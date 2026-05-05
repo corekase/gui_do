@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 import pygame
 
+from demo_features.main import MainFeature
 from demo_features.showcase import ShowcaseFeature
 from gui_do.events.gui_event import EventType
 from gui_do.events.keyboard_manager import KeyboardManager
@@ -32,6 +34,7 @@ class _StubActions:
         self.trigger_calls = []
         self.register_calls = []
         self.bind_calls = []
+        self.bind_global_calls = []
 
     def register_action(self, action_id: str, handler):
         self.register_calls.append((str(action_id), handler))
@@ -40,6 +43,9 @@ class _StubActions:
     def bind_key(self, key: int, action_id: str, *, scene=None):
         self.bind_calls.append((int(key), str(action_id), scene))
         self._bound[(scene, int(key))] = str(action_id)
+
+    def bind_global_key(self, key: int, action_id: str, *, scene=None):
+        self.bind_global_calls.append((int(key), str(action_id), scene))
 
     def trigger_from_event(self, event, app) -> bool:
         self.trigger_calls.append((event.key, app.active_scene_name))
@@ -168,6 +174,29 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
         result = bool(handler(None))
         self.assertTrue(result)
         self.assertEqual(1, len(host.app.task_panel_focus.toggle_calls))
+
+    def test_control_showcase_binds_scene_owned_escape_global_exit(self):
+        host = _StubHost()
+        feature = ShowcaseFeature()
+
+        feature.bind_runtime(host)
+
+        self.assertIn(
+            (pygame.K_ESCAPE, "exit", "control_showcase"),
+            host.app.actions.bind_global_calls,
+        )
+
+    def test_main_binds_scene_owned_escape_global_exit(self):
+        host = _StubHost()
+        feature = MainFeature()
+
+        with patch("demo_features.main.main_feature.setup_routed_runtime"):
+            feature.bind_runtime(host)
+
+        self.assertIn(
+            (pygame.K_ESCAPE, "exit", "main"),
+            host.app.actions.bind_global_calls,
+        )
 
     def test_accessibility_tab_is_consumed_by_focused_control(self):
         scene = _StubScene()

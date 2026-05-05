@@ -28,6 +28,15 @@ class KeyboardManager:
         has_command_palette = callable(has_overlay) and has_overlay("__command_palette__")
         task_panel_focus = getattr(app, "task_panel_focus", None)
 
+        # Global keys are tested first — before task-panel focus, accessibility keys,
+        # focused widget, and active window.  They are per-scene and user-definable.
+        # Typical use: command palette activation key registered via SceneCommandPaletteSpec.
+        _trigger_global = getattr(app.actions, "trigger_global_key_from_event", None)
+        if _trigger_global is not None and _trigger_global(event, app):
+            event.prevent_default()
+            event.stop_propagation()
+            return True
+
         if task_panel_focus is not None and task_panel_focus.is_active:
             # While task-panel focus is active, let user-declared actions (e.g. the
             # toggle key) fire first so any configured key exits the mode — not just

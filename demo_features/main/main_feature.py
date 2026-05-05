@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pygame
 from pygame import Rect
 
 from gui_do import (
@@ -15,12 +16,13 @@ from gui_do.features.data_driven_runtime import (
     SceneMenuStripSpec,
     RightAnchoredTaskPanelButtonSpec,
     SceneTaskPanelSpec,
+    TaskPanelWindowToggleGroupSpec,
     add_right_anchored_task_panel_button,
     TaskPanelButtonSpec,
     TooltipBindingSpec,
     add_task_panel_buttons,
+    add_task_panel_window_toggle_group,
     add_scene_menu_strip_from_spec,
-    add_window_toggle_task_panel_controls,
     create_auto_sized_styled_label,
     ensure_scene_task_panel,
     setup_routed_runtime,
@@ -121,12 +123,16 @@ class MainFeature(Feature):
             ),
         )
 
-        toggle_controls_before_showcase, max_slot_before_showcase = add_window_toggle_task_panel_controls(
+        # Window toggles declared as a spec-driven group starting at slot 1.
+        # Individual windows declare their absolute slot_index in their binding specs
+        # (System=1, Life=2, Mandelbrot=3), so the toggle group is contiguous.
+        # The Showcase navigation button is intentionally placed after the group.
+        toggle_controls = add_task_panel_window_toggle_group(
             host,
             host.task_panel,
             host.app.layout,
             host.window_presentation,
-            max_slot_index=1,
+            TaskPanelWindowToggleGroupSpec(start_index=1),
         )
 
         add_task_panel_buttons(
@@ -137,22 +143,13 @@ class MainFeature(Feature):
                 TaskPanelButtonSpec(
                     attr_name="showcase_button",
                     control_id="showcase",
-                    slot_index=2,
+                    slot_index=4,
                     label="Showcase",
                     on_click=host.go_to_control_showcase,
                     style="angle",
                 ),
             ),
         )
-
-        toggle_controls_after_showcase, max_slot_after_showcase = add_window_toggle_task_panel_controls(
-            host,
-            host.task_panel,
-            host.app.layout,
-            host.window_presentation,
-            min_slot_index=3,
-        )
-        toggle_controls = toggle_controls_before_showcase + toggle_controls_after_showcase
 
         slot0_rect = host.app.layout.linear(0)
         host.help_button = add_right_anchored_task_panel_button(
@@ -188,6 +185,10 @@ class MainFeature(Feature):
     def bind_runtime(self, host) -> None:
         """Wire runtime overlays and hotkeys from the declarative runtime spec."""
         setup_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
+        app_actions = getattr(host.app, "actions", None)
+        bind_global_key = getattr(app_actions, "bind_global_key", None)
+        if callable(bind_global_key):
+            bind_global_key(pygame.K_ESCAPE, "exit", scene="main")
 
     def _toggle_help_overlay(self) -> None:
         overlay = self._help_overlay

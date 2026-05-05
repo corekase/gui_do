@@ -1348,6 +1348,10 @@ class ShowcaseFeature(Feature):
     def bind_runtime(self, host) -> None:
         """Wire runtime hotkeys from the declarative runtime spec."""
         setup_routed_runtime(self, host, _CONTROLS_RUNTIME_SPEC)
+        app_actions = getattr(host.app, "actions", None)
+        bind_global_key = getattr(app_actions, "bind_global_key", None)
+        if callable(bind_global_key):
+            bind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
 
     def on_update(self, host) -> None:
         dt = self._frame_timer.tick()

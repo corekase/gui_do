@@ -1346,17 +1346,40 @@ ShortcutOverlaySpec(
 )
 ```
 
-#### Advanced pattern: command palette with dynamic entries
+#### Advanced pattern: command palette grouped auto-populate + callable custom entries
 
 ```python
-from gui_do import CommandEntry
+from gui_do import CommandEntry, HostApplicationBindingSpec, PaletteBindingSpec
 
-entries = [
-    CommandEntry(id="new_doc", label="New Document", on_select=self._new_document),
-    CommandEntry(id="open_doc", label="Open Document", on_select=self._open_document),
-]
-handle = host.command_palette.show(entries, placeholder="Type a command...")
+def palette_custom_entries(app):
+    # User-defined callable returning CommandEntry values.
+    return (
+        CommandEntry(
+            entry_id="custom:retile",
+            title="Retile Windows",
+            action=lambda: app.tile_windows(),
+            category="Custom",
+        ),
+    )
+
+HostApplicationBindingSpec(
+    ...,
+    palette_spec=PaletteBindingSpec(
+        enable_builtin_entries=True,
+        include_scene_entries=True,      # optional built-in Scene group
+        include_window_entries=True,     # optional built-in Window group
+        group_order=("windows", "custom", "scenes"),
+        # group_order controls whether Scene/Window groups appear before,
+        # after, or between custom entries.
+        custom_entries_provider=palette_custom_entries,
+        connect_window_presentation=True,
+    ),
+)
 ```
+
+When `connect_window_presentation=True`, built-in **Window** entries are ordered
+by `FeatureWindowBinding.task_panel_slot_index` (same order as task panel window
+toggles), not by control id.
 
 #### Common mistakes
 
@@ -1469,48 +1492,106 @@ self._tab_router = router
 → 8.1 Bootstrap (SceneBundleBindingSpec, FeatureWindowBundleBindingSpec) | 8.2 Feature Lifecycle (build and bind_runtime) | 8.5 Controls (WindowControl, TaskPanelControl, WindowPresenter) | 8.7 Focus (TaskPanelFocusToggleSpec) | 8.8 Overlays (overlay layer sits above window layer)
 
 ---
-
+Scenes define broad interaction contexts — the "modes" of the application, such as a main desktop, a control showcase, or a settings screen. Within a scene, windows are floating or docked UI surfaces that can be individually shown or hidden.  `gui_do` provides three built-in optional facilities that a scene may declare: a **task panel**, a **scene menu strip**, and a **command palette**.  Every facility is per-scene and optional — a scene that does not declare it simply does not have it.  This system coordinates what is visible, what has focus, and which commands are reachable at any given moment.
 ### 8.10 Scheduling, Timing, Animation, and Transitions
 
 [Back to Table of Contents](#table-of-contents)
-
+Think of scenes as application-level modes.  Each scene has its own feature set, windows, and optionally a task panel, scene menu strip, and command palette.  Transitions between scenes are animated.  Within a scene, windows are managed by `ScenePresentationModel`; their visibility, focus integration, and task panel buttons are all coordinated through the presentation layer.  Features own windows; they do not manage scene transitions directly.
 #### What it is and why it exists
-
+All three facilities are **built in to gui_do** and available to every scene — they are enabled or disabled purely by what specs a scene declares.  The spec-driven approach is the expected and preferred way for user code to interact with these facilities.
 Time-based work — animations, timed callbacks, multi-step background workflows — must execute within per-frame budgets. If time-based work exceeds its budget, rendering stalls and the UI freezes. `gui_do` provides a layered scheduling system: from simple timers and debouncing at one end, through tweens and animation state machines in the middle, to cooperative coroutine scheduling for multi-frame workflows at the other end.
-
-#### Mental model and lifecycle placement
-
-The cooperative scheduler is a per-scene resource, driven every frame by `on_update`. Frame time is divided: the scheduler runs each frame but cannot exceed its budget. Tweens and animation sequences tick automatically each frame once registered. Scene timelines run relative to scene entry time. Rate limiters (debouncers and throttlers) are stateful; create them in `__init__` or `build` and use them throughout the feature's lifetime.
-
-#### Scheduler budget contract (from `docs/runtime_operating_contracts.md` Section 6)
-
-- **Fraction**: 0.12 of `dt` milliseconds
+#### The three optional per-scene facilities
 - **Floor**: 0.5 ms (minimum dispatch time even on very fast frames)
-- **Ceiling**: 4.0 ms (maximum dispatch time even on very slow frames)
+##### Task panel
+- `CoroutineHandle` — reference to a running coroutine; `.cancel()` to stop it
+The task panel is a docked strip of buttons at the bottom (or top) of the scene.  It contains **no default items** — every button and group must be declared explicitly.  Declare a task panel with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`.  Then add whatever buttons your scene needs.
+- `Sleep` — yield primitive: sleep for a wall-clock duration in seconds
+**Window toggle group** — if the scene has windows, you may optionally declare a `TaskPanelWindowToggleGroupSpec(start_index=N)`.  This tells the framework to automatically create one toggle button per registered window, starting at slot *N* of the task panel's linear layout.  Individual windows declare their own absolute `slot_index` in their `FeatureWindowBundleBindingSpec`; the group spec just marks where the toggle block begins.  Other controls (exit buttons, navigation buttons, etc.) can freely coexist at slot indices before or after the toggle group — and even within the group's slot range — without conflict.  Omitting `TaskPanelWindowToggleGroupSpec` means no automatic window toggles appear in the task panel for this scene.
 
-These bounds ensure predictable upper limits under slow frames and avoid starvation under fast frames.
+Use `add_task_panel_window_toggle_group` instead of `add_window_toggle_task_panel_controls` when you have a `TaskPanelWindowToggleGroupSpec` — it is the spec-driven form of the same operation.
+
+##### Scene menu strip
+
+The scene menu strip (`SceneMenuStripSpec`) is a menu bar anchored to the top of the scene root.  It contains **no default menu entries**.  Two optional sections may be included:
+
+- **Scene section** (`scenes_shown=True`) — lists all registered scenes so the user can navigate between them
+- **Windows section** (`windows_shown=True`) — lists all windows registered in the current scene; each entry shows the window's current visibility state as a check mark and toggles it when selected
+
+Both sections are optional independently.  A scene menu with `scenes_shown=False, windows_shown=False` is effectively empty.  The Windows section coordinates automatically with the task panel toggle buttons — when a toggle button changes a window's visible state, the menu reflects the change, and vice versa.  This coordination is built in to `ScenePresentationModel.handle_window_toggle` and requires no additional code.
+
+##### Command palette
+
+The command palette (`SceneCommandPaletteSpec`) is a keyboard-driven command entry overlay.  Each scene declares its own activation key:
+
+```python
+# In the scene's RoutedRuntimeSpec:
+MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
+    scene_name="main",
+    command_palette=SceneCommandPaletteSpec(
+        key=pygame.K_F5,
+        scene_name="main",
+    ),
+    ...
+)
+```
+
+`setup_routed_runtime` automatically registers the activation key as a **global key** — a key that is tested at the very start of event routing, before overlay focus, task-panel focus, widget focus, active-window handlers, and screen-event handlers.  This guarantees the palette is always reachable regardless of which window or control has keyboard input.  The routing order (from first-tested to last) is:
+
+1. Overlay intercept (`gui_application.py` — ESC to dismiss dialogs, etc.)
+2. **Global keys** — command palette and any other per-scene global bindings
+3. Task-panel focus branch
+4. Accessibility keys (Tab, Shift-Tab, arrow traversal)
+5. Focused widget
+6. Active window
+7. Screen-event handler
+8. Action manager normal bindings
+
+The command palette key is **per-scene and user-definable**: each scene declares its own `SceneCommandPaletteSpec` with any key, and scenes can use the same or different keys.  Omitting `SceneCommandPaletteSpec` from a scene's `RoutedRuntimeSpec` means that scene has no command palette key.
+
+User code may also call `setup_scene_command_palette_key(app, palette_manager, spec)` directly if finer control is needed.
 
 #### Primary public APIs
 
-From **Tier 5** (scheduling and animation):
-- `TaskEvent`, `TaskScheduler` — per-task event scheduling; register callbacks to fire at a future time or after an interval
-- `Timers` — simple named timer management; `set(name, duration, callback)`, `cancel(name)`, `tick(dt)`
-- `TweenManager`, `TweenHandle`, `Easing` — property interpolation; `TweenManager.to(target, attr, value, duration, easing)` returns a `TweenHandle` for chaining or cancellation
-- `AnimationSequence`, `AnimationHandle` — ordered sequences of tween steps; `AnimationHandle` cancels or fast-forwards
-- `TransitionManager`, `TransitionSpec`, `TransitionEvent` — scene and UI transition orchestration
-- `AnimationStateMachine`, `AnimationTransitionMode` — state-machine-driven animation; declare states and transitions; machine drives `AnimationSequence` instances based on current state
-- `SceneTimeline` — timed event sequence relative to scene entry; useful for tutorial flows and scripted intros
-- `Debouncer`, `Throttler` — rate-limit callbacks; `Debouncer` fires only after a quiet period; `Throttler` fires at most once per interval
-- `CooperativeScheduler` — runs Python generator-based coroutines that yield control at safe points; resumed each frame within budget
-- `CoroutineHandle` — reference to a running coroutine; `.cancel()` to stop it
-- `Pause` — yield primitive: pause the coroutine until explicitly resumed
-- `Sleep` — yield primitive: sleep for a wall-clock duration in seconds
-- `WaitForEvent` — yield primitive: block until a named event fires
-- `WaitForSignal` — yield primitive: block until a `Signal` fires with an optional predicate
-- `WaitUntil` — yield primitive: block until a callable returns `True`
-- `WaitForAll` — yield primitive: block until all of a list of coroutines complete
+From **Tier 1** (spec types):
+- `ScenePresentationModel` — tracks which windows are registered in a scene and their visibility state; provides `handle_window_toggle` for scene menu strip integration
+- `WindowSpec`, `AnchoredWindowSpec` — declare window geometry, anchoring strategy, and chrome properties
+- `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelFocusToggleSpec` — declare the scene's task panel and per-window toggle buttons
+- `TaskPanelWindowToggleGroupSpec` — declares where the automatic window-toggle button group begins in the task panel; optional, per-scene
+- `SceneCommandPaletteSpec` — declares the per-scene command palette activation key; optional, global key routing
+- `FeatureWindowBundleBindingSpec` — wires feature + window + task panel button in a single spec; the recommended way to add a feature window
+- `WindowToggleBindingSpec`, `SceneSetupBindingSpec`, `RuntimeSceneBindingSpec`, `SceneRootBindingSpec` — lower-level binding specs for advanced wiring
+- `TabbedPresenterSpec`, `TabBuilderSpec` — declaratively specify tabbed window content
+- `SceneReturnButtonSpec` — adds a return/back button to the scene menu strip
+- `SceneMenuStripSpec` — declares the scene menu strip (optionally with Scene and Window sections)
+
+From **Tier 18** (advanced runtime helpers):
+- `set_window_visible_state` — programmatically show or hide a window and update the focus ring
+- `toggle_window_visibility` — toggle a window's visibility, updating task panel button state
+- `create_anchored_feature_window` — creates and registers an anchored window for a feature
+- `create_feature_presented_window` — creates a window from a `WindowPresenter` subclass
+- `add_window_scene_menu_strip` — adds a window toggle entry to the scene menu strip
+- `ensure_scene_task_panel` — ensures a task panel control exists in the scene, creating one if needed
+- `add_task_panel_window_toggle_group` — spec-driven helper; creates window toggle controls from `TaskPanelWindowToggleGroupSpec`
+- `setup_scene_command_palette_key` — registers a global per-scene command palette activation key
+- `bind_global_key` — registers an `ActionManager` global key (tested first in routing, before focus and active-window handlers)
+- `ActiveTabUpdateRouter` — efficiently routes updates only to the currently active tab's presenter
+- `TabLayoutContext` — provides layout context for tabbed window content
+- `create_presented_anchored_window`, `create_presented_window_from_spec` — presenter-based window creation helpers
+- `setup_feature_presenter_tabs`, `setup_feature_presenter_tabs_from_window_content` — wire tabbed content into a presenter window
+- `bind_task_panel_focus_toggle` — binds a task panel focus toggle for a window
+- `add_task_panel_button`, `add_task_panel_buttons` — programmatically add buttons to the task panel
+- `add_scene_return_button` — adds a return/back button to the scene's menu strip
+- `sorted_window_bindings`, `collect_window_toggle_controls`, `apply_window_toggle_accessibility`, `add_window_toggle_task_panel_controls`, `register_window_toggle_tooltips` — bulk window-toggle wiring helpers
+- `add_window_control`, `add_window_label`, `add_window_button`, `add_window_button_row` — convenience helpers for building window interiors
 
 #### Typical usage flow
+
+1. Declare a `SceneBundleBindingSpec` in `HostApplicationBindingSpec` for the scene. Set `include_scene_root`, `include_nav_action`, and other flags as needed.
+2. Use `FeatureWindowBundleBindingSpec` to declare features that have windows — this wires the feature, its `WindowPresenter`, its `AnchoredWindowSpec`, and its task panel toggle button in one declaration.
+3. Implement `WindowPresenter` subclasses to build each window's interior.
+4. In the scene's `RoutedRuntimeSpec`, add `command_palette=SceneCommandPaletteSpec(key=..., scene_name=...)` to enable the command palette activation key for that scene.
+5. In the scene's `build` method, call `ensure_scene_task_panel` with a `SceneTaskPanelSpec`, add navigation/exit buttons with `add_task_panel_buttons`, and call `add_task_panel_window_toggle_group` with a `TaskPanelWindowToggleGroupSpec` to add the window toggle block.
+6. Use `TaskPanelFocusToggleSpec` inside `RoutedRuntimeSpec` for automatic focus ring management when windows are shown/hidden.
 
 **Tween animation:**
 ```python
@@ -1699,7 +1780,7 @@ From **Tier 22** (theme invalidation):
 From **Tier 1** (spec integration):
 - `FontRoleBindingSpec` — declares the mapping from semantic font role names to font configurations in the bootstrap spec
 - `CursorSpec`, `CursorBindingSpec` — declare custom cursor shapes and their scene bindings
-- `PaletteBindingSpec` — declares a color palette binding in the bootstrap spec
+- `PaletteBindingSpec` — declares command-palette entry-group behavior (Scene group, Window group, custom callable entries, and group order)
 - `setup_standard_font_roles` — convenience function (Tier 1) to register standard font roles from a font config dictionary
 
 #### Typical usage flow
@@ -2676,7 +2757,60 @@ The recommended policy for deprecating public API:
 - **Prefer additive transitions.** Add new parameters with defaults; keep old parameters accepting their old types. Add a `DeprecationWarning` via Python's `warnings` module to any code path that uses the old calling convention.
 - **Remove legacy behavior only after a migration path is available.** Document the migration path in this section before removing the old behavior.
 - **One version minimum.** Deprecated behavior should remain functional (with a warning) for at least one released version before removal.
+#### Scene with all three facilities: command palette, scene menu, and task panel with window toggles
 
+```python
+import pygame
+from gui_do import (
+    RoutedRuntimeSpec, SceneCommandPaletteSpec, SceneMenuStripSpec,
+    SceneTaskPanelSpec, TaskPanelButtonSpec, TaskPanelWindowToggleGroupSpec,
+    add_task_panel_buttons, add_task_panel_window_toggle_group,
+    add_scene_menu_strip_from_spec, ensure_scene_task_panel,
+    setup_routed_runtime,
+)
+
+MY_RUNTIME_SPEC = RoutedRuntimeSpec(
+    scene_name="main",
+    command_palette=SceneCommandPaletteSpec(
+        key=pygame.K_F5,
+        scene_name="main",
+    ),
+    # task_panel_focus_toggles=(...),  # optional
+)
+
+# In the feature's build(self, host) method:
+host.desktop_menu_bar = add_scene_menu_strip_from_spec(
+    host.root,
+    host,
+    SceneMenuStripSpec(
+        control_id="menu_bar",
+        rect=Rect(0, 0, width, 28),
+        scene_name="main",
+        scenes_shown=True,    # optional: include Scene navigation menu
+        windows_shown=True,   # optional: include Windows menu with visibility toggles
+        on_window_toggled=host.window_presentation.handle_window_toggle,
+    ),
+)
+host.task_panel = ensure_scene_task_panel(
+    host,
+    SceneTaskPanelSpec(scene_name="main", control_id="task_panel", ...),
+)
+add_task_panel_buttons(host, host.task_panel, host.app.layout, [
+    TaskPanelButtonSpec(attr_name="exit_button", slot_index=0, label="Exit", on_click=host.app.quit, ...),
+])
+# Window toggles declared as a group starting at slot 1.  Individual windows
+# declare their absolute slot_index in their FeatureWindowBundleBindingSpec.
+toggle_controls = add_task_panel_window_toggle_group(
+    host, host.task_panel, host.app.layout, host.window_presentation,
+    TaskPanelWindowToggleGroupSpec(start_index=1),
+)
+
+# In the feature's bind_runtime(self, host) method:
+setup_routed_runtime(self, host, MY_RUNTIME_SPEC)
+```
+
+
+→ 8.1 Bootstrap (SceneBundleBindingSpec, FeatureWindowBundleBindingSpec) | 8.2 Feature Lifecycle (build and bind_runtime) | 8.3 Events and Actions (global key routing, bind_global_key) | 8.5 Controls (WindowControl, TaskPanelControl, WindowPresenter) | 8.7 Focus (TaskPanelFocusToggleSpec) | 8.8 Overlays (command palette overlay, overlay intercept layer)
 As of the current generation, no public API names in `gui_do` are formally deprecated. Maintainers should add entries to this section whenever a formal deprecation is introduced, including: the deprecated name, the replacement name or approach, the version in which the deprecation was introduced, and the planned removal version.
 
 ### Upgrade Checklist

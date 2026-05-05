@@ -41,18 +41,12 @@ class TestDemoRuntimeSceneSpecs(unittest.TestCase):
             app.pristine_calls,
         )
 
-    def test_runtime_scene_specs_bind_escape_to_exit(self):
+    def test_runtime_scene_specs_do_not_bind_escape_to_exit(self):
         app = _StubApp()
 
         bind_runtime_scene_exit_keys(app.actions, RUNTIME_SCENE_SPECS, key=pygame.K_ESCAPE)
 
-        self.assertEqual(
-            [
-                (pygame.K_ESCAPE, "exit", "main"),
-                (pygame.K_ESCAPE, "exit", "control_showcase"),
-            ],
-            app.actions.bound_keys,
-        )
+        self.assertEqual([], app.actions.bound_keys)
 
     def test_runtime_scene_specs_prewarm_targets(self):
         app = _StubApp()

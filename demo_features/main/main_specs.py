@@ -6,6 +6,7 @@ import pygame
 
 from gui_do.features.data_driven_runtime import (
     RoutedRuntimeSpec,
+    SceneCommandPaletteSpec,
     ShortcutOverlaySpec,
     TaskPanelFocusToggleSpec,
 )
@@ -49,6 +50,10 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
             scene_name="main",
             key=pygame.K_F1,
         ),
+    ),
+    command_palette=SceneCommandPaletteSpec(
+        key=pygame.K_F5,
+        scene_name="main",
     ),
 )
 

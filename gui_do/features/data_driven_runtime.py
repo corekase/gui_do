@@ -219,6 +219,68 @@ class SceneTaskPanelSpec:
 
 
 @dataclass(frozen=True)
+class TaskPanelWindowToggleGroupSpec:
+    """Declarative marker for placing automatic window-toggle buttons in the task panel.
+
+    Declare one of these in the scene's task panel setup to opt in to automatic window
+    toggle management.  The framework creates one ``ToggleControl`` per registered window
+    and places it at the slot index declared by each window's binding spec.
+
+    *start_index* is the lowest slot index that the toggle group may occupy.  Controls
+    added before that index (Exit buttons, navigation buttons, etc.) are unaffected.
+    Controls added after the last window's slot index are equally unaffected — the group
+    and other task panel items can freely coexist at any index values.
+
+    Declaring this spec is optional.  Omitting it means no automatic window toggles
+    appear in the task panel for this scene.
+
+    Example — task panel with an Exit button at slot 0, window toggles starting at
+    slot 1 (System at 1, Life at 3), and a Showcase navigation button at slot 2::
+
+        ensure_scene_task_panel(host, SceneTaskPanelSpec(...))
+        add_task_panel_buttons(host, task_panel, layout, [
+            TaskPanelButtonSpec(attr_name="exit_button", slot_index=0, ...),
+            TaskPanelButtonSpec(attr_name="showcase_button", slot_index=2, ...),
+        ])
+        add_task_panel_window_toggle_group(
+            host, task_panel, layout, host.window_presentation,
+            TaskPanelWindowToggleGroupSpec(start_index=1),
+        )
+    """
+
+    start_index: int = 1
+
+
+@dataclass(frozen=True)
+class SceneCommandPaletteSpec:
+    """Declarative spec for a scene's command palette activation key.
+
+    Declared per-scene.  The key is registered as a *global* key — it fires at the
+    very start of key routing, before focus dispatch, active-window handlers, and
+    screen-event handlers.  This guarantees the palette is always reachable regardless
+    of which window or control has keyboard focus.
+
+    *scene_name* scopes the activation key to one scene; pass ``None`` to activate in
+    every scene (useful when the same key should open the palette everywhere).
+
+    The command palette itself is provided by ``gui_do`` as a built-in facility.
+    Each scene declares its own spec — having a command palette is optional.
+
+    Example::
+
+        MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
+            scene_name="main",
+            command_palette=SceneCommandPaletteSpec(key=pygame.K_F5, scene_name="main"),
+            ...
+        )
+    """
+
+    key: int
+    scene_name: str | None = None
+    action_id: str = "command_palette_open"
+
+
+@dataclass(frozen=True)
 class SceneReturnButtonSpec:
     """Declarative descriptor for a standard scene-return button on a task panel."""
 
@@ -289,6 +351,7 @@ class RoutedRuntimeSpec:
     event_subscriptions: Sequence[EventSubscriptionSpec] = field(default_factory=tuple)
     shortcut_overlays: Sequence[ShortcutOverlaySpec] = field(default_factory=tuple)
     task_panel_focus_toggles: Sequence[TaskPanelFocusToggleSpec] = field(default_factory=tuple)
+    command_palette: "SceneCommandPaletteSpec | None" = None
 
 
 @dataclass(frozen=True)
@@ -454,13 +517,21 @@ class SceneBundleBindingSpec:
 class PaletteBindingSpec:
     """User-side declaration for command palette behavior.
 
-    gui_do provides the command palette as a facility; this spec lets the user
-    declare whether built-in scene/window entries are populated and whether
-    window toggles route through the window presentation model (keeping task
-    panel toggle buttons in sync).
+    gui_do provides the command palette as a facility; this spec lets user code
+    opt in/out of built-in Scene and Window entry groups independently, choose
+    where those groups appear relative to custom entries, and provide custom
+    entries via a user-defined callable.
+
+    ``custom_entries_provider`` may accept either zero arguments or the active
+    ``GuiApplication`` as one argument and should return a sequence of
+    ``CommandEntry`` values.
     """
 
     enable_builtin_entries: bool = True
+    include_scene_entries: bool = True
+    include_window_entries: bool = True
+    group_order: Sequence[str] = ("scenes", "windows", "custom")
+    custom_entries_provider: Callable[..., Sequence[object]] | None = None
     connect_window_presentation: bool = True
 
 
@@ -771,10 +842,14 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     host._palette_manager = CommandPaletteManager(host.app.overlay, host.app)
     palette_spec = getattr(config, "palette_spec", None)
     if palette_spec is not None and palette_spec.enable_builtin_entries:
-        host._palette_manager.enable_builtin_scene_and_window_entries(
+        host._palette_manager.configure_builtin_entry_groups(
             host.app,
             on_scene_selected=host.scene_transitions.go,
             window_presentation=host.window_presentation if palette_spec.connect_window_presentation else None,
+            include_scene_entries=bool(palette_spec.include_scene_entries),
+            include_window_entries=bool(palette_spec.include_window_entries),
+            group_order=tuple(palette_spec.group_order),
+            custom_entries_provider=palette_spec.custom_entries_provider,
         )
     declare_host_actions(host, config.action_specs)
 
@@ -1046,6 +1121,53 @@ def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
     for binding, toggle in toggle_controls:
         label = binding.task_panel_label or binding.action_label or binding.key.title()
         tooltip_manager.register(toggle, f"Toggle the {label} window")
+
+
+def add_task_panel_window_toggle_group(
+    host,
+    task_panel,
+    app_layout,
+    window_presentation,
+    spec: "TaskPanelWindowToggleGroupSpec",
+) -> list:
+    """Create window toggle controls from a declarative ``TaskPanelWindowToggleGroupSpec``.
+
+    This is the canonical spec-driven alternative to calling
+    ``add_window_toggle_task_panel_controls`` directly.  The *spec* records where the
+    group begins; individual window slot positions are controlled by the ``slot_index``
+    declared on each ``FeatureWindowBundleBindingSpec`` / ``WindowToggleBindingSpec``.
+
+    Returns the same ``list[(binding, toggle)]`` structure as
+    ``add_window_toggle_task_panel_controls`` so callers can pass the result to
+    ``register_window_toggle_tooltips`` or accessibility helpers.
+    """
+    toggle_controls, _ = add_window_toggle_task_panel_controls(
+        host,
+        task_panel,
+        app_layout,
+        window_presentation,
+        min_slot_index=int(spec.start_index),
+    )
+    return toggle_controls
+
+
+def setup_scene_command_palette_key(app, palette_manager, spec: "SceneCommandPaletteSpec") -> None:
+    """Register a global per-scene activation key for the command palette.
+
+    The key is bound as a *global* key (via ``ActionManager.bind_global_key``) so it
+    fires before focus dispatch, active-window handlers, and screen-event handlers.
+    This guarantees the palette is always reachable regardless of UI state.
+
+    The action is idempotent: if the action is already registered it is reused, so
+    multiple features in the same scene can each declare the same spec safely.
+
+    Called automatically by ``setup_routed_runtime`` when ``RoutedRuntimeSpec.command_palette``
+    is set.  User code may also call this directly for fine-grained control.
+    """
+    action_id = str(spec.action_id)
+    if not app.actions.has_action(action_id):
+        app.actions.register_action(action_id, lambda _e: (palette_manager.show(app) or True))
+    app.actions.bind_global_key(int(spec.key), action_id, scene=spec.scene_name)
 
 
 def initialize_locale_registry(tables, *, initial_locale: str) -> LocaleRegistry:
@@ -1437,6 +1559,11 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
                 scene_name=str(tpft.scene_name),
                 key=int(tpft.key),
             )
+
+    if spec.command_palette is not None and app is not None:
+        palette_manager = getattr(host, "_palette_manager", None)
+        if palette_manager is not None:
+            setup_scene_command_palette_key(app, palette_manager, spec.command_palette)
 
     return scheduler
 

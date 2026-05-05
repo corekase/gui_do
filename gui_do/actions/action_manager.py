@@ -35,6 +35,7 @@ class ActionManager:
         self._actions: dict[str, ActionHandler] = {}
         self._keymap: dict[KeyBinding, list[str]] = defaultdict(list)
         self._bindings_by_action: dict[str, list[KeyBinding]] = defaultdict(list)
+        self._global_keymap: dict[KeyBinding, list[str]] = defaultdict(list)
         self._middlewares: List[ActionMiddleware] = []
 
     def register_action(self, action_name: str, handler: ActionHandler) -> None:
@@ -86,6 +87,64 @@ class ActionManager:
             if not bindings:
                 del self._bindings_by_action[action_name]
         return True
+
+    def bind_global_key(self, key: int, action_name: str, *, scene: str | None = None) -> None:
+        """Bind a global key tested first in routing — before focus, windows, and all other handlers.
+
+        Global keys fire regardless of focused widget or active-window state.
+        Use this for per-scene commands like the command palette activation key that
+        must be reachable even when a window is receiving keyboard input.
+
+        *scene* scopes the binding to a specific scene name; ``None`` applies to every scene.
+        Tab and other reserved accessibility keys cannot be registered as global keys.
+        """
+        key = int(key)
+        action_name = str(action_name)
+        if key in _RESERVED_ACCESSIBILITY_KEYS:
+            raise logical_error(
+                f"Key {pygame.key.name(key)!r} is reserved for accessibility focus traversal "
+                f"and cannot be bound as a global key.",
+                subsystem="gui_do.actions",
+                operation="ActionManager.bind_global_key",
+                source_skip_frames=1,
+            )
+        binding = KeyBinding(key, scene=scene, window_only=False)
+        names = self._global_keymap[binding]
+        if action_name not in names:
+            names.append(action_name)
+
+    def unbind_global_key(self, key: int, action_name: str, *, scene: str | None = None) -> bool:
+        """Remove a global key binding.  Returns ``True`` if it existed."""
+        binding = KeyBinding(int(key), scene=scene, window_only=False)
+        names = self._global_keymap.get(binding)
+        if not names or str(action_name) not in names:
+            return False
+        names.remove(str(action_name))
+        if not names:
+            del self._global_keymap[binding]
+        return True
+
+    def trigger_global_key_from_event(self, event, app) -> bool:
+        """Fire the first matching global-key action for *event*, if any.
+
+        Called at the very start of key routing — before focus, active-window, and
+        screen-event handlers — so that per-scene commands like the command palette
+        are always reachable regardless of UI state.
+        """
+        if event.kind is not EventType.KEY_DOWN or event.key is None:
+            return False
+        scene_name = app.active_scene_name
+        key = int(event.key)
+        candidates = (
+            KeyBinding(key, scene=scene_name, window_only=False),
+            KeyBinding(key, scene=None, window_only=False),
+        )
+        for binding in candidates:
+            for action_name in self._global_keymap.get(binding, ()):
+                handler = self._actions.get(action_name)
+                if handler is not None and self._dispatch(action_name, handler, event):
+                    return True
+        return False
 
     def bindings_for_action(self, action_name: str) -> List[KeyBinding]:
         """Return all key bindings that route to *action_name*."""

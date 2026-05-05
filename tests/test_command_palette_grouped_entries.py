@@ -1,0 +1,144 @@
+import unittest
+
+from gui_do.overlays.command_palette_manager import CommandEntry, CommandPaletteManager
+
+
+class _OverlayStub:
+    def has_overlay(self, _owner_id):
+        return False
+
+    def hide(self, _owner_id):
+        return None
+
+
+class _WindowStub:
+    def __init__(self, control_id: str, title: str, scene_name: str, visible: bool = False):
+        self.control_id = str(control_id)
+        self.title = str(title)
+        self.scene_name = str(scene_name)
+        self.visible = bool(visible)
+
+
+class _BindingStub:
+    def __init__(self, key: str, slot_index: int):
+        self.key = str(key)
+        self.task_panel_slot_index = int(slot_index)
+
+
+class _WindowPresentationStub:
+    def __init__(self):
+        self._bindings = (
+            _BindingStub("systems", 1),
+            _BindingStub("life", 2),
+            _BindingStub("mandel", 3),
+        )
+        self._windows = {
+            "systems": _WindowStub("systems_window", "System", "main", visible=True),
+            "life": _WindowStub("life_window", "Life", "main", visible=False),
+            "mandel": _WindowStub("mandel_window", "Mandelbrot", "main", visible=False),
+        }
+
+    def bindings(self):
+        return self._bindings
+
+    def get_window(self, key: str):
+        return self._windows.get(str(key))
+
+
+class _FeatureRegistryStub:
+    def __init__(self):
+        self._features = {}
+
+
+class _AppStub:
+    def __init__(self):
+        self.active_scene_name = "main"
+        self.features = _FeatureRegistryStub()
+
+    def scene_names(self):
+        return ("main", "control_showcase")
+
+    def scene_pretty_name(self, scene_name: str):
+        return {
+            "main": "Main",
+            "control_showcase": "Control Showcase",
+        }.get(str(scene_name), str(scene_name))
+
+
+class TestCommandPaletteGroupedEntries(unittest.TestCase):
+    def test_group_order_allows_custom_between_scene_and_window_groups(self):
+        manager = CommandPaletteManager(_OverlayStub())
+        app = _AppStub()
+        window_presentation = _WindowPresentationStub()
+
+        manager.configure_builtin_entry_groups(
+            app,
+            window_presentation=window_presentation,
+            include_scene_entries=True,
+            include_window_entries=True,
+            group_order=("scenes", "custom", "windows"),
+            custom_entries_provider=lambda _app: (
+                CommandEntry(
+                    entry_id="custom:refresh",
+                    title="Refresh",
+                    action=lambda: None,
+                    category="Custom",
+                ),
+            ),
+        )
+
+        manager._before_show_callback()
+        entry_ids = [entry.entry_id for entry in manager.entries()]
+
+        self.assertEqual(
+            [
+                "scene:control_showcase",
+                "custom:refresh",
+                "window:main:systems_window",
+                "window:main:life_window",
+                "window:main:mandel_window",
+            ],
+            entry_ids,
+        )
+
+    def test_disable_scene_and_window_groups_emits_no_builtin_entries(self):
+        manager = CommandPaletteManager(_OverlayStub())
+        app = _AppStub()
+
+        manager.configure_builtin_entry_groups(
+            app,
+            include_scene_entries=False,
+            include_window_entries=False,
+            group_order=("scenes", "windows", "custom"),
+            custom_entries_provider=None,
+        )
+
+        manager._before_show_callback()
+        self.assertEqual([], manager.entries())
+
+    def test_custom_provider_can_be_no_arg_callable(self):
+        manager = CommandPaletteManager(_OverlayStub())
+        app = _AppStub()
+
+        manager.configure_builtin_entry_groups(
+            app,
+            include_scene_entries=False,
+            include_window_entries=False,
+            group_order=("custom",),
+            custom_entries_provider=lambda: (
+                CommandEntry(
+                    entry_id="custom:retile",
+                    title="Retile",
+                    action=lambda: None,
+                    category="Custom",
+                ),
+            ),
+        )
+
+        manager._before_show_callback()
+        entry_ids = [entry.entry_id for entry in manager.entries()]
+        self.assertEqual(["custom:retile"], entry_ids)
+
+
+if __name__ == "__main__":
+    unittest.main()

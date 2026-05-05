@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections import Counter
-from typing import Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Sequence, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -122,6 +122,7 @@ class _CommandPaletteListView(ListViewControl):
         super().__init__(control_id, rect, items=items, row_height=row_height, selected_index=selected_index)
         self._toggle_visual_cache: Dict[tuple, object] = {}
         self._scene_visual_cache: Dict[tuple, object] = {}
+        self._draw_font = None
 
     def draw(self, surface: "pygame.Surface", theme) -> None:
         if not self.visible:
@@ -205,7 +206,8 @@ class _CommandPaletteListView(ListViewControl):
         text_color = theme.text
         if not item.enabled:
             text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
-        text_surf = font.render(item.label, True, text_color)
+        raw_font = getattr(font, "_font", font)
+        text_surf = raw_font.render(item.label, True, text_color)
         surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
     def _draw_window_toggle_row(self, surface: "pygame.Surface", theme, row_rect: Rect, entry: "CommandEntry") -> None:
@@ -304,6 +306,10 @@ class CommandPaletteManager:
         self._entry_selected_callback: Optional[Callable[[CommandEntry], None]] = None
         self._selected_entry_id_by_scene: Dict[str, str] = {}
         self._window_presentation = None
+        self._include_scene_entries: bool = True
+        self._include_window_entries: bool = True
+        self._group_order: tuple[str, ...] = ("scenes", "windows", "custom")
+        self._custom_entries_provider: Optional[Callable[..., Sequence[CommandEntry]]] = None
         if app is not None:
             self._register_background_trigger(app)
 
@@ -401,10 +407,45 @@ class CommandPaletteManager:
         provided, window toggle actions route through it so that task panel
         toggle buttons and tile_windows stay in sync with the palette.
         """
+        self.configure_builtin_entry_groups(
+            app,
+            on_scene_selected=on_scene_selected,
+            window_presentation=window_presentation,
+            include_scene_entries=True,
+            include_window_entries=True,
+            group_order=("scenes", "windows", "custom"),
+            custom_entries_provider=None,
+        )
+
+    def configure_builtin_entry_groups(
+        self,
+        app: "GuiApplication",
+        *,
+        on_scene_selected: Optional[Callable[[str], None]] = None,
+        window_presentation=None,
+        include_scene_entries: bool = True,
+        include_window_entries: bool = True,
+        group_order: Sequence[str] = ("scenes", "windows", "custom"),
+        custom_entries_provider: Optional[Callable[..., Sequence[CommandEntry]]] = None,
+    ) -> None:
+        """Configure built-in palette groups and their placement order.
+
+        ``group_order`` may include any of ``"scenes"``, ``"windows"``, and
+        ``"custom"`` in any order, allowing built-in groups to appear before,
+        after, or between custom entries.
+
+        ``custom_entries_provider`` is a user-defined callable returning a
+        sequence of :class:`CommandEntry` objects. It may accept zero arguments
+        or a single ``app`` argument.
+        """
         self._window_presentation = window_presentation
+        self._include_scene_entries = bool(include_scene_entries)
+        self._include_window_entries = bool(include_window_entries)
+        self._group_order = self._normalize_group_order(group_order)
+        self._custom_entries_provider = custom_entries_provider
 
         def _before_show() -> None:
-            self._register_builtin_scene_and_window_entries(app, on_scene_selected=on_scene_selected)
+            self._register_configured_builtin_entries(app, on_scene_selected=on_scene_selected)
 
         def _selected_entry_id() -> Optional[str]:
             return self._selected_entry_id_for_scene(app)
@@ -610,7 +651,7 @@ class CommandPaletteManager:
     def _on_dismissed(self) -> None:
         self._handle = None
 
-    def _register_builtin_scene_and_window_entries(
+    def _register_configured_builtin_entries(
         self,
         app: "GuiApplication",
         *,
@@ -618,12 +659,32 @@ class CommandPaletteManager:
     ) -> None:
         self.clear()
 
+        grouped_entries: dict[str, list[CommandEntry]] = {
+            "scenes": self._collect_builtin_scene_entries(app, on_scene_selected=on_scene_selected)
+            if self._include_scene_entries
+            else [],
+            "windows": self._collect_builtin_window_entries(app)
+            if self._include_window_entries
+            else [],
+            "custom": self._collect_custom_entries(app),
+        }
+        for group_name in self._group_order:
+            for entry in grouped_entries.get(group_name, ()):
+                self.register(entry)
+
+    def _collect_builtin_scene_entries(
+        self,
+        app: "GuiApplication",
+        *,
+        on_scene_selected: Optional[Callable[[str], None]] = None,
+    ) -> list[CommandEntry]:
+        entries: list[CommandEntry] = []
         scene_pretty_name_fn = getattr(app, "scene_pretty_name", None)
         for scene_name in self._allowed_builtin_scene_names(app):
             pretty_name = str(scene_name)
             if callable(scene_pretty_name_fn):
                 pretty_name = str(scene_pretty_name_fn(scene_name))
-            self.register(
+            entries.append(
                 CommandEntry(
                     entry_id=f"scene:{scene_name}",
                     title=pretty_name,
@@ -631,6 +692,57 @@ class CommandPaletteManager:
                     category="Scenes",
                 )
             )
+        return entries
+
+    def _collect_builtin_window_entries(self, app: "GuiApplication") -> list[CommandEntry]:
+        entries: list[CommandEntry] = []
+        scene_key = self._selection_scene_key(app)
+        windows = self._ordered_builtin_windows(app)
+        for window in windows:
+            control_id = str(getattr(window, "control_id", ""))
+            window_title = str(getattr(window, "title", "") or control_id or "Window")
+            entries.append(
+                CommandEntry(
+                    entry_id=f"window:{scene_key}:{control_id}",
+                    title=window_title,
+                    action=lambda target=window: self._toggle_builtin_window(app, target),
+                    category="Windows",
+                    render_kind="window_toggle",
+                    window_visible=bool(getattr(window, "visible", False)),
+                )
+            )
+        return entries
+
+    def _ordered_builtin_windows(self, app: "GuiApplication") -> list[object]:
+        active_scene = self._selection_scene_key(app)
+        active_scene_windows = self._active_scene_window_set(app)
+        presentation = self._window_presentation
+        if presentation is not None and hasattr(presentation, "bindings"):
+            bindings = tuple(getattr(presentation, "bindings")() or ())
+            sorted_bindings = sorted(
+                bindings,
+                key=lambda b: (
+                    10_000 if getattr(b, "task_panel_slot_index", None) is None else int(getattr(b, "task_panel_slot_index")),
+                    str(getattr(b, "key", "")),
+                ),
+            )
+            ordered: list[object] = []
+            for binding in sorted_bindings:
+                key = str(getattr(binding, "key", ""))
+                window = None
+                get_window = getattr(presentation, "get_window", None)
+                if callable(get_window) and key:
+                    window = get_window(key)
+                if window is None:
+                    continue
+                if active_scene_windows is not None and window not in active_scene_windows:
+                    continue
+                window_scene = str(getattr(window, "scene_name", "") or "")
+                if active_scene and window_scene and window_scene != active_scene:
+                    continue
+                ordered.append(window)
+            if ordered:
+                return ordered
 
         windows = []
         scene = getattr(app, "scene", None)
@@ -640,21 +752,49 @@ class CommandPaletteManager:
                 is_window = getattr(node, "is_window", None)
                 if callable(is_window) and is_window():
                     windows.append(node)
-
         windows.sort(key=self._window_sort_key)
-        for window in windows:
-            control_id = str(getattr(window, "control_id", ""))
-            window_title = str(getattr(window, "title", "") or control_id or "Window")
-            self.register(
-                CommandEntry(
-                    entry_id=f"window:{self._selection_scene_key(app)}:{control_id}",
-                    title=window_title,
-                    action=lambda target=window: self._toggle_builtin_window(app, target),
-                    category="Windows",
-                    render_kind="window_toggle",
-                    window_visible=bool(getattr(window, "visible", False)),
-                )
-            )
+        return windows
+
+    @staticmethod
+    def _active_scene_window_set(app: "GuiApplication") -> Optional[set[object]]:
+        scene = getattr(app, "scene", None)
+        walk_nodes = getattr(scene, "_walk_nodes", None)
+        if not callable(walk_nodes):
+            return None
+        scene_windows: set[object] = set()
+        for node in walk_nodes():
+            is_window = getattr(node, "is_window", None)
+            if callable(is_window) and is_window():
+                scene_windows.add(node)
+        return scene_windows
+
+    def _collect_custom_entries(self, app: "GuiApplication") -> list[CommandEntry]:
+        provider = self._custom_entries_provider
+        if not callable(provider):
+            return []
+        entries = None
+        try:
+            entries = provider(app)
+        except TypeError:
+            entries = provider()
+        except Exception:
+            return []
+        if entries is None:
+            return []
+        return [entry for entry in tuple(entries) if isinstance(entry, CommandEntry)]
+
+    @staticmethod
+    def _normalize_group_order(group_order: Sequence[str]) -> tuple[str, ...]:
+        allowed = ("scenes", "windows", "custom")
+        remaining = list(allowed)
+        normalized: list[str] = []
+        for item in tuple(group_order or ()):
+            name = str(item).strip().casefold()
+            if name in remaining:
+                normalized.append(name)
+                remaining.remove(name)
+        normalized.extend(remaining)
+        return tuple(normalized)
 
     @staticmethod
     def _allowed_builtin_scene_names(app: "GuiApplication") -> List[str]:
