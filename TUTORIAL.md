@@ -1198,7 +1198,7 @@ if __name__ == "__main__":
 
 ### What to explore in the codebase
 
-**`demo_features/`** contains living reference patterns for every major gui_do subsystem. Each subfolder is one feature package following the established pattern: `__init__.py` is the sole public surface, internal files are organized by concern. Reading `demo_features/systems/` alongside MANUAL.md §8 is an efficient way to see all 10 newer systems in action.
+**`demo_features/`** contains living reference patterns for every major gui_do subsystem. Each subfolder is one feature package following the established pattern: `__init__.py` is the sole public surface, internal files are organized by concern. Reading `demo_features/system/` alongside MANUAL.md §8 is an efficient way to see all 10 newer systems in action.
 
 **`gui_do/features/data_driven_runtime.py`** and **`gui_do/features/feature_lifecycle.py`** are readable and well-commented. Working through the bootstrap function in `data_driven_runtime.py` will demystify exactly what `bootstrap_host_application` does and why the lifecycle phases fire in the order they do.
 
