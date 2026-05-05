@@ -100,7 +100,7 @@ class MovingShapesBackdropFeature(DirectFeature):
         radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
         center = (radius, radius)
         pygame.draw.circle(sprite, border_color, center, radius)
-        pygame.draw.circle(sprite, fill_color, center, max(1, radius - 2))
+        pygame.draw.circle(sprite, fill_color, center, max(1, radius - 3))
         return self._build_shape_state(sprite, radius)
 
     def _create_polygon_shape(self, num_sides: int, is_star: bool) -> ShapeSpriteState:
