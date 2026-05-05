@@ -61,12 +61,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         feature_entries=(
             (
                 "_shapes_feature",
-                lambda: MovingShapesBackdropFeature(
-                    circle_count=12,
-                    square_count=12,
-                    octagon_count=12,
-                    star_count=12,
-                ),
+                lambda: MovingShapesBackdropFeature(total_shapes=49),
             ),
             ("_main_feature", MainFeature),
             ("_controls_feature", ShowcaseFeature),

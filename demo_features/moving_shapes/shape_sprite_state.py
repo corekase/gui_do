@@ -11,7 +11,6 @@ import pygame
 class ShapeSpriteState:
     """Per-shape cached sprite with runtime position and velocity."""
 
-    kind: str
     radius: int
     sprite: pygame.Surface
     x: float

@@ -13,6 +13,17 @@ from gui_do import DirectFeature
 from .moving_shapes_specs import DEMO_BORDER_BASE_COLOUR, DEMO_SHAPE_COLOURS
 from .shape_sprite_state import ShapeSpriteState
 
+# Each entry is (num_sides, is_star).  num_sides == 0 is the circle special-case.
+_SHAPE_DEFINITIONS: list[tuple[int, bool]] = [
+    (0, False),   # circle
+    (3, False),   # triangle
+    (4, False),   # square
+    (5, False),   # pentagon
+    (6, False),   # hexagon
+    (8, False),   # octagon
+    (5, True),    # star (5-point, alternating 100%/50% radius)
+]
+
 
 class MovingShapesBackdropFeature(DirectFeature):
     """Render and animate cached random geometric sprites directly on screen."""
@@ -24,19 +35,13 @@ class MovingShapesBackdropFeature(DirectFeature):
     def __init__(
         self,
         *,
-        circle_count: int = 28,
-        square_count: int = 0,
-        octagon_count: int = 0,
-        star_count: int = 0,
+        total_shapes: int = 48,
         seed: Optional[int] = None,
         scene_name: Optional[str] = None,
         feature_name: str = "moving_shapes_backdrop",
     ) -> None:
         super().__init__(feature_name, scene_name=scene_name)
-        self.circle_count = max(0, int(circle_count))
-        self.square_count = max(0, int(square_count))
-        self.octagon_count = max(0, int(octagon_count))
-        self.star_count = max(0, int(star_count))
+        self._total_shapes = max(0, int(total_shapes))
         self._rng = random.Random(seed)
         self._shapes: list[ShapeSpriteState] = []
         self._create_shapes()
@@ -77,15 +82,18 @@ class MovingShapesBackdropFeature(DirectFeature):
             surface.blit(shape.sprite, (left, top))
 
     def _create_shapes(self) -> None:
-        """Create cached shape sprite/motion states at init time."""
-        for _ in range(self.circle_count):
-            self._shapes.append(self._create_circle_shape())
-        for _ in range(self.square_count):
-            self._shapes.append(self._create_square_shape())
-        for _ in range(self.octagon_count):
-            self._shapes.append(self._create_octagon_shape())
-        for _ in range(self.star_count):
-            self._shapes.append(self._create_star_shape())
+        """Divide total_shapes evenly among all available shape types."""
+        num_types = len(_SHAPE_DEFINITIONS)
+        if num_types == 0:
+            return
+        base, remainder = divmod(self._total_shapes, num_types)
+        for i, (num_sides, is_star) in enumerate(_SHAPE_DEFINITIONS):
+            count = base + (1 if i < remainder else 0)
+            for _ in range(count):
+                if num_sides == 0:
+                    self._shapes.append(self._create_circle_shape())
+                else:
+                    self._shapes.append(self._create_polygon_shape(num_sides, is_star))
 
     def _create_circle_shape(self) -> ShapeSpriteState:
         """Create one cached circular sprite with initial velocity."""
@@ -93,53 +101,29 @@ class MovingShapesBackdropFeature(DirectFeature):
         center = (radius, radius)
         pygame.draw.circle(sprite, border_color, center, radius)
         pygame.draw.circle(sprite, fill_color, center, max(1, radius - 2))
-        return self._build_shape_state("circle", sprite, radius, rotate=False)
+        return self._build_shape_state(sprite, radius)
 
-    def _create_square_shape(self) -> ShapeSpriteState:
-        """Create one cached axis-aligned square sprite with velocity."""
+    def _create_polygon_shape(self, num_sides: int, is_star: bool) -> ShapeSpriteState:
+        """Create a polygon sprite using evenly-divided degree points and a random rotation offset."""
         radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
-        diameter = radius * 2
-        pygame.draw.rect(sprite, fill_color, pygame.Rect(0, 0, diameter, diameter))
-        pygame.draw.rect(sprite, border_color, pygame.Rect(0, 0, diameter, diameter), width=2)
-        return self._build_shape_state("square", sprite, radius, rotate=True)
-
-    def _create_octagon_shape(self) -> ShapeSpriteState:
-        """Create one cached regular octagon sprite with velocity."""
-        radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
-
         center_x = float(radius)
         center_y = float(radius)
         outer_r = float(radius - 1)
+        inner_r = outer_r * 0.5
+        num_points = num_sides * 2 if is_star else num_sides
+        step_deg = 360.0 / num_points
+        start_deg = self._rng.uniform(0.0, 360.0)
         points = []
-        for i in range(8):
-            angle = (math.tau * i / 8.0) - (math.pi / 8.0)
-            px = center_x + (math.cos(angle) * outer_r)
-            py = center_y + (math.sin(angle) * outer_r)
+        for i in range(num_points):
+            angle_deg = start_deg + step_deg * i
+            angle_rad = math.radians(angle_deg)
+            point_r = (inner_r if i % 2 else outer_r) if is_star else outer_r
+            px = center_x + math.cos(angle_rad) * point_r
+            py = center_y + math.sin(angle_rad) * point_r
             points.append((int(round(px)), int(round(py))))
-
         pygame.draw.polygon(sprite, fill_color, points)
-        pygame.draw.polygon(sprite, border_color, points, width=2)
-        return self._build_shape_state("octagon", sprite, radius, rotate=True)
-
-    def _create_star_shape(self) -> ShapeSpriteState:
-        """Create one cached five-point star sprite with velocity."""
-        radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
-
-        center_x = float(radius)
-        center_y = float(radius)
-        outer_r = float(radius - 1)
-        inner_r = max(2.0, outer_r * 0.45)
-        points = []
-        for i in range(10):
-            angle = (-math.pi / 2.0) + (math.pi * i / 5.0)
-            point_r = outer_r if i % 2 == 0 else inner_r
-            px = center_x + (math.cos(angle) * point_r)
-            py = center_y + (math.sin(angle) * point_r)
-            points.append((int(round(px)), int(round(py))))
-
-        pygame.draw.polygon(sprite, fill_color, points)
-        pygame.draw.polygon(sprite, border_color, points, width=2)
-        return self._build_shape_state("star", sprite, radius, rotate=True)
+        pygame.draw.polygon(sprite, border_color, points, width=1)
+        return self._build_shape_state(sprite, radius)
 
     def _create_shape_surface_and_colors(self) -> tuple[int, pygame.Surface, tuple[int, int, int, int], tuple[int, int, int, int]]:
         """Build a base square ARGB surface plus randomized fill/border colors."""
@@ -153,18 +137,12 @@ class MovingShapesBackdropFeature(DirectFeature):
         border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
         return radius, sprite, fill_color, border_color
 
-    def _build_shape_state(self, kind: str, sprite: pygame.Surface, radius: int, *, rotate: bool) -> ShapeSpriteState:
-        """Finalize sprite orientation and motion into a ShapeSpriteState."""
-        resolved_sprite = sprite
-        resolved_radius = int(radius)
-        if rotate:
-            resolved_sprite = pygame.transform.rotate(resolved_sprite, self._rng.uniform(0.0, 360.0))
-            resolved_radius = resolved_sprite.get_width() // 2
+    def _build_shape_state(self, sprite: pygame.Surface, radius: int) -> ShapeSpriteState:
+        """Finalize sprite and motion into a ShapeSpriteState."""
         dx, dy = self._random_velocity()
         return ShapeSpriteState(
-            kind=str(kind),
-            radius=int(resolved_radius),
-            sprite=resolved_sprite,
+            radius=int(radius),
+            sprite=sprite,
             x=0.0,
             y=0.0,
             dx=dx,
