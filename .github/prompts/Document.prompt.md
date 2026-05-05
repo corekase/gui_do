@@ -79,8 +79,8 @@ Write README.md with exactly these top-level sections, in this order:
 
 #### 1. Project Header
 
-- Project name (`gui_do`) and the latest demo video block (see Media Block spec below).
-- Unittest badge immediately below the video block.
+- Unittest badge (first line, before the project heading).
+- Project name (`gui_do`) heading, followed by the latest demo video block (see Media Block spec below).
 - One-paragraph plain-English description (3–5 sentences):
   - What gui_do is (a Python GUI framework built on pygame)
   - The central programming model (declarative specs, feature lifecycle, reactive state)
@@ -157,22 +157,22 @@ Links to:
 
 ### Preserved README Header Elements
 
-If README.md exists, read it before generating and carry forward its header elements exactly. If README.md does not exist, construct the header from the Media Block spec and the verbatim badge line below — no file read is needed. The following elements must appear in the generated file regardless of which path applies:
+If README.md exists, read it before generating and extract its header elements (heading, demonstration block URL, badge text) for reuse. If README.md does not exist, construct the header from the Media Block spec and the verbatim badge line below — no file read is needed. Regardless of where these elements appear in the existing file, always output them in the canonical order below. The following elements must appear in the generated file regardless of which path applies:
 
-- **Project heading**: `# gui_do` (first line of the file)
+- **Project heading**: `# gui_do` (second line of the file, immediately after the unittest badge)
 - **Latest Demonstration block**: the `### Latest Demonstration` section with its surrounding `---` dividers and the `<a href=...><img ...></a>` video thumbnail block. Read `gui_do/_version.py` `__demo__` and use that value as `URLPART`. If README.md existed and the URL already matched, preserve it unchanged; otherwise construct it from the Media Block spec below.
 - **Unittest badge**: `[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg?branch=main)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)` — copy this line verbatim; do not alter the URL or badge text.
 
 The ordering of these three elements must remain:
-1. `# gui_do`
-2. `### Latest Demonstration` block (with `---` dividers)
-3. Unittest badge line
+1. Unittest badge line (line 1 of the file)
+2. `# gui_do` (line 2)
+3. `### Latest Demonstration` block (with `---` dividers)
 
 ### Media Block Spec
 
 Read `gui_do/_version.py` for `__demo__`. Use its value as `URLPART`.
 
-Position: immediately below the `# gui_do` project name heading, before the unittest badge.
+Position: immediately below the `# gui_do` project name heading. Header order is always: badge first, then heading, then demonstration block.
 
 Exact format:
 ```
@@ -375,7 +375,7 @@ This listing must run as-is. All imports must be from `gui_do` root. All API nam
 
 After generating both files, run a compliance pass:
 
-1. **README.md header check.** Confirm the file opens with `# gui_do`, followed by the `### Latest Demonstration` block (with `---` dividers), followed by the unittest badge line. Confirm the video URL uses the `__demo__` value from `gui_do/_version.py`. Confirm the badge URL is the exact verbatim string from the existing README.
+1. **README.md header check.** Confirm the file opens with the unittest badge line on line 1, then `# gui_do` on line 2, then the `### Latest Demonstration` block (with `---` dividers). If the badge appears anywhere else, move it to line 1. Confirm the video URL uses the `__demo__` value from `gui_do/_version.py`. Confirm the badge URL is the exact verbatim string from the existing README.
 2. **README.md structure check.** Confirm the eight required sections are present in order after the header.
 3. **TUTORIAL.md structure check.** Confirm all 11 required sections are present in order. Confirm the install command is `python -m pip install -e . --no-deps`. Confirm no private/internal symbol appears in any code example.
 4. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
