@@ -34,9 +34,8 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Sequence, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
-import pygame
 from pygame import Rect, Surface
 
 

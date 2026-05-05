@@ -3,7 +3,7 @@ from typing import Optional, TYPE_CHECKING
 
 from pygame import Rect
 
-from ...events.gui_event import GuiEvent
+from ...events.gui_event import EventType, GuiEvent
 from ...events.value_change_callback import ValueChangeCallback
 from ...events.value_change_callback import dispatch_value_change
 from ...events.value_change_callback import validate_value_change_callback
@@ -14,6 +14,16 @@ from ...layout.layout_axis import LayoutAxis
 if TYPE_CHECKING:
     from ...app.gui_application import GuiApplication
     from ...theme.color_theme import ColorTheme
+
+
+_SLIDER_FOCUS_KEYS: frozenset[int] = frozenset((
+    pygame.K_HOME,
+    pygame.K_END,
+    pygame.K_LEFT,
+    pygame.K_RIGHT,
+    pygame.K_DOWN,
+    pygame.K_UP,
+))
 
 
 class SliderControl(_AxisDragControlBase):
@@ -77,13 +87,14 @@ class SliderControl(_AxisDragControlBase):
         travel = self._travel_rect()
         handle_len = self._handle_length()
         origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
-        return int(round(origin + (handle_len / 2.0) + (ratio * self._travel_span())))
+        travel_span = max(0, (travel.width if self.axis == LayoutAxis.HORIZONTAL else travel.height) - handle_len)
+        return int(round(origin + (handle_len / 2.0) + (ratio * travel_span)))
 
     def _to_value(self, pixel: int) -> float:
         self._normalize_range()
         travel = self._travel_rect()
         handle_len = self._handle_length()
-        span_pixels = self._travel_span()
+        span_pixels = max(0, (travel.width if self.axis == LayoutAxis.HORIZONTAL else travel.height) - handle_len)
         origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
         ratio = 0.0 if span_pixels <= 0 else (pixel - (origin + (handle_len / 2.0))) / float(span_pixels)
         ratio = min(max(ratio, 0.0), 1.0)
@@ -231,14 +242,7 @@ class SliderControl(_AxisDragControlBase):
             self._end_drag(app)
             return False
 
-        if not self.focused and (
-            event.is_key_down(pygame.K_HOME)
-            or event.is_key_down(pygame.K_END)
-            or event.is_key_down(pygame.K_LEFT)
-            or event.is_key_down(pygame.K_RIGHT)
-            or event.is_key_down(pygame.K_DOWN)
-            or event.is_key_down(pygame.K_UP)
-        ):
+        if not self.focused and event.kind is EventType.KEY_DOWN and event.key in _SLIDER_FOCUS_KEYS:
             return False
 
         step = self._keyboard_step()

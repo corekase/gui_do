@@ -45,11 +45,9 @@ Usage::
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Callable, Dict, FrozenSet, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
-from ..data.presentation_model import ObservableValue
-from .state_machine import StateMachine, _TransitionRecord
+from .state_machine import StateMachine
 
 
 # ---------------------------------------------------------------------------

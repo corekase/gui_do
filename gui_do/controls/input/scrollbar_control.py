@@ -3,7 +3,7 @@ from typing import Optional, TYPE_CHECKING
 
 from pygame import Rect
 
-from ...events.gui_event import GuiEvent
+from ...events.gui_event import EventType, GuiEvent
 from ...events.value_change_callback import ValueChangeCallback
 from ...events.value_change_callback import dispatch_value_change
 from ...events.value_change_callback import validate_value_change_callback
@@ -14,6 +14,18 @@ from ...layout.layout_axis import LayoutAxis
 if TYPE_CHECKING:
     from ...app.gui_application import GuiApplication
     from ...theme.color_theme import ColorTheme
+
+
+_SCROLLBAR_FOCUS_KEYS: frozenset[int] = frozenset((
+    pygame.K_HOME,
+    pygame.K_END,
+    pygame.K_PAGEUP,
+    pygame.K_PAGEDOWN,
+    pygame.K_LEFT,
+    pygame.K_RIGHT,
+    pygame.K_UP,
+    pygame.K_DOWN,
+))
 
 
 class ScrollbarControl(_AxisDragControlBase):
@@ -61,7 +73,6 @@ class ScrollbarControl(_AxisDragControlBase):
         return max(0, self.content_size - self.viewport_size)
 
     def _clamp_offset(self) -> None:
-        self._normalize_geometry()
         self.offset = min(max(0, self.offset), self._max_offset())
 
     def _page_step(self) -> int:
@@ -140,6 +151,13 @@ class ScrollbarControl(_AxisDragControlBase):
         ratio = 0.0 if max_offset <= 0 else self.offset / float(max_offset)
         return int(round(ratio * travel_span))
 
+    def _offset_to_pixel_with_len(self, handle_len: int) -> int:
+        track = self._track_rect()
+        max_offset = self._max_offset()
+        travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
+        ratio = 0.0 if max_offset <= 0 else self.offset / float(max_offset)
+        return int(round(ratio * travel_span))
+
     def _pixel_to_offset(self, pixel: int) -> int:
         track = self._track_rect()
         handle_len = self._handle_length()
@@ -152,7 +170,7 @@ class ScrollbarControl(_AxisDragControlBase):
         self._clamp_offset()
         track = self._track_rect()
         handle_len = self._handle_length()
-        pixel = self._drag_handle_axis_pixel if self.dragging else self._offset_to_pixel()
+        pixel = self._drag_handle_axis_pixel if self.dragging else self._offset_to_pixel_with_len(handle_len)
         if self.axis == LayoutAxis.HORIZONTAL:
             return Rect(track.left + pixel, track.top, handle_len, track.height)
         return Rect(track.left, track.top + pixel, track.width, handle_len)
@@ -232,16 +250,7 @@ class ScrollbarControl(_AxisDragControlBase):
             self._end_drag(app)
             return False
 
-        if not self.focused and (
-            event.is_key_down(pygame.K_HOME)
-            or event.is_key_down(pygame.K_END)
-            or event.is_key_down(pygame.K_PAGEUP)
-            or event.is_key_down(pygame.K_PAGEDOWN)
-            or event.is_key_down(pygame.K_LEFT)
-            or event.is_key_down(pygame.K_RIGHT)
-            or event.is_key_down(pygame.K_UP)
-            or event.is_key_down(pygame.K_DOWN)
-        ):
+        if not self.focused and event.kind is EventType.KEY_DOWN and event.key in _SCROLLBAR_FOCUS_KEYS:
             return False
 
         if event.is_key_down(pygame.K_HOME):
@@ -274,7 +283,7 @@ class ScrollbarControl(_AxisDragControlBase):
                     self._drag_anchor_offset = pointer[1] - handle.y
                 self._refresh_drag_lock_rect(app, pointer)
                 app.pointer_capture.begin(self.control_id, app.pointer_capture.lock_rect, use_relative_motion=True)
-                pointer_pos = app.logical_pointer_pos
+                pointer_pos = pointer
                 track = self._track_rect()
                 self._drag_handle_axis_pixel = (
                     int(pointer_pos[0]) - track.left - self._drag_anchor_offset

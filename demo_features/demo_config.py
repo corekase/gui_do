@@ -17,7 +17,6 @@ from gui_do import (
     TelemetryConfig,
     build_host_application_config,
 )
-import pygame
 
 
 DEMO_BOOTSTRAP_CONFIG = build_host_application_config(

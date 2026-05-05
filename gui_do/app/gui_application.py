@@ -567,12 +567,13 @@ class GuiApplication:
             pointer_event_in_window, pointer_focus_target = self.scene.pointer_context_at(logical_event.pos)
 
         if is_pointer_event:
+            is_lmb_down = logical_event.is_mouse_down(1)
             # IMPORTANT: for mouse-down clicks inside an open overlay, route the overlay
             # BEFORE changing scene-graph focus.  Setting focus first triggers
             # on_focus_changed(False) on the focused control (e.g. a menu bar), which
             # dismisses any open flyout before the click can reach it.
             click_in_overlay = (
-                logical_event.is_mouse_down(1)
+                is_lmb_down
                 and self.overlay.point_in_any_overlay(logical_event.pos)
             )
             if click_in_overlay:
@@ -588,7 +589,7 @@ class GuiApplication:
             else:
                 # Normal path: for mouse-down, apply focus first (background clicks
                 # intentionally do not mutate focus state).
-                if logical_event.is_mouse_down(1) and pointer_focus_target is not None:
+                if is_lmb_down and pointer_focus_target is not None:
                     self.focus.set_focus(pointer_focus_target)
                 overlay_consumed = self.overlay.route_event(logical_event, self)
                 if overlay_consumed:

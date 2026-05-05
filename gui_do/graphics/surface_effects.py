@@ -24,13 +24,12 @@ numpy is not available the functions fall back to a slower pure-Python path
 from __future__ import annotations
 
 import math
-from typing import Optional, Tuple
+from typing import Tuple
 
 import pygame
 from pygame import Surface
 
 try:
-    import numpy as _np
     _HAS_NUMPY = True
 except ImportError:
     _HAS_NUMPY = False

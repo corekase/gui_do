@@ -38,14 +38,13 @@ Usage::
 from __future__ import annotations
 
 from collections import deque
-from typing import Any, Deque, List, Optional, Tuple, TYPE_CHECKING
+from typing import Deque, List, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect, Surface
 
 if TYPE_CHECKING:
     from ..app.scene import Scene
-    from ..theme.color_theme import ColorTheme
     from .dirty_region import DirtyRegionTracker
 
 
@@ -186,7 +185,6 @@ class DebugOverlay:
             if dirty_tracker is not None:
                 dirty_rects.extend(dirty_tracker.dirty_union() and [dirty_tracker.dirty_union()] or [])
             self._dirty_flash = []
-            flash_surf = Surface((1, 1), pygame.SRCALPHA)
             for dr in dirty_rects:
                 if dr and dr.width > 0 and dr.height > 0:
                     fs = Surface((dr.width, dr.height), pygame.SRCALPHA)

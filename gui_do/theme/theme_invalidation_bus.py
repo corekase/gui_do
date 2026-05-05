@@ -42,7 +42,6 @@ from __future__ import annotations
 from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..theme.theme_manager import ThemeManager, DesignTokens
     from ..graphics.dirty_region import DirtyRegionTracker
 
 

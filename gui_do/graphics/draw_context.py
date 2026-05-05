@@ -35,8 +35,6 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Optional, Tuple
-
-import pygame
 from pygame import Rect, Surface
 
 

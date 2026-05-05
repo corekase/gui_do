@@ -16,7 +16,6 @@ from gui_do.features.data_driven_runtime import (
 from .life_logic_feature import LifeLogicFeature
 from .life_specs import (
     _LIFE_WINDOW_SPEC,
-    _LIFE_RUNTIME_SPEC,
     _LIFE_LIFECYCLE_SPEC,
 )
 

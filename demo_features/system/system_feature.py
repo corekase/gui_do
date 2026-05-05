@@ -24,9 +24,6 @@ from gui_do import (
     CoroutineHandle,
     DataCache,
     FormField,
-    DiffInsert,
-    DiffMove,
-    DiffRemove,
     DockPane,
     DockTabs,
     DockWorkspace,
@@ -41,7 +38,6 @@ from gui_do import (
     FrameTimer,
     InputMap,
     LabelControl,
-    ListDiff,
     ListDiffCalculator,
     ListItem,
     LocaleRegistry,
@@ -75,10 +71,8 @@ from gui_do import (
     ResponsiveLayout,
     # N1 – Scoped Service Graph
     ServiceKey,
-    ServiceScope,
     ScopeStack,
     # N2 – Cancelable Dataflow Pipeline
-    CancellationToken,
     DataflowPipeline,
     PipelineStage,
     # N3 – Transactional App State Store
@@ -112,7 +106,6 @@ from gui_do import (
     SchemaVersion,
     SnapshotMigrator,
     make_snapshot,
-    read_version,
     RoutedFeature,
     SceneSpatialIndex,
     SceneSnapshot,
@@ -124,13 +117,11 @@ from gui_do import (
     TabPanelManager,
     TextFlow,
     TextInputControl,
-    TextMatch,
     TextSearcher,
     TextSpan,
     TileMap,
     TileSet,
     ToggleControl,
-    WaitUntil,
     WindowControl,
 )
 from gui_do import set_window_visible_state
@@ -151,12 +142,9 @@ from gui_do.features.data_driven_runtime import (
 from .demo_inspectable import DemoInspectable
 from .set_int_command import SetIntCommand
 from .system_specs import (
-    _TAB_H,
     _SYSTEMS_WINDOW_SPEC,
-    _SYSTEMS_TAB_ENTRIES,
     _SYSTEMS_TAB_SPECS,
     _SYSTEMS_TABBED_PRESENTER_SPEC,
-    _SYSTEMS_RUNTIME_SPEC,
     _SYSTEMS_LIFECYCLE_SPEC,
 )
 
@@ -1272,7 +1260,6 @@ class SystemFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_particle_tab(self, host, rect: Rect) -> list:
-        import pygame as _pygame
         ctx = TabLayoutContext(self.window, rect)
 
         ctx.add_label("nsdf_particle_info", 20,
@@ -2013,7 +2000,6 @@ class SystemFeature(RoutedFeature):
     _NS_V3 = SchemaVersion(3, 0)
 
     def _build_arch3_tab(self, host, rect: Rect) -> list:
-        from pygame import Rect as _Rect
         ctx = TabLayoutContext(self.window, rect)
 
         ctx.add_label(

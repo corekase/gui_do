@@ -23,10 +23,6 @@ class FocusVisualizer:
     def __init__(self, app) -> None:
         self.app = app
 
-    def has_active_hint(self) -> bool:
-        """Return True when a focus hint is currently eligible to draw."""
-        return self._focused_node() is not None
-
     def _focused_node(self):
         """Return the currently focused UI node when hint drawing is enabled."""
         if not self.app.focus.should_draw_focus_hint():

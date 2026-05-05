@@ -83,7 +83,6 @@ from gui_do import (
     draw_controls_prewarm,
     ensure_scene_task_panel,
     make_labeled_slot_height_fn,
-    ui_property,
     ControlDefinition,
     build_specs_from_column_section,
 )
@@ -118,7 +117,6 @@ def _relayout_category(
     gallery_layout,
     ensure_basics_aux_label,
 ) -> None:
-    from collections.abc import Callable
     bounds = Rect(category_content_bounds)
     if bounds.width <= 0 or bounds.height <= 0:
         return

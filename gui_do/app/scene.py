@@ -122,24 +122,12 @@ class Scene:
             if node.children:
                 queue.extend(node.children)
 
-    def _window_nodes(self) -> List[UiNode]:
-        windows, _task_panels = self._window_query_nodes()
-        return list(windows)
-
     def active_window(self) -> UiNode | None:
         windows, _task_panels = self._window_query_nodes()
-        result = None
-        for node in windows:
+        for node in reversed(windows):
             if node.active and node.visible and node.enabled:
-                result = node
-        return result
-
-    def _point_in_task_panel(self, pos) -> bool:
-        _windows, task_panels = self._window_query_nodes()
-        for node in task_panels:
-            if node.visible and node.enabled and node.rect.collidepoint(pos):
-                return True
-        return False
+                return node
+        return None
 
     def _point_in_window(self, pos) -> bool:
         windows, _task_panels = self._window_query_nodes()

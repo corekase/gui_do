@@ -36,10 +36,8 @@ Usage::
 """
 from __future__ import annotations
 
-import math
 from typing import Callable, List, Optional, Sequence, Tuple
 
-import pygame
 from pygame import Rect, Surface
 
 

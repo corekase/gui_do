@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Deque, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Deque, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -48,14 +48,6 @@ class _ToastEntry:
     alpha: float = 1.0
 
 
-_SEVERITY_COLORS: "Dict[ToastSeverity, Tuple[int, int, int]]" = {
-    ToastSeverity.INFO: (50, 120, 200),
-    ToastSeverity.SUCCESS: (50, 180, 80),
-    ToastSeverity.WARNING: (200, 160, 40),
-    ToastSeverity.ERROR: (200, 60, 60),
-}
-
-
 class ToastManager:
     """App-level service for showing transient toast notifications."""
 
@@ -67,7 +59,6 @@ class ToastManager:
         max_visible: int = 5,
         default_duration_seconds: float = 3.0,
         toast_width: int = 280,
-        row_height: int = 56,
         margin: int = 16,
         gap: int = 8,
     ) -> None:
@@ -76,7 +67,6 @@ class ToastManager:
         self._max_visible = max(1, int(max_visible))
         self._default_duration = float(default_duration_seconds)
         self._toast_width = int(toast_width)
-        self._row_height = int(row_height)
         self._margin = int(margin)
         self._gap = int(gap)
         self._toasts: Deque[_ToastEntry] = deque(maxlen=self._max_visible)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pygame
 from typing import Optional, Tuple
 
 from pygame import Rect

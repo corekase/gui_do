@@ -122,7 +122,6 @@ class ShapeRenderer:
         a Gaussian shadow blur.  Fully portable.
         """
         layers = max(1, spread)
-        shadow_color = (color[0], color[1], color[2], alpha)
         shadow_rect = rect.inflate(spread * 2, spread * 2).move(offset_x, offset_y)
         for i in range(layers, 0, -1):
             layer_alpha = int(alpha * (i / layers) * 0.6)

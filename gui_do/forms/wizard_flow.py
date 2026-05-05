@@ -212,8 +212,6 @@ class WizardFlow:
         self._index -= 1
         self._update_progress(self._index / len(self._steps))
 
-        # Restore previously collected data for this step
-        prev = self._step_data[self._index]
         self._fire_enter(self._index)
         return True
 
