@@ -2,7 +2,7 @@ import unittest
 
 from pygame import Rect
 
-from demo_features.life import LifeSimulationFeature
+from demo_features.life import LifeFeature
 
 
 class _StubPacket:
@@ -57,7 +57,7 @@ class _StubToggle:
 
 class TestLifeDemoFeatureAbstractions(unittest.TestCase):
     def test_update_life_frame_core_toggles_cell_from_local_point(self):
-        feature = LifeSimulationFeature()
+        feature = LifeFeature()
         feature.life_cells = set()
         feature.life_origin = [0.0, 0.0]
         feature.life_cell_size = 10
@@ -71,7 +71,7 @@ class TestLifeDemoFeatureAbstractions(unittest.TestCase):
         self.assertIn(("toggle_cell", {"cell": (2, 1)}), sent)
 
     def test_update_life_frame_core_steps_when_toggle_pushed(self):
-        feature = LifeSimulationFeature()
+        feature = LifeFeature()
         feature.life_cells = {(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)}
         feature.life_origin = [0.0, 0.0]
         feature.life_cell_size = 12

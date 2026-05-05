@@ -3,9 +3,9 @@
 This package is the canonical container for Mandelbrot feature behavior and specs.
 """
 
-from .mandel_status_event import MandelStatusEvent
-from .mandelbrot_logic_feature import MandelbrotLogicFeature
-from .mandelbrot_render_feature import MandelbrotRenderFeature
+from .mandelbrot_status_event import MandelStatusEvent
+from .mandelbrot_logic import MandelbrotLogicFeature
+from .mandelbrot_render import MandelbrotFeature
 from .mandelbrot_specs import (
     MANDEL_KIND_CLEARED,
     MANDEL_KIND_COMPLETE,
@@ -19,7 +19,7 @@ from .mandelbrot_specs import (
     MANDEL_STATUS_SCOPE,
     MANDEL_STATUS_TOPIC,
 )
-from .mandelbrot_window_presenter import MandelbrotWindowPresenter
+from .mandelbrot_presenter import MandelbrotPresenter
 
 FEATURE_PACKAGE_INFO = {
     "feature_name": "mandelbrot",
@@ -42,6 +42,6 @@ __all__ = [
     "MANDEL_STATUS_TOPIC",
     "MandelStatusEvent",
     "MandelbrotLogicFeature",
-    "MandelbrotRenderFeature",
-    "MandelbrotWindowPresenter",
+    "MandelbrotFeature",
+    "MandelbrotPresenter",
 ]

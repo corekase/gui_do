@@ -5,9 +5,9 @@ This package owns the systems feature, its specs, and feature-local support clas
 
 from .demo_inspectable import DemoInspectable
 from .set_int_command import SetIntCommand
-from .systems_demo_feature import SystemsDemoFeature
-from .systems_specs import SYSTEMS_LIFECYCLE_SPEC, SYSTEMS_RUNTIME_SPEC, SYSTEMS_WINDOW_SPEC
-from .systems_window_presenter import SystemsWindowPresenter
+from .system_feature import SystemFeature
+from .system_specs import SYSTEMS_LIFECYCLE_SPEC, SYSTEMS_RUNTIME_SPEC, SYSTEMS_WINDOW_SPEC
+from .system_presenter import SystemPresenter
 
 FEATURE_PACKAGE_INFO = {
     "feature_name": "systems",
@@ -22,6 +22,6 @@ __all__ = [
     "SYSTEMS_LIFECYCLE_SPEC",
     "SYSTEMS_RUNTIME_SPEC",
     "SYSTEMS_WINDOW_SPEC",
-    "SystemsDemoFeature",
-    "SystemsWindowPresenter",
+    "SystemFeature",
+    "SystemPresenter",
 ]

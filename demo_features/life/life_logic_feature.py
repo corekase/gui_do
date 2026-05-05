@@ -14,7 +14,7 @@ _LIFE_LOGIC_TOPIC = "life_logic"
 _LIFE_EVENT_STATE = "state"
 
 
-class LifeSimulationLogicFeature(LogicFeature):
+class LifeLogicFeature(LogicFeature):
 	"""Domain logic service for Conway life cycles."""
 
 	DEFAULT_SEED: Set[Tuple[int, int]] = {
@@ -100,4 +100,4 @@ class LifeSimulationLogicFeature(LogicFeature):
 		)
 
 
-__all__ = ["LifeSimulationLogicFeature"]
+__all__ = ["LifeLogicFeature"]

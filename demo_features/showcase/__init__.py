@@ -4,12 +4,12 @@ This package owns the showcase feature, its specs, and feature-local support cla
 """
 
 from .control_gallery_layout_manager import ControlGalleryLayoutManager
-from .controls_showcase_feature import ControlsShowcaseFeature
-from .controls_specs import BASICS_SUPPRESSED_LABEL_NAMES, CONTROLS_RUNTIME_SPEC
+from .showcase_feature import ShowcaseFeature
+from .showcase_specs import BASICS_SUPPRESSED_LABEL_NAMES, CONTROLS_RUNTIME_SPEC
 from .showcase_inspectable import ShowcaseInspectable
 
 FEATURE_PACKAGE_INFO = {
-    "feature_name": "controls",
+    "feature_name": "showcase",
     "scene_scope": "control_showcase",
     "layout_standard": "feature package with package-local specs, classes, and helpers",
 }
@@ -18,7 +18,7 @@ __all__ = [
     "BASICS_SUPPRESSED_LABEL_NAMES",
     "CONTROLS_RUNTIME_SPEC",
     "ControlGalleryLayoutManager",
-    "ControlsShowcaseFeature",
+    "ShowcaseFeature",
     "FEATURE_PACKAGE_INFO",
     "ShowcaseInspectable",
 ]

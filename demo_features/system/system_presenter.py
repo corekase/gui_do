@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
-from .systems_demo_feature import (
+from .system_feature import (
     _SYSTEMS_TAB_SPECS,
     _SYSTEMS_TABBED_PRESENTER_SPEC,
     setup_feature_presenter_tabs_from_window_content,
 )
 
 
-class SystemsWindowPresenter(WindowPresenter):
+class SystemPresenter(WindowPresenter):
 
     def __init__(self, feature, host):
         super().__init__(None)
@@ -39,4 +39,4 @@ class SystemsWindowPresenter(WindowPresenter):
         self.window.visible = False
 
 
-__all__ = ["SystemsWindowPresenter"]
+__all__ = ["SystemPresenter"]

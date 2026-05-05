@@ -4,7 +4,7 @@ import pygame
 
 from gui_do import ButtonControl, LabelControl, TabLayoutContext
 from gui_do.persistence.scene_snapshot import SceneSnapshot
-from demo_features.systems import SystemsDemoFeature
+from demo_features.system import SystemFeature
 
 
 class _StubWindow:
@@ -113,7 +113,7 @@ class TestSystemsDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual([buttons[0], buttons[1]], window.added)
 
     def test_restore_snapshot_uses_rect_topleft_for_status_text(self):
-        feature = SystemsDemoFeature()
+        feature = SystemFeature()
         window = _StubSnapshotWindow()
         feature.window = window
         feature._snapshot_label = _StubStatusLabel()

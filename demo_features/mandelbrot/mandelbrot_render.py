@@ -19,8 +19,8 @@ from gui_do.features.data_driven_runtime import (
     RoutedRuntimeSpec,
     shutdown_routed_feature_lifecycle,
 )
-from .mandel_status_event import MandelStatusEvent
-from .mandelbrot_logic_feature import MandelbrotLogicFeature
+from .mandelbrot_status_event import MandelStatusEvent
+from .mandelbrot_logic import MandelbrotLogicFeature
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ _MANDEL_LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
     runtime_spec_attr_name="_runtime_spec",
     scheduler_attr_name="scheduler",
 )
-class MandelbrotRenderFeature(RoutedFeature):
+class MandelbrotFeature(RoutedFeature):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
 
@@ -253,12 +253,12 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
-        from .mandelbrot_window_presenter import MandelbrotWindowPresenter
+        from .mandelbrot_presenter import MandelbrotPresenter
 
         self.window = create_feature_presented_window(
             host,
             feature=self,
-            presenter_cls=MandelbrotWindowPresenter,
+            presenter_cls=MandelbrotPresenter,
             spec=_MANDEL_WINDOW_SPEC,
             window_control_cls=WindowControl,
         )

@@ -1,6 +1,6 @@
 """Shared specs and status constants for the Mandelbrot demo feature."""
 
-from .mandelbrot_render_feature import (
+from .mandelbrot_render import (
     MANDEL_KIND_CLEARED,
     MANDEL_KIND_COMPLETE,
     MANDEL_KIND_FAILED,

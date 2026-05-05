@@ -15,7 +15,7 @@ from gui_do import (
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
-from .life_simulation_feature import (
+from .life_specs import (
 	_LIFE_CANVAS_CONTROL_SPEC,
 	_LIFE_CTRL_GAP,
 	_LIFE_CTRL_H,
@@ -26,7 +26,7 @@ from .life_simulation_feature import (
 )
 
 
-class LifeWindowPresenter(WindowPresenter):
+class LifePresenter(WindowPresenter):
 	"""Window presenter for the Conway's Game of Life window."""
 
 	def __init__(self, feature, host):
@@ -214,4 +214,4 @@ class LifeWindowPresenter(WindowPresenter):
 		self.feature._update_life_frame_core(self.host, self.canvas, self.toggle)
 
 
-__all__ = ["LifeWindowPresenter"]
+__all__ = ["LifePresenter"]

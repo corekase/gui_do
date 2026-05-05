@@ -88,40 +88,16 @@ from gui_do import (
     build_specs_from_column_section,
 )
 from gui_do.features.data_driven_runtime import (
-    RoutedRuntimeSpec,
     SceneMenuStripSpec,
-    TaskPanelFocusToggleSpec,
     add_scene_menu_strip_from_spec,
     build_tab_builder_specs,
     create_tab_control_from_specs,
     setup_routed_runtime,
 )
 from gui_do.features.feature_lifecycle import ControlPlacementSpec
-from demo_features.controls.control_gallery_layout_manager import ControlGalleryLayoutManager
+from demo_features.showcase.control_gallery_layout_manager import ControlGalleryLayoutManager
 from .showcase_inspectable import ShowcaseInspectable
-
-_CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
-    scene_name="control_showcase",
-    task_panel_focus_toggles=(
-        TaskPanelFocusToggleSpec(
-            action_name="toggle_task_panel_focus_control_showcase",
-            scene_name="control_showcase",
-            key=pygame.K_F1,
-        ),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# Category visibility helpers (inlined from control_showcase_category_visibility)
-# ---------------------------------------------------------------------------
-
-BASICS_SUPPRESSED_LABEL_NAMES: frozenset[str] = frozenset({
-    "button_2", "button_3",
-    "toggle_2", "toggle_3",
-    "button_group_a2", "button_group_a3",
-    "button_group_b2", "button_group_b3",
-    "button_group_c2", "button_group_c3",
-})
+from .showcase_specs import _CONTROLS_RUNTIME_SPEC, BASICS_SUPPRESSED_LABEL_NAMES
 
 
 def category_for_row(row_index: int) -> str:
@@ -960,7 +936,7 @@ def build_progress_column_specs(*, stack, col_w, slot_height_for, overflow_gap):
     return indeterminate_bar, anim_ctrl, specs, int(anim_slot_rect.bottom)
 
 
-class ControlsShowcaseFeature(Feature):
+class ShowcaseFeature(Feature):
     """Render all controls except task panel/window in grouped, non-uniform layouts."""
 
     HOST_REQUIREMENTS = {

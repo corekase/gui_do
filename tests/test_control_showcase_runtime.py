@@ -1,6 +1,6 @@
 import unittest
 
-from demo_features.controls.controls_showcase_feature import (
+from demo_features.showcase.showcase_feature import (
     control_has_open_popup,
     promote_open_popup_controls,
 )

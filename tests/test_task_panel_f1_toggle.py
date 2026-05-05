@@ -2,7 +2,7 @@ import unittest
 
 import pygame
 
-from demo_features.controls import ControlsShowcaseFeature
+from demo_features.showcase import ShowcaseFeature
 from gui_do.events.gui_event import EventType
 from gui_do.events.keyboard_manager import KeyboardManager
 
@@ -153,7 +153,7 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
 
     def test_control_showcase_binds_scene_owned_f1_toggle(self):
         host = _StubHost()
-        feature = ControlsShowcaseFeature()
+        feature = ShowcaseFeature()
 
         feature.bind_runtime(host)
 

@@ -31,7 +31,7 @@ from gui_do.features.data_driven_runtime import (
 from .main_specs import MAIN_RUNTIME_SPEC as _MAIN_RUNTIME_SPEC
 
 
-class MainDemoFeature(Feature):
+class MainFeature(Feature):
     """Build the demo's main scene surface and dock controls."""
 
     HOST_REQUIREMENTS = {

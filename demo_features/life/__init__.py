@@ -3,10 +3,10 @@
 This package is the canonical container for the Game of Life feature.
 """
 
-from .life_simulation_feature import LifeSimulationFeature
-from .life_simulation_logic_feature import LifeSimulationLogicFeature
+from .life_feature import LifeFeature
+from .life_logic_feature import LifeLogicFeature
 from .life_specs import LIFE_LIFECYCLE_SPEC, LIFE_RUNTIME_SPEC, LIFE_WINDOW_SPEC
-from .life_window_presenter import LifeWindowPresenter
+from .life_presenter import LifePresenter
 
 FEATURE_PACKAGE_INFO = {
     "feature_name": "life",
@@ -19,7 +19,7 @@ __all__ = [
     "LIFE_LIFECYCLE_SPEC",
     "LIFE_RUNTIME_SPEC",
     "LIFE_WINDOW_SPEC",
-    "LifeSimulationFeature",
-    "LifeSimulationLogicFeature",
-    "LifeWindowPresenter",
+    "LifeFeature",
+    "LifeLogicFeature",
+    "LifePresenter",
 ]

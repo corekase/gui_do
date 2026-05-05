@@ -7,7 +7,7 @@ from pygame import Rect
 from gui_do import ButtonControl, CanvasControl, LabelControl, centered_horizontal_strip_layout, inset_rect
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
-from .mandelbrot_render_feature import (
+from .mandelbrot_render import (
 	_MANDEL_BTN_COUNT,
 	_MANDEL_BTN_SPACING,
 	_MANDEL_CANVAS_H,
@@ -26,7 +26,7 @@ from .mandelbrot_render_feature import (
 )
 
 
-class MandelbrotWindowPresenter(WindowPresenter):
+class MandelbrotPresenter(WindowPresenter):
 	"""Window presenter for the Mandelbrot demo window."""
 
 	def __init__(self, feature, host):
@@ -154,4 +154,4 @@ class MandelbrotWindowPresenter(WindowPresenter):
 		return tuple(task_buttons)
 
 
-__all__ = ["MandelbrotWindowPresenter"]
+__all__ = ["MandelbrotPresenter"]

@@ -10,11 +10,11 @@ import pygame
 
 from gui_do import DirectFeature
 
-from .bouncing_shapes_specs import DEMO_BORDER_BASE_COLOUR, DEMO_SHAPE_COLOURS
+from .moving_shapes_specs import DEMO_BORDER_BASE_COLOUR, DEMO_SHAPE_COLOURS
 from .shape_sprite_state import ShapeSpriteState
 
 
-class BouncingShapesBackdropFeature(DirectFeature):
+class MovingShapesBackdropFeature(DirectFeature):
     """Render and animate cached random geometric sprites directly on screen."""
 
     HOST_REQUIREMENTS = {
@@ -30,7 +30,7 @@ class BouncingShapesBackdropFeature(DirectFeature):
         star_count: int = 0,
         seed: Optional[int] = None,
         scene_name: Optional[str] = None,
-        feature_name: str = "bouncing_shapes_backdrop",
+        feature_name: str = "moving_shapes_backdrop",
     ) -> None:
         super().__init__(feature_name, scene_name=scene_name)
         self.circle_count = max(0, int(circle_count))

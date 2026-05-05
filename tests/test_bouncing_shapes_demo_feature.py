@@ -2,7 +2,7 @@ import unittest
 
 import pygame
 
-from demo_features.bouncing_shapes import BouncingShapesBackdropFeature, ShapeSpriteState
+from demo_features.moving_shapes import MovingShapesBackdropFeature, ShapeSpriteState
 
 
 class _StubHost:
@@ -20,7 +20,7 @@ class TestBouncingShapesDemoFeature(unittest.TestCase):
         pygame.quit()
 
     def test_create_shapes_respects_requested_counts(self):
-        feature = BouncingShapesBackdropFeature(
+        feature = MovingShapesBackdropFeature(
             circle_count=2,
             square_count=1,
             octagon_count=1,
@@ -38,7 +38,7 @@ class TestBouncingShapesDemoFeature(unittest.TestCase):
         self.assertEqual(1, kind_counts.get("star", 0))
 
     def test_bind_runtime_randomizes_positions_within_bounds(self):
-        feature = BouncingShapesBackdropFeature(circle_count=3, seed=11)
+        feature = MovingShapesBackdropFeature(circle_count=3, seed=11)
         host = _StubHost(220, 160)
 
         feature.bind_runtime(host)
@@ -50,7 +50,7 @@ class TestBouncingShapesDemoFeature(unittest.TestCase):
             self.assertLessEqual(shape.y, host.screen_rect.height - shape.radius)
 
     def test_on_direct_update_bounces_off_edges(self):
-        feature = BouncingShapesBackdropFeature(circle_count=0, seed=3)
+        feature = MovingShapesBackdropFeature(circle_count=0, seed=3)
         sprite = pygame.Surface((20, 20), pygame.SRCALPHA)
         shape = ShapeSpriteState(
             kind="circle",

@@ -1,9 +1,9 @@
-from demo_features.bouncing_shapes import BouncingShapesBackdropFeature
-from demo_features.controls import ControlsShowcaseFeature
-from demo_features.life import LifeSimulationFeature
-from demo_features.main_scene import MainDemoFeature
-from demo_features.mandelbrot import MandelbrotRenderFeature
-from demo_features.systems import SystemsDemoFeature
+from demo_features.moving_shapes import MovingShapesBackdropFeature
+from demo_features.showcase import ShowcaseFeature
+from demo_features.life import LifeFeature
+from demo_features.main import MainFeature
+from demo_features.mandelbrot import MandelbrotFeature
+from demo_features.system import SystemFeature
 
 from gui_do import (
     ActionBindingSpec,
@@ -61,20 +61,20 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         feature_entries=(
             (
                 "_shapes_feature",
-                lambda: BouncingShapesBackdropFeature(
+                lambda: MovingShapesBackdropFeature(
                     circle_count=12,
                     square_count=12,
                     octagon_count=12,
                     star_count=12,
                 ),
             ),
-            ("_main_feature", MainDemoFeature),
-            ("_controls_feature", ControlsShowcaseFeature),
+            ("_main_feature", MainFeature),
+            ("_controls_feature", ShowcaseFeature),
         ),
         feature_window_bundle_entries=(
             FeatureWindowBundleBindingSpec(
                 "_systems_feature",
-                SystemsDemoFeature,
+                SystemFeature,
                 "systems",
                 slot_index=1,
                 task_panel_label="System",
@@ -83,7 +83,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
             ),
             FeatureWindowBundleBindingSpec(
                 "_life_feature",
-                LifeSimulationFeature,
+                LifeFeature,
                 "life",
                 slot_index=3,
                 task_panel_label="Life",
@@ -91,7 +91,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
             ),
             FeatureWindowBundleBindingSpec(
                 "_mandel_feature",
-                MandelbrotRenderFeature,
+                MandelbrotFeature,
                 "mandel",
                 slot_index=4,
                 task_panel_label="Mandelbrot",

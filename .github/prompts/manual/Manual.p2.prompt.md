@@ -20,7 +20,7 @@ complete, verbose chapter. This chapter is the theoretical backbone of the manua
    pipeline description and any new builder patterns.
 4. Read `gui_do/features/feature_lifecycle.py` top portion to verify current lifecycle phase
    names and HOST_REQUIREMENTS protocol — do not assume names from prior runs.
-5. Skim `demo_features/main_scene/main_demo_feature.py` for a concrete lifecycle example.
+5. Skim `demo_features/main/main_feature.py` for a concrete lifecycle example.
 
 Use only names found in the actual files. Do not copy names from prior MANUAL.md content
 without verifying they still exist in `gui_do/__init__.py`.
