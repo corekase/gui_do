@@ -122,7 +122,7 @@ class MovingShapesBackdropFeature(DirectFeature):
             py = center_y + math.sin(angle_rad) * point_r
             points.append((int(round(px)), int(round(py))))
         pygame.draw.polygon(sprite, fill_color, points)
-        pygame.draw.polygon(sprite, border_color, points, width=1)
+        pygame.draw.polygon(sprite, border_color, points, width=3)
         return self._build_shape_state(sprite, radius)
 
     def _create_shape_surface_and_colors(self) -> tuple[int, pygame.Surface, tuple[int, int, int, int], tuple[int, int, int, int]]:
