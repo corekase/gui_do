@@ -5,7 +5,7 @@ This package is the canonical container for Mandelbrot feature behavior and spec
 
 from .mandelbrot_status_event import MandelStatusEvent
 from .mandelbrot_logic import MandelbrotLogicFeature
-from .mandelbrot_render import MandelbrotFeature
+from .mandelbrot_feature import MandelbrotFeature
 from .mandelbrot_specs import (
     MANDEL_KIND_CLEARED,
     MANDEL_KIND_COMPLETE,

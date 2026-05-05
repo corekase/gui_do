@@ -10,7 +10,7 @@ from .system_specs import SYSTEMS_LIFECYCLE_SPEC, SYSTEMS_RUNTIME_SPEC, SYSTEMS_
 from .system_presenter import SystemPresenter
 
 FEATURE_PACKAGE_INFO = {
-    "feature_name": "systems",
+    "feature_name": "system",
     "scene_scope": "main",
     "layout_standard": "feature package with package-local specs, classes, and helpers",
 }

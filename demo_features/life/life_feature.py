@@ -13,6 +13,7 @@ from gui_do.features.data_driven_runtime import (
     register_routed_feature_companions,
     resolve_canvas_local_point,
 )
+from .life_logic_feature import LifeLogicFeature
 from .life_specs import (
     _LIFE_WINDOW_SPEC,
     _LIFE_RUNTIME_SPEC,
@@ -121,7 +122,7 @@ class LifeFeature(RoutedFeature):
         self.toggle.pushed = False
         # Apply local state immediately so the next frame cannot render stale cells
         # with the freshly reset viewport while the logic message is in transit.
-        self.life_cells = set(LifeSimulationLogicFeature.DEFAULT_SEED)
+        self.life_cells = set(LifeLogicFeature.DEFAULT_SEED)
         self._send_life_logic_command("reset")
 
     def zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
@@ -184,7 +185,7 @@ class LifeFeature(RoutedFeature):
 
         if toggle.pushed:
             # Step locally first to keep animation deterministic even with message latency.
-            self.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.life_cells)
+            self.life_cells = LifeLogicFeature.next_life_cycle(self.life_cells)
             self._send_life_logic_command("next")
 
         cell_size = max(2, int(round(self.life_cell_size)))
