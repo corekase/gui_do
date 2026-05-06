@@ -117,6 +117,10 @@ class InteractionStateMachine:
     ) -> None:
         self._phase = initial_phase
         self._transitions: List[InteractionTransition] = []
+        # Index: (from_phase, event_kind) -> list[Transition]  (for non-wildcard transitions)
+        self._index: dict = {}  # dict[(InteractionPhase, str), List[InteractionTransition]]
+        # Wildcard (from_phase=None) transitions, keyed by event_kind
+        self._wildcards: dict = {}  # dict[str, List[InteractionTransition]]
         self._on_phase_change: List[Callable[[InteractionPhase, InteractionPhase], None]] = []
 
     # ------------------------------------------------------------------
@@ -135,6 +139,12 @@ class InteractionStateMachine:
     def add_transition(self, transition: InteractionTransition) -> None:
         """Register a :class:`InteractionTransition`."""
         self._transitions.append(transition)
+        # Update the fast-lookup index.
+        if transition.from_phase is None:
+            self._wildcards.setdefault(transition.event_kind, []).append(transition)
+        else:
+            key = (transition.from_phase, transition.event_kind)
+            self._index.setdefault(key, []).append(transition)
 
     def handle_event(self, ctx: InteractionContext) -> bool:
         """Attempt to advance the state machine given *ctx*.
@@ -142,21 +152,43 @@ class InteractionStateMachine:
         Returns ``True`` if a transition fired, ``False`` if no matching
         transition was found or all guards rejected the event.
         """
-        for t in self._transitions:
-            if t.from_phase is not None and t.from_phase != self._phase:
-                continue
-            if t.event_kind != ctx.event_kind:
-                continue
-            if t.guard is not None and not t.guard(ctx):
-                continue
-            # Transition fires
-            old_phase = self._phase
-            self._phase = t.to_phase
-            if t.action is not None:
-                t.action(ctx)
-            for cb in list(self._on_phase_change):
-                cb(old_phase, self._phase)
-            return True
+        event_kind = ctx.event_kind
+        # Check phase-specific transitions first (indexed O(1) lookup).
+        candidates = self._index.get((self._phase, event_kind))
+        if candidates:
+            for t in candidates:
+                if t.guard is not None and not t.guard(ctx):
+                    continue
+                old_phase = self._phase
+                self._phase = t.to_phase
+                if t.action is not None:
+                    t.action(ctx)
+                observers = self._on_phase_change
+                if observers:
+                    if len(observers) == 1:
+                        observers[0](old_phase, self._phase)
+                    else:
+                        for cb in list(observers):
+                            cb(old_phase, self._phase)
+                return True
+        # Check wildcard (from_phase=None) transitions.
+        wildcards = self._wildcards.get(event_kind)
+        if wildcards:
+            for t in wildcards:
+                if t.guard is not None and not t.guard(ctx):
+                    continue
+                old_phase = self._phase
+                self._phase = t.to_phase
+                if t.action is not None:
+                    t.action(ctx)
+                observers = self._on_phase_change
+                if observers:
+                    if len(observers) == 1:
+                        observers[0](old_phase, self._phase)
+                    else:
+                        for cb in list(observers):
+                            cb(old_phase, self._phase)
+                return True
         return False
 
     # ------------------------------------------------------------------

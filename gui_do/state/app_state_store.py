@@ -172,13 +172,13 @@ class AppStateStore:
 
         # Key-based subscribers
         for key in changed_keys:
-            for cb in list(self._key_subs.get(key, [])):
+            for cb in self._key_subs.get(key, []):
                 cb(self._state[key])
 
         # Selectors — only snapshot state if selectors are registered (optimization for hot path).
         if self._selectors:
             state_snapshot = dict(self._state)
-            for sel in list(self._selectors):
+            for sel in self._selectors:
                 # Pass changed_keys to selector so it can short-circuit if it has no dependencies on them.
                 sel._update(state_snapshot, changed_keys=changed_keys)
 

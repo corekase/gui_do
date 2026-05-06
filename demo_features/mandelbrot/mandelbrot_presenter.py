@@ -7,7 +7,7 @@ from pygame import Rect
 from gui_do import ButtonControl, CanvasControl, LabelControl, centered_horizontal_strip_layout, inset_rect
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
-from .mandelbrot_render import (
+from .mandelbrot_specs import (
 	_MANDEL_BTN_COUNT,
 	_MANDEL_BTN_SPACING,
 	_MANDEL_CANVAS_H,

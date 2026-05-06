@@ -35,15 +35,6 @@ except ImportError:
     _HAS_NUMPY = False
 
 
-def _fallback_pixels3d(surface: Surface) -> list:
-    """Pure-Python pixel accessor when numpy is unavailable."""
-    w, h = surface.get_size()
-    return [
-        [[surface.get_at((x, y))[c] for c in range(3)] for y in range(h)]
-        for x in range(w)
-    ]
-
-
 class SurfaceEffects:
     """Static surface post-processing helpers.  All methods are ``@staticmethod``."""
 

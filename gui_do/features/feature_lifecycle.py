@@ -7,7 +7,6 @@ from collections.abc import Mapping
 
 if TYPE_CHECKING:
     from gui_do.app.gui_application import GuiApplication
-    from gui_do.controls.base.ui_node import UiNode as Control
     from collections.abc import Callable, Iterable, Deque
     from typing import Any, Optional, Dict, List
 

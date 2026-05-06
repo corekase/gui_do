@@ -208,8 +208,7 @@ class TileMap:
 
     def fill(self, tile_id: int) -> None:
         """Fill the entire map with *tile_id*."""
-        for i in range(len(self._tiles)):
-            self._tiles[i] = tile_id
+        self._tiles[:] = [tile_id] * len(self._tiles)
 
     def fill_rect(
         self,

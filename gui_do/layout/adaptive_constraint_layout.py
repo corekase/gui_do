@@ -196,18 +196,26 @@ class ConstraintLayoutEngine:
 
         Returns a dict mapping target IDs to resolved ``pygame.Rect`` objects.
         """
-        # Collect all target IDs
-        target_ids = {c.target_id for c in constraint_set.all_constraints}
-        target_ids |= set(self._initial_rects)
+        # Build a per-target group in a single O(m) pass, sorted descending by priority.
+        # This replaces the O(K*m) pattern of calling for_target() per target.
+        by_target: Dict[str, list] = {}
+        for c in constraint_set._constraints:
+            bucket = by_target.get(c.target_id)
+            if bucket is None:
+                by_target[c.target_id] = [c]
+            else:
+                bucket.append(c)
+        for bucket in by_target.values():
+            bucket.sort(key=lambda c: -c.priority)
+
+        # Collect all target IDs (constraints + initial rects)
+        target_ids = by_target.keys() | self._initial_rects.keys()
 
         results: Dict[str, Rect] = {}
 
         for tid in sorted(target_ids):
             base = self._initial_rects.get(tid, Rect(0, 0, 0, 0)).copy()
-            constraints = sorted(
-                constraint_set.for_target(tid),
-                key=lambda c: -c.priority,
-            )
+            constraints = by_target.get(tid, [])
             left = float(base.left)
             top = float(base.top)
             width = float(base.width)
@@ -278,7 +286,9 @@ def resolve_adaptive_policy(
 ) -> Optional[AdaptivePolicy]:
     """Return the most-specific policy whose ``min_width`` <= container width.
 
-    Policies are tried in descending ``min_width`` order.
+    Policies are tried in descending ``min_width`` order.  If *policies* is
+    already sorted (descending) the sort is effectively free (timsort is O(n)
+    on a sorted input).
     """
     sorted_policies = sorted(policies, key=lambda p: -p.min_width)
     for policy in sorted_policies:

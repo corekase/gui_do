@@ -79,6 +79,8 @@ class SceneTimeline:
         # --- after() support: relative offset resolved on play() ---
         self._after_events: List[Tuple[float, _Callback]] = []
         self._play_start_extra_events_added: bool = False
+        # Lazy sort: set to False whenever events are appended out of order.
+        self._events_sorted: bool = True
 
     # ------------------------------------------------------------------
     # Event registration
@@ -86,8 +88,11 @@ class SceneTimeline:
 
     def at(self, t_seconds: float, callback: _Callback) -> "SceneTimeline":
         """Fire *callback* when :attr:`current_time` reaches *t_seconds*."""
-        self._events.append((max(0.0, float(t_seconds)), callback))
-        self._events.sort(key=lambda e: e[0])
+        t = max(0.0, float(t_seconds))
+        # Mark sort as needed if appending out of order.
+        if self._events and t < self._events[-1][0]:
+            self._events_sorted = False
+        self._events.append((t, callback))
         return self
 
     def after(self, delay: float, callback: _Callback) -> "SceneTimeline":
@@ -147,8 +152,12 @@ class SceneTimeline:
             if not self._play_start_extra_events_added and self._after_events:
                 for delay, cb in self._after_events:
                     self._events.append((self._t + delay, cb))
-                self._events.sort(key=lambda e: e[0])
+                self._events_sorted = False
                 self._play_start_extra_events_added = True
+            # Sort once before playback starts if any appends were out-of-order.
+            if not self._events_sorted:
+                self._events.sort(key=lambda e: e[0])
+                self._events_sorted = True
             self._playing = True
 
     def pause(self) -> None:
@@ -161,6 +170,7 @@ class SceneTimeline:
         self._playing = False
         self._fired.clear()
         self._play_start_extra_events_added = False
+        self._events_sorted = True
         # Reset loops
         for loop in self._loops:
             loop["next"] = loop["interval"]
@@ -171,6 +181,9 @@ class SceneTimeline:
     def seek(self, t_seconds: float) -> None:
         """Jump to *t_seconds*.  Events between old and new time are fired.
         Events before old time (backward seek) have their fired-state reset."""
+        if not self._events_sorted:
+            self._events.sort(key=lambda e: e[0])
+            self._events_sorted = True
         new_t = max(0.0, float(t_seconds))
         if new_t > self._t:
             self._advance(new_t - self._t)

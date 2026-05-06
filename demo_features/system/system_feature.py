@@ -124,7 +124,6 @@ from gui_do import (
     ToggleControl,
     WindowControl,
 )
-from gui_do import set_window_visible_state
 from gui_do.features.data_driven_runtime import (
     ActiveTabUpdateRouter,
     bind_routed_feature_lifecycle,

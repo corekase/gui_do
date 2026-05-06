@@ -57,18 +57,21 @@ class EventBus:
         scoped = self._subscriptions_by_scope.pop(scope, None)
         if not scoped:
             return 0
+        # Group subs to remove by topic so we scan each topic list at most once.
+        by_topic: dict = {}
+        for sub in scoped:
+            by_topic.setdefault(sub.topic, set()).add(id(sub))
         removed = 0
-        for sub in tuple(scoped):
-            subs = self._subscribers.get(sub.topic)
+        for topic, id_set in by_topic.items():
+            subs = self._subscribers.get(topic)
             if not subs:
                 continue
-            for i, current in enumerate(subs):
-                if current is sub:
-                    del subs[i]
-                    removed += 1
-                    if not subs:
-                        del self._subscribers[sub.topic]
-                    break
+            new_subs = [s for s in subs if id(s) not in id_set]
+            removed += len(subs) - len(new_subs)
+            if new_subs:
+                self._subscribers[topic] = new_subs
+            else:
+                del self._subscribers[topic]
         return removed
 
     def subscriber_count(self, topic: str | None = None) -> int:

@@ -50,8 +50,9 @@ from __future__ import annotations
 
 import math
 import random
+from collections import deque
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -159,9 +160,13 @@ class Emitter:
     _accumulator: float = field(default=0.0, init=False, repr=False, compare=False)
     # Internal: pending burst particles to emit on next update.
     _pending_burst: int = field(default=0, init=False, repr=False, compare=False)
+    # Internal: cached end size resolved once from the size tuple.
+    _end_size: float = field(default=0.0, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         self._pending_burst = self.burst_count
+        # Cache end_size to avoid per-spawn len() check.
+        self._end_size = self.size[1] if len(self.size) > 1 else self.size[0]
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +191,10 @@ class ParticleSystem:
         self._emitters: List[Emitter] = []
         self._particles: List[_Particle] = [_Particle() for _ in range(max_particles)]
         self._active_count: int = 0
+        # Free-list of available particle indices — O(1) spawn instead of O(n) scan.
+        self._free_indices: deque = deque(range(max_particles))
+        # Per-radius surface cache for semi-transparent particles — avoids per-draw Surface allocation.
+        self._alpha_surf_cache: Dict[int, pygame.Surface] = {}
 
     # ------------------------------------------------------------------
     # Emitter management
@@ -217,9 +226,10 @@ class ParticleSystem:
     def clear(self) -> None:
         """Remove all emitters and kill all live particles."""
         self._emitters.clear()
-        for p in self._particles:
+        for i, p in enumerate(self._particles):
             p.alive = False
         self._active_count = 0
+        self._free_indices = deque(range(self._max_particles))
 
     # ------------------------------------------------------------------
     # Properties
@@ -239,30 +249,29 @@ class ParticleSystem:
     # ------------------------------------------------------------------
 
     def _spawn(self, emitter: Emitter) -> None:
-        """Spawn one particle from *emitter* using the first free slot."""
-        for p in self._particles:
-            if p.alive:
-                continue
-            # Spawn into slot
-            p.alive = True
-            p.x = emitter.x
-            p.y = emitter.y
-            p.age = 0.0
-            p.lifetime = random.uniform(*emitter.lifetime)
-            speed = random.uniform(*emitter.speed)
-            a0, a1 = emitter.angle_range
-            angle_deg = random.uniform(a0, a1)
-            angle_rad = math.radians(angle_deg)
-            p.vx = math.cos(angle_rad) * speed
-            p.vy = math.sin(angle_rad) * speed
-            p.start_size = emitter.size[0]
-            p.end_size = emitter.size[1] if len(emitter.size) > 1 else emitter.size[0]
-            p.size = p.start_size
-            p.color = random.choice(emitter.colors)
-            p.alpha = 255
-            p.gravity = emitter.gravity
-            p.fade_out = emitter.fade_out
-            return  # one particle spawned
+        """Spawn one particle from *emitter* using the free-list (O(1))."""
+        if not self._free_indices:
+            return
+        idx = self._free_indices.popleft()
+        p = self._particles[idx]
+        p.alive = True
+        p.x = emitter.x
+        p.y = emitter.y
+        p.age = 0.0
+        p.lifetime = random.uniform(*emitter.lifetime)
+        speed = random.uniform(*emitter.speed)
+        a0, a1 = emitter.angle_range
+        angle_deg = random.uniform(a0, a1)
+        angle_rad = math.radians(angle_deg)
+        p.vx = math.cos(angle_rad) * speed
+        p.vy = math.sin(angle_rad) * speed
+        p.start_size = emitter.size[0]
+        p.end_size = emitter._end_size
+        p.size = p.start_size
+        p.color = random.choice(emitter.colors)
+        p.alpha = 255
+        p.gravity = emitter.gravity
+        p.fade_out = emitter.fade_out
 
     # ------------------------------------------------------------------
     # Update
@@ -291,14 +300,18 @@ class ParticleSystem:
                         self._spawn(emitter)
                     emitter._accumulator -= 1.0
 
-        # Advance live particles
+        # Advance live particles; collect newly-dead indices for the free-list.
         alive_count = 0
-        for p in self._particles:
+        newly_dead: Optional[list] = None
+        for i, p in enumerate(self._particles):
             if not p.alive:
                 continue
             p.age += dt
             if p.age >= p.lifetime:
                 p.alive = False
+                if newly_dead is None:
+                    newly_dead = []
+                newly_dead.append(i)
                 continue
             p.vy += p.gravity * dt
             p.x += p.vx * dt
@@ -307,6 +320,8 @@ class ParticleSystem:
             p.size = p.start_size + (p.end_size - p.start_size) * t
             p.alpha = int(255 * (1.0 - t)) if p.fade_out else 255
             alive_count += 1
+        if newly_dead:
+            self._free_indices.extend(newly_dead)
         self._active_count = alive_count
 
     # ------------------------------------------------------------------
@@ -315,6 +330,7 @@ class ParticleSystem:
 
     def draw(self, surface: pygame.Surface) -> None:
         """Render all live particles onto *surface*."""
+        cache = self._alpha_surf_cache
         for p in self._particles:
             if not p.alive:
                 continue
@@ -322,8 +338,13 @@ class ParticleSystem:
             cx = int(p.x)
             cy = int(p.y)
             if p.alpha < 255:
-                # Draw with alpha using a tiny surface blit
-                tmp = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
+                # Reuse a cached surface per radius to avoid per-frame allocation.
+                tmp = cache.get(radius)
+                if tmp is None:
+                    tmp = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
+                    cache[radius] = tmp
+                else:
+                    tmp.fill((0, 0, 0, 0))
                 r, g, b = p.color
                 pygame.draw.circle(tmp, (r, g, b, p.alpha), (radius + 1, radius + 1), radius)
                 surface.blit(tmp, (cx - radius - 1, cy - radius - 1))

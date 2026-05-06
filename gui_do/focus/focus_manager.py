@@ -258,16 +258,6 @@ class FocusManager:
         return False
 
     @staticmethod
-    def _is_effectively_interactive(node) -> bool:
-        """Return True when node and all ancestors are visible and enabled."""
-        current = node
-        while current is not None:
-            if not current.visible or not current.enabled:
-                return False
-            current = current.parent
-        return True
-
-    @staticmethod
     def _find_ancestor_task_panel(node):
         current = node
         while current is not None:

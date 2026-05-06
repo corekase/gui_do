@@ -51,14 +51,6 @@ class DialogManager:
         dialog_id = self._alloc_id()
         self._open_ids.append(dialog_id)
 
-        def _handle_close():
-            self._dismiss_id(dialog_id)
-            if on_close is not None:
-                try:
-                    on_close()
-                except Exception:
-                    pass
-
         self._show_modal(dialog_id, title, message, width=width)
         return DialogHandle(dialog_id, self)
 
@@ -73,22 +65,6 @@ class DialogManager:
     ) -> DialogHandle:
         dialog_id = self._alloc_id()
         self._open_ids.append(dialog_id)
-
-        def _confirm():
-            self._dismiss_id(dialog_id)
-            if on_confirm is not None:
-                try:
-                    on_confirm()
-                except Exception:
-                    pass
-
-        def _cancel():
-            self._dismiss_id(dialog_id)
-            if on_cancel is not None:
-                try:
-                    on_cancel()
-                except Exception:
-                    pass
 
         self._show_modal(dialog_id, title, message, width=width)
         return DialogHandle(dialog_id, self)
