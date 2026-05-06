@@ -60,8 +60,8 @@ Key helpers: `ensure_scene_task_panel`, `add_task_panel_buttons`, `add_task_pane
 
 Declare with `SceneMenuStripSpec` passed to `add_scene_menu_strip_from_spec`.  No default menu entries.  Two optional sections: `scenes_shown=True` (Scene navigation menu) and `windows_shown=True` (Windows visibility toggles menu).  The Windows section coordinates automatically with the task panel toggle buttons via `ScenePresentationModel.handle_window_toggle`.
 
-Key types: `SceneMenuStripSpec`, `SceneReturnButtonSpec`.
-Key helpers: `add_scene_menu_strip_from_spec`, `add_scene_return_button`.
+Key types: `SceneMenuStripSpec`, `TaskPanelSceneNavButtonSpec`.
+Key helpers: `add_scene_menu_strip_from_spec`, `add_task_panel_scene_nav_button`.
 
 ### Command Palette
 

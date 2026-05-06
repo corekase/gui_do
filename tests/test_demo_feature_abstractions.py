@@ -6,9 +6,17 @@ from gui_do.features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     AnchoredWindowSpec,
     LogicBindingSpec,
+    TaskPanelLinearLayoutSpec,
+    TaskPanelSceneNavButtonSpec,
+    TaskPanelWindowToggleGroupSpec,
+    RightAnchoredTaskPanelButtonSpec,
     TaskPanelButtonSpec,
+    add_scene_task_panel_items,
+    add_right_anchored_task_panel_button,
     add_task_panel_button,
     add_task_panel_buttons,
+    add_task_panel_scene_nav_button,
+    add_task_panel_window_toggle_group,
     add_window_button,
     add_window_button_row,
     add_window_control,
@@ -24,6 +32,7 @@ from gui_do.features.data_driven_runtime import (
     create_tab_control_from_specs,
     compute_tabbed_window_layout,
     collect_window_toggle_controls,
+    create_task_panel_linear_layout,
     create_feature_presented_window,
     create_presented_anchored_window,
     create_presented_window_from_spec,
@@ -183,6 +192,18 @@ class _StubToggleControl:
         self.accessibility_calls.append((str(role), str(label)))
 
 
+class _StubSequenceControl:
+    def __init__(self):
+        self.tab_indices = []
+        self.accessibility = []
+
+    def set_tab_index(self, idx: int):
+        self.tab_indices.append(int(idx))
+
+    def set_accessibility(self, *, role: str, label: str):
+        self.accessibility.append((str(role), str(label)))
+
+
 class _StubToggleHost:
     pass
 
@@ -194,6 +215,7 @@ class _StubLayout:
 
 class _StubTaskPanel:
     def __init__(self):
+        self.rect = Rect(0, 100, 400, 50)
         self.added_controls = []
 
     def add(self, control):
@@ -608,6 +630,8 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
 
         first_toggle = task_panel.added_controls[0]
         later_toggle = task_panel.added_controls[1]
+        self.assertEqual(1, first_toggle.tab_index)
+        self.assertEqual(3, later_toggle.tab_index)
         first_toggle.on_toggle(True)
         later_toggle.on_toggle(False)
         self.assertEqual(
@@ -654,6 +678,81 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             ],
             tooltip_manager.calls,
         )
+
+    def test_task_panel_window_toggle_group_supports_per_scene_owner_and_independent_tab_order(self):
+        host = _StubToggleHost()
+        window_presentation = _StubWindowPresentation(
+            (
+                _StubToggleBinding(
+                    key="alpha",
+                    toggle_attr="alpha_toggle",
+                    task_panel_slot_index=1,
+                    accessibility_label="Alpha",
+                    action_label="Alpha Action",
+                ),
+                _StubToggleBinding(
+                    key="beta",
+                    toggle_attr="beta_toggle",
+                    task_panel_slot_index=2,
+                    accessibility_label="Beta",
+                    action_label="Beta Action",
+                ),
+            )
+        )
+
+        scene_a = _StubToggleHost()
+        scene_b = _StubToggleHost()
+        panel_a = _StubTaskPanel()
+        panel_b = _StubTaskPanel()
+        layout = _StubLayout()
+
+        toggles_a = add_task_panel_window_toggle_group(
+            host,
+            panel_a,
+            layout,
+            window_presentation,
+            TaskPanelWindowToggleGroupSpec(start_index=1),
+            attr_owner=scene_a,
+        )
+        toggles_b = add_task_panel_window_toggle_group(
+            host,
+            panel_b,
+            layout,
+            window_presentation,
+            TaskPanelWindowToggleGroupSpec(start_index=1),
+            attr_owner=scene_b,
+        )
+
+        self.assertTrue(hasattr(scene_a, "alpha_toggle"))
+        self.assertTrue(hasattr(scene_b, "alpha_toggle"))
+        self.assertIsNot(scene_a.alpha_toggle, scene_b.alpha_toggle)
+        self.assertFalse(hasattr(host, "alpha_toggle"))
+
+        scene_a_back = _StubSequenceControl()
+        scene_b_back = _StubSequenceControl()
+        next_a = apply_accessibility_sequence(
+            [
+                (scene_a_back, "button", "Back A"),
+                (toggles_a[0][1], "toggle", "Alpha"),
+                (toggles_a[1][1], "toggle", "Beta"),
+            ],
+            40,
+        )
+        next_b = apply_accessibility_sequence(
+            [
+                (scene_b_back, "button", "Back B"),
+                (toggles_b[0][1], "toggle", "Alpha"),
+                (toggles_b[1][1], "toggle", "Beta"),
+            ],
+            60,
+        )
+
+        self.assertEqual(43, next_a)
+        self.assertEqual(63, next_b)
+        self.assertEqual([40], scene_a_back.tab_indices)
+        self.assertEqual([60], scene_b_back.tab_indices)
+        self.assertEqual(41, toggles_a[0][1].tab_index)
+        self.assertEqual(61, toggles_b[0][1].tab_index)
 
     def test_apply_accessibility_sequence_from_attrs_uses_target_attributes(self):
         target = _StubAttrAccessibilityTarget()
@@ -827,6 +926,111 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertIs(host.first_button, task_panel.added_controls[0])
         self.assertIs(host.second_button, task_panel.added_controls[1])
 
+    def test_create_task_panel_linear_layout_anchors_to_task_panel_top(self):
+        task_panel = _StubTaskPanel()
+
+        layout = create_task_panel_linear_layout(
+            task_panel,
+            TaskPanelLinearLayoutSpec(
+                left=16,
+                top_offset=10,
+                item_width=124,
+                item_height=30,
+                spacing=10,
+                horizontal=True,
+            ),
+        )
+
+        rect0 = layout.linear(0)
+        rect1 = layout.linear(1)
+        self.assertEqual((16, 110, 124, 30), (rect0.left, rect0.top, rect0.width, rect0.height))
+        self.assertEqual(150, rect1.left)
+
+    def test_add_task_panel_scene_nav_button_uses_slot_layout_and_sets_attr(self):
+        host = _StubTaskPanelHost()
+        task_panel = _StubTaskPanel()
+        layout = _StubLayout()
+
+        button = add_task_panel_scene_nav_button(
+            task_panel,
+            layout,
+            host,
+            TaskPanelSceneNavButtonSpec(
+                attr_name="back_button",
+                control_id="back",
+                slot_index=2,
+                label="Back",
+                target_scene="main",
+                accessibility_label="Return to main",
+            ),
+        )
+
+        self.assertIs(button, host.back_button)
+        self.assertEqual("back", button.control_id)
+        self.assertEqual("Back", button.text)
+        self.assertEqual(2, button.rect.left)
+
+    def test_add_scene_task_panel_items_builds_buttons_nav_and_toggles(self):
+        host = _StubTaskPanelHost()
+        task_panel = _StubTaskPanel()
+        layout = _StubLayout()
+        presentation = _StubWindowPresentation(
+            (
+                _StubToggleBinding(
+                    key="first",
+                    toggle_attr="first_toggle",
+                    task_panel_slot_index=9,
+                    accessibility_label="First Toggle",
+                    action_label="First Action",
+                ),
+                _StubToggleBinding(
+                    key="second",
+                    toggle_attr="second_toggle",
+                    task_panel_slot_index=10,
+                    accessibility_label="Second Toggle",
+                    action_label="Second Action",
+                ),
+            )
+        )
+
+        result = add_scene_task_panel_items(
+            host,
+            task_panel,
+            layout,
+            button_specs=(
+                TaskPanelButtonSpec(
+                    attr_name="exit_button",
+                    control_id="exit",
+                    slot_index=0,
+                    label="Exit",
+                    on_click=lambda: None,
+                ),
+            ),
+            scene_nav_button_specs=(
+                TaskPanelSceneNavButtonSpec(
+                    attr_name="showcase_button",
+                    control_id="showcase",
+                    slot_index=4,
+                    label="Showcase",
+                    target_scene="control_showcase",
+                    accessibility_label="Open showcase",
+                ),
+            ),
+            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(start_index=1),
+            window_presentation=presentation,
+            window_toggle_slot_overrides={"first": 1, "second": 2},
+            tab_sequence_start=40,
+        )
+
+        self.assertEqual(1, len(result.scene_nav_buttons))
+        self.assertEqual(2, len(result.window_toggle_controls))
+        self.assertIs(host.exit_button, task_panel.added_controls[0])
+        self.assertIs(host.showcase_button, task_panel.added_controls[1])
+        self.assertEqual(1, result.window_toggle_controls[0][1].rect.left)
+        self.assertEqual(2, result.window_toggle_controls[1][1].rect.left)
+        self.assertEqual(40, host.exit_button.tab_index)
+        self.assertEqual(43, host.showcase_button.tab_index)
+
     def test_add_window_control_and_label_and_button_helpers(self):
         window = _StubWindow()
         controls = []
@@ -845,6 +1049,71 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual(3, len(window.added))
         self.assertIs(added, controls[2])
         self.assertIs(raw_control, added)
+
+    def test_add_right_anchored_task_panel_button_includes_task_panel_focus_cycle_by_default(self):
+        host = _StubTaskPanelHost()
+        task_panel = _StubTaskPanel()
+        task_panel.rect = Rect(0, 100, 500, 50)
+
+        button = add_right_anchored_task_panel_button(
+            host,
+            task_panel,
+            RightAnchoredTaskPanelButtonSpec(
+                attr_name="help_button",
+                control_id="help",
+                label="Help",
+                on_click=lambda: None,
+                width=124,
+                height=30,
+                top_offset=10,
+                right_padding=16,
+                style="angle",
+            ),
+        )
+
+        self.assertIs(button, host.help_button)
+        self.assertEqual(0, button.tab_index)
+        self.assertFalse(getattr(button, "task_panel_focus_excluded", False))
+
+    def test_add_right_anchored_task_panel_button_appends_after_existing_ordered_controls(self):
+        host = _StubTaskPanelHost()
+        task_panel = _StubTaskPanel()
+        layout = _StubLayout()
+
+        add_task_panel_button(
+            task_panel,
+            layout,
+            control_id="exit",
+            slot_index=0,
+            label="Exit",
+            on_click=lambda: None,
+        )
+        add_task_panel_button(
+            task_panel,
+            layout,
+            control_id="systems",
+            slot_index=1,
+            label="System",
+            on_click=lambda: None,
+        )
+
+        help_button = add_right_anchored_task_panel_button(
+            host,
+            task_panel,
+            RightAnchoredTaskPanelButtonSpec(
+                attr_name="help_button",
+                control_id="help",
+                label="Help",
+                on_click=lambda: None,
+                width=124,
+                height=30,
+                top_offset=10,
+                right_padding=16,
+                style="angle",
+            ),
+        )
+
+        self.assertEqual(2, help_button.tab_index)
 
     def test_add_window_button_row_places_buttons_horizontally(self):
         window = _StubWindow()

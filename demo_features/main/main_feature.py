@@ -16,13 +16,15 @@ from gui_do.features.data_driven_runtime import (
     SceneMenuStripSpec,
     RightAnchoredTaskPanelButtonSpec,
     SceneTaskPanelSpec,
+    TaskPanelLinearLayoutSpec,
+    TaskPanelSceneNavButtonSpec,
     TaskPanelWindowToggleGroupSpec,
     add_right_anchored_task_panel_button,
     TaskPanelButtonSpec,
     TooltipBindingSpec,
-    add_task_panel_buttons,
-    add_task_panel_window_toggle_group,
+    add_scene_task_panel_items,
     add_scene_menu_strip_from_spec,
+    create_task_panel_linear_layout,
     create_auto_sized_styled_label,
     ensure_scene_task_panel,
     setup_routed_runtime,
@@ -41,8 +43,6 @@ class MainFeature(Feature):
             "app",
             "screen_rect",
             "scene_presentation",
-            "go_to_main",
-            "go_to_control_showcase",
             "window_presentation",
             "action_registry",
         ),
@@ -99,59 +99,48 @@ class MainFeature(Feature):
             ),
         )
 
-        host.app.layout.set_linear_properties(
-            anchor=(16, host.screen_rect.height - 40),
-            item_width=124,
-            item_height=30,
-            spacing=10,
-            horizontal=True,
+        task_panel_layout = create_task_panel_linear_layout(
+            host.task_panel,
+            TaskPanelLinearLayoutSpec(
+                left=16,
+                top_offset=10,
+                item_width=124,
+                item_height=30,
+                spacing=10,
+                horizontal=True,
+            ),
         )
 
-        add_task_panel_buttons(
+        task_panel_items = add_scene_task_panel_items(
             host,
             host.task_panel,
-            host.app.layout,
-            (
+            task_panel_layout,
+            button_specs=(
                 TaskPanelButtonSpec(
                     attr_name="exit_button",
                     control_id="exit",
-                    slot_index=0,
                     label="Exit",
                     on_click=host.app.quit,
                     style="angle",
                 ),
             ),
-        )
-
-        # Window toggles declared as a spec-driven group starting at slot 1.
-        # Individual windows declare their absolute slot_index in their binding specs
-        # (System=1, Life=2, Mandelbrot=3), so the toggle group is contiguous.
-        # The Showcase navigation button is intentionally placed after the group.
-        toggle_controls = add_task_panel_window_toggle_group(
-            host,
-            host.task_panel,
-            host.app.layout,
-            host.window_presentation,
-            TaskPanelWindowToggleGroupSpec(start_index=1),
-        )
-
-        add_task_panel_buttons(
-            host,
-            host.task_panel,
-            host.app.layout,
-            (
-                TaskPanelButtonSpec(
+            scene_nav_button_specs=(
+                TaskPanelSceneNavButtonSpec(
                     attr_name="showcase_button",
                     control_id="showcase",
-                    slot_index=4,
                     label="Showcase",
-                    on_click=host.go_to_control_showcase,
-                    style="angle",
+                    target_scene="control_showcase",
+                    accessibility_label="Open control showcase scene",
+                    tab_index=-1,
                 ),
             ),
+            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(start_index=1),
+            window_presentation=host.window_presentation,
+            tab_sequence_start=0,
         )
+        toggle_controls = task_panel_items.window_toggle_controls
 
-        slot0_rect = host.app.layout.linear(0)
+        slot0_rect = task_panel_layout.linear(0)
         host.help_button = add_right_anchored_task_panel_button(
             host,
             host.task_panel,

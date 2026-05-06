@@ -15,6 +15,7 @@ from ..controls.data.tab_control import TabControl, TabItem
 from ..controls.input.button_control import ButtonControl
 from ..controls.display.label_control import LabelControl
 from ..controls.input.toggle_control import ToggleControl
+from ..layout.layout_manager import LayoutManager
 from ..text.localization import LocaleRegistry
 from .feature_lifecycle import (
     FeatureWindowPresentationModel,
@@ -49,7 +50,7 @@ class WindowSpec:
     task_panel_button_id: str
     task_panel_label: str
     task_panel_style: str
-    task_panel_slot_index: int
+    task_panel_slot_index: int | None
     accessibility_label: str
 
 
@@ -120,9 +121,9 @@ class TaskPanelButtonSpec:
     """Declarative descriptor for a task-panel button owned by a host attribute."""
     attr_name: str
     control_id: str
-    slot_index: int
     label: str
     on_click: Callable[[], object]
+    slot_index: int | None = None
     style: str = "angle"
 
 
@@ -139,6 +140,7 @@ class RightAnchoredTaskPanelButtonSpec:
     top_offset: int
     right_padding: int = 16
     style: str = "angle"
+    include_in_task_panel_focus_cycle: bool = True
 
 
 @dataclass(frozen=True)
@@ -218,6 +220,18 @@ class SceneTaskPanelSpec:
 
 
 @dataclass(frozen=True)
+class TaskPanelLinearLayoutSpec:
+    """Declarative descriptor for linear task-panel item layout."""
+
+    left: int = 16
+    top_offset: int = 10
+    item_width: int = 110
+    item_height: int = 30
+    spacing: int = 10
+    horizontal: bool = True
+
+
+@dataclass(frozen=True)
 class TaskPanelWindowToggleGroupSpec:
     """Declarative marker for placing automatic window-toggle buttons in the task panel.
 
@@ -280,21 +294,27 @@ class SceneCommandPaletteSpec:
 
 
 @dataclass(frozen=True)
-class SceneReturnButtonSpec:
-    """Declarative descriptor for a standard scene-return button on a task panel."""
+class TaskPanelSceneNavButtonSpec:
+    """Declarative descriptor for a scene-navigation button on a task panel."""
 
+    attr_name: str | None = None
     control_id: str = "scene_return"
+    slot_index: int | None = None
     label: str = "Return"
     target_scene: str = "main"
     go_to_attr: str | None = None
-    left: int = 16
-    top_offset: int = 10
-    width: int = 110
-    height: int = 30
     style: str = "angle"
     accessibility_role: str = "button"
     accessibility_label: str = "Return"
     tab_index: int = -1
+
+
+@dataclass(frozen=True)
+class SceneTaskPanelItemsResult:
+    """Created controls from one scene task-panel composition pass."""
+
+    scene_nav_buttons: tuple[object, ...] = field(default_factory=tuple)
+    window_toggle_controls: tuple[tuple[object, object], ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -380,7 +400,7 @@ class FeatureWindowBundleBindingSpec:
     feature_attr: str
     factory: object  # Callable[[], object]
     window_key: str
-    slot_index: int
+    slot_index: int | None = None
     task_panel_label: str | None = None
     task_panel_style: str = "round"
     action_label: str | None = None
@@ -396,7 +416,7 @@ class WindowToggleBindingSpec:
 
     key: str
     feature_attr: str
-    slot_index: int
+    slot_index: int | None = None
     task_panel_label: str | None = None
     task_panel_style: str = "round"
     action_label: str | None = None
@@ -926,7 +946,10 @@ def build_host_main_tab_order(host, window_toggle_controls) -> list:
         by their task_panel_slot_index for coherent focus flow.
     """
     base_controls = [host.exit_button]
-    sorted_windows = sorted(window_toggle_controls, key=lambda pair: pair[0].task_panel_slot_index)
+    sorted_windows = sorted(
+        window_toggle_controls,
+        key=lambda pair: (10_000 if pair[0].task_panel_slot_index is None else int(pair[0].task_panel_slot_index)),
+    )
     showcase_button = getattr(host, "showcase_button", None)
 
     # Keep showcase in its visual position: after the first window toggle when
@@ -1057,16 +1080,12 @@ def ensure_scene_scheduler(feature, host, *, scene_name: str = "main", attr_name
 
 
 def sorted_window_bindings(bindings):
-    """Return feature-window bindings sorted by declarative slot and key."""
-    return tuple(
-        sorted(
-            tuple(bindings),
-            key=lambda b: (
-                10_000 if getattr(b, "task_panel_slot_index", None) is None else int(b.task_panel_slot_index),
-                str(getattr(b, "key", "")),
-            ),
-        )
-    )
+    """Return feature-window bindings ordered by explicit slot then declaration order."""
+    ordered = list(tuple(bindings))
+    with_slots = [b for b in ordered if getattr(b, "task_panel_slot_index", None) is not None]
+    without_slots = [b for b in ordered if getattr(b, "task_panel_slot_index", None) is None]
+    with_slots.sort(key=lambda b: (int(b.task_panel_slot_index), str(getattr(b, "key", ""))))
+    return tuple([*with_slots, *without_slots])
 
 
 def collect_window_toggle_controls(host, window_presentation):
@@ -1099,20 +1118,37 @@ def add_window_toggle_task_panel_controls(
     *,
     min_slot_index: int | None = None,
     max_slot_index: int | None = None,
+    attr_owner=None,
+    slot_overrides: Mapping[str, int] | None = None,
 ):
     """Create window toggle controls on the task panel from declarative bindings.
 
     Optional slot bounds allow callers to create controls in phases so focus order
     can match visual slot order when mixed with non-toggle controls.
     """
+    target = host if attr_owner is None else attr_owner
     toggle_controls = []
     max_seen_slot_index = 0
+    slot_map = {} if slot_overrides is None else {str(k): int(v) for k, v in slot_overrides.items()}
+    next_auto_slot = int(min_slot_index) if min_slot_index is not None else 0
+    used_slots: set[int] = set(slot_map.values())
     for binding in sorted_window_bindings(window_presentation.bindings()):
-        slot_index = 1 if binding.task_panel_slot_index is None else int(binding.task_panel_slot_index)
+        if str(binding.key) in slot_map:
+            slot_index = int(slot_map[str(binding.key)])
+        elif binding.task_panel_slot_index is not None:
+            slot_index = int(binding.task_panel_slot_index)
+        else:
+            while next_auto_slot in used_slots:
+                next_auto_slot += 1
+            slot_index = int(next_auto_slot)
+            used_slots.add(slot_index)
+            next_auto_slot += 1
         if min_slot_index is not None and slot_index < int(min_slot_index):
             continue
         if max_slot_index is not None and slot_index > int(max_slot_index):
             continue
+        used_slots.add(slot_index)
+        next_auto_slot = max(next_auto_slot, slot_index + 1)
         max_seen_slot_index = max(max_seen_slot_index, slot_index)
         toggle = task_panel.add(
             ToggleControl(
@@ -1129,8 +1165,9 @@ def add_window_toggle_task_panel_controls(
                 style=binding.task_panel_style,
             )
         )
+        toggle.set_tab_index(int(slot_index))
         if binding.toggle_attr:
-            setattr(host, binding.toggle_attr, toggle)
+            setattr(target, binding.toggle_attr, toggle)
         toggle_controls.append((binding, toggle))
     return toggle_controls, max_seen_slot_index
 
@@ -1148,6 +1185,9 @@ def add_task_panel_window_toggle_group(
     app_layout,
     window_presentation,
     spec: "TaskPanelWindowToggleGroupSpec",
+    *,
+    attr_owner=None,
+    slot_overrides: Mapping[str, int] | None = None,
 ) -> list:
     """Create window toggle controls from a declarative ``TaskPanelWindowToggleGroupSpec``.
 
@@ -1166,6 +1206,8 @@ def add_task_panel_window_toggle_group(
         app_layout,
         window_presentation,
         min_slot_index=int(spec.start_index),
+        attr_owner=attr_owner,
+        slot_overrides=slot_overrides,
     )
     return toggle_controls
 
@@ -1245,9 +1287,19 @@ def prewarm_runtime_scenes(app, runtime_scene_specs) -> None:
         app.prewarm_scene(spec.scene_name)
 
 
-def add_task_panel_button(task_panel, app_layout, *, control_id: str, slot_index: int, label: str, on_click, style: str = "angle"):
+def add_task_panel_button(
+    task_panel,
+    app_layout,
+    *,
+    control_id: str,
+    slot_index: int,
+    label: str,
+    on_click,
+    style: str = "angle",
+    assign_tab_index: bool = True,
+):
     """Create and add a standard task-panel button positioned by linear slot index."""
-    return task_panel.add(
+    button = task_panel.add(
         ButtonControl(
             str(control_id),
             app_layout.linear(int(slot_index)),
@@ -1256,16 +1308,31 @@ def add_task_panel_button(task_panel, app_layout, *, control_id: str, slot_index
             style=str(style),
         )
     )
+    if bool(assign_tab_index):
+        button.set_tab_index(int(slot_index))
+    return button
 
 
 def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPanelButtonSpec]):
     """Create and assign host-owned task-panel buttons from declarative specs."""
+    next_slot = 0
+    used_slots: set[int] = set()
     for spec in specs:
+        if spec.slot_index is None:
+            while next_slot in used_slots:
+                next_slot += 1
+            slot_index = next_slot
+            used_slots.add(slot_index)
+            next_slot += 1
+        else:
+            slot_index = int(spec.slot_index)
+            used_slots.add(slot_index)
+            next_slot = max(next_slot, slot_index + 1)
         button = add_task_panel_button(
             task_panel,
             app_layout,
             control_id=spec.control_id,
-            slot_index=spec.slot_index,
+            slot_index=slot_index,
             label=spec.label,
             on_click=spec.on_click,
             style=spec.style,
@@ -1290,6 +1357,19 @@ def add_right_anchored_task_panel_button(host, task_panel, spec: RightAnchoredTa
             style=str(spec.style),
         )
     )
+    if not bool(spec.include_in_task_panel_focus_cycle):
+        button.set_tab_index(-1)
+        setattr(button, "task_panel_focus_excluded", True)
+    else:
+        peers = getattr(task_panel, "children", None)
+        if not isinstance(peers, list):
+            peers = getattr(task_panel, "added_controls", [])
+        prior_indices = [
+            int(getattr(node, "tab_index", -1))
+            for node in peers
+            if node is not button and int(getattr(node, "tab_index", -1)) >= 0
+        ]
+        button.set_tab_index(0 if not prior_indices else (max(prior_indices) + 1))
     setattr(host, spec.attr_name, button)
     return button
 
@@ -1395,8 +1475,24 @@ def ensure_scene_task_panel(host, spec: SceneTaskPanelSpec):
     )
 
 
-def _resolve_scene_navigation_callback(host, spec: SceneReturnButtonSpec):
-    """Resolve return-button navigation callback with host-first overrides."""
+def create_task_panel_linear_layout(task_panel, spec: TaskPanelLinearLayoutSpec):
+    """Create a LayoutManager configured for linear scene task-panel items."""
+    layout = LayoutManager()
+    layout.set_linear_properties(
+        anchor=(
+            int(spec.left),
+            int(task_panel.rect.top + int(spec.top_offset)),
+        ),
+        item_width=int(spec.item_width),
+        item_height=int(spec.item_height),
+        spacing=int(spec.spacing),
+        horizontal=bool(spec.horizontal),
+    )
+    return layout
+
+
+def _resolve_scene_navigation_callback(host, spec: TaskPanelSceneNavButtonSpec):
+    """Resolve scene-navigation callback with host-first overrides."""
     attr_name = spec.go_to_attr or f"go_to_{spec.target_scene}"
     cb = getattr(host, str(attr_name), None)
     if callable(cb):
@@ -1413,26 +1509,157 @@ def _resolve_scene_navigation_callback(host, spec: SceneReturnButtonSpec):
     return lambda: None
 
 
-def add_scene_return_button(task_panel, host, spec: SceneReturnButtonSpec):
-    """Add a standard scene-return button to a task panel from declarative spec."""
-    rect = Rect(
-        int(spec.left),
-        int(task_panel.rect.top + int(spec.top_offset)),
-        int(spec.width),
-        int(spec.height),
-    )
-    button = task_panel.add(
-        ButtonControl(
-            str(spec.control_id),
-            rect,
-            str(spec.label),
-            _resolve_scene_navigation_callback(host, spec),
-            style=str(spec.style),
-        )
+def add_task_panel_scene_nav_button(task_panel, app_layout, host, spec: TaskPanelSceneNavButtonSpec):
+    """Add a scene-navigation button to a task panel from declarative spec."""
+    resolved_slot_index = 0 if spec.slot_index is None else int(spec.slot_index)
+    button = add_task_panel_button(
+        task_panel,
+        app_layout,
+        control_id=str(spec.control_id),
+        slot_index=resolved_slot_index,
+        label=str(spec.label),
+        on_click=_resolve_scene_navigation_callback(host, spec),
+        style=str(spec.style),
+        assign_tab_index=False,
     )
     button.set_accessibility(role=str(spec.accessibility_role), label=str(spec.accessibility_label))
     button.set_tab_index(int(spec.tab_index))
+    if spec.attr_name:
+        setattr(host, str(spec.attr_name), button)
     return button
+
+
+def add_scene_task_panel_items(
+    host,
+    task_panel,
+    app_layout,
+    *,
+    button_specs: Sequence[TaskPanelButtonSpec] = (),
+    scene_nav_button_specs: Sequence[TaskPanelSceneNavButtonSpec] = (),
+    window_toggle_group_spec: "TaskPanelWindowToggleGroupSpec | None" = None,
+    window_presentation=None,
+    window_toggle_attr_owner=None,
+    window_toggle_slot_overrides: Mapping[str, int] | None = None,
+    tab_sequence_start: int | None = None,
+) -> SceneTaskPanelItemsResult:
+    """Compose scene task-panel content from declarative button/toggle specs."""
+    resolved_button_slots: dict[str, int] = {}
+    resolved_scene_nav_slots: dict[str, int] = {}
+    resolved_toggle_slots: dict[str, int] = {}
+
+    next_auto_slot = 0
+    used_slots: set[int] = set()
+
+    def _claim_slot(specified: int | None, *, minimum: int = 0) -> int:
+        nonlocal next_auto_slot
+        if specified is not None:
+            slot = int(specified)
+            used_slots.add(slot)
+            next_auto_slot = max(next_auto_slot, slot + 1)
+            return slot
+        next_auto_slot = max(next_auto_slot, int(minimum))
+        while next_auto_slot in used_slots:
+            next_auto_slot += 1
+        slot = next_auto_slot
+        used_slots.add(slot)
+        next_auto_slot += 1
+        return slot
+
+    for spec in button_specs:
+        slot = _claim_slot(spec.slot_index)
+        resolved_button_slots[str(spec.attr_name)] = slot
+        button = add_task_panel_button(
+            task_panel,
+            app_layout,
+            control_id=spec.control_id,
+            slot_index=slot,
+            label=spec.label,
+            on_click=spec.on_click,
+            style=spec.style,
+        )
+        setattr(host, spec.attr_name, button)
+
+    resolved_override_map = dict(window_toggle_slot_overrides or {})
+
+    if window_toggle_group_spec is not None and window_presentation is not None:
+        min_slot = int(window_toggle_group_spec.start_index)
+        next_auto_slot = max(next_auto_slot, min_slot)
+        for binding in sorted_window_bindings(window_presentation.bindings()):
+            key = str(getattr(binding, "key", ""))
+            if key in resolved_override_map:
+                slot = int(resolved_override_map[key])
+                used_slots.add(slot)
+                next_auto_slot = max(next_auto_slot, slot + 1)
+                resolved_toggle_slots[key] = slot
+                continue
+            declared = getattr(binding, "task_panel_slot_index", None)
+            slot = _claim_slot(int(declared) if declared is not None else None, minimum=min_slot)
+            resolved_override_map[key] = slot
+            resolved_toggle_slots[key] = slot
+
+    next_auto_slot = (max(used_slots) + 1) if used_slots else 0
+    scene_nav_buttons = []
+    for spec in scene_nav_button_specs:
+        slot = _claim_slot(spec.slot_index, minimum=next_auto_slot)
+        resolved_scene_nav_slots[str(spec.control_id)] = slot
+        button = add_task_panel_scene_nav_button(
+            task_panel,
+            app_layout,
+            host,
+            TaskPanelSceneNavButtonSpec(
+                attr_name=spec.attr_name,
+                control_id=spec.control_id,
+                slot_index=slot,
+                label=spec.label,
+                target_scene=spec.target_scene,
+                go_to_attr=spec.go_to_attr,
+                style=spec.style,
+                accessibility_role=spec.accessibility_role,
+                accessibility_label=spec.accessibility_label,
+                tab_index=spec.tab_index,
+            ),
+        )
+        scene_nav_buttons.append(button)
+
+    window_toggle_controls = []
+    if window_toggle_group_spec is not None and window_presentation is not None:
+        window_toggle_controls = add_task_panel_window_toggle_group(
+            host,
+            task_panel,
+            app_layout,
+            window_presentation,
+            window_toggle_group_spec,
+            attr_owner=window_toggle_attr_owner,
+            slot_overrides=resolved_override_map,
+        )
+
+    if tab_sequence_start is not None:
+        ordered_items = []
+        for spec in button_specs:
+            control = getattr(host, str(spec.attr_name), None)
+            if control is None:
+                continue
+            ordered_items.append((int(resolved_button_slots[str(spec.attr_name)]), control, "button", str(spec.label)))
+        for btn, spec in zip(scene_nav_buttons, scene_nav_button_specs):
+            ordered_items.append(
+                (
+                    int(resolved_scene_nav_slots[str(spec.control_id)]),
+                    btn,
+                    str(spec.accessibility_role),
+                    str(spec.accessibility_label),
+                )
+            )
+        for binding, control in window_toggle_controls:
+            slot_index = int(resolved_toggle_slots.get(str(binding.key), 0))
+            label = binding.accessibility_label or binding.action_label or binding.key
+            ordered_items.append((int(slot_index), control, "toggle", str(label)))
+        items = [(control, role, label) for _slot, control, role, label in sorted(ordered_items, key=lambda x: x[0])]
+        apply_accessibility_sequence(items, int(tab_sequence_start))
+
+    return SceneTaskPanelItemsResult(
+        scene_nav_buttons=tuple(scene_nav_buttons),
+        window_toggle_controls=tuple(window_toggle_controls),
+    )
 
 
 def centered_overlay_rect(surface, *, width: int, height: int, offset_x: int = 0, offset_y: int = 0) -> Rect:
@@ -1921,7 +2148,7 @@ def make_window_toggle_spec(
     key: str,
     feature_attr: str,
     *,
-    slot_index: int,
+    slot_index: int | None = None,
     task_panel_label: str | None = None,
     task_panel_style: str = "round",
     action_label: str | None = None,
@@ -1942,7 +2169,7 @@ def make_window_toggle_spec(
         task_panel_button_id=task_panel_button_id or f"show_{normalized_key}",
         task_panel_label=normalized_label,
         task_panel_style=str(task_panel_style),
-        task_panel_slot_index=int(slot_index),
+        task_panel_slot_index=(None if slot_index is None else int(slot_index)),
         accessibility_label=accessibility_label or f"Show {normalized_label} window",
     )
 

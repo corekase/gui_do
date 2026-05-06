@@ -403,23 +403,26 @@ class TestDrawControlsPrewarm(unittest.TestCase):
 
 
 # ===========================================================================
-# SceneTaskPanelSpec + SceneReturnButtonSpec helpers
+# SceneTaskPanelSpec + task-panel scene-nav button helpers
 # ===========================================================================
 
 class TestSceneTaskPanelHelpers(unittest.TestCase):
 
-    def test_scene_task_panel_spec_and_return_button_spec_exported(self):
+    def test_scene_task_panel_spec_and_scene_nav_button_spec_exported(self):
         import gui_do
         self.assertTrue(hasattr(gui_do, "SceneTaskPanelSpec"))
-        self.assertTrue(hasattr(gui_do, "SceneReturnButtonSpec"))
+        self.assertTrue(hasattr(gui_do, "TaskPanelLinearLayoutSpec"))
+        self.assertTrue(hasattr(gui_do, "TaskPanelSceneNavButtonSpec"))
 
     def test_ensure_scene_task_panel_exported(self):
         import gui_do
         self.assertTrue(hasattr(gui_do, "ensure_scene_task_panel"))
 
-    def test_add_scene_return_button_exported(self):
+    def test_add_scene_nav_button_helpers_exported(self):
         import gui_do
-        self.assertTrue(hasattr(gui_do, "add_scene_return_button"))
+        self.assertTrue(hasattr(gui_do, "create_task_panel_linear_layout"))
+        self.assertTrue(hasattr(gui_do, "add_task_panel_scene_nav_button"))
+        self.assertTrue(hasattr(gui_do, "add_scene_task_panel_items"))
 
     def test_ensure_scene_task_panel_delegates_to_scene_presentation(self):
         from gui_do import SceneTaskPanelSpec, ensure_scene_task_panel
@@ -447,45 +450,46 @@ class TestSceneTaskPanelHelpers(unittest.TestCase):
             auto_hide=False,
         )
 
-    def test_add_scene_return_button_uses_go_to_attr_when_available(self):
-        from gui_do import SceneReturnButtonSpec, add_scene_return_button
+    def test_add_task_panel_scene_nav_button_uses_go_to_attr_when_available(self):
+        from gui_do import TaskPanelSceneNavButtonSpec, add_task_panel_scene_nav_button
         task_panel = MagicMock()
-        task_panel.rect = Rect(0, 100, 300, 50)
         button = MagicMock()
         task_panel.add.return_value = button
+        app_layout = MagicMock()
+        app_layout.linear.return_value = Rect(10, 108, 120, 24)
         host = MagicMock()
         host.go_to_main = MagicMock()
-        spec = SceneReturnButtonSpec(
+        spec = TaskPanelSceneNavButtonSpec(
+            attr_name="scene_back",
             control_id="ret",
+            slot_index=3,
             label="Return",
             target_scene="main",
             go_to_attr="go_to_main",
-            left=10,
-            top_offset=8,
-            width=120,
-            height=24,
             style="angle",
             accessibility_role="button",
             accessibility_label="Return to main",
             tab_index=-1,
         )
-        created = add_scene_return_button(task_panel, host, spec)
+        created = add_task_panel_scene_nav_button(task_panel, app_layout, host, spec)
         self.assertIs(created, button)
         task_panel.add.assert_called_once()
+        self.assertIs(host.scene_back, button)
         button.set_accessibility.assert_called_once_with(role="button", label="Return to main")
         button.set_tab_index.assert_called_once_with(-1)
 
-    def test_add_scene_return_button_falls_back_to_scene_transitions(self):
-        from gui_do import SceneReturnButtonSpec, add_scene_return_button
+    def test_add_task_panel_scene_nav_button_falls_back_to_scene_transitions(self):
+        from gui_do import TaskPanelSceneNavButtonSpec, add_task_panel_scene_nav_button
         task_panel = MagicMock()
-        task_panel.rect = Rect(0, 100, 300, 50)
         button = MagicMock()
         task_panel.add.return_value = button
+        app_layout = MagicMock()
+        app_layout.linear.return_value = Rect(0, 0, 110, 30)
         host = MagicMock()
         host.go_to_main = None
         host.scene_transitions = MagicMock()
-        spec = SceneReturnButtonSpec(target_scene="main", go_to_attr="go_to_main")
-        add_scene_return_button(task_panel, host, spec)
+        spec = TaskPanelSceneNavButtonSpec(target_scene="main", go_to_attr="go_to_main")
+        add_task_panel_scene_nav_button(task_panel, app_layout, host, spec)
         on_click = task_panel.add.call_args[0][0].on_click
         on_click()
         host.scene_transitions.go.assert_called_once_with("main")

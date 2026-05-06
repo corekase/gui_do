@@ -174,13 +174,24 @@ class TaskPanelFocusManager:
             seen_object_ids.add(object_id)
             seen_control_ids.add(node.control_id)
             candidates.append(node)
-        return candidates
+        indexed = []
+        unindexed = []
+        for discovery_index, node in enumerate(candidates):
+            tab_index = int(getattr(node, "tab_index", -1))
+            if tab_index >= 0:
+                indexed.append((tab_index, discovery_index, node))
+                continue
+            unindexed.append((discovery_index, node))
+        indexed.sort(key=lambda item: (item[0], item[1]))
+        return [node for _tab, _idx, node in indexed] + [node for _idx, node in unindexed]
 
     @staticmethod
     def _is_task_panel_focus_candidate(node) -> bool:
         # Built-in task panel mode owns its own focus list, independent from
         # normal scene Tab order. Include standard focusable controls and
         # key-activatable actionable controls even when tab_index is -1.
+        if bool(getattr(node, "task_panel_focus_excluded", False)):
+            return False
         if bool(node.accepts_focus()):
             return True
         invokes_click = getattr(type(node), "_invoke_click", None) is not UiNode._invoke_click

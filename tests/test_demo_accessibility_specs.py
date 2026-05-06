@@ -74,7 +74,7 @@ class TestDemoAccessibilitySpecs(unittest.TestCase):
         ordered = [host.exit_button, host.systems_toggle_window, host.showcase_button]
         apply_host_main_accessibility(host, ordered, STATIC_ACCESSIBILITY_SPECS)
         self.assertEqual([("button", "Exit")], host.exit_button.accessibility_calls)
-        self.assertEqual([("button", "Showcase")], host.showcase_button.accessibility_calls)
+        self.assertEqual([], host.showcase_button.accessibility_calls)
         self.assertEqual([("toggle", "Show Systems window")], host.systems_toggle_window.accessibility_calls)
         self.assertEqual([("toggle", "Show Life window")], host.life_toggle_window.accessibility_calls)
         self.assertEqual([("toggle", "Show Mandelbrot window")], host.mandel_toggle_window.accessibility_calls)

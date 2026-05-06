@@ -68,7 +68,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 "_systems_feature",
                 SystemFeature,
                 "systems",
-                slot_index=1,
                 task_panel_label="System",
                 task_panel_style="round",
             ),
@@ -76,7 +75,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 "_life_feature",
                 LifeFeature,
                 "life",
-                slot_index=2,
                 task_panel_label="Life",
                 task_panel_style="round",
             ),
@@ -84,7 +82,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 "_mandel_feature",
                 MandelbrotFeature,
                 "mandel",
-                slot_index=3,
                 task_panel_label="Mandelbrot",
                 task_panel_style="round",
             ),
@@ -99,7 +96,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         ),
         static_accessibility_entries=(
             ("exit_button", "Exit"),
-            ("showcase_button", "Showcase"),
         ),
         font_role_entries=(
             FontRoleBindingSpec("title", 14, "window"),

@@ -19,8 +19,10 @@ from gui_do import (
     DockWorkspace,
     DockWorkspacePanel,
     FrameAnimation,
-    SceneReturnButtonSpec,
     SceneTaskPanelSpec,
+    TaskPanelLinearLayoutSpec,
+    TaskPanelSceneNavButtonSpec,
+    TaskPanelWindowToggleGroupSpec,
     SceneMenuStripControl,
     CellCaretLayout,
     ControlRegistry,
@@ -78,8 +80,9 @@ from gui_do import (
     ToastSeverity,
     TreeControl,
     TreeNode,
-    add_scene_return_button,
+    add_scene_task_panel_items,
     build_notification_center,
+    create_task_panel_linear_layout,
     draw_controls_prewarm,
     ensure_scene_task_panel,
     make_labeled_slot_height_fn,
@@ -973,6 +976,10 @@ class ShowcaseFeature(Feature):
     TASK_PANEL_BUTTON_HEIGHT = 30
     TASK_PANEL_BUTTON_LEFT = 16
     TASK_PANEL_BUTTON_TOP_OFFSET = 10
+    TASK_PANEL_SLOT_SPACING = 10
+    TASK_PANEL_ENABLE_WINDOW_TOGGLES = False
+    TASK_PANEL_WINDOW_TOGGLE_START_SLOT = 1
+    TASK_PANEL_TAB_SEQUENCE_START = 30
 
     LAYOUT_OVERALL_ROWS_CONSTANT = 7
     LAYOUT_OVERALL_COLUMNS_CONSTANT = 2
@@ -1018,6 +1025,7 @@ class ShowcaseFeature(Feature):
 
         self.task_panel = None
         self.showcase_return_button = None
+        self._task_panel_window_toggle_controls: list[tuple[object, object]] = []
         self._showcase_notification_center: NotificationCenter | None = None
         self._indeterminate_bar: ProgressBarControl | None = None
         self._showcase_anim_ctrl: AnimatedImageControl | None = None
@@ -1459,23 +1467,50 @@ class ShowcaseFeature(Feature):
                 auto_hide=True,
             ),
         )
-        self.showcase_return_button = add_scene_return_button(
+        task_panel_layout = create_task_panel_linear_layout(
             self.task_panel,
-            host,
-            SceneReturnButtonSpec(
-                control_id="showcase_return",
-                label="Return",
-                target_scene="main",
-                go_to_attr="go_to_main",
-                left=self.TASK_PANEL_BUTTON_LEFT,
-                top_offset=self.TASK_PANEL_BUTTON_TOP_OFFSET,
-                width=self.TASK_PANEL_BUTTON_WIDTH,
-                height=self.TASK_PANEL_BUTTON_HEIGHT,
-                style="angle",
-                accessibility_role="button",
-                accessibility_label="Return to main",
-                # Keep showcase Tab traversal within the feature surface; task panel
-                # actions remain clickable but are not part of feature focus cycling.
-                tab_index=-1,
+            TaskPanelLinearLayoutSpec(
+                left=int(self.TASK_PANEL_BUTTON_LEFT),
+                top_offset=int(self.TASK_PANEL_BUTTON_TOP_OFFSET),
+                item_width=int(self.TASK_PANEL_BUTTON_WIDTH),
+                item_height=int(self.TASK_PANEL_BUTTON_HEIGHT),
+                spacing=int(self.TASK_PANEL_SLOT_SPACING),
+                horizontal=True,
             ),
         )
+
+        window_presentation = getattr(host, "window_presentation", None)
+        task_panel_items = add_scene_task_panel_items(
+            host,
+            self.task_panel,
+            task_panel_layout,
+            scene_nav_button_specs=(
+                TaskPanelSceneNavButtonSpec(
+                    control_id="showcase_return",
+                    slot_index=0,
+                    label="Return",
+                    target_scene="main",
+                    go_to_attr="go_to_main",
+                    style="angle",
+                    accessibility_role="button",
+                    accessibility_label="Return to main",
+                    tab_index=-1,
+                ),
+            ),
+            window_toggle_group_spec=(
+                TaskPanelWindowToggleGroupSpec(start_index=int(self.TASK_PANEL_WINDOW_TOGGLE_START_SLOT))
+                if self.TASK_PANEL_ENABLE_WINDOW_TOGGLES
+                else None
+            ),
+            window_presentation=window_presentation,
+            window_toggle_attr_owner=self,
+            tab_sequence_start=(
+                int(self.TASK_PANEL_TAB_SEQUENCE_START)
+                if self.TASK_PANEL_ENABLE_WINDOW_TOGGLES
+                else None
+            ),
+        )
+        self.showcase_return_button = (
+            task_panel_items.scene_nav_buttons[0] if task_panel_items.scene_nav_buttons else None
+        )
+        self._task_panel_window_toggle_controls = list(task_panel_items.window_toggle_controls)

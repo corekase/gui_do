@@ -959,7 +959,7 @@ Think of scene presentation as top-level context management and window presentat
 
 #### Primary public APIs and key types
 
-- Tier 1 specs/models: `ScenePresentationModel`, `WindowSpec`, `AnchoredWindowSpec`, `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelFocusToggleSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`, `TabbedPresenterSpec`, `TabBuilderSpec`, `SceneCommandPaletteSpec`, `SceneReturnButtonSpec`.
+- Tier 1 specs/models: `ScenePresentationModel`, `WindowSpec`, `AnchoredWindowSpec`, `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelFocusToggleSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`, `TabbedPresenterSpec`, `TabBuilderSpec`, `SceneCommandPaletteSpec`, `TaskPanelSceneNavButtonSpec`.
 - Tier 18 helpers: `set_window_visible_state`, `toggle_window_visibility`, `create_anchored_feature_window`, `add_window_scene_menu_strip`, `ensure_scene_task_panel`, `add_task_panel_buttons`, `add_task_panel_window_toggle_group`, `register_window_toggle_tooltips`, `create_presented_anchored_window`, `create_presented_window_from_spec`, `create_feature_presented_window`, `register_window_presentation_specs`, `register_window_tab_builders`, `build_tab_builder_specs`, `create_tab_control_from_specs`, `compute_tabbed_window_layout`, `setup_feature_presenter_tabs`, `register_tab_update_handlers`, `ActiveTabUpdateRouter`, `TabLayoutContext`.
 - Related control abstraction: `WindowPresenter`.
 
