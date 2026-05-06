@@ -217,6 +217,7 @@ class GuiApplication:
                 # remembered scope and hover teardown apply to the outgoing scene.
                 self.task_panel_focus.exit(outgoing_scene, self)
             self._reconcile_task_panel_hover_state(outgoing_scene, force_idle=True)
+            self._snap_autohide_task_panels_lowered(outgoing_scene)
             self._active_scene_name = name
             self._sync_scene_scheduler_activity(name)
             self.scene = runtime.scene
@@ -267,6 +268,18 @@ class GuiApplication:
                 child.reconcile_hover(child_wants_hover)
                 if child.children:
                     queue.extend(child.children)
+
+    def _snap_autohide_task_panels_lowered(self, scene) -> None:
+        """Snap every autohide task panel in *scene* to its fully-lowered position.
+
+        Called during scene transitions so a raised autohide panel does not
+        visually linger mid-slide when the incoming scene is displayed.
+        """
+        if scene is None:
+            return
+        for node in scene._walk_nodes():
+            if node.is_task_panel() and getattr(node, "auto_hide", False):
+                node.snap_to_lowered()
 
     @property
     def active_scene_name(self) -> str:

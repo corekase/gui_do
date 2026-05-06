@@ -203,6 +203,20 @@ class TaskPanelControl(PanelControl):
         self._hovered = is_active
         self.invalidate()
 
+    def snap_to_lowered(self) -> None:
+        """Immediately move the panel to its fully-lowered (hidden) position.
+
+        Clears the hovered flag so the animation loop treats the panel as
+        already settled and will not drift it back up on the next update.
+        Has no effect when auto_hide is False.
+        """
+        if not self.auto_hide:
+            return
+        if self.rect.y != self._hidden_y:
+            self.rect.y = self._hidden_y
+            self._mark_child_layout_dirty()
+        self._hovered = False
+
     def update(self, _dt_seconds: float) -> None:
         if self.visible and self.auto_hide:
             target = self._shown_y if self._hovered else self._hidden_y
