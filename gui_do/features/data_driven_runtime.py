@@ -1581,8 +1581,12 @@ def add_scene_task_panel_items(
 
     resolved_override_map = dict(window_toggle_slot_overrides or {})
 
+    effective_window_toggle_group_spec = window_toggle_group_spec
     if window_toggle_group_spec is not None and window_presentation is not None:
         min_slot = int(window_toggle_group_spec.start_index)
+        if min_slot >= len(used_slots):
+            min_slot = int(next_auto_slot)
+        effective_window_toggle_group_spec = TaskPanelWindowToggleGroupSpec(start_index=int(min_slot))
         next_auto_slot = max(next_auto_slot, min_slot)
         for binding in sorted_window_bindings(window_presentation.bindings()):
             key = str(getattr(binding, "key", ""))
@@ -1622,13 +1626,13 @@ def add_scene_task_panel_items(
         scene_nav_buttons.append(button)
 
     window_toggle_controls = []
-    if window_toggle_group_spec is not None and window_presentation is not None:
+    if effective_window_toggle_group_spec is not None and window_presentation is not None:
         window_toggle_controls = add_task_panel_window_toggle_group(
             host,
             task_panel,
             app_layout,
             window_presentation,
-            window_toggle_group_spec,
+            effective_window_toggle_group_spec,
             attr_owner=window_toggle_attr_owner,
             slot_overrides=resolved_override_map,
         )

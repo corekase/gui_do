@@ -1031,6 +1031,50 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual(40, host.exit_button.tab_index)
         self.assertEqual(43, host.showcase_button.tab_index)
 
+    def test_add_scene_task_panel_items_clamps_out_of_range_toggle_group_start_to_panel_end(self):
+        host = _StubTaskPanelHost()
+        task_panel = _StubTaskPanel()
+        layout = _StubLayout()
+        presentation = _StubWindowPresentation(
+            (
+                _StubToggleBinding(
+                    key="first",
+                    toggle_attr="first_toggle",
+                    task_panel_slot_index=None,
+                    accessibility_label="First Toggle",
+                    action_label="First Action",
+                ),
+                _StubToggleBinding(
+                    key="second",
+                    toggle_attr="second_toggle",
+                    task_panel_slot_index=None,
+                    accessibility_label="Second Toggle",
+                    action_label="Second Action",
+                ),
+            )
+        )
+
+        result = add_scene_task_panel_items(
+            host,
+            task_panel,
+            layout,
+            button_specs=(
+                TaskPanelButtonSpec(
+                    attr_name="exit_button",
+                    control_id="exit",
+                    slot_index=0,
+                    label="Exit",
+                    on_click=lambda: None,
+                ),
+            ),
+            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(start_index=99),
+            window_presentation=presentation,
+        )
+
+        self.assertEqual(2, len(result.window_toggle_controls))
+        self.assertEqual(1, result.window_toggle_controls[0][1].rect.left)
+        self.assertEqual(2, result.window_toggle_controls[1][1].rect.left)
+
     def test_add_window_control_and_label_and_button_helpers(self):
         window = _StubWindow()
         controls = []
