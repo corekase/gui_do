@@ -1899,7 +1899,7 @@ def bind_task_panel_focus_toggle(
     """Register and bind the standard task-panel focus toggle action.
 
     Encapsulates the repeated pattern of registering a focus-toggle action and
-    binding it to a key per scene::
+    binding it as a global-first key per scene::
 
         bind_task_panel_focus_toggle(
             host.app.actions, host.app,
@@ -1907,6 +1907,10 @@ def bind_task_panel_focus_toggle(
             scene_name="main",
             key=pygame.K_F1,
         )
+
+    The key is bound through ``ActionManager.bind_global_key`` so it always
+    routes first, even when an active window or focused control would otherwise
+    consume key input.
     """
     def _toggle(_event):
         overlay = getattr(app, "overlay", None)
@@ -1917,7 +1921,7 @@ def bind_task_panel_focus_toggle(
         return bool(task_panel_focus is not None and task_panel_focus.toggle(app.scene, app))
 
     app_actions.register_action(str(action_name), _toggle)
-    app_actions.bind_key(key, str(action_name), scene=str(scene_name))
+    app_actions.bind_global_key(key, str(action_name), scene=str(scene_name))
 
 
 def add_window_control(window, controls: list, control):

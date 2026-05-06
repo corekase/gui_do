@@ -277,7 +277,7 @@ class TestBindTaskPanelFocusToggle(unittest.TestCase):
         name_arg = app_actions.register_action.call_args[0][0]
         self.assertEqual(name_arg, "my_toggle")
 
-        app_actions.bind_key.assert_called_once_with(1, "my_toggle", scene="my_scene")
+        app_actions.bind_global_key.assert_called_once_with(1, "my_toggle", scene="my_scene")
 
     def test_toggle_returns_true_when_palette_open(self):
         from gui_do import bind_task_panel_focus_toggle

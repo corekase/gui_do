@@ -165,7 +165,7 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
 
         self.assertIn(
             (pygame.K_F1, "toggle_task_panel_focus_control_showcase", "control_showcase"),
-            host.app.actions.bind_calls,
+            host.app.actions.bind_global_calls,
         )
 
         action_id, handler = host.app.actions.register_calls[-1]
