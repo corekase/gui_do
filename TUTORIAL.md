@@ -394,7 +394,7 @@ class ActivityLogFeature(Feature):
 
     def bind_runtime(self, host) -> None:
         self.stop_log_subscription = self.lines.subscribe(
-            lambda value: setattr(self.content, "text", "\n".join(value[-4:]) if value else "No events yet")
+            lambda _change: setattr(self.content, "text", "\n".join(list(self.lines)[-4:]) if self.lines else "No events yet")
         )
 
     def on_update(self, host) -> None:
@@ -550,7 +550,7 @@ See feature lifecycle details in [MANUAL.md](MANUAL.md#82-feature-lifecycle-and-
 - ToastManager: Use host.app.toasts.show(...) to present lightweight user notifications.
 
 ```python
-host.app.toasts.show("Saved", duration=1.5)
+host.app.toasts.show("Saved", duration_seconds=1.5)
 ```
 
 See runtime services in [MANUAL.md](MANUAL.md#88-overlays-dialogs-notifications-and-command-surfaces).
@@ -680,7 +680,7 @@ class ActivityLogFeature(RoutedFeature):
     def bind_runtime(self, host) -> None:
         bind_routed_feature_lifecycle(self, host, self.lifecycle_spec)
         self.stop_lines_subscription = self.lines.subscribe(
-            lambda values: setattr(self.content, "text", "\n".join(values[-6:]) if values else "No events yet")
+            lambda _change: setattr(self.content, "text", "\n".join(list(self.lines)[-6:]) if self.lines else "No events yet")
         )
 
     def shutdown_runtime(self, host) -> None:
