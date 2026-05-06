@@ -13,10 +13,5 @@ class GuiDoDemo:
         return self.app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
 
 
-def main() -> None:
-    """Entrypoint for running the gui_do demo as a script."""
-    GuiDoDemo().run()
-
-
 if __name__ == "__main__":
-    main()
+    GuiDoDemo().run()
