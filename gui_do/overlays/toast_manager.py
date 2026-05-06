@@ -186,10 +186,22 @@ class ToastManager:
             pygame.draw.rect(surface, outline, rect, width=2, border_radius=4)
             draw_y = rect.y + 10
             if entry.title:
-                title_surf = theme.fonts.render_text(entry.title, text_color, role_name="toast.text", size=font.point_size)
+                title_surf = theme.render_text(
+                    entry.title,
+                    role="toast.text",
+                    size=font.point_size,
+                    color=text_color,
+                    shadow=True,
+                )
                 surface.blit(title_surf, (rect.x + 16, draw_y))
                 draw_y += title_surf.get_height() + 6
-            msg_surf = theme.fonts.render_text(entry.message, text_color, role_name="toast.text", size=font.point_size)
+            msg_surf = theme.render_text(
+                entry.message,
+                role="toast.text",
+                size=font.point_size,
+                color=text_color,
+                shadow=True,
+            )
             surface.blit(msg_surf, (rect.x + 16, draw_y))
 
     def route_event(self, event, app) -> bool:
