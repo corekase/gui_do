@@ -9,9 +9,6 @@ class GuiDoDemo:
     def __init__(self) -> None:
         bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
 
-    def run(self) -> int:
-        return self.app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
-
 
 if __name__ == "__main__":
-    GuiDoDemo().run()
+    GuiDoDemo().app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
