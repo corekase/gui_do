@@ -72,6 +72,55 @@ class TestGuiApplicationPrewarmScene(unittest.TestCase):
         self.assertEqual("control_showcase", call["scene_name"])
         self.assertTrue(call["force"])
 
+    def test_prewarm_scene_draws_hidden_windows_once(self):
+        app = GuiApplication.__new__(GuiApplication)
+        app.surface = pygame.Surface((96, 64))
+        app._active_scene_name = "main"
+        app.features = _StubFeatures()
+
+        runtime_theme = object()
+
+        class _StubWindow:
+            def __init__(self, *, visible: bool):
+                self.visible = bool(visible)
+                self.draw_calls = 0
+
+            def draw(self, surface, theme):
+                _ = surface
+                _ = theme
+                self.draw_calls += 1
+
+        hidden_window = _StubWindow(visible=False)
+        visible_window = _StubWindow(visible=True)
+        scene_calls = {"draw": 0}
+
+        class _RuntimeScene:
+            def update(self, _dt_seconds):
+                return None
+
+            def draw(self, _surface, _theme):
+                scene_calls["draw"] += 1
+
+            def _window_query_nodes(self):
+                return ([hidden_window, visible_window], [])
+
+        def _scene_runtime(self, _name):
+            return type("_Runtime", (), {"theme": runtime_theme, "scene": _RuntimeScene()})()
+
+        def _restore_pristine(self, scene_name=None, surface=None):
+            _ = scene_name
+            _ = surface
+            return True
+
+        app._scene_runtime = MethodType(_scene_runtime, app)
+        app.restore_pristine = MethodType(_restore_pristine, app)
+
+        app.prewarm_scene("main")
+
+        self.assertEqual(1, scene_calls["draw"])
+        self.assertEqual(1, hidden_window.draw_calls)
+        self.assertEqual(0, visible_window.draw_calls)
+
 
 if __name__ == "__main__":
     unittest.main()

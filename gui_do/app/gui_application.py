@@ -1019,6 +1019,25 @@ class GuiApplication:
         # initialized in update()/draw() rather than feature prewarm hooks.
         runtime.scene.update(0.0)
         runtime.scene.draw(warm_surface, runtime.theme)
+        self._prewarm_hidden_windows(runtime.scene, warm_surface, runtime.theme)
+        return warmed
+
+    def _prewarm_hidden_windows(self, scene: "Scene", surface: pygame.Surface, theme: "ColorTheme") -> int:
+        """Draw hidden windows once so first user show does not hitch on lazy visuals."""
+        query_windows = getattr(scene, "_window_query_nodes", None)
+        if not callable(query_windows):
+            return 0
+
+        windows, _task_panels = query_windows()
+        warmed = 0
+        for window in windows:
+            if bool(getattr(window, "visible", False)):
+                continue
+            draw = getattr(window, "draw", None)
+            if not callable(draw):
+                continue
+            draw(surface, theme)
+            warmed += 1
         return warmed
 
     def draw_screen_features(self, surface, theme) -> None:
