@@ -159,7 +159,7 @@ _MANDEL_TASK_CANVAS_KEY_BY_TASK_ID = {
 
 _MANDEL_WINDOW_SPEC = AnchoredWindowSpec(
     control_id="mandelbrot_window",
-    title="Mandelbrot Demo",
+    title="Mandelbrot",
     size=_MANDEL_WINDOW_SIZE,
     anchor="top_left",
     margin=(28, 92),
