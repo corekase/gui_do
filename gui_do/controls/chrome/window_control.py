@@ -50,6 +50,8 @@ class _WindowContentHost(UiNode):
 
 
 class WindowControl(UiNode):
+    """Window container with title bar and child controls."""
+
     presenter: Optional[object] = None
     _TITLEBAR_MIN_HEIGHT = 14
     _TITLEBAR_VERTICAL_PADDING = 8
@@ -69,7 +71,6 @@ class WindowControl(UiNode):
             presenter.on_attach(self)
         if hasattr(presenter, "on_create"):
             presenter.on_create()
-    """Window container with title bar and child controls."""
 
     def __init__(
         self,

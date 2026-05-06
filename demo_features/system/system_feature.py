@@ -135,7 +135,7 @@ from gui_do.features.data_driven_runtime import (
     PresenterLabelSpec,
     register_descriptors,
     register_tab_update_handlers,
-    setup_feature_presenter_tabs_from_window_content,
+        setup_feature_presenter_tabs_from_window_content,
     TabLayoutContext,
 )
 
@@ -143,8 +143,8 @@ from .demo_inspectable import DemoInspectable
 from .set_int_command import SetIntCommand
 from .system_specs import (
     _SYSTEMS_WINDOW_SPEC,
-    _SYSTEMS_TAB_SPECS,
-    _SYSTEMS_TABBED_PRESENTER_SPEC,
+        _SYSTEMS_TAB_SPECS,
+        _SYSTEMS_TABBED_PRESENTER_SPEC,
     _SYSTEMS_LIFECYCLE_SPEC,
 )
 
@@ -646,9 +646,6 @@ class SystemFeature(RoutedFeature):
     # Tab management
     # ------------------------------------------------------------------
 
-    def _window_event_handler(self, event_type: str, _data=None) -> None:
-        if event_type == "close":
-            set_window_visible_state(self.window, False)
 
     def _on_tab_change(self, key: str) -> None:
         self._active_tab = key

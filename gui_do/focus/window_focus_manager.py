@@ -132,18 +132,22 @@ class WindowFocusManager:
             if self._hint_elapsed_seconds >= FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS:
                 self._hint_visible = False
 
-    def revalidate(self, scene: "Scene") -> None:
+    def revalidate(self, scene: "Scene", cached_walk_nodes=None) -> None:
         """If the focused window is no longer valid advance to next or clear.
 
         Called once per frame so that closing or hiding a window
         automatically moves window focus to the next available window.
+
+        Args:
+            scene: Scene to search
+            cached_walk_nodes: Optional pre-computed BFS walk list from scene._get_cached_bfs_walk()
         """
         if self._focused_window is None:
             return
         if self._focused_window.visible and self._focused_window.enabled:
             return
 
-        candidates = self._candidate_windows(scene)
+        candidates = self._candidate_windows(scene, cached_walk_nodes=cached_walk_nodes)
         if candidates:
             self._focused_window = candidates[0]
             # Preserve current hint visibility so the user sees the transition.
@@ -155,11 +159,17 @@ class WindowFocusManager:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _candidate_windows(self, scene: "Scene") -> List:
-        """Return sorted Ctrl+Tab targets: windows plus screen-level menubars."""
+    def _candidate_windows(self, scene: "Scene", cached_walk_nodes=None) -> List:
+        """Return sorted Ctrl+Tab targets: windows plus screen-level menubars.
+
+        Args:
+            scene: Scene to search
+            cached_walk_nodes: Optional pre-computed BFS walk list from scene._get_cached_bfs_walk()
+        """
+        walk_source = cached_walk_nodes if cached_walk_nodes is not None else scene._walk_nodes()
         targets = [
             node
-            for node in scene._walk_nodes()
+            for node in walk_source
             if self._is_window_cycle_target(node)
         ]
         targets.sort(key=lambda node: str(getattr(node, "control_id", "")))

@@ -276,10 +276,18 @@ class FocusManager:
             current = current.parent
         return None
 
-    def _focusable_nodes(self, scene, *, window=None) -> list:
+    def _focusable_nodes(self, scene, *, window=None, cached_walk_nodes=None) -> list:
+        """Return focusable nodes from scene. Accepts optional cached BFS walk for efficiency.
+
+        Args:
+            scene: Scene to search
+            window: Optional window to filter nodes to descendants of this window
+            cached_walk_nodes: Optional pre-computed BFS walk list from scene._get_cached_bfs_walk()
+        """
         scope_root = self.active_scope_root
         ordered = []
-        for walk_index, node in enumerate(scene._walk_nodes()):
+        walk_source = cached_walk_nodes if cached_walk_nodes is not None else scene._walk_nodes()
+        for walk_index, node in enumerate(walk_source):
             if not node.accepts_focus():
                 continue
             # Task panels are traversed via TaskPanelFocusManager, not regular Tab.
@@ -363,11 +371,15 @@ class FocusManager:
             wants_hover = bool(node.visible and node.enabled and node.rect.collidepoint(probe))
             node.reconcile_hover(wants_hover)
 
-    def revalidate_focus(self, scene) -> None:
+    def revalidate_focus(self, scene, cached_walk_nodes=None) -> None:
         """If the focused node is no longer focusable, move to the nearest valid node or clear.
 
         Searches within the same enclosing window as the previously focused node first.
         Focus is moved without showing the keyboard hint (it is an automatic transition).
+
+        Args:
+            scene: Scene to search
+            cached_walk_nodes: Optional pre-computed BFS walk list from scene._get_cached_bfs_walk()
         """
         focused = self._focused_node
         if focused is None:
@@ -381,7 +393,7 @@ class FocusManager:
             return  # still valid, nothing to do
 
         window = self._find_ancestor_window(focused)
-        candidates = self._focusable_nodes(scene, window=window)
+        candidates = self._focusable_nodes(scene, window=window, cached_walk_nodes=cached_walk_nodes)
 
         if not candidates:
             self.clear_focus()

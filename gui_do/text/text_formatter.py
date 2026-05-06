@@ -91,6 +91,19 @@ class TextFormatter(Protocol):
 
 
 class NumericFormatter:
+    """Formats numeric text (integer or float) with optional validation bounds.
+
+    Parameters
+    ----------
+    decimals:
+        Number of decimal places.  ``0`` means integer-only.
+    min_value / max_value:
+        Optional inclusive validation bounds.
+    thousands_sep:
+        Optional character to group integer digits (e.g. ``","``).
+        Default ``""`` means no grouping.
+    """
+
     def format(self, raw: str) -> str:
         """Format *raw* for display."""
         try:
@@ -140,18 +153,6 @@ class NumericFormatter:
     def adjust_cursor(self, raw: str, cursor: int, inserted: str) -> int:
         """Return new cursor position after insertion (moves forward by insertion length)."""
         return min(cursor + len(inserted), len(raw) + len(inserted))
-    """Formats numeric text (integer or float) with optional validation bounds.
-
-    Parameters
-    ----------
-    decimals:
-        Number of decimal places.  ``0`` means integer-only.
-    min_value / max_value:
-        Optional inclusive validation bounds.
-    thousands_sep:
-        Optional character to group integer digits (e.g. ``","``).
-        Default ``""`` means no grouping.
-    """
 
     def __init__(
         self,
@@ -269,55 +270,6 @@ class NumericFormatter:
             input_filter=_filter_numeric,
             font_role=font_role,
             display_value_provider=lambda: self.format(control._value),
-        )
-        state["control"] = control
-        return control
-
-        def _on_change(new_text: str) -> None:
-            control = state["control"]
-            if control is not None:
-                digits_before_cursor = sum(1 for ch in new_text[: control.cursor_pos] if ch.isdigit())
-                parsed_live = self.parse(new_text)
-                live_text = _format_live_numeric(parsed_live)
-                if live_text != new_text:
-                    control.set_value_with_cursor(live_text, _cursor_from_digit_count(live_text, digits_before_cursor))
-                    new_text = live_text
-
-            parsed = self.parse(new_text)
-            if parsed == "":
-                state["last_valid"] = ""
-            elif self.validate(parsed):
-                state["last_valid"] = self.format(parsed)
-            if on_change is not None:
-                on_change(new_text)
-
-        def _on_submit(submitted_text: str) -> None:
-            control = state["control"]
-            if control is None:
-                return
-            parsed = self.parse(submitted_text)
-            if parsed == "":
-                normalized = ""
-            elif self.validate(parsed):
-                normalized = self.format(parsed)
-            else:
-                normalized = state["last_valid"]
-            control.set_value(normalized)
-            state["last_valid"] = normalized
-            if on_submit is not None:
-                on_submit(normalized)
-
-        control = TextInputControl(
-            control_id,
-            rect,
-            value=state["last_valid"],
-            placeholder=placeholder,
-            max_length=max_length,
-            masked=masked,
-            on_change=_on_change,
-            on_submit=_on_submit,
-            input_filter=_filter_numeric,
-            font_role=font_role,
         )
         state["control"] = control
         return control

@@ -6,7 +6,7 @@ push/pop-based scope hierarchy with context-manager support.
 """
 from __future__ import annotations
 
-from typing import Callable, Generic, Iterator, List, Optional, TypeVar
+from typing import Callable, Generic, Optional, TypeVar
 
 __all__ = ["ServiceKey", "ServiceScope", "ScopeStack"]
 

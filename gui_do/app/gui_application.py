@@ -443,8 +443,12 @@ class GuiApplication:
             self.features.update_direct_features(dt_seconds)
             self.scene.update(dt_seconds)
             self.invalidation.invalidate_all()
-            self.focus.revalidate_focus(self.scene)
-            self.window_focus.revalidate(self.scene)
+            # Cache the full BFS walk once to use across all revalidation methods.
+            # This eliminates redundant O(n_nodes) walks across focus, window_focus,
+            # and task_panel_focus revalidation in a single frame.
+            cached_walk = self.scene._get_cached_bfs_walk()
+            self.focus.revalidate_focus(self.scene, cached_walk_nodes=cached_walk)
+            self.window_focus.revalidate(self.scene, cached_walk_nodes=cached_walk)
             self.task_panel_focus.revalidate(self.scene, self)
             active_window = self.scene.active_window()
             if active_window is not self._last_active_window:

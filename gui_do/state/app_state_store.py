@@ -39,16 +39,22 @@ class StateSelector(Generic[T]):
         to the value of interest.
     initial_state:
         Starting state dict used to compute the initial cached value.
+    depends_on:
+        Optional set of state keys that this selector depends on. If provided,
+        the selector only re-evaluates when one of these keys changes. If None,
+        the selector re-evaluates on every patch (classic behavior, safer but slower).
     """
 
     def __init__(
         self,
         extractor: Callable[[Dict[str, Any]], T],
         initial_state: Dict[str, Any],
+        depends_on: set[str] | None = None,
     ) -> None:
         self._extractor = extractor
         self._cached: T = extractor(initial_state)
         self._listeners: List[Callable[[T], None]] = []
+        self._depends_on: set[str] | None = depends_on
 
     @property
     def value(self) -> T:
@@ -74,12 +80,40 @@ class StateSelector(Generic[T]):
     # Internal — called by the store
     # ------------------------------------------------------------------
 
-    def _update(self, new_state: Dict[str, Any]) -> None:
-        new_val = self._extractor(new_state)
-        if new_val != self._cached:
-            self._cached = new_val
-            for cb in list(self._listeners):
-                cb(new_val)
+    def _update(self, new_state: Dict[str, Any], changed_keys: List[str] | None = None) -> None:
+        """Update the selector if its dependencies changed.
+
+        Args:
+            new_state: New state dict to evaluate
+            changed_keys: List of keys that changed in this patch. If provided and
+                          _depends_on is set, only updates if overlap exists.
+                          If changed_keys is None, always updates (legacy behavior).
+        """
+        # Legacy behavior: if no changed_keys provided, always update.
+        # (Used for backward compatibility with code that calls _update without changed_keys)
+        if changed_keys is None:
+            new_val = self._extractor(new_state)
+            if new_val != self._cached:
+                self._cached = new_val
+                for cb in list(self._listeners):
+                    cb(new_val)
+            return
+
+        # Dependency-aware update: only recompute if a dependency changed.
+        if self._depends_on is None:
+            # No dependencies declared: conservative, always update
+            new_val = self._extractor(new_state)
+            if new_val != self._cached:
+                self._cached = new_val
+                for cb in list(self._listeners):
+                    cb(new_val)
+        elif any(key in self._depends_on for key in changed_keys):
+            # At least one dependency changed: update
+            new_val = self._extractor(new_state)
+            if new_val != self._cached:
+                self._cached = new_val
+                for cb in list(self._listeners):
+                    cb(new_val)
 
 
 # ---------------------------------------------------------------------------
@@ -141,18 +175,27 @@ class AppStateStore:
             for cb in list(self._key_subs.get(key, [])):
                 cb(self._state[key])
 
-        # Selectors
-        state_snapshot = dict(self._state)
-        for sel in list(self._selectors):
-            sel._update(state_snapshot)
+        # Selectors — only snapshot state if selectors are registered (optimization for hot path).
+        if self._selectors:
+            state_snapshot = dict(self._state)
+            for sel in list(self._selectors):
+                # Pass changed_keys to selector so it can short-circuit if it has no dependencies on them.
+                sel._update(state_snapshot, changed_keys=changed_keys)
 
     # ------------------------------------------------------------------
     # Selectors
     # ------------------------------------------------------------------
 
-    def select(self, extractor: Callable[[Dict[str, Any]], T]) -> StateSelector[T]:
-        """Create and register a :class:`StateSelector` backed by *extractor*."""
-        sel: StateSelector[T] = StateSelector(extractor, dict(self._state))
+    def select(self, extractor: Callable[[Dict[str, Any]], T], depends_on: set[str] | None = None) -> StateSelector[T]:
+        """Create and register a :class:`StateSelector` backed by *extractor*.
+
+        Args:
+            extractor: Function to extract/compute the derived value from state.
+            depends_on: Optional set of state keys this selector depends on. If provided,
+                       the selector only re-evaluates when one of these keys changes.
+                       If None, re-evaluates on every state change (safe but slower).
+        """
+        sel: StateSelector[T] = StateSelector(extractor, dict(self._state), depends_on=depends_on)
         with self._lock:
             self._selectors.append(sel)
         return sel

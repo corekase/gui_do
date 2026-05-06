@@ -20,11 +20,15 @@ class Scene:
         self._window_query_dirty: bool = True
         self._cached_window_nodes: List[UiNode] = []
         self._cached_task_panel_nodes: List[UiNode] = []
+        self._walk_nodes_dirty: bool = True
+        self._cached_walk_nodes: List[UiNode] = []
 
     def _invalidate_window_query_cache(self) -> None:
         self._window_query_dirty = True
         self._cached_window_nodes = []
         self._cached_task_panel_nodes = []
+        self._walk_nodes_dirty = True
+        self._cached_walk_nodes = []
 
     def _window_query_nodes(self) -> tuple[List[UiNode], List[UiNode]]:
         if not self._window_query_dirty:
@@ -110,17 +114,33 @@ class Scene:
 
     # --- Internal traversal ---
 
-    def _walk_nodes(self) -> "Generator[UiNode, None, None]":
+    def _get_cached_bfs_walk(self) -> List[UiNode]:
+        """Return cached list of all nodes in BFS order. Invalidated on add/remove.
+
+        Provides O(1) read access to the full scene walk result, avoiding
+        redundant generator iterations in per-frame revalidation loops.
+        """
+        if not self._walk_nodes_dirty:
+            return self._cached_walk_nodes
         # List-with-index BFS avoids deque object overhead and popleft cost.
-        # The list grows as children are appended; index advances without shifting.
         queue: list = list(self.nodes)
         i = 0
+        nodes: List[UiNode] = []
         while i < len(queue):
             node = queue[i]
             i += 1
-            yield node
+            nodes.append(node)
             if node.children:
                 queue.extend(node.children)
+        self._cached_walk_nodes = nodes
+        self._walk_nodes_dirty = False
+        return nodes
+
+    def _walk_nodes(self) -> "Generator[UiNode, None, None]":
+        # Delegate to cached walk, yielding from the cached list.
+        # Maintains generator interface for backward compatibility.
+        for node in self._get_cached_bfs_walk():
+            yield node
 
     def active_window(self) -> UiNode | None:
         windows, _task_panels = self._window_query_nodes()
@@ -218,15 +238,24 @@ class Scene:
         _window, best = self._pointer_context_at_validated(pos)
         return best
 
-    def _pointer_context_at_validated(self, pos) -> tuple[UiNode | None, UiNode | None]:
-        windows, _task_panels = self._window_query_nodes()
+    def _pointer_context_at_validated(self, pos, windows: List[UiNode] | None = None) -> tuple[UiNode | None, UiNode | None]:
+        """Find (window_hit, best_focus_target) at pos. Accepts optional cached windows list.
+
+        Args:
+            pos: Mouse position tuple (x, y)
+            windows: Optional pre-queried windows list to avoid redundant window query.
+                     If None, windows are queried from scene.
+        """
+        if windows is None:
+            windows, _task_panels = self._window_query_nodes()
         top_window = None
         for node in reversed(windows):
             if node.visible and node.enabled and node.rect.collidepoint(pos):
                 top_window = node
                 break
         best: UiNode | None = None
-        for node in self._walk_nodes():
+        walk_nodes = self._get_cached_bfs_walk()  # Use cached walk instead of generator
+        for node in walk_nodes:
             if not (node.visible and node.enabled):
                 continue
             if (
@@ -238,11 +267,16 @@ class Scene:
                 best = node
         return top_window, best
 
-    def pointer_context_at(self, pos) -> tuple[bool, UiNode | None]:
-        """Return ``(window_hit, focus_target)`` for one pointer position in one pass."""
+    def pointer_context_at(self, pos, windows: List[UiNode] | None = None) -> tuple[bool, UiNode | None]:
+        """Return ``(window_hit, focus_target)`` for one pointer position in one pass.
+
+        Args:
+            pos: Mouse position tuple (x, y)
+            windows: Optional pre-queried windows list for efficiency.
+        """
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return (False, None)
-        top_window, best = self._pointer_context_at_validated(pos)
+        top_window, best = self._pointer_context_at_validated(pos, windows=windows)
         return (top_window is not None, best)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
