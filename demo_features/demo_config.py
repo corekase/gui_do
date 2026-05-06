@@ -71,7 +71,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 slot_index=1,
                 task_panel_label="System",
                 task_panel_style="round",
-                tab_before_showcase=True,
             ),
             FeatureWindowBundleBindingSpec(
                 "_life_feature",
@@ -80,7 +79,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 slot_index=2,
                 task_panel_label="Life",
                 task_panel_style="round",
-                tab_before_showcase=True,
             ),
             FeatureWindowBundleBindingSpec(
                 "_mandel_feature",
@@ -89,7 +87,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 slot_index=3,
                 task_panel_label="Mandelbrot",
                 task_panel_style="round",
-                tab_before_showcase=True,
             ),
         ),
         action_entries=(

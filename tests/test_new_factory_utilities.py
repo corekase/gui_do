@@ -1142,7 +1142,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
             task_panel_label="X",
             task_panel_style="round",
             task_panel_slot_index=9,
-            tab_before_showcase=False,
             accessibility_label="Show X window",
         )
         built = build_window_toggle_specs(
@@ -1153,7 +1152,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                     slot_index=2,
                     task_panel_label="Life",
                     task_panel_style="angle",
-                    tab_before_showcase=True,
                 ),
                 existing,
             )
@@ -1163,7 +1161,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         self.assertEqual(built[0].feature_attr, "_life")
         self.assertEqual(built[0].task_panel_slot_index, 2)
         self.assertEqual(built[0].task_panel_style, "angle")
-        self.assertTrue(built[0].tab_before_showcase)
         self.assertIs(built[1], existing)
 
     def test_build_scene_nav_actions_from_tuples_and_passthrough(self):
@@ -1602,7 +1599,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                     slot_index=4,
                     task_panel_label="Mandelbrot",
                     task_panel_style="round",
-                    tab_before_showcase=True,
                 ),
             )
         )
@@ -1618,10 +1614,8 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         self.assertEqual(window_specs[0].task_panel_slot_index, 3)
         self.assertEqual(window_specs[0].task_panel_label, "Life")
         self.assertEqual(window_specs[0].task_panel_style, "round")
-        self.assertFalse(window_specs[0].tab_before_showcase)
-        self.assertEqual(window_specs[1].key, "mandel")
+        self.assertEqual(window_specs[0].task_panel_slot_index, 2)
         self.assertEqual(window_specs[1].task_panel_slot_index, 4)
-        self.assertTrue(window_specs[1].tab_before_showcase)
 
     def test_build_feature_window_bundle_specs_passthrough(self):
         from gui_do import (
@@ -1644,7 +1638,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
             task_panel_label="Extra",
             task_panel_style="angle",
             task_panel_slot_index=9,
-            tab_before_showcase=False,
             accessibility_label="Show Extra window",
         )
         feature_specs, window_specs = build_feature_window_bundle_specs(

@@ -308,7 +308,6 @@ class _StubWindowSpec:
         task_panel_label: str,
         task_panel_style: str,
         task_panel_slot_index: int,
-        tab_before_showcase: bool,
         accessibility_label: str,
     ):
         self.key = key
@@ -320,7 +319,6 @@ class _StubWindowSpec:
         self.task_panel_label = task_panel_label
         self.task_panel_style = task_panel_style
         self.task_panel_slot_index = task_panel_slot_index
-        self.tab_before_showcase = tab_before_showcase
         self.accessibility_label = accessibility_label
 
 
@@ -1102,7 +1100,6 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
                 task_panel_label="Systems",
                 task_panel_style="toggle",
                 task_panel_slot_index=1,
-                tab_before_showcase=True,
                 accessibility_label="Systems Window",
             )
         ]
@@ -1120,7 +1117,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual("Systems", kwargs["task_panel_label"])
         self.assertEqual("toggle", kwargs["task_panel_style"])
         self.assertEqual(1, kwargs["task_panel_slot_index"])
-        self.assertTrue(kwargs["tab_before_showcase"])
+        self.assertIn("_toggle_window", kwargs["toggle_attr"])
         self.assertEqual("Systems Window", kwargs["accessibility_label"])
 
     # ------------------------------------------------------------------

@@ -50,7 +50,6 @@ class WindowSpec:
     task_panel_label: str
     task_panel_style: str
     task_panel_slot_index: int
-    tab_before_showcase: bool
     accessibility_label: str
 
 
@@ -384,7 +383,6 @@ class FeatureWindowBundleBindingSpec:
     slot_index: int
     task_panel_label: str | None = None
     task_panel_style: str = "round"
-    tab_before_showcase: bool = False
     action_label: str | None = None
     action_name: str | None = None
     task_panel_button_id: str | None = None
@@ -401,7 +399,6 @@ class WindowToggleBindingSpec:
     slot_index: int
     task_panel_label: str | None = None
     task_panel_style: str = "round"
-    tab_before_showcase: bool = False
     action_label: str | None = None
     action_name: str | None = None
     task_panel_button_id: str | None = None
@@ -914,13 +911,27 @@ def _build_standard_action_handler(host, spec):
 
 
 def build_host_main_tab_order(host, window_toggle_controls) -> list:
-    """Return the main-scene controls in declarative accessibility order."""
-    before_showcase = [c for b, c in window_toggle_controls if b.tab_before_showcase]
-    after_showcase = [c for b, c in window_toggle_controls if not b.tab_before_showcase]
+    """Return the main-scene controls in declarative accessibility order.
+
+    Keyboard focus order follows visual slot_index order, ensuring that tabbing
+    through controls matches their visual layout in the task panel. This maintains
+    accessibility best practices where focus order aligns with visual presentation.
+
+    Args:
+        host: The host application instance.
+        window_toggle_controls: Sequence of (WindowSpec, control) tuples.
+
+    Returns:
+        Ordered list of controls for accessibility declaration, with windows sorted
+        by their task_panel_slot_index for coherent focus flow.
+    """
     base_controls = [host.exit_button]
-    base_controls.extend(before_showcase)
-    base_controls.append(host.showcase_button)
-    base_controls.extend(after_showcase)
+    # Sort window controls by their slot_index to match visual order
+    sorted_windows = sorted(
+        window_toggle_controls,
+        key=lambda pair: pair[0].task_panel_slot_index
+    )
+    base_controls.extend(c for _b, c in sorted_windows)
     return base_controls
 
 
@@ -1905,7 +1916,6 @@ def make_window_toggle_spec(
     slot_index: int,
     task_panel_label: str | None = None,
     task_panel_style: str = "round",
-    tab_before_showcase: bool = False,
     action_label: str | None = None,
     action_name: str | None = None,
     task_panel_button_id: str | None = None,
@@ -1925,7 +1935,6 @@ def make_window_toggle_spec(
         task_panel_label=normalized_label,
         task_panel_style=str(task_panel_style),
         task_panel_slot_index=int(slot_index),
-        tab_before_showcase=bool(tab_before_showcase),
         accessibility_label=accessibility_label or f"Show {normalized_label} window",
     )
 
@@ -2039,7 +2048,6 @@ def build_feature_window_bundle_specs(
                 slot_index=entry.slot_index,
                 task_panel_label=entry.task_panel_label,
                 task_panel_style=entry.task_panel_style,
-                tab_before_showcase=entry.tab_before_showcase,
                 action_label=entry.action_label,
                 action_name=entry.action_name,
                 task_panel_button_id=entry.task_panel_button_id,
@@ -2067,7 +2075,6 @@ def build_window_toggle_specs(bindings: Sequence[WindowToggleBindingSpec | Windo
                 slot_index=binding.slot_index,
                 task_panel_label=binding.task_panel_label,
                 task_panel_style=binding.task_panel_style,
-                tab_before_showcase=binding.tab_before_showcase,
                 action_label=binding.action_label,
                 action_name=binding.action_name,
                 task_panel_button_id=binding.task_panel_button_id,
@@ -2630,7 +2637,6 @@ def register_window_presentation_specs(window_presentation, window_specs) -> Non
             task_panel_label=spec.task_panel_label,
             task_panel_style=spec.task_panel_style,
             task_panel_slot_index=spec.task_panel_slot_index,
-            tab_before_showcase=spec.tab_before_showcase,
             accessibility_label=spec.accessibility_label,
         )
 
