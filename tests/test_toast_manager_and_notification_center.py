@@ -181,6 +181,20 @@ class TestToastManagerClickHandling(unittest.TestCase):
         ev = GuiEvent(kind=kind, type=event_type, pos=(x, y), button=1)
         return self.mgr.route_event(ev, self.app)
 
+    def _pointer_event(self, *, x: int, y: int, kind: EventType, button: int | None = None):
+        if kind is EventType.MOUSE_BUTTON_DOWN:
+            event_type = pygame.MOUSEBUTTONDOWN
+        elif kind is EventType.MOUSE_BUTTON_UP:
+            event_type = pygame.MOUSEBUTTONUP
+        elif kind is EventType.MOUSE_MOTION:
+            event_type = pygame.MOUSEMOTION
+        elif kind is EventType.MOUSE_WHEEL:
+            event_type = pygame.MOUSEWHEEL
+        else:
+            event_type = 0
+        ev = GuiEvent(kind=kind, type=event_type, pos=(x, y), button=button)
+        return self.mgr.route_event(ev, self.app)
+
     def test_click_inside_toast_consumes_by_default(self):
         self.mgr.show("hello")
         consumed = self._click(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24)
@@ -204,6 +218,28 @@ class TestToastManagerClickHandling(unittest.TestCase):
         self.mgr.show("hello")
         consumed = self._click(x=8, y=8)
         self.assertFalse(consumed)
+
+    def test_mouse_motion_inside_toast_consumed(self):
+        self.mgr.show("hello")
+        consumed = self._pointer_event(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24, kind=EventType.MOUSE_MOTION)
+        self.assertTrue(consumed)
+
+    def test_mouse_wheel_inside_toast_consumed(self):
+        self.mgr.show("hello")
+        consumed = self._pointer_event(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24, kind=EventType.MOUSE_WHEEL)
+        self.assertTrue(consumed)
+
+    def test_non_left_click_inside_toast_consumed_without_callback(self):
+        fired = []
+        self.mgr.show("hello", on_click=lambda: fired.append("ok"))
+        consumed = self._pointer_event(
+            x=_SCREEN.right - 24,
+            y=_SCREEN.bottom - 24,
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            button=3,
+        )
+        self.assertTrue(consumed)
+        self.assertEqual([], fired)
 
 
 # ===========================================================================

@@ -205,15 +205,22 @@ class ToastManager:
             surface.blit(msg_surf, (rect.x + 16, draw_y))
 
     def route_event(self, event, app) -> bool:
-        """Consume clicks on toast bounds and invoke optional per-toast callbacks."""
+        """Consume pointer events over toast bounds and invoke optional click callbacks."""
         if not self._toasts:
             return False
-        if getattr(event, "kind", None) not in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            from ..events.gui_event import EventType
+        from ..events.gui_event import EventType
 
-            if getattr(event, "kind", None) not in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP):
-                return False
-        if int(getattr(event, "button", 0) or 0) != 1:
+        kind = getattr(event, "kind", None)
+        if kind not in (
+            pygame.MOUSEBUTTONDOWN,
+            pygame.MOUSEBUTTONUP,
+            pygame.MOUSEMOTION,
+            pygame.MOUSEWHEEL,
+            EventType.MOUSE_BUTTON_DOWN,
+            EventType.MOUSE_BUTTON_UP,
+            EventType.MOUSE_MOTION,
+            EventType.MOUSE_WHEEL,
+        ):
             return False
         pos = getattr(event, "pos", None)
         if not (isinstance(pos, tuple) and len(pos) == 2):
@@ -225,9 +232,7 @@ class ToastManager:
         font = self._ensure_draw_font(theme)
         for entry, rect in self._layout_toasts(font):
             if rect.collidepoint(pos):
-                from ..events.gui_event import EventType
-
-                if getattr(event, "kind", None) in (pygame.MOUSEBUTTONDOWN, EventType.MOUSE_BUTTON_DOWN):
+                if kind in (pygame.MOUSEBUTTONDOWN, EventType.MOUSE_BUTTON_DOWN) and int(getattr(event, "button", 0) or 0) == 1:
                     callback = entry.on_click
                     if callable(callback):
                         try:

@@ -269,6 +269,24 @@ class GuiApplication:
                 if child.children:
                     queue.extend(child.children)
 
+    def _reconcile_scene_hover_state(self, scene: Scene, *, pointer_pos=None, force_idle: bool = False) -> None:
+        """Normalize scene-wide hover flags for all nodes.
+
+        Used by top-layer input consumers (for example toasts) to keep
+        underlying controls from retaining stale hover visuals when pointer
+        events are intentionally intercepted before scene dispatch.
+        """
+        if scene is None:
+            return
+        probe = None
+        if not force_idle and isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+            probe = (int(pointer_pos[0]), int(pointer_pos[1]))
+        for node in scene._walk_nodes():
+            wants_hover = False
+            if probe is not None and node.visible and node.enabled:
+                wants_hover = bool(node.rect.collidepoint(probe))
+            node.reconcile_hover(wants_hover)
+
     def _snap_autohide_task_panels_lowered(self, scene) -> None:
         """Snap every autohide task panel in *scene* to its fully-lowered position.
 
@@ -570,8 +588,9 @@ class GuiApplication:
         is_pointer_event = logical_event.kind in _POINTER_EVENT_KINDS
 
         # Toasts render above overlays/scene. Pointer hits on toast bounds are
-        # consumed so clicks do not fall through to underlying controls.
+        # consumed so pointer state does not fall through to underlying controls.
         if is_pointer_event and self.toasts.route_event(logical_event, self):
+            self._reconcile_scene_hover_state(self.scene, force_idle=True)
             self.invalidation.invalidate_all()
             return True
 
