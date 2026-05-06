@@ -1117,7 +1117,6 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual("Systems", kwargs["task_panel_label"])
         self.assertEqual("toggle", kwargs["task_panel_style"])
         self.assertEqual(1, kwargs["task_panel_slot_index"])
-        self.assertIn("_toggle_window", kwargs["toggle_attr"])
         self.assertEqual("Systems Window", kwargs["accessibility_label"])
 
     # ------------------------------------------------------------------

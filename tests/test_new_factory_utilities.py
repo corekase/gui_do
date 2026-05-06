@@ -1614,7 +1614,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         self.assertEqual(window_specs[0].task_panel_slot_index, 3)
         self.assertEqual(window_specs[0].task_panel_label, "Life")
         self.assertEqual(window_specs[0].task_panel_style, "round")
-        self.assertEqual(window_specs[0].task_panel_slot_index, 2)
         self.assertEqual(window_specs[1].task_panel_slot_index, 4)
 
     def test_build_feature_window_bundle_specs_passthrough(self):

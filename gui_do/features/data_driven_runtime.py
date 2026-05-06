@@ -926,12 +926,20 @@ def build_host_main_tab_order(host, window_toggle_controls) -> list:
         by their task_panel_slot_index for coherent focus flow.
     """
     base_controls = [host.exit_button]
-    # Sort window controls by their slot_index to match visual order
-    sorted_windows = sorted(
-        window_toggle_controls,
-        key=lambda pair: pair[0].task_panel_slot_index
-    )
-    base_controls.extend(c for _b, c in sorted_windows)
+    sorted_windows = sorted(window_toggle_controls, key=lambda pair: pair[0].task_panel_slot_index)
+    showcase_button = getattr(host, "showcase_button", None)
+
+    # Keep showcase in its visual position: after the first window toggle when
+    # at least one toggle exists, otherwise directly after Exit.
+    if sorted_windows:
+        base_controls.append(sorted_windows[0][1])
+        if showcase_button is not None:
+            base_controls.append(showcase_button)
+        base_controls.extend(c for _b, c in sorted_windows[1:])
+        return base_controls
+
+    if showcase_button is not None:
+        base_controls.append(showcase_button)
     return base_controls
 
 
