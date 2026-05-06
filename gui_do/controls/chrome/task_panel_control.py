@@ -36,6 +36,8 @@ class TaskPanelControl(PanelControl):
         self.dock_bottom = bool(dock_bottom)
         self._shown_y = int(rect.y)
         self._hidden_y = self._compute_hidden_y()
+        if self.auto_hide:
+            self.rect.y = self._hidden_y
         self._hovered = False
         self._focus_mode_active = False
         self._child_local_offsets: Dict[object, Tuple[int, int]] = {}
