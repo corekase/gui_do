@@ -7,7 +7,6 @@ Feature-specific classes, specs, and future helpers should live here.
 from .moving_shapes_backdrop_feature import (
     MovingShapesBackdropFeature,
 )
-from .moving_shapes_specs import DEMO_BORDER_BASE_COLOUR, DEMO_SHAPE_COLOURS
 from .shape_sprite_state import ShapeSpriteState
 
 FEATURE_PACKAGE_INFO = {
@@ -18,8 +17,6 @@ FEATURE_PACKAGE_INFO = {
 
 __all__ = [
     "MovingShapesBackdropFeature",
-    "DEMO_BORDER_BASE_COLOUR",
-    "DEMO_SHAPE_COLOURS",
     "FEATURE_PACKAGE_INFO",
     "ShapeSpriteState",
 ]

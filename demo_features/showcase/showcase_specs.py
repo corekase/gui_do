@@ -34,6 +34,4 @@ BASICS_SUPPRESSED_LABEL_NAMES: frozenset[str] = frozenset({
     "button_group_c2", "button_group_c3",
 })
 
-CONTROLS_RUNTIME_SPEC = _CONTROLS_RUNTIME_SPEC
-
-__all__ = ["BASICS_SUPPRESSED_LABEL_NAMES", "CONTROLS_RUNTIME_SPEC"]
+__all__ = ["BASICS_SUPPRESSED_LABEL_NAMES"]

@@ -5,7 +5,6 @@ Feature-specific classes, specs, and future helpers should live here as a best-p
 """
 
 from .main_feature import MainFeature
-from .main_specs import MAIN_RUNTIME_SPEC
 
 FEATURE_PACKAGE_INFO = {
     "feature_name": "main",
@@ -15,6 +14,5 @@ FEATURE_PACKAGE_INFO = {
 
 __all__ = [
     "FEATURE_PACKAGE_INFO",
-    "MAIN_RUNTIME_SPEC",
     "MainFeature",
 ]
