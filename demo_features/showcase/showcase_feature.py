@@ -575,7 +575,15 @@ class ShowcaseFeature(Feature):
             row_control_h = max(int(c["control_h"]) for c in cells)
             row_slot_rect = Rect(stack.add_slot_or_overflow(slot_h(row_control_h), overflow_gap=row_gap))
             col_gap = int(cells[0].get("col_gap", self.BASICS_COL_GAP)) if cells else self.BASICS_COL_GAP
-            col_rects = CellCaretLayout.split_columns(row_slot_rect, count=cols, gap=col_gap, min_width=60)
+            natural_widths = [c.get("natural_width") for c in cells]
+            if all(w is not None for w in natural_widths):
+                x = row_slot_rect.left
+                col_rects = []
+                for w in natural_widths:
+                    col_rects.append(Rect(x, row_slot_rect.top, int(w), row_slot_rect.height))
+                    x += int(w) + col_gap
+            else:
+                col_rects = CellCaretLayout.split_columns(row_slot_rect, count=cols, gap=col_gap, min_width=60)
             for col_i, cell in enumerate(cells):
                 col_rect = Rect(col_rects[col_i])
                 desired_slot_h = slot_h(int(cell["control_h"]))
@@ -583,7 +591,11 @@ class ShowcaseFeature(Feature):
 
                 target_w = cell.get("target_width")
                 if isinstance(target_w, int) and 1 <= target_w < slot_rect.width:
-                    slot_rect.left += (slot_rect.width - target_w) // 2
+                    target_align = str(cell.get("target_align", "center")).lower()
+                    if target_align == "right":
+                        slot_rect.left += slot_rect.width - target_w
+                    elif target_align != "left":
+                        slot_rect.left += (slot_rect.width - target_w) // 2
                     slot_rect.width = target_w
 
                 control_h = max(1, slot_rect.height - label_h - label_gap)
@@ -640,7 +652,7 @@ class ShowcaseFeature(Feature):
         def make_vertical_button_cell(cell_id: str, control_ids: tuple[str, str, str], labels: tuple[str, str, str], control_w: int, control_h: int):
             panel = PanelControl(cell_id, Rect(0, 0, control_w, control_h), draw_background=False)
             btn_w = min(100, control_w)
-            col_anchor = Rect((control_w - btn_w) // 2, 0, btn_w, control_h)
+            col_anchor = Rect(0, 0, btn_w, control_h)
             stack_inner, _, _, _ = CellCaretLayout.column_stack_from_anchor(
                 anchor=col_anchor,
                 content_bottom=col_anchor.bottom,
@@ -661,7 +673,7 @@ class ShowcaseFeature(Feature):
         def make_vertical_group_cell(control_id: str, group_name: str, control_ids: tuple[str, str, str], labels: tuple[str, str, str], control_w: int, control_h: int):
             panel = PanelControl(control_id, Rect(0, 0, control_w, control_h), draw_background=False)
             btn_w = min(100, control_w)
-            col_anchor = Rect((control_w - btn_w) // 2, 0, btn_w, control_h)
+            col_anchor = Rect(0, 0, btn_w, control_h)
             stack_inner, _, _, _ = CellCaretLayout.column_stack_from_anchor(
                 anchor=col_anchor,
                 content_bottom=col_anchor.bottom,
@@ -727,7 +739,7 @@ class ShowcaseFeature(Feature):
             track_w = 24
             gap_x = 12
             pair_w = (track_w * 2) + gap_x
-            start_x = max(0, (control_w - pair_w) // 2)
+            start_x = 0
             track_h = max(80, control_h)
             y = max(0, (control_h - track_h) // 2)
             panel.add_at(
@@ -781,7 +793,8 @@ class ShowcaseFeature(Feature):
                     "control_h": 80,
                     "factory": make_arrow_boxes_cell,
                     "focusable": False,
-                    "col_gap": self.BASICS_COL_GAP,
+                    "natural_width": 110,
+                    "col_gap": 6,
                 },
                 {
                     "name": "buttons_cell",
@@ -795,7 +808,8 @@ class ShowcaseFeature(Feature):
                         h,
                     ),
                     "focusable": False,
-                    "col_gap": self.BASICS_COL_GAP,
+                    "natural_width": 100,
+                    "col_gap": 6,
                 },
                 {
                     "name": "button_group_a_cell",
@@ -810,7 +824,8 @@ class ShowcaseFeature(Feature):
                         h,
                     ),
                     "focusable": False,
-                    "col_gap": self.BASICS_COL_GAP,
+                    "natural_width": 100,
+                    "col_gap": 6,
                 },
                 {
                     "name": "button_group_b_cell",
@@ -825,7 +840,8 @@ class ShowcaseFeature(Feature):
                         h,
                     ),
                     "focusable": False,
-                    "col_gap": self.BASICS_COL_GAP,
+                    "natural_width": 100,
+                    "col_gap": 6,
                 },
                 {
                     "name": "button_group_c_cell",
@@ -840,53 +856,60 @@ class ShowcaseFeature(Feature):
                         h,
                     ),
                     "focusable": False,
-                    "col_gap": self.BASICS_COL_GAP,
+                    "natural_width": 100,
+                    "col_gap": 6,
                 },
             ],
             cols=5,
         )
 
-        # Row 2: text area, text input, tab, data grid
+        # Row 2: text area + input stacked, tab, data grid
+        def make_text_area_with_input_cell(control_w: int, control_h: int):
+            panel = PanelControl("control_text_area_cell", Rect(0, 0, control_w, control_h), draw_background=False)
+            ta_h = 96
+            ti_h = 32
+            inner_gap = 8
+            input_label_y = ta_h + inner_gap
+            input_y = input_label_y + label_h + label_gap
+            panel.add_at(
+                TextAreaControl(
+                    "control_text_area",
+                    Rect(0, 0, control_w, ta_h),
+                    value="Heading: Notes\n- First line\n- Second line",
+                ),
+                0, 0,
+            )
+            panel.add_at(
+                LabelControl(
+                    "label_control_text_input_inline",
+                    Rect(0, 0, control_w, label_h),
+                    "Text Input",
+                    align="left",
+                ),
+                0,
+                input_label_y,
+            )
+            panel.add_at(
+                TextInputControl(
+                    "control_text_input",
+                    Rect(0, 0, control_w, ti_h),
+                    placeholder="Type here",
+                ),
+                0,
+                input_y,
+            )
+            return panel
+
         add_row(
             [
                 {
                     "name": "text_area",
                     "label": "Text Area",
-                    "control_h": 96,
-                    "factory": lambda w, h: make_single_control_cell(
-                        "control_text_area_cell",
-                        child_id="control_text_area",
-                        control_w=w,
-                        control_h=h,
-                        build_child=lambda r: TextAreaControl(
-                            "control_text_area",
-                            r,
-                            value="Heading: Notes\n- First line\n- Second line",
-                        ),
-                    ),
+                    "control_h": 160,
+                    "factory": make_text_area_with_input_cell,
                     "focusable": False,
                     "accessibility_role": "textbox",
                     "accessibility_label": "Text area",
-                    "col_gap": self.BASICS_COL_GAP,
-                },
-                {
-                    "name": "text_input",
-                    "label": "Text Input",
-                    "control_h": 32,
-                    "factory": lambda w, h: make_single_control_cell(
-                        "control_text_input_cell",
-                        child_id="control_text_input",
-                        control_w=w,
-                        control_h=h,
-                        build_child=lambda r: TextInputControl(
-                            "control_text_input",
-                            r,
-                            placeholder="Type here",
-                        ),
-                    ),
-                    "focusable": False,
-                    "accessibility_role": "textbox",
-                    "accessibility_label": "Text input",
                     "col_gap": self.BASICS_COL_GAP,
                 },
                 {
@@ -942,7 +965,7 @@ class ShowcaseFeature(Feature):
                     "col_gap": self.BASICS_COL_GAP,
                 },
             ],
-            cols=4,
+            cols=3,
         )
 
         # Row 3: horizontal pair, vertical pair
@@ -950,7 +973,7 @@ class ShowcaseFeature(Feature):
             [
                 {
                     "name": "horizontal_pair",
-                    "label": "Horizontal Controls",
+                    "label": "Horizontal Scrollbar and Slider",
                     "control_h": 56,
                     "factory": make_horiz_pair_cell,
                     "focusable": False,
@@ -958,7 +981,7 @@ class ShowcaseFeature(Feature):
                 },
                 {
                     "name": "vertical_pair",
-                    "label": "Vertical Controls",
+                    "label": "Vertical Scrollbar and Slider",
                     "control_h": 140,
                     "factory": make_vert_pair_cell,
                     "focusable": False,
@@ -981,21 +1004,22 @@ class ShowcaseFeature(Feature):
                         nc,
                     ),
                     "focusable": False,
-                    "col_gap": 12,
+                    "col_gap": 6,
                 },
                 {
                     "name": "image",
                     "label": "Image",
                     "control_h": 160,
                     "target_width": 160,
+                    "target_align": "left",
                     "factory": lambda w, h: ImageControl(
                         "control_image",
-                        Rect(0, 0, min(w, h), min(w, h)),
+                        Rect(0, 0, h, h),
                         image_path,
                         scale=True,
                     ),
                     "focusable": False,
-                    "col_gap": 12,
+                    "col_gap": 6,
                 },
             ],
             cols=2,
