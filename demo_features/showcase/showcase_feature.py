@@ -97,6 +97,7 @@ from gui_do.features.data_driven_runtime import (
     create_tab_control_from_specs,
     setup_routed_runtime,
 )
+from gui_do.features.feature_lifecycle import ControlPlacementSpec
 from .showcase_inspectable import ShowcaseInspectable
 from .showcase_specs import _CONTROLS_RUNTIME_SPEC
 
@@ -265,6 +266,8 @@ class ShowcaseFeature(Feature):
     CATEGORY_TAB_STRIP_HEIGHT = 34
     CATEGORY_TAB_STRIP_GAP = 8
     ROW_GAP = 8
+    BASICS_COL_GAP = 10
+    BASICS_INNER_GAP = 6
 
     # Control values
     SLIDER_MINIMUM = 0.0
@@ -372,7 +375,6 @@ class ShowcaseFeature(Feature):
         row_gap = self.ROW_GAP
 
         # Pre-compute column widths per category so control factories get correct dimensions
-        basics_col_w = self._col_width(content_rect, self.BASICS_COLUMNS)
         other_col_w = self._col_width(content_rect, self.DATA_COLUMNS)
 
         self._showcase_notification_center = build_notification_center(
@@ -383,8 +385,10 @@ class ShowcaseFeature(Feature):
             max_records=6,
         )
 
+        basics_specs = self._build_basics_specs(content_rect)
+        self._registry.register(basics_specs)
+
         for defs, num_cols in (
-            (self._basics_defs(basics_col_w), self.BASICS_COLUMNS),
             (self._data_defs(other_col_w), self.DATA_COLUMNS),
             (self._advanced_defs(other_col_w, host), self.ADVANCED_COLUMNS),
             (self._extended_defs(other_col_w, host), self.EXTENDED_COLUMNS),
@@ -543,132 +547,461 @@ class ShowcaseFeature(Feature):
     # Control definition builders (one method per category)
     # ------------------------------------------------------------------
 
-    def _basics_defs(self, col_w: int) -> list[ControlDefinition]:
+    def _build_basics_specs(self, bounds: Rect) -> tuple[ControlPlacementSpec, ...]:
         image_path = str(Path(__file__).parent.parent / self.IMAGE_PATH)
         nc = self._showcase_notification_center
-        return [
-            ControlDefinition("arrow_up", "Arrow Up", 32, 0,
-                lambda: ArrowBoxControl("control_arrow_up", Rect(0, 0, col_w, 32), 90),
-                focusable=True, accessibility_role="button", accessibility_label="Arrow up"),
-            ControlDefinition("arrow_down", "Arrow Down", 32, 1,
-                lambda: ArrowBoxControl("control_arrow_down", Rect(0, 0, col_w, 32), 270),
-                focusable=True, accessibility_role="button", accessibility_label="Arrow down"),
-            ControlDefinition("arrow_left", "Arrow Left", 32, 2,
-                lambda: ArrowBoxControl("control_arrow_left", Rect(0, 0, col_w, 32), 180),
-                focusable=True, accessibility_role="button", accessibility_label="Arrow left"),
-            ControlDefinition("arrow_right", "Arrow Right", 32, 3,
-                lambda: ArrowBoxControl("control_arrow_right", Rect(0, 0, col_w, 32), 0),
-                focusable=True, accessibility_role="button", accessibility_label="Arrow right"),
-            ControlDefinition("button", "Button", 30, 4,
-                lambda: ButtonControl("control_button", Rect(0, 0, col_w, 30), "Button"),
-                focusable=True, accessibility_role="button", accessibility_label="Button"),
-            ControlDefinition("button_2", "Button 2", 30, 5,
-                lambda: ButtonControl("control_button_2", Rect(0, 0, col_w, 30), "Button"),
-                focusable=True, accessibility_role="button", accessibility_label="Button 2"),
-            ControlDefinition("button_3", "Button 3", 30, 6,
-                lambda: ButtonControl("control_button_3", Rect(0, 0, col_w, 30), "Button"),
-                focusable=True, accessibility_role="button", accessibility_label="Button 3"),
-            ControlDefinition("toggle", "Toggle", 30, 7,
-                lambda: ToggleControl("control_toggle", Rect(0, 0, col_w, 30), "On", "Off",
-                    pushed=False, style="round"),
-                focusable=True, accessibility_role="toggle", accessibility_label="Toggle"),
-            ControlDefinition("toggle_2", "Toggle 2", 30, 8,
-                lambda: ToggleControl("control_toggle_2", Rect(0, 0, col_w, 30), "On", "Off",
-                    pushed=False, style="round"),
-                focusable=True, accessibility_role="toggle", accessibility_label="Toggle 2"),
-            ControlDefinition("toggle_3", "Toggle 3", 30, 9,
-                lambda: ToggleControl("control_toggle_3", Rect(0, 0, col_w, 30), "On", "Off",
-                    pushed=False, style="round"),
-                focusable=True, accessibility_role="toggle", accessibility_label="Toggle 3"),
-            ControlDefinition("button_group_a1", "Group A", 30, 10,
-                lambda: ButtonGroupControl("control_button_group_a1", Rect(0, 0, col_w, 30),
-                    "controls_showcase_a", "A1", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group A option 1"),
-            ControlDefinition("button_group_a2", "Group A 2", 30, 11,
-                lambda: ButtonGroupControl("control_button_group_a2", Rect(0, 0, col_w, 30),
-                    "controls_showcase_a", "A2", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group A option 2"),
-            ControlDefinition("button_group_a3", "Group A 3", 30, 12,
-                lambda: ButtonGroupControl("control_button_group_a3", Rect(0, 0, col_w, 30),
-                    "controls_showcase_a", "A3", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group A option 3"),
-            ControlDefinition("button_group_b1", "Group B", 30, 13,
-                lambda: ButtonGroupControl("control_button_group_b1", Rect(0, 0, col_w, 30),
-                    "controls_showcase_b", "B1", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group B option 1"),
-            ControlDefinition("button_group_b2", "Group B 2", 30, 14,
-                lambda: ButtonGroupControl("control_button_group_b2", Rect(0, 0, col_w, 30),
-                    "controls_showcase_b", "B2", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group B option 2"),
-            ControlDefinition("button_group_b3", "Group B 3", 30, 15,
-                lambda: ButtonGroupControl("control_button_group_b3", Rect(0, 0, col_w, 30),
-                    "controls_showcase_b", "B3", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group B option 3"),
-            ControlDefinition("button_group_c1", "Group C", 30, 16,
-                lambda: ButtonGroupControl("control_button_group_c1", Rect(0, 0, col_w, 30),
-                    "controls_showcase_c", "C1", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group C option 1"),
-            ControlDefinition("button_group_c2", "Group C 2", 30, 17,
-                lambda: ButtonGroupControl("control_button_group_c2", Rect(0, 0, col_w, 30),
-                    "controls_showcase_c", "C2", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group C option 2"),
-            ControlDefinition("button_group_c3", "Group C 3", 30, 18,
-                lambda: ButtonGroupControl("control_button_group_c3", Rect(0, 0, col_w, 30),
-                    "controls_showcase_c", "C3", selected=False),
-                focusable=True, accessibility_role="button", accessibility_label="Group C option 3"),
-            ControlDefinition("text_input", "Text Input", 32, 19,
-                lambda: TextInputControl("control_text_input", Rect(0, 0, col_w, 32),
-                    placeholder="Type here"),
-                focusable=True, accessibility_role="textbox", accessibility_label="Text input"),
-            ControlDefinition("text_area", "Text Area", 96, 20,
-                lambda: TextAreaControl("control_text_area", Rect(0, 0, col_w, 96),
-                    value="Heading: Notes\n- First line\n- Second line"),
-                focusable=True, accessibility_role="textbox", accessibility_label="Text area"),
-            ControlDefinition("horizontal_scrollbar", "Horizontal Scrollbar", 24, 21,
-                lambda: ScrollbarControl("control_horizontal_scrollbar", Rect(0, 0, col_w, 24),
-                    LayoutAxis.HORIZONTAL, self.SCROLLBAR_CONTENT_SIZE, self.SCROLLBAR_VIEWPORT_SIZE,
-                    offset=self.SCROLLBAR_DEFAULT_OFFSET, step=self.SCROLLBAR_STEP),
-                focusable=True, accessibility_role="scrollbar", accessibility_label="Horizontal scrollbar"),
-            ControlDefinition("horizontal_slider", "Horizontal Slider", 24, 22,
-                lambda: SliderControl("control_horizontal_slider", Rect(0, 0, col_w, 24),
-                    LayoutAxis.HORIZONTAL, self.SLIDER_MINIMUM, self.SLIDER_MAXIMUM, self.SLIDER_DEFAULT_VALUE),
-                focusable=True, accessibility_role="slider", accessibility_label="Horizontal slider"),
-            ControlDefinition("vertical_scrollbar", "Vertical Scrollbar", 120, 23,
-                lambda: ScrollbarControl("control_vertical_scrollbar", Rect(0, 0, col_w, 120),
-                    LayoutAxis.VERTICAL, self.SCROLLBAR_CONTENT_SIZE, self.SCROLLBAR_VIEWPORT_SIZE,
-                    offset=self.SCROLLBAR_DEFAULT_OFFSET, step=self.SCROLLBAR_STEP),
-                focusable=True, accessibility_role="scrollbar", accessibility_label="Vertical scrollbar"),
-            ControlDefinition("vertical_slider", "Vertical Slider", 120, 24,
-                lambda: SliderControl("control_vertical_slider", Rect(0, 0, col_w, 120),
-                    LayoutAxis.VERTICAL, self.SLIDER_MINIMUM, self.SLIDER_MAXIMUM, self.SLIDER_DEFAULT_VALUE),
-                focusable=True, accessibility_role="slider", accessibility_label="Vertical slider"),
-            ControlDefinition("data_grid", "Data Grid", 120, 25,
-                lambda: DataGridControl("control_data_grid", Rect(0, 0, col_w, 120),
-                    [GridColumn(key="name", title="Name", width=90),
-                     GridColumn(key="value", title="Value", width=70)],
-                    [GridRow(data={"name": "Alpha", "value": 10}, row_id="a"),
-                     GridRow(data={"name": "Beta", "value": 20}, row_id="b"),
-                     GridRow(data={"name": "Gamma", "value": 30}, row_id="c"),
-                     GridRow(data={"name": "Delta", "value": 40}, row_id="d")],
-                    row_height=24),
-                focusable=True, accessibility_role="table", accessibility_label="Data grid"),
-            ControlDefinition("tab", "Tab", 160, 26,
-                lambda: TabControl("control_tab", Rect(0, 0, col_w, 160),
-                    items=[
-                        TabItem("one", "One", LabelControl("ctrl_tab_lbl_one", Rect(0, 0, 1, 30), "One", align="left")),
-                        TabItem("two", "Two", LabelControl("ctrl_tab_lbl_two", Rect(0, 0, 1, 30), "Two", align="left")),
-                        TabItem("three", "Three", LabelControl("ctrl_tab_lbl_three", Rect(0, 0, 1, 30), "Three", align="left")),
-                    ],
-                    selected_key="one"),
-                focusable=True, accessibility_role="tablist", accessibility_label="Tab control"),
-            ControlDefinition("image", "Image", 120, 27,
-                lambda: ImageControl("control_image", Rect(0, 0, col_w, 120), image_path, scale=True),
-                focusable=False),
-            ControlDefinition("notification_panel", "Notification Panel", 160, 28,
-                lambda: NotificationPanelControl("control_notification_panel",
-                    Rect(0, 0, col_w, 160), nc),
-                focusable=False),
-        ]
+        label_h = int(self.LABEL_HEIGHT)
+        label_gap = int(self.LABEL_GAP)
+        row_gap = int(self.ROW_GAP)
+        next_row_index = 0
+        specs: list[ControlPlacementSpec] = []
+
+        stack, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+            anchor=bounds,
+            content_bottom=bounds.bottom,
+            preferred_width=bounds.width,
+            item_gap_y=row_gap,
+        )
+
+        def slot_h(control_h: int) -> int:
+            return CellCaretLayout.labeled_slot_height(
+                max(1, int(control_h)),
+                label_height=label_h,
+                label_gap=label_gap,
+            )
+
+        def add_row(cells: list[dict], cols: int) -> None:
+            nonlocal next_row_index
+            row_control_h = max(int(c["control_h"]) for c in cells)
+            row_slot_rect = Rect(stack.add_slot_or_overflow(slot_h(row_control_h), overflow_gap=row_gap))
+            col_gap = int(cells[0].get("col_gap", self.BASICS_COL_GAP)) if cells else self.BASICS_COL_GAP
+            col_rects = CellCaretLayout.split_columns(row_slot_rect, count=cols, gap=col_gap, min_width=60)
+            for col_i, cell in enumerate(cells):
+                col_rect = Rect(col_rects[col_i])
+                desired_slot_h = slot_h(int(cell["control_h"]))
+                slot_rect = Rect(col_rect.left, col_rect.top, col_rect.width, min(col_rect.height, desired_slot_h))
+
+                target_w = cell.get("target_width")
+                if isinstance(target_w, int) and 1 <= target_w < slot_rect.width:
+                    slot_rect.left += (slot_rect.width - target_w) // 2
+                    slot_rect.width = target_w
+
+                control_h = max(1, slot_rect.height - label_h - label_gap)
+                control = cell["factory"](slot_rect.width, control_h)
+                specs.append(
+                    ControlPlacementSpec(
+                        name=str(cell["name"]),
+                        control=control,
+                        control_rect=slot_rect,
+                        focusable=bool(cell.get("focusable", False)),
+                        labeled=True,
+                        label_text=str(cell["label"]),
+                        accessibility_role=cell.get("accessibility_role"),
+                        accessibility_label=cell.get("accessibility_label"),
+                        column_index=col_i,
+                        row_index=next_row_index,
+                    )
+                )
+                next_row_index += 1
+
+        def make_arrow_boxes_cell(control_w: int, control_h: int):
+            panel = PanelControl("control_arrow_boxes_cell", Rect(0, 0, control_w, control_h), draw_background=False)
+            area_w = min(60, control_w)
+            area_h = min(60, control_h)
+            area = Rect((control_w - area_w) // 2, (control_h - area_h) // 2, area_w, area_h)
+            inner_gap = int(self.BASICS_INNER_GAP)
+            col_rects = CellCaretLayout.split_columns(area, count=2, gap=inner_gap, min_width=10)
+            box_h = max(10, (area_h - inner_gap) // 2)
+
+            left_stack, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                anchor=col_rects[0],
+                content_bottom=col_rects[0].bottom,
+                preferred_width=col_rects[0].width,
+                item_gap_y=inner_gap,
+            )
+            up_rect = Rect(left_stack.add_slot_or_overflow(box_h, overflow_gap=0))
+            left_rect = Rect(left_stack.add_slot_or_overflow(box_h, overflow_gap=0))
+
+            right_stack, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                anchor=col_rects[1],
+                content_bottom=col_rects[1].bottom,
+                preferred_width=col_rects[1].width,
+                item_gap_y=inner_gap,
+            )
+            down_rect = Rect(right_stack.add_slot_or_overflow(box_h, overflow_gap=0))
+            right_rect = Rect(right_stack.add_slot_or_overflow(box_h, overflow_gap=0))
+
+            panel.add_at(ArrowBoxControl("control_arrow_up", Rect(0, 0, up_rect.width, up_rect.height), 90), up_rect.left, up_rect.top)
+            panel.add_at(ArrowBoxControl("control_arrow_down", Rect(0, 0, down_rect.width, down_rect.height), 270), down_rect.left, down_rect.top)
+            panel.add_at(ArrowBoxControl("control_arrow_left", Rect(0, 0, left_rect.width, left_rect.height), 180), left_rect.left, left_rect.top)
+            panel.add_at(ArrowBoxControl("control_arrow_right", Rect(0, 0, right_rect.width, right_rect.height), 0), right_rect.left, right_rect.top)
+            return panel
+
+        def make_vertical_button_cell(cell_id: str, control_ids: tuple[str, str, str], labels: tuple[str, str, str], control_w: int, control_h: int):
+            panel = PanelControl(cell_id, Rect(0, 0, control_w, control_h), draw_background=False)
+            btn_w = min(100, control_w)
+            col_anchor = Rect((control_w - btn_w) // 2, 0, btn_w, control_h)
+            stack_inner, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                anchor=col_anchor,
+                content_bottom=col_anchor.bottom,
+                preferred_width=col_anchor.width,
+                item_gap_y=int(self.BASICS_INNER_GAP),
+            )
+            gap_y = int(self.BASICS_INNER_GAP)
+            btn_h = max(20, (control_h - (gap_y * 2)) // 3)
+            for idx, text in enumerate(labels):
+                slot = Rect(stack_inner.add_slot_or_overflow(btn_h, overflow_gap=0))
+                panel.add_at(
+                    ButtonControl(control_ids[idx], Rect(0, 0, slot.width, slot.height), text),
+                    slot.left,
+                    slot.top,
+                )
+            return panel
+
+        def make_vertical_group_cell(control_id: str, group_name: str, control_ids: tuple[str, str, str], labels: tuple[str, str, str], control_w: int, control_h: int):
+            panel = PanelControl(control_id, Rect(0, 0, control_w, control_h), draw_background=False)
+            btn_w = min(100, control_w)
+            col_anchor = Rect((control_w - btn_w) // 2, 0, btn_w, control_h)
+            stack_inner, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                anchor=col_anchor,
+                content_bottom=col_anchor.bottom,
+                preferred_width=col_anchor.width,
+                item_gap_y=int(self.BASICS_INNER_GAP),
+            )
+            gap_y = int(self.BASICS_INNER_GAP)
+            btn_h = max(20, (control_h - (gap_y * 2)) // 3)
+            for idx, text in enumerate(labels):
+                slot = Rect(stack_inner.add_slot_or_overflow(btn_h, overflow_gap=0))
+                panel.add_at(
+                    ButtonGroupControl(
+                        control_ids[idx],
+                        Rect(0, 0, slot.width, slot.height),
+                        f"controls_showcase_{group_name}",
+                        text,
+                        selected=False,
+                    ),
+                    slot.left,
+                    slot.top,
+                )
+            return panel
+
+        def make_horiz_pair_cell(control_w: int, control_h: int):
+            panel = PanelControl("control_horizontal_pair_cell", Rect(0, 0, control_w, control_h), draw_background=False)
+            stack_inner, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                anchor=Rect(0, 0, control_w, control_h),
+                content_bottom=control_h,
+                preferred_width=control_w,
+                item_gap_y=row_gap,
+            )
+            sb_rect = Rect(stack_inner.add_slot_or_overflow(24, overflow_gap=0))
+            sl_rect = Rect(stack_inner.add_slot_or_overflow(24, overflow_gap=0))
+            panel.add_at(
+                ScrollbarControl(
+                    "control_horizontal_scrollbar",
+                    Rect(0, 0, sb_rect.width, sb_rect.height),
+                    LayoutAxis.HORIZONTAL,
+                    self.SCROLLBAR_CONTENT_SIZE,
+                    self.SCROLLBAR_VIEWPORT_SIZE,
+                    offset=self.SCROLLBAR_DEFAULT_OFFSET,
+                    step=self.SCROLLBAR_STEP,
+                ),
+                sb_rect.left,
+                sb_rect.top,
+            )
+            panel.add_at(
+                SliderControl(
+                    "control_horizontal_slider",
+                    Rect(0, 0, sl_rect.width, sl_rect.height),
+                    LayoutAxis.HORIZONTAL,
+                    self.SLIDER_MINIMUM,
+                    self.SLIDER_MAXIMUM,
+                    self.SLIDER_DEFAULT_VALUE,
+                ),
+                sl_rect.left,
+                sl_rect.top,
+            )
+            return panel
+
+        def make_vert_pair_cell(control_w: int, control_h: int):
+            panel = PanelControl("control_vertical_pair_cell", Rect(0, 0, control_w, control_h), draw_background=False)
+            track_w = 24
+            gap_x = 12
+            pair_w = (track_w * 2) + gap_x
+            start_x = max(0, (control_w - pair_w) // 2)
+            track_h = max(80, control_h)
+            y = max(0, (control_h - track_h) // 2)
+            panel.add_at(
+                ScrollbarControl(
+                    "control_vertical_scrollbar",
+                    Rect(0, 0, track_w, track_h),
+                    LayoutAxis.VERTICAL,
+                    self.SCROLLBAR_CONTENT_SIZE,
+                    self.SCROLLBAR_VIEWPORT_SIZE,
+                    offset=self.SCROLLBAR_DEFAULT_OFFSET,
+                    step=self.SCROLLBAR_STEP,
+                ),
+                start_x,
+                y,
+            )
+            panel.add_at(
+                SliderControl(
+                    "control_vertical_slider",
+                    Rect(0, 0, track_w, track_h),
+                    LayoutAxis.VERTICAL,
+                    self.SLIDER_MINIMUM,
+                    self.SLIDER_MAXIMUM,
+                    self.SLIDER_DEFAULT_VALUE,
+                ),
+                start_x + track_w + gap_x,
+                y,
+            )
+            return panel
+
+        def make_single_control_cell(
+            cell_id: str,
+            *,
+            child_id: str,
+            control_w: int,
+            control_h: int,
+            build_child,
+        ):
+            panel = PanelControl(cell_id, Rect(0, 0, control_w, control_h), draw_background=False)
+            child = build_child(Rect(0, 0, control_w, control_h))
+            if getattr(child, "control_id", None) != child_id and hasattr(child, "control_id"):
+                child.control_id = child_id
+            panel.add_at(child, 0, 0)
+            return panel
+
+        # Row 1: Arrow boxes + buttons + group columns A/B/C
+        add_row(
+            [
+                {
+                    "name": "arrow_boxes",
+                    "label": "Arrow Boxes",
+                    "control_h": 80,
+                    "factory": make_arrow_boxes_cell,
+                    "focusable": False,
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "buttons_cell",
+                    "label": "Buttons",
+                    "control_h": 80,
+                    "factory": lambda w, h: make_vertical_button_cell(
+                        "control_button_cell",
+                        ("control_button", "control_button_2", "control_button_3"),
+                        ("Button A", "Button B", "Button C"),
+                        w,
+                        h,
+                    ),
+                    "focusable": False,
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "button_group_a_cell",
+                    "label": "Group A",
+                    "control_h": 80,
+                    "factory": lambda w, h: make_vertical_group_cell(
+                        "control_button_group_a_cell",
+                        "a",
+                        ("control_button_group_a1", "control_button_group_a2", "control_button_group_a3"),
+                        ("A1", "A2", "A3"),
+                        w,
+                        h,
+                    ),
+                    "focusable": False,
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "button_group_b_cell",
+                    "label": "Group B",
+                    "control_h": 80,
+                    "factory": lambda w, h: make_vertical_group_cell(
+                        "control_button_group_b_cell",
+                        "b",
+                        ("control_button_group_b1", "control_button_group_b2", "control_button_group_b3"),
+                        ("B1", "B2", "B3"),
+                        w,
+                        h,
+                    ),
+                    "focusable": False,
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "button_group_c_cell",
+                    "label": "Group C",
+                    "control_h": 80,
+                    "factory": lambda w, h: make_vertical_group_cell(
+                        "control_button_group_c_cell",
+                        "c",
+                        ("control_button_group_c1", "control_button_group_c2", "control_button_group_c3"),
+                        ("C1", "C2", "C3"),
+                        w,
+                        h,
+                    ),
+                    "focusable": False,
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+            ],
+            cols=5,
+        )
+
+        # Row 2: text area, text input, tab, data grid
+        add_row(
+            [
+                {
+                    "name": "text_area",
+                    "label": "Text Area",
+                    "control_h": 96,
+                    "factory": lambda w, h: make_single_control_cell(
+                        "control_text_area_cell",
+                        child_id="control_text_area",
+                        control_w=w,
+                        control_h=h,
+                        build_child=lambda r: TextAreaControl(
+                            "control_text_area",
+                            r,
+                            value="Heading: Notes\n- First line\n- Second line",
+                        ),
+                    ),
+                    "focusable": False,
+                    "accessibility_role": "textbox",
+                    "accessibility_label": "Text area",
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "text_input",
+                    "label": "Text Input",
+                    "control_h": 32,
+                    "factory": lambda w, h: make_single_control_cell(
+                        "control_text_input_cell",
+                        child_id="control_text_input",
+                        control_w=w,
+                        control_h=h,
+                        build_child=lambda r: TextInputControl(
+                            "control_text_input",
+                            r,
+                            placeholder="Type here",
+                        ),
+                    ),
+                    "focusable": False,
+                    "accessibility_role": "textbox",
+                    "accessibility_label": "Text input",
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "tab",
+                    "label": "Tab",
+                    "control_h": 160,
+                    "factory": lambda w, h: make_single_control_cell(
+                        "control_tab_cell",
+                        child_id="control_tab",
+                        control_w=w,
+                        control_h=h,
+                        build_child=lambda r: TabControl(
+                            "control_tab",
+                            r,
+                            items=[
+                                TabItem("one", "One", LabelControl("ctrl_tab_lbl_one", Rect(0, 0, 1, 30), "One", align="left")),
+                                TabItem("two", "Two", LabelControl("ctrl_tab_lbl_two", Rect(0, 0, 1, 30), "Two", align="left")),
+                                TabItem("three", "Three", LabelControl("ctrl_tab_lbl_three", Rect(0, 0, 1, 30), "Three", align="left")),
+                            ],
+                            selected_key="one",
+                        ),
+                    ),
+                    "focusable": False,
+                    "accessibility_role": "tablist",
+                    "accessibility_label": "Tab control",
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+                {
+                    "name": "data_grid",
+                    "label": "Data Grid",
+                    "control_h": 120,
+                    "factory": lambda w, h: make_single_control_cell(
+                        "control_data_grid_cell",
+                        child_id="control_data_grid",
+                        control_w=w,
+                        control_h=h,
+                        build_child=lambda r: DataGridControl(
+                            "control_data_grid",
+                            r,
+                            [GridColumn(key="name", title="Name", width=90), GridColumn(key="value", title="Value", width=70)],
+                            [
+                                GridRow(data={"name": "Alpha", "value": 10}, row_id="a"),
+                                GridRow(data={"name": "Beta", "value": 20}, row_id="b"),
+                                GridRow(data={"name": "Gamma", "value": 30}, row_id="c"),
+                                GridRow(data={"name": "Delta", "value": 40}, row_id="d"),
+                            ],
+                            row_height=24,
+                        ),
+                    ),
+                    "focusable": False,
+                    "accessibility_role": "table",
+                    "accessibility_label": "Data grid",
+                    "col_gap": self.BASICS_COL_GAP,
+                },
+            ],
+            cols=4,
+        )
+
+        # Row 3: horizontal pair, vertical pair
+        add_row(
+            [
+                {
+                    "name": "horizontal_pair",
+                    "label": "Horizontal Controls",
+                    "control_h": 56,
+                    "factory": make_horiz_pair_cell,
+                    "focusable": False,
+                    "col_gap": 16,
+                },
+                {
+                    "name": "vertical_pair",
+                    "label": "Vertical Controls",
+                    "control_h": 140,
+                    "factory": make_vert_pair_cell,
+                    "focusable": False,
+                    "col_gap": 16,
+                },
+            ],
+            cols=2,
+        )
+
+        # Row 4: notification panel then square image
+        add_row(
+            [
+                {
+                    "name": "notification_panel",
+                    "label": "Notification Panel",
+                    "control_h": 160,
+                    "factory": lambda w, h: NotificationPanelControl(
+                        "control_notification_panel",
+                        Rect(0, 0, w, h),
+                        nc,
+                    ),
+                    "focusable": False,
+                    "col_gap": 12,
+                },
+                {
+                    "name": "image",
+                    "label": "Image",
+                    "control_h": 160,
+                    "target_width": 160,
+                    "factory": lambda w, h: ImageControl(
+                        "control_image",
+                        Rect(0, 0, min(w, h), min(w, h)),
+                        image_path,
+                        scale=True,
+                    ),
+                    "focusable": False,
+                    "col_gap": 12,
+                },
+            ],
+            cols=2,
+        )
+
+        return tuple(specs)
 
     def _data_defs(self, col_w: int) -> list[ControlDefinition]:
         scroll_items = [
