@@ -1075,11 +1075,6 @@ class ShowcaseFeature(Feature):
                     [MenuEntry("File", [ContextMenuItem("Open"), ContextMenuItem("Save")]),
                      MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")])]),
                 focusable=False, accessibility_role="menubar", accessibility_label="Menu bar"),
-            ControlDefinition("rich_label", "Rich Label", 80, 66,
-                lambda: RichLabelControl("control_rich_label", Rect(0, 0, col_w, 80),
-                    text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, "
-                         "run `deploy --env staging`, and **_ship_** after QA."),
-                focusable=False),
             ControlDefinition("canvas", "Canvas", 100, 67,
                 lambda: CanvasControl("control_canvas", Rect(0, 0, col_w, 100), max_events=64),
                 focusable=False),
@@ -1088,6 +1083,11 @@ class ShowcaseFeature(Feature):
                 focusable=False),
             ControlDefinition("panel", "Panel", 60, 69,
                 lambda: PanelControl("control_panel", Rect(0, 0, col_w, 60), draw_background=True),
+                focusable=False),
+            ControlDefinition("rich_label", "Rich Label", 80, 66,
+                lambda: RichLabelControl("control_rich_label", Rect(0, 0, col_w, 80),
+                    text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, "
+                         "run `deploy --env staging`, and **_ship_** after QA."),
                 focusable=False),
         ]
 

@@ -223,6 +223,23 @@ class TestPlacementHelpers(unittest.TestCase):
         self.assertEqual(1, len(controls))
         self.assertEqual(1, len(placed))
         self.assertEqual(Rect(10, 42, 100, 18), control.rect)
+        self.assertEqual(0, control.tab_index)
+
+    def test_place_control_focusable_preserves_existing_non_negative_tab_index(self):
+        container = _StubContainer()
+        control = _StubControl()
+        control.set_tab_index(7)
+
+        place_control(
+            container,
+            "alpha",
+            "Alpha",
+            control,
+            Rect(10, 20, 100, 40),
+            focusable=True,
+        )
+
+        self.assertEqual(7, control.tab_index)
 
     def test_place_control_unlabeled_disables_non_focusable(self):
         container = _StubContainer()
@@ -273,6 +290,8 @@ class TestPlacementHelpers(unittest.TestCase):
         self.assertEqual(2, len(placed))
         self.assertEqual("labeled", placed[0].name)
         self.assertEqual("unlabeled", placed[1].name)
+        self.assertEqual(0, labeled.tab_index)
+        self.assertEqual(-1, unlabeled.tab_index)
 
 
 if __name__ == "__main__":

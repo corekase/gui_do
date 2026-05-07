@@ -437,6 +437,10 @@ def register_placed_control(
     if accessibility_role is not None and accessibility_label is not None:
         control.set_accessibility(role=accessibility_role, label=accessibility_label)
     if focusable:
+        # Controls default to tab_index=-1; promote to default focusable index
+        # unless the control already opted into a specific non-negative index.
+        if int(getattr(control, "tab_index", -1)) < 0:
+            control.set_tab_index(0)
         if focus_controls is not None:
             focus_controls.append(control)
     else:
