@@ -101,11 +101,10 @@ pipeline artifact and must not appear in the published output.
 
 ## Output
 
-**First Run Eligibility** (`MANUAL.md` missing/empty + explicit `CONFIRM_MANUAL_REPLACE`):
-- Use `create_file` to create `MANUAL.md` with the full skeleton, or replace full contents
-  only when the file exists but is empty.
+**From-Scratch Rebuild Mode** (`MANUAL.md` does not exist):
+- Use `create_file` to create `MANUAL.md` with the full skeleton.
 
-**Update Run** (default mode; required whenever `MANUAL.md` exists with content):
+**Update Run** (`MANUAL.md` exists):
 - Do NOT replace the entire file. Only update the sections p1 owns:
   - Replace the preamble (title paragraph through end of `## How to Use This Manual`)
     using a targeted `replace_string_in_file`.

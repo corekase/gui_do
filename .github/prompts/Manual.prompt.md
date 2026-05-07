@@ -1,7 +1,7 @@
 ---
 name: Manual
 description: Generate or update MANUAL.md — invoke this file directly to run the full pipeline
-mode: agent
+agent: agent
 ---
 
 # gui_do Manual — Pipeline Orchestrator
@@ -17,26 +17,23 @@ All required sub-prompt execution must be strictly sequential and never concurre
 evaluate, run, or validate sub-prompts in parallel. This sequential rule applies both to
 top-level step order and to all operations inside every sub-prompt.
 
+Run non-interactively. Do not ask follow-up confirmation questions during planning or execution.
+Mode selection is deterministic from filesystem state and must not require confirmation.
+
 ## Determine Run Mode First
 
 Before executing any step:
 
 1. Check whether `MANUAL.md` exists at the repository root.
-2. Default to **Update Mode** on every invocation.
+2. Choose mode strictly by file existence:
+   - If `MANUAL.md` exists: run in **Update Mode**.
+   - If `MANUAL.md` does not exist: run in **From-Scratch Rebuild Mode**.
 
-   **Safety-Gated Replace/From-Scratch Mode**:
-   - Replace/from-scratch mode can execute only if `MANUAL.md` does not exist or is empty.
-   - Replace/from-scratch mode also requires explicit user confirmation with the exact phrase
-     `CONFIRM_MANUAL_REPLACE`.
-   - If the exact confirmation phrase is missing, do not run replace/from-scratch mode.
-   - If `MANUAL.md` exists with content, replace/from-scratch mode is forbidden even when
-     requested; continue in Update Mode.
-
-   **First Run Eligibility** (`MANUAL.md` missing/empty + `CONFIRM_MANUAL_REPLACE` present):
+   **From-Scratch Rebuild Mode** (`MANUAL.md` missing):
    - Execute all 9 steps in sequence.
    - p1 creates the full skeleton; p2-p8 expand sections; p9 performs enrichment pass.
 
-   **Update Run** (default and required when `MANUAL.md` exists with content):
+   **Update Run** (`MANUAL.md` exists):
    - If the user specifies which chapters changed (e.g., “update the Controls chapter”):
      run only the sub-prompts covering those chapters. Skip p1 unless the preamble or
      TOC itself is explicitly mentioned.
@@ -46,10 +43,7 @@ Before executing any step:
    - Otherwise (general request such as “update the manual” or “regenerate the manual”
      with no specific section constraint): run all 9 steps in update mode.
 
-   If execution appears to require replace/from-scratch while `MANUAL.md` exists, stop and ask
-   for confirmation to continue in update mode only; do not replace the file.
-
-   When in doubt about run mode, prefer update mode and run all 9 steps over skipping any.
+   Do not ask for mode confirmation.
 
 ---
 
