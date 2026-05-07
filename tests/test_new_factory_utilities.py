@@ -9,7 +9,7 @@ Covers:
 from __future__ import annotations
 
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pygame
 from pygame import Rect

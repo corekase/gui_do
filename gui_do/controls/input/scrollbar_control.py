@@ -128,70 +128,58 @@ class ScrollbarControl(_AxisDragControlBase):
         # driven by directional/page/home/end keys and pointer interaction.
         return
 
-    def _track_rect(self) -> Rect:
-        return Rect(self.rect)
-
     def _handle_length(self) -> int:
-        track = self._track_rect()
         if self.content_size <= 0:
             return 12
         ratio = min(1.0, self.viewport_size / float(self.content_size))
         if self.axis == LayoutAxis.HORIZONTAL:
-            track_span = max(1, track.width)
+            track_span = max(1, self.rect.width)
         else:
-            track_span = max(1, track.height)
+            track_span = max(1, self.rect.height)
         base = int(round(track_span * ratio))
         return max(1, min(track_span, max(12, base)))
 
     def _offset_to_pixel(self) -> int:
-        track = self._track_rect()
         max_offset = self._max_offset()
         handle_len = self._handle_length()
-        travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
+        travel_span = max(1, (self.rect.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (self.rect.height - handle_len))
         ratio = 0.0 if max_offset <= 0 else self.offset / float(max_offset)
         return int(round(ratio * travel_span))
 
     def _offset_to_pixel_with_len(self, handle_len: int) -> int:
-        track = self._track_rect()
         max_offset = self._max_offset()
-        travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
+        travel_span = max(1, (self.rect.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (self.rect.height - handle_len))
         ratio = 0.0 if max_offset <= 0 else self.offset / float(max_offset)
         return int(round(ratio * travel_span))
 
-    def _pixel_to_offset(self, pixel: int) -> int:
-        track = self._track_rect()
-        handle_len = self._handle_length()
-        travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
+    def _pixel_to_offset(self, pixel: int, handle_len: int) -> int:
+        travel_span = max(1, (self.rect.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (self.rect.height - handle_len))
         max_offset = self._max_offset()
         ratio = min(max(pixel / float(travel_span), 0.0), 1.0)
         return int(round(ratio * max_offset))
 
     def handle_rect(self) -> Rect:
         self._clamp_offset()
-        track = self._track_rect()
         handle_len = self._handle_length()
         pixel = self._drag_handle_axis_pixel if self.dragging else self._offset_to_pixel_with_len(handle_len)
         if self.axis == LayoutAxis.HORIZONTAL:
-            return Rect(track.left + pixel, track.top, handle_len, track.height)
-        return Rect(track.left, track.top + pixel, track.width, handle_len)
+            return Rect(self.rect.left + pixel, self.rect.top, handle_len, self.rect.height)
+        return Rect(self.rect.left, self.rect.top + pixel, self.rect.width, handle_len)
 
-    def _lock_rect(self, pointer_pos) -> Rect:
-        track = self._track_rect()
-        handle_len = self._handle_length()
-        travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
+    def _lock_rect(self, pointer_pos, handle_len: int) -> Rect:
+        travel_span = max(1, (self.rect.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (self.rect.height - handle_len))
         if self.axis == LayoutAxis.HORIZONTAL:
-            min_pointer = track.left + self._drag_anchor_offset
-            max_pointer = track.left + travel_span + self._drag_anchor_offset
+            min_pointer = self.rect.left + self._drag_anchor_offset
+            max_pointer = self.rect.left + travel_span + self._drag_anchor_offset
             return Rect(min_pointer, pointer_pos[1], max(1, (max_pointer - min_pointer) + 1), 1)
-        min_pointer = track.top + self._drag_anchor_offset
-        max_pointer = track.top + travel_span + self._drag_anchor_offset
+        min_pointer = self.rect.top + self._drag_anchor_offset
+        max_pointer = self.rect.top + travel_span + self._drag_anchor_offset
         return Rect(pointer_pos[0], min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
 
-    def _lock_area_axis_rect(self, app: "GuiApplication", pointer_pos) -> Optional[Rect]:
+    def _lock_area_axis_rect(self, app: "GuiApplication", pointer_pos, handle_len: int) -> Optional[Rect]:
         if app.lock_area is None:
             return None
         lock = Rect(app.lock_area)
-        handle_len = self._handle_length()
         if self.axis == LayoutAxis.HORIZONTAL:
             min_pointer = int(lock.left + self._drag_anchor_offset)
             max_pointer = int((lock.right - handle_len) + self._drag_anchor_offset)
@@ -204,9 +192,9 @@ class ScrollbarControl(_AxisDragControlBase):
             max_pointer = min_pointer
         return Rect(int(pointer_pos[0]), min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
 
-    def _refresh_drag_lock_rect(self, app: "GuiApplication", pointer_pos) -> None:
-        lock_rect = self._lock_rect(pointer_pos)
-        axis_lock = self._lock_area_axis_rect(app, pointer_pos)
+    def _refresh_drag_lock_rect(self, app: "GuiApplication", pointer_pos, handle_len: int) -> None:
+        lock_rect = self._lock_rect(pointer_pos, handle_len)
+        axis_lock = self._lock_area_axis_rect(app, pointer_pos, handle_len)
         if axis_lock is not None:
             clipped = lock_rect.clip(axis_lock)
             if clipped.width > 0 and clipped.height > 0:
@@ -215,8 +203,8 @@ class ScrollbarControl(_AxisDragControlBase):
                 lock_rect = axis_lock
         app.pointer_capture.lock_rect = Rect(lock_rect)
 
-    def _constrained_drag_pointer(self, app: "GuiApplication", pointer_pos):
-        self._refresh_drag_lock_rect(app, pointer_pos)
+    def _constrained_drag_pointer(self, app: "GuiApplication", pointer_pos, handle_len: int):
+        self._refresh_drag_lock_rect(app, pointer_pos, handle_len)
         lock = app.pointer_capture.lock_rect
         if lock is None:
             pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
@@ -230,12 +218,11 @@ class ScrollbarControl(_AxisDragControlBase):
         app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
         return pointer_pos, pointer_axis
 
-    def _update_drag_handle_pixel(self, pointer_axis: int) -> int:
+    def _update_drag_handle_pixel(self, pointer_axis: int, handle_len: int) -> int:
         """Compute axis pixel from *pointer_axis*, clamp and store in ``_drag_handle_axis_pixel``, return the raw axis pixel."""
         is_h = self.axis == LayoutAxis.HORIZONTAL
         track_origin = self.rect.left if is_h else self.rect.top
         axis_pixel = pointer_axis - track_origin - self._drag_anchor_offset
-        handle_len = self._handle_length()
         travel_span = max(1, (self.rect.width if is_h else self.rect.height) - handle_len)
         self._drag_handle_axis_pixel = min(max(axis_pixel, 0), travel_span)
         return axis_pixel
@@ -281,14 +268,14 @@ class ScrollbarControl(_AxisDragControlBase):
                     self._drag_anchor_offset = pointer[0] - handle.x
                 else:
                     self._drag_anchor_offset = pointer[1] - handle.y
-                self._refresh_drag_lock_rect(app, pointer)
+                handle_len = handle.width if self.axis == LayoutAxis.HORIZONTAL else handle.height
+                self._refresh_drag_lock_rect(app, pointer, handle_len)
                 app.pointer_capture.begin(self.control_id, app.pointer_capture.lock_rect, use_relative_motion=True)
                 pointer_pos = pointer
-                track = self._track_rect()
                 self._drag_handle_axis_pixel = (
-                    int(pointer_pos[0]) - track.left - self._drag_anchor_offset
+                    int(pointer_pos[0]) - self.rect.left - self._drag_anchor_offset
                     if self.axis == LayoutAxis.HORIZONTAL
-                    else int(pointer_pos[1]) - track.top - self._drag_anchor_offset
+                    else int(pointer_pos[1]) - self.rect.top - self._drag_anchor_offset
                 )
                 self._drag_start_programmatic_epoch = self._programmatic_change_epoch
                 self.dragging = True
@@ -299,15 +286,17 @@ class ScrollbarControl(_AxisDragControlBase):
             if self._ancestor_window() is None and isinstance(pointer_pos, tuple) and len(pointer_pos) == 2 and app.scene._point_in_window(pointer_pos):
                 self._end_drag(app, sync_pointer=True, release_pos=pointer_pos)
                 return False
-            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos)
-            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
-            return self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
+            handle_len = self._handle_length()
+            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos, handle_len)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis, handle_len)
+            return self._set_offset(self._pixel_to_offset(axis_pixel, handle_len), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
             pointer_pos = app.logical_pointer_pos
-            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos)
-            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
-            self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
+            handle_len = self._handle_length()
+            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos, handle_len)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis, handle_len)
+            self._set_offset(self._pixel_to_offset(axis_pixel, handle_len), reason=ValueChangeReason.MOUSE_DRAG)
             self._end_drag(app, sync_pointer=True)
             return True
 
@@ -333,10 +322,9 @@ class ScrollbarControl(_AxisDragControlBase):
             self._set_offset(int(state["offset"]))
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        track = self._track_rect()
         handle = self.handle_rect()
         factory = theme.graphics_factory
-        track_size = (track.width, track.height)
+        track_size = (self.rect.width, self.rect.height)
         handle_size = (handle.width, handle.height)
         if self._track_visuals is None or self._track_visuals_size != track_size:
             self._track_visuals = factory.build_frame_visuals(track)
@@ -358,5 +346,5 @@ class ScrollbarControl(_AxisDragControlBase):
             armed=self.dragging or self._focus_activation_armed,
             hovered=not self.dragging,
         )
-        surface.blit(track_selected, track)
+        surface.blit(track_selected, self.rect)
         surface.blit(handle_selected, handle)

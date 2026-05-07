@@ -68,34 +68,23 @@ class SliderControl(_AxisDragControlBase):
         self._normalize_range()
         self.value = min(max(self.value, self.minimum), self.maximum)
 
-    def _travel_rect(self) -> Rect:
-        return Rect(self.rect)
-
     def _handle_length(self) -> int:
         return max(1, int(self.handle_size))
 
-    def _travel_span(self) -> int:
-        handle_len = self._handle_length()
-        if self.axis == LayoutAxis.HORIZONTAL:
-            return max(0, self.rect.width - handle_len)
-        return max(0, self.rect.height - handle_len)
-
-    def _to_pixel(self, value: float) -> int:
+    def _to_pixel(self, value: float, handle_len: int) -> int:
         self._normalize_range()
         span = self.maximum - self.minimum
         ratio = 0.0 if span <= 0 else (value - self.minimum) / span
-        travel = self._travel_rect()
-        handle_len = self._handle_length()
-        origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
-        travel_span = max(0, (travel.width if self.axis == LayoutAxis.HORIZONTAL else travel.height) - handle_len)
+        is_h = self.axis == LayoutAxis.HORIZONTAL
+        origin = self.rect.left if is_h else self.rect.top
+        travel_span = max(0, (self.rect.width if is_h else self.rect.height) - handle_len)
         return int(round(origin + (handle_len / 2.0) + (ratio * travel_span)))
 
-    def _to_value(self, pixel: int) -> float:
+    def _to_value(self, pixel: int, handle_len: int) -> float:
         self._normalize_range()
-        travel = self._travel_rect()
-        handle_len = self._handle_length()
-        span_pixels = max(0, (travel.width if self.axis == LayoutAxis.HORIZONTAL else travel.height) - handle_len)
-        origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
+        is_h = self.axis == LayoutAxis.HORIZONTAL
+        span_pixels = max(0, (self.rect.width if is_h else self.rect.height) - handle_len)
+        origin = self.rect.left if is_h else self.rect.top
         ratio = 0.0 if span_pixels <= 0 else (pixel - (origin + (handle_len / 2.0))) / float(span_pixels)
         ratio = min(max(ratio, 0.0), 1.0)
         return self.minimum + ((self.maximum - self.minimum) * ratio)
@@ -158,28 +147,27 @@ class SliderControl(_AxisDragControlBase):
 
     def handle_rect(self) -> Rect:
         self._normalize_range()
-        pixel = self._drag_handle_axis_pixel if self.dragging else self._to_pixel(self.value)
         handle_len = self._handle_length()
+        pixel = self._drag_handle_axis_pixel if self.dragging else self._to_pixel(self.value, handle_len)
         if self.axis == LayoutAxis.HORIZONTAL:
             return Rect(int(round(pixel - (handle_len / 2.0))), self.rect.y, handle_len, self.rect.height)
         return Rect(self.rect.x, int(round(pixel - (handle_len / 2.0))), self.rect.width, handle_len)
 
-    def _build_lock_rect(self, pointer_pos) -> Rect:
-        travel = self._travel_rect()
-        travel_span = self._travel_span()
-        if self.axis == LayoutAxis.HORIZONTAL:
-            min_pointer = travel.left + self._drag_anchor_offset
-            max_pointer = travel.left + travel_span + self._drag_anchor_offset
+    def _build_lock_rect(self, pointer_pos, handle_len: int) -> Rect:
+        is_h = self.axis == LayoutAxis.HORIZONTAL
+        travel_span = max(0, (self.rect.width if is_h else self.rect.height) - handle_len)
+        if is_h:
+            min_pointer = self.rect.left + self._drag_anchor_offset
+            max_pointer = self.rect.left + travel_span + self._drag_anchor_offset
             return Rect(min_pointer, pointer_pos[1], max(1, (max_pointer - min_pointer) + 1), 1)
-        min_pointer = travel.top + self._drag_anchor_offset
-        max_pointer = travel.top + travel_span + self._drag_anchor_offset
+        min_pointer = self.rect.top + self._drag_anchor_offset
+        max_pointer = self.rect.top + travel_span + self._drag_anchor_offset
         return Rect(pointer_pos[0], min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
 
-    def _lock_area_axis_rect(self, app: "GuiApplication", pointer_pos) -> Optional[Rect]:
+    def _lock_area_axis_rect(self, app: "GuiApplication", pointer_pos, handle_len: int) -> Optional[Rect]:
         if app.lock_area is None:
             return None
         lock = Rect(app.lock_area)
-        handle_len = self._handle_length()
         if self.axis == LayoutAxis.HORIZONTAL:
             # Keep pointer/anchor relationship stable while enforcing lock-area limits
             # for the full handle footprint.
@@ -194,9 +182,9 @@ class SliderControl(_AxisDragControlBase):
             max_pointer = min_pointer
         return Rect(int(pointer_pos[0]), min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
 
-    def _refresh_drag_lock_rect(self, app: "GuiApplication", pointer_pos) -> None:
-        lock_rect = self._build_lock_rect(pointer_pos)
-        axis_lock = self._lock_area_axis_rect(app, pointer_pos)
+    def _refresh_drag_lock_rect(self, app: "GuiApplication", pointer_pos, handle_len: int) -> None:
+        lock_rect = self._build_lock_rect(pointer_pos, handle_len)
+        axis_lock = self._lock_area_axis_rect(app, pointer_pos, handle_len)
         if axis_lock is not None:
             clipped = lock_rect.clip(axis_lock)
             if clipped.width > 0 and clipped.height > 0:
@@ -205,8 +193,8 @@ class SliderControl(_AxisDragControlBase):
                 lock_rect = axis_lock
         app.pointer_capture.lock_rect = Rect(lock_rect)
 
-    def _constrained_drag_pointer(self, app: "GuiApplication", pointer_pos):
-        self._refresh_drag_lock_rect(app, pointer_pos)
+    def _constrained_drag_pointer(self, app: "GuiApplication", pointer_pos, handle_len: int):
+        self._refresh_drag_lock_rect(app, pointer_pos, handle_len)
         lock = app.pointer_capture.lock_rect
         if lock is None:
             pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
@@ -221,9 +209,8 @@ class SliderControl(_AxisDragControlBase):
         app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
         return pointer_pos, pointer_axis
 
-    def _update_drag_handle_pixel(self, pointer_axis: int) -> int:
+    def _update_drag_handle_pixel(self, pointer_axis: int, handle_len: int) -> int:
         """Clamp *pointer_axis* to travel bounds, update ``_drag_handle_axis_pixel``, and return the raw axis pixel."""
-        handle_len = max(1, int(self.handle_size))
         is_h = self.axis == LayoutAxis.HORIZONTAL
         origin = self.rect.left if is_h else self.rect.top
         span = max(0, (self.rect.width if is_h else self.rect.height) - handle_len)
@@ -270,11 +257,12 @@ class SliderControl(_AxisDragControlBase):
                     self._drag_anchor_offset = pointer[0] - handle.x
                 else:
                     self._drag_anchor_offset = pointer[1] - handle.y
-                self._refresh_drag_lock_rect(app, pointer)
+                handle_len = self._handle_length()
+                self._refresh_drag_lock_rect(app, pointer, handle_len)
                 app.pointer_capture.begin(self.control_id, app.pointer_capture.lock_rect, use_relative_motion=True)
                 pointer_pos = app.logical_pointer_pos
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-                self._update_drag_handle_pixel(pointer_axis)
+                self._update_drag_handle_pixel(pointer_axis, handle_len)
                 self._drag_start_programmatic_epoch = self._programmatic_change_epoch
                 self.dragging = True
                 return True
@@ -284,15 +272,17 @@ class SliderControl(_AxisDragControlBase):
             if self._ancestor_window() is None and isinstance(pointer_pos, tuple) and len(pointer_pos) == 2 and app.scene._point_in_window(pointer_pos):
                 self._end_drag(app, sync_pointer=True, release_pos=pointer_pos)
                 return False
-            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos)
-            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
-            return self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
+            handle_len = self._handle_length()
+            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos, handle_len)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis, handle_len)
+            return self._set_value(self._to_value(axis_pixel, handle_len), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
             pointer_pos = app.logical_pointer_pos
-            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos)
-            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
-            self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
+            handle_len = self._handle_length()
+            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos, handle_len)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis, handle_len)
+            self._set_value(self._to_value(axis_pixel, handle_len), reason=ValueChangeReason.MOUSE_DRAG)
             self._end_drag(app, sync_pointer=True)
             return True
 
@@ -321,13 +311,12 @@ class SliderControl(_AxisDragControlBase):
             self._set_value(float(state["value"]))
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        travel = self._travel_rect()
         handle = self.handle_rect()
         factory = theme.graphics_factory
-        travel_size = (travel.width, travel.height)
+        travel_size = (self.rect.width, self.rect.height)
         handle_size = (handle.width, handle.height)
         if self._track_visuals is None or self._track_visuals_size != travel_size:
-            self._track_visuals = factory.build_frame_visuals(travel)
+            self._track_visuals = factory.build_frame_visuals(self.rect)
             self._track_visuals_size = travel_size
         if self._handle_visuals is None or self._handle_visuals_size != handle_size:
             self._handle_visuals = factory.build_frame_visuals(handle)
@@ -346,5 +335,5 @@ class SliderControl(_AxisDragControlBase):
             armed=self.dragging or self._focus_activation_armed,
             hovered=not self.dragging,
         )
-        surface.blit(track_selected, travel)
+        surface.blit(track_selected, self.rect)
         surface.blit(handle_selected, handle)

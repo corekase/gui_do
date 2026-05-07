@@ -85,8 +85,9 @@ class TaskScheduler:
         self._incoming_failures: Queue[_TaskFailure] = Queue()
         self._incoming_completions: Queue[_TaskCompletion] = Queue()
 
-        self._failed_events: List[TaskEvent] = []
-        self._finished_events: List[TaskEvent] = []
+        # Keyed by task_id for O(1) insert/remove instead of O(n) list filtering.
+        self._failed_events: Dict[Hashable, TaskEvent] = {}
+        self._finished_events: Dict[Hashable, TaskEvent] = {}
 
     @staticmethod
     def recommended_worker_count(logical_cpus: Optional[int] = None, reserve_for_ui: int = 1, cap: int = 4) -> int:
@@ -131,8 +132,8 @@ class TaskScheduler:
             raise ValueError("message_method must be callable")
 
         with self._lock:
-            self._failed_events = [event for event in self._failed_events if event.task_id != task_id]
-            self._finished_events = [event for event in self._finished_events if event.task_id != task_id]
+            self._failed_events.pop(task_id, None)
+            self._finished_events.pop(task_id, None)
             if task_id in self._tasks or task_id in self._running or task_id in self._pending or task_id in self._suspended:
                 self._remove_task_internal(task_id)
 
@@ -149,8 +150,9 @@ class TaskScheduler:
                 self._validate_task_id(task_id)
                 self._remove_task_internal(task_id)
             removed = set(task_ids)
-            self._finished_events = [event for event in self._finished_events if event.task_id not in removed]
-            self._failed_events = [event for event in self._failed_events if event.task_id not in removed]
+            for _tid in removed:
+                self._finished_events.pop(_tid, None)
+                self._failed_events.pop(_tid, None)
             self._task_messages = deque(message for message in self._task_messages if message.task_id not in removed)
 
     def remove_all(self) -> None:
@@ -347,16 +349,16 @@ class TaskScheduler:
         return self._results.pop(task_id, default)
 
     def get_finished_events(self) -> List[TaskEvent]:
-        return list(self._finished_events)
+        return list(self._finished_events.values())
 
     def get_finished_tasks(self) -> List[Hashable]:
-        return [event.task_id for event in self._finished_events if event.operation == "finished"]
+        return [event.task_id for event in self._finished_events.values() if event.operation == "finished"]
 
     def get_failed_events(self) -> List[TaskEvent]:
-        return list(self._failed_events)
+        return list(self._failed_events.values())
 
     def get_failed_tasks(self) -> List[tuple[Hashable, str]]:
-        return [(event.task_id, event.error or "") for event in self._failed_events if event.operation == "failed"]
+        return [(event.task_id, event.error or "") for event in self._failed_events.values() if event.operation == "failed"]
 
     def clear_events(self) -> None:
         self._finished_events.clear()
@@ -454,7 +456,7 @@ class TaskScheduler:
             try:
                 result = completion.future.result()
                 self._results[task_id] = result
-                self._finished_events.append(TaskEvent("finished", task_id))
+                self._finished_events[task_id] = TaskEvent("finished", task_id)
                 finished_task_ids.append(task_id)
             except Exception as exc:  # noqa: BLE001
                 self._enqueue_failure(task_id, completion.generation, f"{type(exc).__name__}: {exc}")
@@ -577,7 +579,7 @@ class TaskScheduler:
             with self._lock:
                 if self._task_generation.get(failure.task_id) != failure.generation:
                     continue
-                self._failed_events.append(TaskEvent("failed", failure.task_id, failure.error))
+                self._failed_events[failure.task_id] = TaskEvent("failed", failure.task_id, failure.error)
                 self._tasks.pop(failure.task_id, None)
                 self._running.discard(failure.task_id)
 

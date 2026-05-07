@@ -1,6 +1,6 @@
 """Tests for gui_do.graphics.scene_graph_2d (S4)."""
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from gui_do.graphics.scene_graph_2d import Node2D, SceneGraph2D, Camera2D
 

@@ -268,18 +268,16 @@ class CooperativeScheduler:
             return
         self._updating = True
         try:
-            index = 0
-            while index < len(self._handles):
-                handle = self._handles[index]
+            write = 0
+            for handle in self._handles:
                 if not handle.is_running:
-                    self._handles.pop(index)
                     continue
                 if self._try_resume(handle, dt):
                     self._step(handle)
-                if not handle.is_running:
-                    self._handles.pop(index)
-                    continue
-                index += 1
+                if handle.is_running:
+                    self._handles[write] = handle
+                    write += 1
+            del self._handles[write:]
         finally:
             self._updating = False
             if self._pending_starts:
@@ -296,30 +294,30 @@ class CooperativeScheduler:
         if ws is None:
             return True
 
-        if isinstance(ws, Pause):
+        if type(ws) is Pause:
             handle._cleanup_wait()
             return True
 
-        if isinstance(ws, Sleep):
+        if type(ws) is Sleep:
             handle._wait_elapsed += dt
             if handle._wait_elapsed >= ws.seconds:
                 handle._cleanup_wait()
                 return True
             return False
 
-        if isinstance(ws, (WaitForEvent, WaitForSignal)):
+        if type(ws) is WaitForEvent or type(ws) is WaitForSignal:
             if handle._wait_triggered:
                 handle._cleanup_wait()
                 return True
             return False
 
-        if isinstance(ws, WaitUntil):
+        if type(ws) is WaitUntil:
             if ws.predicate():
                 handle._cleanup_wait()
                 return True
             return False
 
-        if isinstance(ws, WaitForAll):
+        if type(ws) is WaitForAll:
             all_done = all(
                 h.is_complete or h.is_cancelled
                 for h in ws.handles
@@ -353,7 +351,7 @@ class CooperativeScheduler:
         if isinstance(token, (Pause, Sleep, WaitUntil, WaitForAll)):
             return  # timer/poll — handled in _try_resume
 
-        if isinstance(token, WaitForEvent):
+        if type(token) is WaitForEvent:
             def _on_event(payload: Any) -> None:
                 if token.predicate is None or token.predicate(payload):
                     handle._wait_triggered = True
@@ -363,7 +361,7 @@ class CooperativeScheduler:
                 handle._wait_triggered = True  # fail-safe: resume immediately
             return
 
-        if isinstance(token, WaitForSignal):
+        if type(token) is WaitForSignal:
             triggered = [False]
 
             def _on_signal(value: Any) -> None:
