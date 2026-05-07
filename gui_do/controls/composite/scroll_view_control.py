@@ -240,6 +240,21 @@ class ScrollViewControl(UiNode):
                 self.scroll_by(dy=int(-event.wheel_y) * 24)
                 return True
 
+        # When this container has focus, allow embedded list-like children to
+        # consume navigation keys even if those children are intentionally not
+        # focusable on their own (e.g. list view inside a scroll view demo).
+        if event.kind == EventType.KEY_DOWN and self._focused:
+            for child in reversed(self.children):
+                if not (child.visible and child.enabled):
+                    continue
+                handle_key = getattr(child, "_handle_key", None)
+                if callable(handle_key):
+                    try:
+                        if bool(handle_key(event.key, event.mod)):
+                            return True
+                    except Exception:
+                        pass
+
         # Forward to children — their rects are already in screen-space
         for child in reversed(self.children):
             if not child.visible:

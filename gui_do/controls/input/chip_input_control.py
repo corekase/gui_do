@@ -172,6 +172,15 @@ class ChipInputControl(UiNode):
                         self._on_change(list(self._values))
                 self.invalidate()
                 return True
+            # Fallback printable key path for platforms/configurations where
+            # pygame TEXT_INPUT is not emitted for regular character keys.
+            if not (event.mod & (pygame.KMOD_CTRL | pygame.KMOD_ALT | pygame.KMOD_META)):
+                source = getattr(event, "source_event", None)
+                uni = str(getattr(source, "unicode", "") or "")
+                if len(uni) == 1 and uni >= " " and uni != ",":
+                    self._edit_text += uni
+                    self.invalidate()
+                    return True
 
         if event.kind == EventType.TEXT_INPUT and self._focused:
             char = event.text or ""

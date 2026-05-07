@@ -19,7 +19,14 @@ class KeyboardManager:
         # Accessibility navigation keys handled at focused-control scope.
         return bool(
             event.kind == EventType.KEY_DOWN
-            and event.key in (pygame.K_TAB, pygame.K_UP, pygame.K_DOWN)
+            and event.key in (pygame.K_TAB,)
+        )
+
+    @staticmethod
+    def _is_arrow_key_event(event) -> bool:
+        return bool(
+            event.kind == EventType.KEY_DOWN
+            and event.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN)
         )
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
@@ -59,21 +66,20 @@ class KeyboardManager:
             event.stop_propagation()
             return True
 
+        if self._is_arrow_key_event(event):
+            # Arrow keys are always scoped to the currently focused control.
+            # Whether handled or not, they must not fall through to active-window,
+            # screen, scene, or action handlers.
+            app.focus.route_key_event(event, app)
+            event.prevent_default()
+            event.stop_propagation()
+            return True
+
         if self._is_accessibility_key_event(event):
             if has_command_palette:
                 event.prevent_default()
                 event.stop_propagation()
                 return True
-
-            if event.key in (pygame.K_UP, pygame.K_DOWN):
-                focused_node = getattr(app.focus, "focused_node", None)
-                if focused_node is not None:
-                    # Let the focused control react first, then consume so this
-                    # accessibility key cannot fall through to scene-level handlers.
-                    app.focus.route_key_event(event, app)
-                    event.prevent_default()
-                    event.stop_propagation()
-                    return True
 
             # Accessibility keys are reserved for focus traversal behavior and
             # must not bubble to actions/window/screen handlers.

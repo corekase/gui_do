@@ -262,6 +262,56 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
         self.assertEqual([], window.calls)
         self.assertEqual([], screen_calls)
 
+    def test_arrow_left_is_consumed_and_routed_to_focused_control(self):
+        window = _StubWindow()
+        scene = _StubScene(active_window=window)
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+        app.focus.focused_node = object()
+        app.focus.route_result = False
+
+        screen_calls = []
+
+        def _screen_handler(_event):
+            screen_calls.append(True)
+            return True
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_LEFT)
+
+        consumed = manager.route_key_event(scene, event, app, _screen_handler)
+
+        self.assertTrue(consumed)
+        self.assertTrue(event.default_prevented)
+        self.assertTrue(event.propagation_stopped)
+        self.assertEqual(1, len(app.focus.route_calls))
+        self.assertEqual([], window.calls)
+        self.assertEqual([], screen_calls)
+
+    def test_arrow_right_is_consumed_even_without_focus(self):
+        window = _StubWindow()
+        scene = _StubScene(active_window=window)
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+
+        screen_calls = []
+
+        def _screen_handler(_event):
+            screen_calls.append(True)
+            return True
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_RIGHT)
+
+        consumed = manager.route_key_event(scene, event, app, _screen_handler)
+
+        self.assertTrue(consumed)
+        self.assertTrue(event.default_prevented)
+        self.assertTrue(event.propagation_stopped)
+        self.assertEqual(1, len(app.focus.route_calls))
+        self.assertEqual([], window.calls)
+        self.assertEqual([], screen_calls)
+
     def test_non_accessible_key_routes_to_screen_handler_when_no_active_window(self):
         scene = _StubScene(active_window=None)
         task_panel_focus = _StubTaskPanelFocus(is_active=False)
