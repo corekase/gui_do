@@ -1,7 +1,5 @@
 import unittest
 
-from pygame import Rect
-
 from demo_features.showcase.showcase_feature import (
     apply_category_visibility,
     category_for_row,
@@ -13,25 +11,9 @@ class _DummyNode:
     def __init__(self):
         self.visible = True
         self.enabled = True
-        self.rect = Rect(0, 0, 10, 10)
-
-    def set_rect(self, rect):
-        self.rect = Rect(rect)
 
 
-class _DummyGalleryLayout:
-    def __init__(self):
-        self.basics_calls = 0
-        self.grid_calls = []
-
-    def relayout_basics(self, bounds, items, *, ensure_aux_label):
-        self.basics_calls += 1
-
-    def relayout_grid_items(self, category_key, bounds, items):
-        self.grid_calls.append((category_key, len(items)))
-
-
-class TestControlShowcaseCategoryVisibility(unittest.TestCase):
+class TestCategoryForRow(unittest.TestCase):
     def test_category_for_row_thresholds(self):
         self.assertEqual("basics", category_for_row(0))
         self.assertEqual("basics", category_for_row(59))
@@ -39,86 +21,127 @@ class TestControlShowcaseCategoryVisibility(unittest.TestCase):
         self.assertEqual("advanced", category_for_row(100))
         self.assertEqual("extended", category_for_row(140))
 
-    def test_apply_basics_visibility_suppresses_duplicate_labels(self):
-        gallery = _DummyGalleryLayout()
+    def test_category_for_row_extended_above_boundary(self):
+        self.assertEqual("extended", category_for_row(200))
+        self.assertEqual("extended", category_for_row(999))
 
-        basic_control = _DummyNode()
-        basic_label = _DummyNode()
-        suppressed_control = _DummyNode()
-        suppressed_label = _DummyNode()
+    def test_category_for_row_advanced_range(self):
+        self.assertEqual("advanced", category_for_row(100))
+        self.assertEqual("advanced", category_for_row(139))
+
+
+class TestApplyCategoryVisibility(unittest.TestCase):
+    def _make_placed(self, control, label, name, row_index):
+        return PlacedControl(control, label, name, 0, row_index)
+
+    def test_basics_active_shows_basics_hides_others(self):
+        basics_control = _DummyNode()
+        basics_label = _DummyNode()
         data_control = _DummyNode()
         data_label = _DummyNode()
-        aux_label = _DummyNode()
         orphan_label = _DummyNode()
 
         placed_controls = [
-            PlacedControl(basic_control, basic_label, "button", 0, 0),
-            PlacedControl(suppressed_control, suppressed_label, "button_2", 0, 1),
-            PlacedControl(data_control, data_label, "list_view", 0, 70),
+            self._make_placed(basics_control, basics_label, "button", 0),
+            self._make_placed(data_control, data_label, "list_view", 70),
         ]
-        control_labels = [basic_label, suppressed_label, data_label, aux_label, orphan_label]
+        control_labels = [basics_label, data_label, orphan_label]
 
         apply_category_visibility(
             active_key="basics",
-            category_content_bounds=Rect(0, 0, 300, 200),
             placed_controls=placed_controls,
             control_labels=control_labels,
-            basics_aux_labels={"vertical_scrollbar": aux_label},
-            gallery_layout=gallery,
-            ensure_basics_aux_label=lambda _name: aux_label,
-            basics_suppressed_label_names=frozenset({"button_2"}),
         )
 
-        self.assertEqual(1, gallery.basics_calls)
-        self.assertEqual([], gallery.grid_calls)
-
-        self.assertTrue(basic_control.visible)
-        self.assertTrue(basic_control.enabled)
-        self.assertTrue(basic_label.visible)
-
-        self.assertTrue(suppressed_control.visible)
-        self.assertFalse(suppressed_label.visible)
+        self.assertTrue(basics_control.visible)
+        self.assertTrue(basics_control.enabled)
+        self.assertTrue(basics_label.visible)
+        self.assertTrue(basics_label.enabled)
 
         self.assertFalse(data_control.visible)
+        self.assertFalse(data_control.enabled)
         self.assertFalse(data_label.visible)
+        self.assertFalse(data_label.enabled)
 
-        self.assertTrue(aux_label.visible)
         self.assertFalse(orphan_label.visible)
+        self.assertFalse(orphan_label.enabled)
 
-    def test_apply_non_basics_hides_aux_labels_and_uses_grid_relayout(self):
-        gallery = _DummyGalleryLayout()
-
+    def test_data_active_shows_data_hides_basics(self):
         data_control = _DummyNode()
         data_label = _DummyNode()
         basics_control = _DummyNode()
         basics_label = _DummyNode()
-        aux_label = _DummyNode()
 
         placed_controls = [
-            PlacedControl(data_control, data_label, "list_view", 0, 70),
-            PlacedControl(basics_control, basics_label, "button", 0, 0),
+            self._make_placed(data_control, data_label, "list_view", 70),
+            self._make_placed(basics_control, basics_label, "button", 4),
         ]
-        control_labels = [data_label, basics_label, aux_label]
+        control_labels = [data_label, basics_label]
 
         apply_category_visibility(
             active_key="data",
-            category_content_bounds=Rect(0, 0, 300, 200),
             placed_controls=placed_controls,
             control_labels=control_labels,
-            basics_aux_labels={"vertical_scrollbar": aux_label},
-            gallery_layout=gallery,
-            ensure_basics_aux_label=lambda _name: aux_label,
-            basics_suppressed_label_names=frozenset({"button_2"}),
         )
-
-        self.assertEqual(0, gallery.basics_calls)
-        self.assertEqual([("data", 1)], gallery.grid_calls)
 
         self.assertTrue(data_control.visible)
         self.assertTrue(data_label.visible)
         self.assertFalse(basics_control.visible)
         self.assertFalse(basics_label.visible)
-        self.assertFalse(aux_label.visible)
+
+    def test_control_without_label_handled(self):
+        control = _DummyNode()
+        placed = PlacedControl(control, None, "canvas", 0, 67)
+
+        apply_category_visibility(
+            active_key="data",
+            placed_controls=[placed],
+            control_labels=[],
+        )
+
+        self.assertTrue(control.visible)
+        self.assertTrue(control.enabled)
+
+    def test_advanced_and_extended_boundaries(self):
+        adv_control = _DummyNode()
+        adv_label = _DummyNode()
+        ext_control = _DummyNode()
+        ext_label = _DummyNode()
+
+        placed_controls = [
+            self._make_placed(adv_control, adv_label, "spinner", 100),
+            self._make_placed(ext_control, ext_label, "toolbar", 140),
+        ]
+        control_labels = [adv_label, ext_label]
+
+        apply_category_visibility(
+            active_key="advanced",
+            placed_controls=placed_controls,
+            control_labels=control_labels,
+        )
+
+        self.assertTrue(adv_control.visible)
+        self.assertTrue(adv_label.visible)
+        self.assertFalse(ext_control.visible)
+        self.assertFalse(ext_label.visible)
+
+    def test_all_labels_show_when_all_belong_to_active_category(self):
+        controls = [_DummyNode() for _ in range(3)]
+        labels = [_DummyNode() for _ in range(3)]
+        placed = [
+            self._make_placed(controls[i], labels[i], f"ctrl_{i}", i)
+            for i in range(3)
+        ]
+
+        apply_category_visibility(
+            active_key="basics",
+            placed_controls=placed,
+            control_labels=labels,
+        )
+
+        for c, l in zip(controls, labels):
+            self.assertTrue(c.visible)
+            self.assertTrue(l.visible)
 
 
 if __name__ == "__main__":
