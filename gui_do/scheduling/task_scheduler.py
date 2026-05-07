@@ -78,8 +78,8 @@ class TaskScheduler:
         self._task_messages: Deque[_TaskMessage] = deque()
         self._message_dispatch_limit: Optional[int] = None
         self._message_dispatch_time_budget_ms: Optional[float] = None
-        self._message_ingest_limit: Optional[int] = 512
-        self._max_queued_messages_per_task: Optional[int] = 1024
+        self._message_ingest_limit: Optional[int] = 256
+        self._max_queued_messages_per_task: Optional[int] = 768
 
         self._incoming_messages: Queue[_TaskMessage] = Queue()
         self._incoming_failures: Queue[_TaskFailure] = Queue()
@@ -505,8 +505,9 @@ class TaskScheduler:
         collector = telemetry_collector()
         dispatch_start = perf_counter()
         dispatched_count = 0
+        decremented_counts: Dict[Hashable, int] = {}
         while True:
-            message = None
+            dispatch_batch: List[_TaskMessage] = []
             with self._lock:
                 if not self._task_messages:
                     break
@@ -518,28 +519,47 @@ class TaskScheduler:
                     and ((perf_counter() - dispatch_start) * 1000.0) >= self._message_dispatch_time_budget_ms
                 ):
                     break
-                message = self._task_messages.popleft()
-                if self._task_generation.get(message.task_id) != message.generation:
-                    self._decrement_message_count_locked(message.task_id)
-                    continue
+                # When a time budget is active, dispatch one message at a time so the
+                # next budget check happens immediately and frame spikes are bounded.
+                batch_size = 1 if self._message_dispatch_time_budget_ms is not None else 32
+                remaining_limit = batch_size
+                if self._message_dispatch_limit is not None:
+                    remaining_limit = min(remaining_limit, self._message_dispatch_limit - dispatched_count)
+                for _ in range(max(0, remaining_limit)):
+                    if not self._task_messages:
+                        break
+                    message = self._task_messages.popleft()
+                    if self._task_generation.get(message.task_id) != message.generation:
+                        self._decrement_message_count_locked(message.task_id)
+                        continue
+                    dispatch_batch.append(message)
 
+            if not dispatch_batch:
+                continue
+
+            decremented_counts.clear()
             try:
-                with collector.span(
-                    "task_scheduler",
-                    "message_callback",
-                    metadata={"task_id": str(message.task_id)},
-                ):
-                    message.callback(message.payload)
-            except Exception as exc:  # noqa: BLE001
-                self._enqueue_failure(
-                    message.task_id,
-                    message.generation,
-                    f"Task message callback failed: {type(exc).__name__}: {exc}",
-                )
+                for message in dispatch_batch:
+                    try:
+                        with collector.span(
+                            "task_scheduler",
+                            "message_callback",
+                            metadata={"task_id": str(message.task_id)},
+                        ):
+                            message.callback(message.payload)
+                    except Exception as exc:  # noqa: BLE001
+                        self._enqueue_failure(
+                            message.task_id,
+                            message.generation,
+                            f"Task message callback failed: {type(exc).__name__}: {exc}",
+                        )
+                    finally:
+                        decremented_counts[message.task_id] = decremented_counts.get(message.task_id, 0) + 1
+                    dispatched_count += 1
             finally:
                 with self._lock:
-                    self._decrement_message_count_locked(message.task_id)
-            dispatched_count += 1
+                    for task_id, count in decremented_counts.items():
+                        self._decrement_message_count_locked(task_id, decrement=count)
         if dispatched_count:
             collector.record_duration(
                 "task_scheduler",
@@ -561,11 +581,13 @@ class TaskScheduler:
                 self._tasks.pop(failure.task_id, None)
                 self._running.discard(failure.task_id)
 
-    def _decrement_message_count_locked(self, task_id: Hashable) -> None:
+    def _decrement_message_count_locked(self, task_id: Hashable, decrement: int = 1) -> None:
+        if decrement <= 0:
+            return
         count = self._task_message_counts.get(task_id)
         if count is None:
             return
-        next_count = count - 1
+        next_count = count - decrement
         if next_count <= 0:
             self._task_message_counts.pop(task_id, None)
         else:

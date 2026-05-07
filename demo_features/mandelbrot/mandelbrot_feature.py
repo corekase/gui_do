@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pygame import Rect
+from pygame import PixelArray, Rect
 
 from gui_do import (
     ButtonControl,
@@ -202,6 +202,12 @@ class MandelbrotFeature(RoutedFeature):
         self.status_text = "Mandelbrot: idle"
         self._runtime_spec = None
         self._busy = False
+        self._color_table: tuple[tuple[int, int, int], ...] = ((0, 0, 0),)
+        self._mapped_color_tables: dict[int, tuple[int, ...]] = {}
+        self._idle_dispatch_limit = None
+        self._idle_ingest_limit = None
+        self._pending_launches: list[tuple[str, str, str, dict]] = []
+        self._launches_per_update = 1
 
     # ------------------------------------------------------------------
     # Lifecycle hooks
@@ -222,6 +228,12 @@ class MandelbrotFeature(RoutedFeature):
     def bind_runtime(self, host) -> None:
         self.demo = host
         self.scheduler = bind_routed_feature_lifecycle(self, host, _LIFECYCLE_SPEC)
+        if self.scheduler is not None:
+            if hasattr(self.scheduler, "get_message_dispatch_limit"):
+                self._idle_dispatch_limit = self.scheduler.get_message_dispatch_limit()
+            if hasattr(self.scheduler, "get_message_ingest_limit"):
+                self._idle_ingest_limit = self.scheduler.get_message_ingest_limit()
+        self._refresh_color_table()
         self._set_busy(False)
 
     def _build_runtime_spec(self, host) -> RoutedRuntimeSpec:
@@ -240,9 +252,11 @@ class MandelbrotFeature(RoutedFeature):
 
     def shutdown_runtime(self, host) -> None:
         shutdown_routed_feature_lifecycle(self, host, _LIFECYCLE_SPEC)
+        self._pending_launches.clear()
         self._set_busy(False)
 
     def on_update(self, _host) -> None:
+        self._drain_pending_launches()
         self._drain_scheduler_events()
 
     # ------------------------------------------------------------------
@@ -254,9 +268,17 @@ class MandelbrotFeature(RoutedFeature):
         if sched is None or bool(busy) == self._busy:
             return
         self._busy = bool(busy)
-        limit = 48 if busy else 512
+        limit = self._idle_dispatch_limit
+        ingest_limit = self._idle_ingest_limit
+        if busy:
+            if isinstance(limit, int):
+                limit = max(48, min(limit, 192))
+            if isinstance(ingest_limit, int):
+                ingest_limit = max(256, min(ingest_limit, 1024))
         if hasattr(sched, "set_message_dispatch_limit"):
             sched.set_message_dispatch_limit(limit)
+        if hasattr(sched, "set_message_ingest_limit"):
+            sched.set_message_ingest_limit(ingest_limit)
 
     # ------------------------------------------------------------------
     # Canvas helpers
@@ -269,9 +291,42 @@ class MandelbrotFeature(RoutedFeature):
         provider = self._feature_manager.get(name)
         return provider if isinstance(provider, MandelbrotLogicFeature) else None
 
-    def _col(self, k: int) -> tuple:
+    def _refresh_color_table(self) -> None:
         logic = self._logic("primary")
-        return logic.mandel_col(k) if logic else (0, 0, 0)
+        if logic is None:
+            self._color_table = ((0, 0, 0),)
+            self._mapped_color_tables.clear()
+            return
+
+        max_iter = max(1, int(logic.max_iter))
+        palette = tuple(logic.mandel_cols)
+        if not palette:
+            self._color_table = tuple((0, 0, 0) for _ in range(max_iter))
+            self._mapped_color_tables.clear()
+            return
+
+        terminal = max_iter - 1
+        self._color_table = tuple((0, 0, 0) if i >= terminal else palette[i % len(palette)] for i in range(max_iter))
+        self._mapped_color_tables.clear()
+
+    def _color_for_iteration(self, value: int) -> tuple[int, int, int]:
+        if value < 0:
+            return self._color_table[0]
+        if value >= len(self._color_table):
+            return self._color_table[-1]
+        return self._color_table[value]
+
+    def _mapped_colors_for_canvas(self, canvas) -> tuple[int, ...]:
+        key = id(canvas)
+        cached = self._mapped_color_tables.get(key)
+        if cached is not None:
+            return cached
+        mapped = tuple(canvas.map_rgb(color) for color in self._color_table)
+        self._mapped_color_tables[key] = mapped
+        return mapped
+
+    def _col(self, k: int) -> tuple:
+        return self._color_for_iteration(int(k))
 
     def _viewport(self, width: int, height: int) -> tuple:
         logic = self._logic("primary")
@@ -289,14 +344,38 @@ class MandelbrotFeature(RoutedFeature):
         if canvas is None:
             return
         cw, ch = canvas.get_size()
+        color_for_iteration = self._color_for_iteration
+        mapped_colors = self._mapped_colors_for_canvas(canvas)
+        mapped_count = len(mapped_colors)
 
         if task_id == "iter":
-            # Iterative payload: (y_row, [iteration_count, ...])
-            y, row = payload
+            # Iterative payloads:
+            #   (y_row, [iteration_count, ...])
+            #   (y_row, x_start, [iteration_count, ...])
+            if len(payload) == 2:
+                y, row = payload
+                x_start = 0
+            else:
+                y, x_start, row = payload
             if 0 <= y < ch:
-                for x, v in enumerate(row):
-                    if 0 <= x < cw:
-                        canvas.set_at((x, y), self._col(v))
+                draw_x = max(0, int(x_start))
+                source_x = max(0, -int(x_start))
+                limit = min(cw - draw_x, len(row) - source_x)
+                if limit > 0:
+                    mapped_row = []
+                    append = mapped_row.append
+                    default_color = mapped_colors[-1]
+                    for x in range(source_x, source_x + limit):
+                        value = int(row[x])
+                        if 0 <= value < mapped_count:
+                            append(mapped_colors[value])
+                        else:
+                            append(default_color)
+                    pixels = PixelArray(canvas)
+                    try:
+                        pixels[draw_x:draw_x + limit, y] = mapped_row
+                    finally:
+                        del pixels
             return
 
         # Recursive payload: (x, y, w, h, values_or_scalar)
@@ -305,15 +384,37 @@ class MandelbrotFeature(RoutedFeature):
             rx, ry = max(0, x0), max(0, y0)
             rx1, ry1 = min(cw, x0 + w), min(ch, y0 + h)
             if rx1 > rx and ry1 > ry:
-                canvas.fill(self._col(values), Rect(rx, ry, rx1 - rx, ry1 - ry))
+                canvas.fill(color_for_iteration(values), Rect(rx, ry, rx1 - rx, ry1 - ry))
             return
 
-        idx = 0
-        for yy in range(y0, y0 + h):
-            for xx in range(x0, x0 + w):
-                if 0 <= yy < ch and 0 <= xx < cw:
-                    canvas.set_at((xx, yy), self._col(values[idx]))
-                idx += 1
+        x_start = max(0, x0)
+        y_start = max(0, y0)
+        x_end = min(cw, x0 + w)
+        y_end = min(ch, y0 + h)
+        if x_end <= x_start or y_end <= y_start:
+            return
+
+        row_span = max(0, w)
+        if row_span <= 0:
+            return
+
+        pixels = PixelArray(canvas)
+        try:
+            default_color = mapped_colors[-1]
+            for yy in range(y_start, y_end):
+                idx = (yy - y0) * row_span + (x_start - x0)
+                row_colors = []
+                append = row_colors.append
+                for _ in range(x_start, x_end):
+                    value = int(values[idx])
+                    if 0 <= value < mapped_count:
+                        append(mapped_colors[value])
+                    else:
+                        append(default_color)
+                    idx += 1
+                pixels[x_start:x_end, yy] = row_colors
+        finally:
+            del pixels
 
     # ------------------------------------------------------------------
     # Status helpers
@@ -371,6 +472,25 @@ class MandelbrotFeature(RoutedFeature):
         )
         self.task_ids.add(task_id)
 
+    def _queue_staged_tasks(self, host, tasks: list[tuple[str, str, str, dict]]) -> None:
+        if not tasks:
+            return
+        first_task = tasks[0]
+        self._queue_task(host, *first_task)
+        if len(tasks) > 1:
+            self._pending_launches.extend(tasks[1:])
+
+    def _drain_pending_launches(self) -> None:
+        demo = self.demo
+        if demo is None or not self._pending_launches:
+            return
+        launches = max(1, int(self._launches_per_update))
+        count = 0
+        while self._pending_launches and count < launches:
+            task_id, logic_alias, runnable, params = self._pending_launches.pop(0)
+            self._queue_task(demo, task_id, logic_alias, runnable, params)
+            count += 1
+
     def _set_buttons_enabled(self, host, enabled: bool) -> None:
         for btn in self.task_buttons:
             btn.enabled = enabled
@@ -427,12 +547,12 @@ class MandelbrotFeature(RoutedFeature):
         if failed:
             self._publish_status(MANDEL_KIND_FAILED, "; ".join(sorted(failed)))
 
-        busy = sched.tasks_busy_match_any(*_ALL_TASK_IDS)
+        busy = bool(self._pending_launches) or sched.tasks_busy_match_any(*_ALL_TASK_IDS)
         self._set_busy(busy)
         self._set_buttons_enabled(demo, not busy)
 
         if busy:
-            n = len(self.task_ids)
+            n = len(self.task_ids) + len(self._pending_launches)
             word = "task" if n == 1 else "tasks"
             status_text = f"Mandelbrot: running ({n} {word})"
             if self.status_text != status_text:
@@ -450,6 +570,7 @@ class MandelbrotFeature(RoutedFeature):
         """Cancel all running tasks, clear canvases, and reset the UI."""
         sched = self._get_scheduler(host)
         sched.remove_tasks(*_ALL_TASK_IDS)
+        self._pending_launches.clear()
         self.task_ids.clear()
         self._set_busy(False)
         self._show_primary()
@@ -462,6 +583,8 @@ class MandelbrotFeature(RoutedFeature):
         sched = self._get_scheduler(host)
         if sched.tasks_busy_match_any(*_ALL_TASK_IDS):
             return None
+        self._pending_launches.clear()
+        self._refresh_color_table()
         self._set_busy(True)
         self._set_buttons_enabled(host, False)
         if split:
@@ -504,9 +627,16 @@ class MandelbrotFeature(RoutedFeature):
             ("3", Rect(0,   th, lw,      h - th)),
             ("4", Rect(lw,  th, w - lw,  h - th)),
         )
-        for tid, rect in quadrants:
-            self._queue_task(host, tid, "primary", "recursive_task",
-                             {"size": (w, h), "center": center, "scale": scale, "rect": Rect(rect)})
+        tasks = [
+            (
+                tid,
+                "primary",
+                "recursive_task",
+                {"size": (w, h), "center": center, "scale": scale, "rect": Rect(rect)},
+            )
+            for tid, rect in quadrants
+        ]
+        self._queue_staged_tasks(host, tasks)
         self._publish_status(MANDEL_KIND_RUNNING_ONE_SPLIT)
 
     def launch_four_split(self, host) -> None:
@@ -518,9 +648,16 @@ class MandelbrotFeature(RoutedFeature):
             return
         w, h = first.canvas.get_size()
         center, scale = self._viewport(w, h)
-        for key in _SPLIT_KEYS:
-            self._queue_task(host, key, key, "recursive_task",
-                             {"size": (w, h), "center": center, "scale": scale, "rect": Rect(0, 0, w, h)})
+        tasks = [
+            (
+                key,
+                key,
+                "recursive_task",
+                {"size": (w, h), "center": center, "scale": scale, "rect": Rect(0, 0, w, h)},
+            )
+            for key in _SPLIT_KEYS
+        ]
+        self._queue_staged_tasks(host, tasks)
         self._publish_status(MANDEL_KIND_RUNNING_FOUR_SPLIT)
 
 

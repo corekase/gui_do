@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from time import perf_counter
 from typing import Tuple
 
 from pygame import Rect
@@ -12,6 +13,9 @@ class MandelbrotLogicFeature(LogicFeature):
 	"""Domain logic provider for Mandelbrot pixel and algorithm calculations."""
 
 	RECURSIVE_LEAF_SPAN = 8
+	ITERATIVE_TARGET_SLICE_MS = 1.5
+	ITERATIVE_MIN_CHUNK = 24
+	ITERATIVE_MAX_CHUNK = 192
 
 	def __init__(self, name: str = "mandelbrot_logic_primary", *, scene_name: str = "main") -> None:
 		super().__init__(name, scene_name=scene_name)
@@ -52,9 +56,21 @@ class MandelbrotLogicFeature(LogicFeature):
 		width, height = params["size"]
 		center = params["center"]
 		scale = params["scale"]
+		chunk_width = max(self.ITERATIVE_MIN_CHUNK, min(self.ITERATIVE_MAX_CHUNK, max(1, width // 8)))
+		target_ms = max(0.25, float(self.ITERATIVE_TARGET_SLICE_MS))
 		for y in range(height):
-			row = [self.mandel_pixel(x, y, width, height, center, scale) for x in range(width)]
-			scheduler.send_message(task_id, (y, row))
+			x = 0
+			while x < width:
+				x_end = min(width, x + chunk_width)
+				slice_start = perf_counter()
+				row = [self.mandel_pixel(xx, y, width, height, center, scale) for xx in range(x, x_end)]
+				scheduler.send_message(task_id, (y, x, row))
+				slice_elapsed_ms = (perf_counter() - slice_start) * 1000.0
+				if slice_elapsed_ms > target_ms and chunk_width > self.ITERATIVE_MIN_CHUNK:
+					chunk_width = max(self.ITERATIVE_MIN_CHUNK, int(chunk_width * 0.75))
+				elif slice_elapsed_ms < (target_ms * 0.5) and chunk_width < self.ITERATIVE_MAX_CHUNK:
+					chunk_width = min(self.ITERATIVE_MAX_CHUNK, int(chunk_width * 1.25))
+				x = x_end
 		return None
 
 	def _recursive_fill(self, scheduler, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
@@ -62,10 +78,20 @@ class MandelbrotLogicFeature(LogicFeature):
 			return
 		if w <= self.RECURSIVE_LEAF_SPAN or h <= self.RECURSIVE_LEAF_SPAN:
 			values = []
+			first_value = None
+			uniform = True
 			for yy in range(y, y + h):
 				for xx in range(x, x + w):
-					values.append(self.mandel_pixel(xx, yy, width, height, center, scale))
-			scheduler.send_message(task_id, (x, y, w, h, values))
+					value = self.mandel_pixel(xx, yy, width, height, center, scale)
+					values.append(value)
+					if first_value is None:
+						first_value = value
+					elif value != first_value:
+						uniform = False
+			if uniform and first_value is not None:
+				scheduler.send_message(task_id, (x, y, w, h, int(first_value)))
+			else:
+				scheduler.send_message(task_id, (x, y, w, h, values))
 			return
 		hw = w // 2
 		hh = h // 2

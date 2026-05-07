@@ -91,9 +91,9 @@ class _FallthroughEntry:
 class GuiApplication:
     """Application runtime coordinator for scene, input, capture, and rendering."""
 
-    _SCHEDULER_DISPATCH_BUDGET_FRACTION = 0.12
-    _SCHEDULER_DISPATCH_BUDGET_MIN_MS = 0.5
-    _SCHEDULER_DISPATCH_BUDGET_MAX_MS = 4.0
+    _SCHEDULER_DISPATCH_BUDGET_FRACTION = 0.10
+    _SCHEDULER_DISPATCH_BUDGET_MIN_MS = 0.35
+    _SCHEDULER_DISPATCH_BUDGET_MAX_MS = 2.5
 
     def __init__(self, surface: pygame.Surface, font_roles=None) -> None:
         self.surface = surface
