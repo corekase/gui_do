@@ -3,6 +3,14 @@ name: Document
 description: Rebuild README.md and TUTORIAL.md from the current codebase. The MANUAL.md is separate (Manual.prompt.md pipeline).
 ---
 
+## Execution Order Requirement
+
+All work in this prompt must run sequentially and never concurrently.
+
+- Perform generation and any sub-generation in strict order.
+- Do not parallelize reads, drafting, rewrites, compliance checks, or enrichment steps.
+- Finish each step fully before starting the next step.
+
 ## Scope
 
 This prompt generates two files only:
@@ -11,6 +19,16 @@ This prompt generates two files only:
 2. **TUTORIAL.md** — a complete step-by-step project tutorial that teaches the full gui_do programming model from zero.
 
 MANUAL.md is produced by a separate prompt pipeline (`Manual.prompt.md`). Do not regenerate or modify MANUAL.md from this prompt.
+
+### File Presence Modes (Required)
+
+Apply this two-mode behavior for `README.md` and `TUTORIAL.md`:
+
+- If a target file already exists, always update it in place (do not skip and do not replace with a brand-new rewrite unless required to restore compliance).
+- If a target file does not exist, generate that missing file from scratch.
+- If one exists and the other is missing, update the existing file and generate the missing file from scratch in the same run.
+- If both exist, update both.
+- If both are missing, generate both from scratch.
 
 ---
 
@@ -378,9 +396,15 @@ After generating both files, run a compliance pass:
 1. **README.md header check.** Confirm the file opens with the unittest badge line on line 1, then `# gui_do` on line 2, then the `### Latest Demonstration` block (with `---` dividers). If the badge appears anywhere else, move it to line 1. Confirm the video URL uses the `__demo__` value from `gui_do/_version.py`. Confirm the badge URL is the exact verbatim string from the existing README.
 2. **README.md structure check.** Confirm the eight required sections are present in order after the header.
 3. **TUTORIAL.md structure check.** Confirm all 11 required sections are present in order. Confirm the install command is `python -m pip install -e . --no-deps`. Confirm no private/internal symbol appears in any code example.
-4. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
-5. **Cross-reference check.** Confirm TUTORIAL.md links to MANUAL.md in Sections 1, 9, and 11. Confirm README.md links to both TUTORIAL.md and MANUAL.md in the Documentation section.
-6. **Run a text search** (e.g. `rg "MANUAL_PLACEHOLDER\|from gui_do\." README.md TUTORIAL.md`) to catch any internal submodule imports or stale placeholder text. Fix violations before completing.
-7. **pygame-ce cleanup.** Search both README.md and TUTORIAL.md for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
+4. **TUTORIAL.md enrichment pass (required after main generation).** Re-read TUTORIAL.md from top to bottom and enrich any section that is thin on explanation or examples.
+  - Add explanatory prose wherever reasoning is missing (especially "why" and lifecycle intent).
+  - Add or expand runnable code snippets wherever a required concept lacks a concrete example.
+  - If a step says to show a full updated listing, ensure that listing is present and complete for that step.
+  - Keep the existing 11-section order unchanged; enrich content in place rather than adding new top-level sections.
+  - Re-verify every added API name against `gui_do/__init__.py`.
+5. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
+6. **Cross-reference check.** Confirm TUTORIAL.md links to MANUAL.md in Sections 1, 9, and 11. Confirm README.md links to both TUTORIAL.md and MANUAL.md in the Documentation section.
+7. **Run a text search** (e.g. `rg "MANUAL_PLACEHOLDER\|from gui_do\." README.md TUTORIAL.md`) to catch any internal submodule imports or stale placeholder text. Fix violations before completing.
+8. **pygame-ce cleanup.** Search both README.md and TUTORIAL.md for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 
 Report: what was checked, what was fixed, and confirm both files are complete and compliant.
