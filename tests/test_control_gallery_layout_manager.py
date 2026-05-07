@@ -3,10 +3,8 @@ from unittest.mock import MagicMock, patch
 
 from pygame import Rect
 
-from demo_features.showcase.showcase_feature import (
-    _build_grid_specs,
-    category_for_row,
-)
+from gui_do import build_multi_column_grid_specs
+from demo_features.showcase.showcase_feature import category_for_row
 
 
 class TestBuildGridSpecs(unittest.TestCase):
@@ -32,11 +30,11 @@ class TestBuildGridSpecs(unittest.TestCase):
         b = bounds or Rect(0, 0, 600, 500)
         cb = content_bottom or b.bottom
         with patch(
-            "demo_features.showcase.showcase_feature.build_specs_from_column_section",
+            "gui_do.features.control_spec.build_specs_from_column_section",
         ) as mock_build, patch(
-            "demo_features.showcase.showcase_feature.CellCaretLayout.split_columns",
+            "gui_do.features.control_spec.CellCaretLayout.split_columns",
         ) as mock_split, patch(
-            "demo_features.showcase.showcase_feature.CellCaretLayout.column_stack_from_anchor",
+            "gui_do.features.control_spec.CellCaretLayout.column_stack_from_anchor",
         ) as mock_stack:
             col_rects = [Rect(i * 200, 0, 200, 500) for i in range(num_cols)]
             mock_split.return_value = col_rects
@@ -53,7 +51,7 @@ class TestBuildGridSpecs(unittest.TestCase):
                 return tuple(specs), 100
             mock_build.side_effect = _fake_build
 
-            return _build_grid_specs(
+            return build_multi_column_grid_specs(
                 defs,
                 bounds=b,
                 num_cols=num_cols,
@@ -68,7 +66,7 @@ class TestBuildGridSpecs(unittest.TestCase):
 
     def test_zero_cols_returns_empty(self):
         defs = [self._make_def("button", 0)]
-        result, bottom = _build_grid_specs(
+        result, bottom = build_multi_column_grid_specs(
             defs,
             bounds=Rect(0, 0, 300, 200),
             num_cols=0,

@@ -457,6 +457,42 @@ def register_placed_control(
             row_index=row_index,
         ))
 
+def apply_category_visibility(
+    *,
+    active_key: str,
+    placed_controls: list,
+    control_labels: list,
+    category_fn,
+) -> None:
+    """Show controls whose category matches *active_key*, hide all others.
+
+    Args:
+        active_key: The category key that should be visible.
+        placed_controls: Sequence of :class:`PlacedControl` records.  Each
+            record's ``row_index`` is passed to *category_fn* to determine its
+            category.
+        control_labels: All label controls tracked by the registry.  Labels
+            belonging to the active category are shown via the *placed_controls*
+            loop; the remainder are explicitly hidden here.
+        category_fn: Callable ``(row_index: int) -> str`` that maps a control's
+            row index to its category key.
+    """
+    active_label_set: set = set()
+    for placed in placed_controls:
+        show = category_fn(int(placed.row_index)) == active_key
+        placed.control.visible = show
+        placed.control.enabled = show
+        if placed.label is not None:
+            placed.label.visible = show
+            placed.label.enabled = show
+            if show:
+                active_label_set.add(placed.label)
+    for label in control_labels:
+        if label not in active_label_set:
+            label.visible = False
+            label.enabled = False
+
+
 def make_labeled_slot_height_fn(label_height: int, label_gap: int):
     """Return a ``(control_height: int) -> int`` callable for labeled slot heights.
 

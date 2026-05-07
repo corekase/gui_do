@@ -1,9 +1,7 @@
 import unittest
 
-from demo_features.showcase.showcase_feature import (
-    apply_category_visibility,
-    category_for_row,
-)
+from gui_do import apply_category_visibility
+from demo_features.showcase.showcase_feature import category_for_row
 from gui_do.features.feature_lifecycle import PlacedControl
 
 
@@ -51,6 +49,7 @@ class TestApplyCategoryVisibility(unittest.TestCase):
             active_key="basics",
             placed_controls=placed_controls,
             control_labels=control_labels,
+            category_fn=category_for_row,
         )
 
         self.assertTrue(basics_control.visible)
@@ -82,6 +81,7 @@ class TestApplyCategoryVisibility(unittest.TestCase):
             active_key="data",
             placed_controls=placed_controls,
             control_labels=control_labels,
+            category_fn=category_for_row,
         )
 
         self.assertTrue(data_control.visible)
@@ -97,6 +97,7 @@ class TestApplyCategoryVisibility(unittest.TestCase):
             active_key="data",
             placed_controls=[placed],
             control_labels=[],
+            category_fn=category_for_row,
         )
 
         self.assertTrue(control.visible)
@@ -118,6 +119,7 @@ class TestApplyCategoryVisibility(unittest.TestCase):
             active_key="advanced",
             placed_controls=placed_controls,
             control_labels=control_labels,
+            category_fn=category_for_row,
         )
 
         self.assertTrue(adv_control.visible)
@@ -137,6 +139,7 @@ class TestApplyCategoryVisibility(unittest.TestCase):
             active_key="basics",
             placed_controls=placed,
             control_labels=labels,
+            category_fn=category_for_row,
         )
 
         for c, l in zip(controls, labels):

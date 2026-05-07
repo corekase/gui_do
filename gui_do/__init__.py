@@ -99,6 +99,9 @@ from .features.data_driven_runtime import (
 from .features.control_spec import (
     ControlDefinition,
     build_specs_from_column_section,
+    RowCellSpec,
+    build_horizontal_row_specs,
+    build_multi_column_grid_specs,
 )
 
 # ============================================================================
@@ -440,7 +443,12 @@ from .features.feature_lifecycle import (
     add_group_label,
     PlacedControl,
     make_labeled_slot_height_fn,
+    apply_category_visibility,
     ControlRegistry,
+)
+from .overlays.popup_promotion import (
+    control_has_open_popup,
+    promote_open_popup_controls,
 )
 from .features.data_driven_runtime import (
     build_tools_menu_entries,
@@ -1063,7 +1071,13 @@ __all__ = [
     "add_group_label",
     "PlacedControl",
     "make_labeled_slot_height_fn",
+    "apply_category_visibility",
     "ControlRegistry",
+    "RowCellSpec",
+    "build_horizontal_row_specs",
+    "build_multi_column_grid_specs",
+    "control_has_open_popup",
+    "promote_open_popup_controls",
     "build_tools_menu_entries",
     "add_standard_scene_menu_strip",
     "apply_accessibility_sequence",
