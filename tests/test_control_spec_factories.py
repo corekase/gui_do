@@ -66,7 +66,7 @@ class TestControlDefinition(unittest.TestCase):
             name="x", label_text="X", control_height=20, row_index=0, control_factory=lambda: None
         )
         self.assertEqual(0, defn.column_index)
-        self.assertTrue(defn.focusable)
+        self.assertIsNone(defn.focusable)
         self.assertIsNone(defn.accessibility_role)
         self.assertIsNone(defn.accessibility_label)
 

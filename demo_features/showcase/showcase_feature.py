@@ -645,43 +645,43 @@ class ShowcaseFeature(Feature):
                 lambda: ListViewControl("control_list_view", Rect(0, 0, col_w, 140),
                     [ListItem(label=f"Item {i + 1}", value=i) for i in range(10)],
                     row_height=24, selected_index=0),
-                focusable=True, accessibility_role="listbox", accessibility_label="List view"),
+                accessibility_role="listbox", accessibility_label="List view"),
             ControlDefinition("scroll_view", "Scroll View", 140, 61,
                 _make_scroll_view,
-                focusable=True, accessibility_role="group", accessibility_label="Scroll view"),
+                accessibility_role="group", accessibility_label="Scroll view"),
             ControlDefinition("tree", "Tree", 150, 62,
                 lambda: TreeControl("control_tree", Rect(0, 0, col_w, 150),
                     [TreeNode("Desktop", expanded=True, children=[TreeNode("Window A"), TreeNode("Window B")]),
                      TreeNode("Scenes", expanded=True, children=[TreeNode("Main"), TreeNode("Control Showcase")])]),
-                focusable=True, accessibility_role="tree", accessibility_label="Tree control"),
+                accessibility_role="tree", accessibility_label="Tree control"),
             ControlDefinition("dropdown", "Dropdown", 32, 63,
                 lambda: DropdownControl("control_dropdown", Rect(0, 0, col_w, 32),
                     [DropdownOption(label=f"Option {i + 1}", value=i) for i in range(4)],
                     placeholder="Choose"),
-                focusable=True, accessibility_role="combobox", accessibility_label="Dropdown"),
+                accessibility_role="combobox", accessibility_label="Dropdown"),
             ControlDefinition("splitter", "Splitter", 60, 64,
                 lambda: SplitterControl("control_splitter", Rect(0, 0, col_w, 60),
                     axis=LayoutAxis.HORIZONTAL, ratio=0.5, min_pane_size=16),
-                focusable=True, accessibility_role="separator", accessibility_label="Splitter"),
+                accessibility_role="separator", accessibility_label="Splitter"),
             ControlDefinition("menu_bar", "Menu Bar", 28, 65,
                 lambda: MenuBarControl("control_menu_bar", Rect(0, 0, col_w, 28),
                     [MenuEntry("File", [ContextMenuItem("Open"), ContextMenuItem("Save")]),
                      MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")])]),
-                focusable=False, accessibility_role="menubar", accessibility_label="Menu bar"),
+                accessibility_role="menubar", accessibility_label="Menu bar"),
             ControlDefinition("canvas", "Canvas", 100, 67,
                 lambda: CanvasControl("control_canvas", Rect(0, 0, col_w, 100), max_events=64),
-                focusable=False),
+                ),
             ControlDefinition("frame", "Frame", 60, 68,
                 lambda: FrameControl("control_frame", Rect(0, 0, col_w, 60), border_width=2),
-                focusable=False),
+                ),
             ControlDefinition("panel", "Panel", 60, 69,
                 lambda: PanelControl("control_panel", Rect(0, 0, col_w, 60), draw_background=True),
-                focusable=False),
+                ),
             ControlDefinition("rich_label", "Rich Label", 80, 66,
                 lambda: RichLabelControl("control_rich_label", Rect(0, 0, col_w, 80),
                     text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, "
                          "run `deploy --env staging`, and **_ship_** after QA."),
-                focusable=False),
+                ),
         ]
 
     def _advanced_defs(self, col_w: int, host) -> list[ControlDefinition]:
@@ -754,7 +754,6 @@ class ShowcaseFeature(Feature):
                 decimals=0,
                 on_change=lambda v, _r: None,
             )
-            spinner.set_tab_index(0)
             y = _add_labeled(panel, y, key="spinner", label="Spinner", control=spinner, control_h=30)
 
             range_slider = RangeSliderControl(
@@ -766,25 +765,21 @@ class ShowcaseFeature(Feature):
                 high_value=80,
                 on_change=lambda lo, hi, _r: None,
             )
-            range_slider.set_tab_index(0)
             y = _add_labeled(panel, y, key="range_slider", label="Range Slider", control=range_slider, control_h=24)
 
             numeric = NumericFormatter(decimals=2, thousands_sep=",").create_text_input(
                 "control_numeric_fmt_input", Rect(0, 0, col_w, 30), raw_value="12500", placeholder="0.00"
             )
-            numeric.set_tab_index(0)
             y = _add_labeled(panel, y, key="numeric_fmt_input", label="Numeric Format", control=numeric, control_h=30)
 
             pattern = PatternFormatter("###-###-####").create_text_input(
                 "control_pattern_fmt_input", Rect(0, 0, col_w, 30), raw_value="5551234567", placeholder="###-###-####"
             )
-            pattern.set_tab_index(0)
             y = _add_labeled(panel, y, key="pattern_fmt_input", label="Pattern Format", control=pattern, control_h=30)
 
             fixed_pattern = FixedPatternFormatter("#####-####").create_text_input(
                 "control_fixed_pattern_fmt_input", Rect(0, 0, col_w, 30), raw_value="941010001", placeholder="#####-####"
             )
-            fixed_pattern.set_tab_index(0)
             _add_labeled(panel, y, key="fixed_pattern_fmt_input", label="Fixed Pattern Format", control=fixed_pattern, control_h=30)
             return panel
 
@@ -792,7 +787,6 @@ class ShowcaseFeature(Feature):
             panel = PanelControl("control_adv_secondary_column", Rect(0, 0, col_w, 278), draw_background=False)
             y = 0
             dock = _make_dock()
-            dock.set_tab_index(0)
             y = _add_labeled(panel, y, key="dock_workspace_panel", label="Dock Workspace", control=dock, control_h=40)
 
             overlay = _make_overlay_panel()
@@ -842,7 +836,6 @@ class ShowcaseFeature(Feature):
                 290,
                 100,
                 _make_primary_column_panel,
-                focusable=False,
             ),
             ControlDefinition(
                 "advanced_secondary_column",
@@ -850,7 +843,6 @@ class ShowcaseFeature(Feature):
                 278,
                 101,
                 _make_secondary_column_panel,
-                focusable=False,
             ),
             ControlDefinition(
                 "advanced_tertiary_column",
@@ -858,7 +850,6 @@ class ShowcaseFeature(Feature):
                 238,
                 102,
                 _make_tertiary_column_panel,
-                focusable=False,
             ),
         ]
 
@@ -886,14 +877,11 @@ class ShowcaseFeature(Feature):
             w: int,
             label: str,
             control,
-            focusable: bool = True,
         ) -> None:
             panel.add_at(
                 LabelControl(f"label_{key}_ext", Rect(0, 0, w, label_h), label, align="left"),
                 x, 0,
             )
-            if focusable:
-                control.set_tab_index(0)
             panel.add_at(control, x, label_h + label_gap)
 
         # Row 1: Toolbar | Split Button | Breadcrumb  (tallest = Toolbar 36px)
@@ -931,7 +919,7 @@ class ShowcaseFeature(Feature):
                 slots=[StatusSlot("status", "Ready", width=80),
                        StatusSlot("line", "Ln 1", width=50, separator_after=True),
                        StatusSlot("col", "Col 1", width=50)])
-            _add_cell(panel, "status_bar", sc1_x, sc1_w, "Status Bar", status_bar, focusable=False)
+            _add_cell(panel, "status_bar", sc1_x, sc1_w, "Status Bar", status_bar)
             expander = ExpanderControl("control_expander", Rect(0, 0, sc2_w, 80),
                 title="Details", body_height=50)
             _add_cell(panel, "expander", sc2_x, sc2_w, "Expander", expander)
@@ -951,7 +939,7 @@ class ShowcaseFeature(Feature):
                         ContextMenuItem("Refresh", action=lambda: None),
                     ]),
                 ])
-            _add_cell(panel, "scene_menu_strip", sc0_x, sc0_w, "Scene Menu Strip", scene_menu, focusable=False)
+            _add_cell(panel, "scene_menu_strip", sc0_x, sc0_w, "Scene Menu Strip", scene_menu)
             date_picker = DatePickerControl("control_date_picker", Rect(0, 0, sc1_w, 32))
             _add_cell(panel, "date_picker", sc1_x, sc1_w, "Date Picker", date_picker)
             time_picker = TimePickerControl("control_time_picker", Rect(0, 0, sc2_w, 32),
@@ -960,7 +948,7 @@ class ShowcaseFeature(Feature):
             return panel
 
         return [
-            ControlDefinition("ext_row1", "", row1_h, 140, _make_row1_panel, focusable=False, labeled=False),
-            ControlDefinition("ext_row2", "", row2_h, 141, _make_row2_panel, focusable=False, labeled=False),
-            ControlDefinition("ext_row3", "", row3_h, 142, _make_row3_panel, focusable=False, labeled=False),
+            ControlDefinition("ext_row1", "", row1_h, 140, _make_row1_panel, labeled=False),
+            ControlDefinition("ext_row2", "", row2_h, 141, _make_row2_panel, labeled=False),
+            ControlDefinition("ext_row3", "", row3_h, 142, _make_row3_panel, labeled=False),
         ]

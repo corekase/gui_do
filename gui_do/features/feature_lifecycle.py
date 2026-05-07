@@ -248,7 +248,7 @@ class ControlPlacementSpec:
     name: str
     control: object
     control_rect: object
-    focusable: bool
+    focusable: bool | None = None
     labeled: bool = True
     label_text: str = ""
     label_font_role: str = "body"
@@ -269,7 +269,7 @@ def place_control(
     *,
     label_font_role: str = "body",
     control_font_role: str = "body",
-    focusable: bool,
+    focusable: bool | None = None,
     accessibility_role: str | None = None,
     accessibility_label: str | None = None,
     column_index: int = 0,
@@ -333,7 +333,7 @@ def place_control_specs(
                 spec.control_rect,
                 label_font_role=str(getattr(spec, "label_font_role", "body")),
                 control_font_role=str(getattr(spec, "control_font_role", "body")),
-                focusable=bool(spec.focusable),
+                focusable=getattr(spec, "focusable", None),
                 accessibility_role=getattr(spec, "accessibility_role", None),
                 accessibility_label=getattr(spec, "accessibility_label", None),
                 column_index=int(getattr(spec, "column_index", 0)),
@@ -350,7 +350,7 @@ def place_control_specs(
             spec.control,
             spec.control_rect,
             control_font_role=str(getattr(spec, "control_font_role", "body")),
-            focusable=bool(spec.focusable),
+            focusable=getattr(spec, "focusable", None),
             accessibility_role=getattr(spec, "accessibility_role", None),
             accessibility_label=getattr(spec, "accessibility_label", None),
             column_index=int(getattr(spec, "column_index", 0)),
@@ -368,7 +368,7 @@ def place_control_unlabeled(
     control_rect,
     *,
     control_font_role: str = "body",
-    focusable: bool,
+    focusable: bool | None = None,
     accessibility_role: str | None = None,
     accessibility_label: str | None = None,
     column_index: int = 0,
@@ -409,7 +409,7 @@ def register_placed_control(
     label,
     *,
     control_font_role: str = "body",
-    focusable: bool,
+    focusable: bool | None = None,
     accessibility_role: str | None,
     accessibility_label: str | None,
     column_index: int = 0,
@@ -436,6 +436,17 @@ def register_placed_control(
             pass
     if accessibility_role is not None and accessibility_label is not None:
         control.set_accessibility(role=accessibility_role, label=accessibility_label)
+    if focusable is None:
+        inferred_focusable = False
+        accepts_focus = getattr(control, "accepts_focus", None)
+        if callable(accepts_focus):
+            try:
+                inferred_focusable = bool(accepts_focus())
+            except Exception:
+                inferred_focusable = False
+        else:
+            inferred_focusable = int(getattr(control, "tab_index", -1)) >= 0
+        focusable = inferred_focusable
     if focusable:
         # Controls default to tab_index=-1; promote to default focusable index
         # unless the control already opted into a specific non-negative index.

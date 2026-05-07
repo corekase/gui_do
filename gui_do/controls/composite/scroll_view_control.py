@@ -169,6 +169,9 @@ class ScrollViewControl(UiNode):
         for child in self.children:
             child.update(dt_seconds)
 
+    def accepts_focus(self) -> bool:
+        return self.visible and self.enabled
+
     def _scrollbar_geometry(self):
         y_track = self._scrollbar_y_track_rect()
         y_handle = self._scrollbar_y_handle_rect() if y_track is not None else None

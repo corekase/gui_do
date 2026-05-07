@@ -74,7 +74,8 @@ class ControlDefinition:
         column_index: Column bucket used by category-visibility logic.
             Defaults to ``0``.
         focusable: Whether the control participates in keyboard focus traversal.
-            Defaults to ``True``.
+            ``None`` (default) defers to automatic inference from the control's
+            own focus capability.
         accessibility_role: ARIA-style role string passed to
             ``control.set_accessibility``.  ``None`` skips the call.
         accessibility_label: Accessible name passed alongside
@@ -87,7 +88,7 @@ class ControlDefinition:
     row_index: int
     control_factory: Callable[[], Any]
     column_index: int = 0
-    focusable: bool = True
+    focusable: bool | None = None
     accessibility_role: str | None = None
     accessibility_label: str | None = None
     labeled: bool = True
@@ -140,8 +141,8 @@ def build_specs_from_column_section(
                 label_text=defn.label_text,
                 control=defn.control_factory(),
                 control_rect=slot_rect,
-                focusable=bool(defn.focusable),
-                                labeled=getattr(defn, "labeled", True),
+                focusable=defn.focusable,
+                labeled=getattr(defn, "labeled", True),
                 accessibility_role=defn.accessibility_role,
                 accessibility_label=defn.accessibility_label,
                 column_index=int(defn.column_index),
@@ -174,6 +175,8 @@ class RowCellSpec:
             builds the live control for this cell.  Height is the intrinsic
             control height *after* label overhead has been subtracted.
         focusable: Whether the cell participates in keyboard focus traversal.
+            ``None`` (default) defers to automatic inference from the control's
+            own focus capability.
         natural_width: If set, the cell occupies exactly this many pixels wide
             and ignores any automatic column split.  All cells in a row must
             have ``natural_width`` set for natural-width mode to activate.
@@ -190,7 +193,7 @@ class RowCellSpec:
     control_height: int
     row_index: int
     cell_factory: Callable[[int, int], Any]
-    focusable: bool = False
+    focusable: bool | None = None
     natural_width: int | None = None
     target_width: int | None = None
     target_align: str = "center"
@@ -298,7 +301,7 @@ def build_horizontal_row_specs(
                 name=cell.name,
                 control=control,
                 control_rect=slot_rect,
-                focusable=bool(cell.focusable),
+                focusable=cell.focusable,
                 labeled=True,
                 label_text=cell.label_text,
                 accessibility_role=cell.accessibility_role,
