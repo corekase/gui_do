@@ -101,18 +101,17 @@ pipeline artifact and must not appear in the published output.
 
 ## Output
 
-**First Run** (MANUAL.md does not exist or is empty):
-- Use `create_file` to create `MANUAL.md` with the full skeleton.
-- If the file already exists but is empty, use `replace_string_in_file` to replace its
-  entire contents with the skeleton.
+**First Run Eligibility** (`MANUAL.md` missing/empty + explicit `CONFIRM_MANUAL_REPLACE`):
+- Use `create_file` to create `MANUAL.md` with the full skeleton, or replace full contents
+  only when the file exists but is empty.
 
-**Update Run** (MANUAL.md exists with content and only p1 is running):
+**Update Run** (default mode; required whenever `MANUAL.md` exists with content):
 - Do NOT replace the entire file. Only update the sections p1 owns:
   - Replace the preamble (title paragraph through end of `## How to Use This Manual`)
     using a targeted `replace_string_in_file`.
   - Replace the `## Table of Contents` block using a targeted `replace_string_in_file`.
   - Leave all sections from `## Conceptual Foundations` onward untouched.
-- If p1 is running as part of a full 8-step pipeline (all steps executing), treat it as
-  a First Run and replace the entire file with a fresh skeleton.
+- If p1 is running as part of the full 9-step pipeline and `MANUAL.md` already has content,
+  continue update behavior above and do not perform full-file replacement.
 
 Verify: check that the file exists and line count is reasonable (>100 lines) before finishing.

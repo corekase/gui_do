@@ -11,17 +11,32 @@ step fully — file written and verified — before reading the next sub-prompt.
 Do not batch them. This file is the only entry point; do not ask the user to run sub-prompts
 manually.
 
+## Global Execution Command
+
+All required sub-prompt execution must be strictly sequential and never concurrent. Do not
+evaluate, run, or validate sub-prompts in parallel. This sequential rule applies both to
+top-level step order and to all operations inside every sub-prompt.
+
 ## Determine Run Mode First
 
 Before executing any step:
 
 1. Check whether `MANUAL.md` exists at the repository root.
+2. Default to **Update Mode** on every invocation.
 
-   **First Run** (file does not exist or is empty):
-   - Execute all 8 steps in sequence.
-   - p1 creates the full skeleton; p2–p8 expand each section in turn.
+   **Safety-Gated Replace/From-Scratch Mode**:
+   - Replace/from-scratch mode can execute only if `MANUAL.md` does not exist or is empty.
+   - Replace/from-scratch mode also requires explicit user confirmation with the exact phrase
+     `CONFIRM_MANUAL_REPLACE`.
+   - If the exact confirmation phrase is missing, do not run replace/from-scratch mode.
+   - If `MANUAL.md` exists with content, replace/from-scratch mode is forbidden even when
+     requested; continue in Update Mode.
 
-   **Update Run** (file exists with content):
+   **First Run Eligibility** (`MANUAL.md` missing/empty + `CONFIRM_MANUAL_REPLACE` present):
+   - Execute all 9 steps in sequence.
+   - p1 creates the full skeleton; p2-p8 expand sections; p9 performs enrichment pass.
+
+   **Update Run** (default and required when `MANUAL.md` exists with content):
    - If the user specifies which chapters changed (e.g., “update the Controls chapter”):
      run only the sub-prompts covering those chapters. Skip p1 unless the preamble or
      TOC itself is explicitly mentioned.
@@ -29,9 +44,12 @@ Before executing any step:
      run the sub-prompts that cover those stale sections. Skip p1 unless the preamble
      placeholder is present.
    - Otherwise (general request such as “update the manual” or “regenerate the manual”
-     with no specific section constraint): run all 8 steps, same as First Run.
+     with no specific section constraint): run all 9 steps in update mode.
 
-   When in doubt about run mode, prefer running all 8 steps over skipping any.
+   If execution appears to require replace/from-scratch while `MANUAL.md` exists, stop and ask
+   for confirmation to continue in update mode only; do not replace the file.
+
+   When in doubt about run mode, prefer update mode and run all 9 steps over skipping any.
 
 ---
 
@@ -53,11 +71,16 @@ For each step:
 | 6 | `.github/prompts/manual/Manual.p6.prompt.md` | Systems 8.9–8.12 |
 | 7 | `.github/prompts/manual/Manual.p7.prompt.md` | Systems 8.13–8.16 + Integration Patterns + E2E Reference |
 | 8 | `.github/prompts/manual/Manual.p8.prompt.md` | Testing/Diagnostics · Performance · Migration · FAQ · Appendices |
+| 9 | `.github/prompts/manual/Manual.p9.prompt.md` | Enrichment pass: add concise examples where missing + build/link specifications options appendix |
 
 ## Completion Check
 
 After all assigned steps are done:
 - Confirm `MANUAL.md` exists and contains no remaining `<!-- MANUAL_PLACEHOLDER: -->` comments.
+- Confirm each major chapter includes concise examples, either embedded or via links to
+  relevant example blocks added during step 9.
+- Confirm specification-heavy sections link to the specifications/options appendix added in
+  step 9.
 - **pygame-ce cleanup.** Search `MANUAL.md` for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 - Report: steps executed, line count of final MANUAL.md, any sections that were skipped and why.
 
@@ -97,7 +120,7 @@ MANUAL.md must contain these top-level sections in this order:
 12. Performance and Scaling Guidance
 13. Migration, Versioning, and Deprecation Notes
 14. FAQ and Troubleshooting
-15. Appendix (A: Glossary · B: Lifecycle/Event Sequence · C: System Dependency Map · D: API Quick Index · D.1: Tier Matrix · D.2: Selection Heuristics · E: Architecture Templates)
+15. Appendix (A: Glossary · B: Lifecycle/Event Sequence · C: System Dependency Map · D: API Quick Index · D.1: Tier Matrix · D.2: Selection Heuristics · E: Architecture Templates · F: Specifications and Option Reference)
 
 ## System Chapters (Fixed Order)
 
