@@ -1,29 +1,30 @@
-# gui_do Manual
+# gui_do — Developer Manual
 
-## Title and Purpose
-
-[Back to Table of Contents](#table-of-contents)
-
-This manual is the primary end-to-end guide for developers building applications with gui_do. It is written for first-time users who need a clear mental model before writing any code, intermediate implementers who need a complete system-level reference, and maintainers who need a reliable operational guide rooted in the current public API surface, runtime contracts, and tested behavior. The document is deliberately structured to move from theory to practice to system-level reference, so a reader can both understand the architectural intent and apply it directly in production code without needing to read the source. Every major system exposed by the framework has its own chapter, and every chapter follows the same structure to reduce the cognitive overhead of navigation. The manual is a single self-contained file; no external supplementary documents are required to follow the guidance here.
+`gui_do` is a data-driven, reactive GUI framework built on top of pygame. This manual is the
+primary learning and reference source for developers who want to build applications with
+`gui_do` — from a first hello-world scene through advanced multi-system integrations. It is
+aimed first at developers new to the framework who need to build a complete mental model, and
+second at experienced users who need a precise API and system reference. Every major concept is
+explained with enough depth that a developer reading only that section can come away with a
+genuine working understanding of purpose, design rationale, and practical application.
 
 ---
 
 ## Table of Contents
 
-- [Title and Purpose](#title-and-purpose)
-- [How to Use This Manual](#how-to-use-this-manual)
+- [1. How to Use This Manual](#how-to-use-this-manual)
   - [Reading Paths](#reading-paths)
   - [Tri-Lens Markers](#tri-lens-markers)
   - [Contract Alignment](#contract-alignment)
   - [Known Non-Goals](#known-non-goals)
-- [Conceptual Foundations (Theory)](#conceptual-foundations-theory)
+- [2. Conceptual Foundations](#conceptual-foundations)
   - [Data-Driven Design](#data-driven-design)
   - [Reactive Data and Observable State](#reactive-data-and-observable-state)
   - [Feature Composition and Lifecycles](#feature-composition-and-lifecycles)
-- [Quickstart Path (Practice)](#quickstart-path-practice)
-- [Architecture and Runtime Model](#architecture-and-runtime-model)
-- [Core Workflow: Build, Bind, Route, Update, Draw](#core-workflow-build-bind-route-update-draw)
-- [Main Systems Reference](#main-systems-reference)
+- [3. Quickstart Path](#quickstart-path)
+- [4. Architecture and Runtime Model](#architecture-and-runtime-model)
+- [5. Core Workflow: Build, Bind, Route, Update, Draw](#core-workflow-build-bind-route-update-draw)
+- [6. Main Systems Reference](#main-systems-reference)
   - [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap-and-host-configuration)
   - [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types)
   - [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-mapping-and-routing)
@@ -40,21 +41,21 @@ This manual is the primary end-to-end guide for developers building applications
   - [8.14 Data and Dataflow Helpers](#814-data-and-dataflow-helpers)
   - [8.15 Graphics and Audio Integration Points](#815-graphics-and-audio-integration-points)
   - [8.16 Telemetry, Introspection, and Operational Hooks](#816-telemetry-introspection-and-operational-hooks)
-- [Integration Patterns and Composition Recipes](#integration-patterns-and-composition-recipes)
-- [End-to-End Reference Application](#end-to-end-reference-application)
-- [Testing, Diagnostics, and Reliability](#testing-diagnostics-and-reliability)
+- [7. Integration Patterns and Composition Recipes](#integration-patterns-and-composition-recipes)
+- [8. End-to-End Reference Application](#end-to-end-reference-application)
+- [9. Testing, Diagnostics, and Reliability](#testing-diagnostics-and-reliability)
   - [Maintainer Diff Checklist](#maintainer-diff-checklist)
-- [Performance and Scaling Guidance](#performance-and-scaling-guidance)
-- [Migration, Versioning, and Deprecation Notes](#migration-versioning-and-deprecation-notes)
-- [FAQ and Troubleshooting](#faq-and-troubleshooting)
-- [Appendix](#appendix)
-  - [Appendix A: Glossary](#appendix-a-glossary)
-  - [Appendix B: Lifecycle and Event Sequence Reference](#appendix-b-lifecycle-and-event-sequence-reference)
-  - [Appendix C: System Dependency Map](#appendix-c-system-dependency-map)
-  - [Appendix D: API Quick Index](#appendix-d-api-quick-index)
-    - [D.1 Tier Matrix](#d1-tier-matrix)
-    - [D.2 Selection Heuristics](#d2-selection-heuristics)
-  - [Appendix E: Architecture Templates](#appendix-e-architecture-templates)
+- [10. Performance and Scaling Guidance](#performance-and-scaling-guidance)
+- [11. Migration, Versioning, and Deprecation Notes](#migration-versioning-and-deprecation-notes)
+- [12. FAQ and Troubleshooting](#faq-and-troubleshooting)
+- [Appendix A: Glossary](#appendix-a-glossary)
+- [Appendix B: Lifecycle and Event Sequence](#appendix-b-lifecycle-and-event-sequence)
+- [Appendix C: System Dependency Map](#appendix-c-system-dependency-map)
+- [Appendix D: API Quick Index](#appendix-d-api-quick-index)
+  - [D.1 Tier Matrix](#d1-tier-matrix)
+  - [D.2 Selection Heuristics](#d2-selection-heuristics)
+- [Appendix E: Architecture Templates](#appendix-e-architecture-templates)
+- [Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference)
 
 ---
 
@@ -62,86 +63,237 @@ This manual is the primary end-to-end guide for developers building applications
 
 [Back to Table of Contents](#table-of-contents)
 
-gui_do is a layered framework: its outermost layer is a declarative, data-driven bootstrap API; beneath that live cooperative runtime systems for state, events, layout, and rendering; and at the foundation are low-level infrastructure pieces that most applications never touch directly. This manual mirrors that layering. It does not assume prior knowledge of gui_do, but it does assume the reader is a competent Python developer who understands basic object-oriented patterns and is familiar with pygame at a conceptual level.
+This manual is organized to serve three distinct use modes: learning, building, and maintaining.
+Understanding which mode you are in will help you navigate directly to what you need without
+reading the entire document linearly.
 
-The manual is written to support three distinct modes of reading. You do not need to read it sequentially unless you are learning from scratch. The sections below describe the three intended modes and suggest a reading order for each.
+**Learn mode** is for developers who are new to `gui_do` or who want to build a complete
+mental model of how the framework operates. Begin with [Conceptual Foundations](#conceptual-foundations),
+which explains the three core ideas that underpin every system in the framework. Then read the
+[Quickstart Path](#quickstart-path) to see those concepts applied in a working skeleton. After
+that, move through the [Architecture and Runtime Model](#architecture-and-runtime-model) and the
+[Core Workflow](#core-workflow-build-bind-route-update-draw) chapters to understand the runtime's
+operating logic. You can then read system chapters selectively in any order, as each is
+self-contained.
+
+**Build mode** is for developers actively implementing features. Use the [Quickstart Path](#quickstart-path)
+as the starting template, consult the system chapters in [Main Systems Reference](#main-systems-reference)
+for the APIs relevant to your task, and check [Integration Patterns](#integration-patterns-and-composition-recipes)
+for multi-system composition recipes. The appendices — particularly [Appendix D (API Quick Index)](#appendix-d-api-quick-index)
+and [Appendix F (Specifications and Option Reference)](#appendix-f-specifications-and-option-reference)
+— are the fastest reference lookup paths.
+
+**Maintain mode** is for developers updating existing applications or regenerating this manual
+after codebase changes. Read the [Maintainer Diff Checklist](#maintainer-diff-checklist) first.
+Consult [Migration, Versioning, and Deprecation Notes](#migration-versioning-and-deprecation-notes)
+for guidance on handling API evolution. The [System Dependency Map](#appendix-c-system-dependency-map)
+identifies which chapters are affected by changes to a given tier.
 
 ### Reading Paths
 
-**Beginner path — I am new to gui_do and want to build my first application.**
+**Beginner path** (new to `gui_do`):
+1. Conceptual Foundations — all three subsections
+2. Quickstart Path
+3. Architecture and Runtime Model
+4. Core Workflow
+5. System chapters 8.1 → 8.4 (foundation systems)
+6. System chapters 8.5 → 8.8 (UI systems)
+7. Integration Patterns — at least the first recipe
 
-Start with the Conceptual Foundations chapter. Read all three subsections there (Data-Driven Design, Reactive Data and Observable State, Feature Composition and Lifecycles) before writing any code. These sections form the theoretical backbone of the entire framework; every other chapter assumes you understand them. After Conceptual Foundations, proceed through the Quickstart Path chapter, which gives you a minimal working application. Then read 8.1 (Bootstrap), 8.2 (Feature Lifecycle), 8.3 (Events and Actions), and 8.4 (State and Observables) as your core systems. By the time you have read those six sections, you can build a complete interactive application. Return to other system chapters as your needs require.
+**Intermediate path** (comfortable with the basics, building non-trivial apps):
+1. Core Workflow (refresh)
+2. System chapters for the specific systems you are using
+3. Integration Patterns — full chapter
+4. End-to-End Reference Application
+5. Testing, Diagnostics, and Reliability
 
-**Intermediate path — I understand the basics and need a complete reference for a specific system.**
-
-Go directly to the relevant system chapter under section 8. Each system chapter is self-contained and cross-links to related systems. If you need to understand how a system relates to others, use Appendix C (System Dependency Map) to identify the dependency chain, then read those chapters in dependency order.
-
-**Maintainer path — I am regenerating, auditing, or significantly updating the manual.**
-
-Begin with the Maintainer Diff Checklist in the Testing, Diagnostics, and Reliability chapter. That checklist is your operational guide. Then use Appendix D.1 (Tier Matrix) to compare the current gui_do/__init__.py exports against the chapter and appendix coverage. Any tier that appears in the codebase but lacks corresponding manual coverage is a gap to fill. Any chapter that references a name not currently exported is a stale reference to fix.
+**Maintainer path** (responsible for codebase evolution):
+1. Maintainer Diff Checklist (runs at the start of every session)
+2. Migration, Versioning, and Deprecation Notes
+3. System Dependency Map (Appendix C)
+4. Tier Matrix (Appendix D.1)
+5. Relevant system chapters for changed areas
 
 ### Tri-Lens Markers
 
-Throughout the manual, content is sometimes annotated with one of three focus lenses to help readers quickly identify what kind of guidance they are reading:
+Throughout this manual, sections and examples are tagged with one of three lenses to indicate
+the type of guidance they provide:
 
-- **[CONCEPT]** marks explanatory prose that describes what something is, why it exists, and how to think about it. These paragraphs build mental models. Read them to understand before you implement.
-- **[PRACTICE]** marks procedural guidance: how to set something up, the idiomatic order of operations, numbered steps. These paragraphs are directly actionable.
-- **[REFERENCE]** marks lookup-oriented content: API names, field lists, enum values, callback signatures. These are skimmable and intended for readers who already understand the concept.
+- **[CONCEPT]** — Explains why something is designed the way it is and what mental model to use.
+- **[PRACTICE]** — Provides concrete usage instructions, patterns, or code examples.
+- **[CONTRACT]** — States normative behavior that the framework guarantees and tests enforce.
+  These statements are backed by the contract test suite described in the Testing chapter.
 
-Not all paragraphs are annotated. The markers appear only when a clear distinction is useful. In particular, most minimal examples are implicitly [PRACTICE] and most API signature tables are implicitly [REFERENCE].
+When you encounter a `[CONTRACT]` marker, the corresponding behavior is verified by automated
+tests. If that behavior ever changes, both the contract doc under `docs/` and the relevant test
+must be updated. See [Contract Alignment](#contract-alignment) for the enforcement model.
 
 ### Contract Alignment
 
-Several behavioral claims in this manual are governed by formal contracts under docs/. The documents there define normative behavior that automated tests enforce. Where this manual cites a specific behavioral guarantee such as scheduler budget bounds, restore report fields, or action routing precedence, that guarantee originates in a contract document, not in prose convention. The relevant files are:
+`gui_do` maintains a set of normative contract documents under `docs/`. These documents specify
+the boundaries, stability policies, and operational guarantees that the runtime upholds. This
+manual is written to be consistent with those contracts, but in case of any discrepancy, the
+contracts take precedence because they are the machine-verifiable ground truth.
 
-- docs/runtime_operating_contracts.md: scheduler budgets, workspace restore fields, determinism guarantees
-- docs/public_api_spec.md: tier organization, stability policy, import contracts
-- docs/architecture_boundary_spec.md: boundaries between library code and demo code
-- docs/package_contracts.md: per-package internal structure contracts
-- docs/event_system_spec.md: event dispatch and routing rules
+The key contract documents and their roles:
 
-When you observe a behavior that contradicts this manual, consult the contract documents to determine which is authoritative. The code and its tests are the ultimate ground truth; the contract documents formalize the intent; the manual explains the reasoning.
+| Document | Role |
+|---|---|
+| `docs/public_api_spec.md` | Tier groupings, stability policy, import contract |
+| `docs/runtime_operating_contracts.md` | Scheduler budgets, restore report fields, cross-system guarantees |
+| `docs/architecture_boundary_spec.md` | Rules separating library code from demo code |
+| `docs/library_demo_separation_contract.md` | Dependency direction and feature isolation requirements |
+| `docs/package_contracts.md` | Per-package public surface rules |
+| `docs/event_system_spec.md` | Event routing and dispatch model |
+
+The contract test suite enforces these documents automatically. High-priority tests include:
+
+```bash
+python -m pytest -q \
+  tests/test_public_api_exports.py \
+  tests/test_public_api_docs_contracts.py \
+  tests/test_runtime_operating_contracts.py \
+  tests/test_boundary_contracts.py \
+  tests/test_gui_application_workspace_contracts.py
+```
 
 ### Known Non-Goals
 
-gui_do intentionally does not attempt the following. Understanding these non-goals prevents misapplication:
+`gui_do` deliberately does not aim to:
 
-- **Native OS widget embedding.** gui_do renders everything to a pygame surface. It does not wrap platform-native controls and does not support mixing native and pygame rendering.
-- **Declarative UI markup.** There is no XML, JSON, or DSL file format for describing UI. All structure is expressed through Python spec objects and feature classes.
-- **Automatic layout from constraint solving at runtime for all controls.** The constraint layout engines (Tier 8 and 28) are available, but most applications use simpler positional or flex layouts. There is no system-wide auto-layout that runs every frame.
-- **Multi-process or multi-window rendering.** gui_do manages a single pygame display surface. Multi-window is a presentation abstraction (floating panels within the surface), not true OS multi-window.
-- **Network or server-client state sync.** The framework has no built-in remote-state or CRDT layer. Observable values and the state store are entirely in-process.
-- **Hot-reload or live editing.** No mechanism exists for reloading feature code at runtime without restarting the application.
-- **Accessibility tree bridging to platform APIs.** The AccessibilityTree (Tier 21) provides a semantic node model, but it does not bridge to AT-SPI, UIA, or macOS NSAccessibility.
-- **Target OS-native widget parity across all platforms.** gui_do does not replace application-specific domain architecture decisions and does not define star-import behavior as a compatibility contract.
+- **Replace a native widget toolkit.** The framework targets pygame-hosted applications — games,
+  tools, and creative software — not desktop productivity apps that expect OS-native controls and
+  accessibility infrastructure.
+- **Provide a layout engine that matches CSS.** The layout systems are purpose-built for
+  pygame surfaces and rects. They do not implement the CSS box model.
+- **Abstract away pygame.** Developers are expected to understand pygame's surface, event, and
+  display APIs. `gui_do` builds on top of them; it does not hide them.
+- **Support multithreaded rendering.** The rendering path is single-threaded. Background threads
+  are used only for data computation; all UI mutations must occur on the main thread.
+- **Be a game engine.** While `gui_do` is built on pygame and includes graphics utilities, it is
+  a GUI framework first. Game-specific systems (physics, collision, etc.) are out of scope.
+- **Provide backwards-compatible public APIs indefinitely.** The framework uses a tier-based
+  stability model. Lower tiers (Tier 1) have the highest stability; higher tiers may evolve more
+  freely. See the Tier Matrix in Appendix D.1.
 
 ---
 
-## Conceptual Foundations (Theory)
+## Conceptual Foundations
 
 [Back to Table of Contents](#table-of-contents)
 
-The three concepts in this chapter — data-driven design, reactive observable state, and feature composition — form the theoretical backbone of everything else in the manual. Every other chapter assumes you have understood them. Read this chapter fully before writing any application code. These ideas govern why gui_do is structured the way it is, and understanding them will save you hours of debugging mismatched expectations later.
+`gui_do` rests on three interlocking ideas that permeate every system in the framework. These
+ideas are not incidental — they are the design principles that explain why the framework is
+organized the way it is, why certain patterns are recommended, and why certain approaches that
+feel natural from imperative GUI experience will produce friction here. Understanding these
+three ideas deeply is the most valuable investment you can make before writing your first
+feature.
 
 ### Data-Driven Design
 
 [Back to Table of Contents](#table-of-contents)
 
-Data-driven design in gui_do means that the application is described first and executed second. Instead of wiring behavior through long chains of imperative setup calls — create this object, attach that handler, register this callback — you define configuration objects that express scenes, features, actions, windows, accessibility annotations, and runtime policies. The framework receives those configuration objects and performs all wiring automatically in a single deterministic pass. Your code never manually threads dependencies; it only expresses intent.
+**[CONCEPT]**
 
-The entry point for this model is the specification pipeline centered on `HostApplicationBindingSpec`, the family of typed `*Spec` descriptors, and `build_host_application_config`. In practice, a developer populates spec objects such as `FeatureSpec`, `SceneSetupSpec`, `RuntimeSceneSpec`, `WindowSpec`, `ActionSpec`, `AccessibilitySequenceSpec`, `ShortcutOverlaySpec`, and dozens of others, then hands a high-level binding object to the builder. The builder performs a single deterministic pass that resolves all cross-references, validates requirements, and produces a fully wired `HostApplicationConfig`. That config is then passed to `bootstrap_host_application`, which constructs the live runtime against the host object.
+Data-driven design is the principle that application structure — the set of scenes, features,
+actions, windows, keyboard shortcuts, accessibility annotations, cursors, and font roles that
+make up a running application — should be expressed as data that the framework interprets,
+rather than as a sequence of imperative function calls that the developer orchestrates. The
+developer describes what the application should be; the framework figures out how to build it.
 
-This two-phase approach is deliberate. The first phase constructs and validates data — all spec relationships are resolved, all class references are checked for protocol compliance, and all required attributes are confirmed present. The second phase executes runtime behavior — scenes are registered, features are instantiated, action registries are populated, input maps are bound. Because those phases are entirely separated, tests can assert correctness at either boundary independently. You can test that config construction produces the expected feature and action graph without ever opening a display window, and you can test runtime behavior separately against known-good config input. This sharply reduces debugging ambiguity because failures are localized to either the description phase or the execution phase.
+In concrete terms, this means that every structural decision in a `gui_do` application is
+captured in spec objects. There are specs for features (`FeatureSpec`), for windows
+(`WindowSpec`), for runtime scenes (`RuntimeSceneSpec`), for actions (`ActionSpec`), for
+shortcuts (`ActionHotkeySpec`), for keyboard bindings (`ControlKeyBindingSpec`), for task
+panel layout (`SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelWindowToggleGroupSpec`),
+for the command palette (`SceneCommandPaletteSpec`), for accessibility annotations
+(`StaticAccessibilitySpec`, `AccessibilitySequenceSpec`), for cursors (`CursorSpec`), for font
+roles (`FontRoleBindingSpec`), and for higher-level bundles that group these together
+(`RoutedRuntimeSpec`, `FeatureWindowBundleBindingSpec`, `SceneBundleBindingSpec`,
+`HostApplicationBindingSpec`). These specs are plain Python dataclass instances — pure data
+with no behavior of their own.
 
-The contrast with imperative wiring is substantial enough to warrant a concrete example. In an imperative approach, adding one keyboard shortcut typically requires: finding the input-dispatch code, inserting a new conditional branch, constructing and registering a callback object, ensuring that callback is cleaned up when the relevant scene exits, and testing that the cleanup actually runs and does not leave stale handlers. Each step is a separate code edit in a separate location, and forgetting any one of them creates subtle bugs that appear only during transitions. In gui_do's data-driven approach, the developer adds one `ActionSpec` entry and optionally one `ActionHotkeySpec` or `ControlKeyBindingSpec`. The framework picks it up, registers it with the action registry under the correct scene scope, routes the key through the input map, and tears it all down automatically when the scene exits. The developer never touches the router.
+The spec pipeline works in two phases. In the first phase, the developer populates a
+`HostApplicationBindingSpec` — a single top-level object that collects all of the application's
+structural declarations — and passes it to `build_host_application_config`. The builder performs
+a single deterministic pass over all the specs: it resolves cross-references between features
+and windows, validates that required attributes are present and consistent, derives implied
+registrations (such as generating action registry entries from `ActionSpec` lists and window
+toggle controls from `WindowSpec` lists), and produces a fully wired `HostApplicationConfig`
+object. The builder is a pure function — same input always produces the same output. In the
+second phase, the developer passes the `HostApplicationConfig` to `bootstrap_host_application`,
+which executes the application by creating the runtime systems, initializing the display,
+running the feature lifecycle, and starting the event loop.
 
-Data-driven structure also provides meaningful protection against internal code reorganization. You can move a class from one file to another, extract a presenter into its own module, split a feature into logic and presentation companion objects, or rename every internal helper — none of these changes require any modification to bootstrap code, as long as each feature package's `__init__.py` continues to export the same public names. Bootstrap code consumes class references and spec values, not file paths or module location assumptions. This is a direct consequence of the data-driven approach: the data that drives the application (the spec objects and the class references they hold) is kept in one place, not scattered throughout the codebase's internal structure. When you maintain a gui_do application over time, internal reorganizations are low-risk precisely because the bootstrap surface is stable.
+This two-step separation — build config, then run — is deliberate. It means the entire
+application structure can be built and inspected in a unit test with no display, no event loop,
+and no pygame initialization. Tests can verify that the right features were registered, that
+the correct action names were wired, that the correct scenes exist, and that accessibility
+sequences were applied — all without running the application at all. This is a decisive
+testability advantage over imperative wiring.
 
-Testability is one of the most concrete benefits. Spec objects can be constructed and validated in pure unit tests with no running display, no pygame initialization, and no event loop. `FeatureSpec` instances can be checked for protocol compliance without instantiating anything. The entire `HostApplicationConfig` can be assembled and examined in tests to verify that exactly the right features, actions, windows, and accessibility annotations were registered. This determinism is only possible because the application's structure is expressed as data rather than hidden inside call sequences.
+To understand why data-driven design matters in practice, compare adding a keyboard shortcut
+in each approach. In a traditional imperative approach, a developer would find the
+input-handling code in the scene manager or the event loop, add a new `elif` branch for the
+key constant, write a callback or dispatch call, and add cleanup logic to the scene exit
+handler to avoid leaking the binding across scene transitions. Each step is a mutation to an
+existing procedure, and the correctness depends on knowing exactly where each hook lives and
+in what order things run. In the data-driven approach, the developer adds one `ActionSpec` to
+the binding spec with the desired action id, label, key, and kind. The builder picks it up,
+registers it with the `ActionManager` via `ActionRegistry`, routes the key through `InputMap`,
+and generates the teardown automatically as part of the scene transition lifecycle. The
+developer never touches the router or the event loop.
 
-The design philosophy behind using rich, named spec objects deserves explicit mention. An `ActionSpec` with named fields — `action_id`, `label`, `kind`, `target`, `category`, `key` — is self-documenting, composable, and forward-compatible. When the framework evolves and new optional fields are added, existing code that constructs `ActionSpec` objects does not break because keyword arguments with defaults are backward-compatible. A raw positional-argument call site cannot offer the same stability guarantee. Specs are also a natural serialization boundary: they are pure data with no side effects, and they could in principle be stored in configuration files, generated programmatically, or compared in test assertions.
+The same principle applies at a larger scale when internal code is reorganized. Moving a class
+from one submodule to another, extracting a presenter into its own file, splitting a monolithic
+feature into a logic companion and a presentation companion — none of these changes require
+touching bootstrap code. The bootstrap only cares about class references and spec values, not
+file paths or module layouts. As long as the feature package's `__init__.py` continues to
+export the same public names (the Feature class, any public spec constants), the bootstrap is
+completely insulated from the restructuring. This is the practical meaning of the spec being
+the public surface: the spec is what the bootstrap imports, and the spec is the stable
+interface. Everything behind the spec's class references can change freely.
 
-The boundary between declarative and imperative is worth stating precisely, because misunderstanding it is a common source of over-engineering. The wiring of the application — scene graph construction, action registry population, input routing, feature orchestration, accessibility tree seeding — is data-driven and should stay that way. The runtime behavior of individual features — what they do inside `handle_event`, `on_update`, and `draw` — is imperative Python inside feature methods, and there is no benefit to trying to declarativize it. The philosophy is: describe static structure declaratively; implement dynamic behavior imperatively. Spec objects are for structure; Python methods are for behavior.
+Specs are also inherently forward-compatible. A `HostApplicationBindingSpec` with named fields
+can accept new optional fields in a future framework version without requiring existing callers
+to change. A purely positional API cannot offer this stability without version-specific
+compatibility shims. The named-field design of the spec objects is a deliberate choice to
+protect the developer's bootstrap code across framework evolution.
+
+It is important to be precise about where the data-driven boundary sits. The framework uses
+specs to describe structure: which features exist in which scenes, which actions are registered,
+which windows are visible by default, how the task panel is organized. It does not use specs to
+describe behavior. What a feature does in `build`, `bind_runtime`, `handle_event`, `on_update`,
+and `draw` is imperative Python inside the feature's methods. The philosophy is: describe
+structure declaratively, implement behavior imperatively. This boundary is not a limitation —
+it is what makes both halves tractable. Declarative structure is easy to validate, test, and
+generate. Imperative behavior is where Python's full expressiveness is needed and appropriate.
+
+**[PRACTICE]**
+
+The minimal data-driven bootstrap looks like this:
+
+```python
+from gui_do import (
+    bootstrap_host_application,
+    build_host_application_config,
+    HostApplicationBindingSpec,
+    FeatureSpec,
+)
+from my_app.my_feature import MyFeature
+
+spec = HostApplicationBindingSpec(
+    title="My App",
+    features=[
+        FeatureSpec(attr_name="my_feature", factory=MyFeature),
+    ],
+)
+config = build_host_application_config(spec)
+bootstrap_host_application(config)
+```
+
+All structural wiring — action registration, scene setup, window layout, accessibility — is
+expressed through the spec, not through code. The only imperative code is inside `MyFeature`.
 
 ---
 
@@ -149,21 +301,112 @@ The boundary between declarative and imperative is worth stating precisely, beca
 
 [Back to Table of Contents](#table-of-contents)
 
-Reactive data in gui_do means that when a value changes, everything that depends on that value updates automatically — without the producer needing to know who the consumers are. In a traditional imperative GUI, if you want a label to show the current count of items in a list, you must call `label.set_text(str(len(items)))` every time the list changes. You have to manually remember every place that should react to a change, and if you add a new dependent later, you have to find every mutation site and add another call. This approach scales poorly and creates brittle, tightly coupled code. Reactive design solves this: the list is an observable, the label subscribes to it once, and forever after, the label stays synchronized without any further intervention from the code that modifies the list.
+**[CONCEPT]**
 
-The foundational reactive primitives are `ObservableValue`, `ObservableList`, and `ObservableDict`. `ObservableValue` wraps a single value of any type. Any code that calls `.subscribe(callback)` will have its callback invoked whenever the `.value` attribute is assigned a new value. The subscription is registered once, and the observable handles delivery for all future changes. `ObservableList` and `ObservableDict` provide the same notification semantics for mutable collections, with `CollectionChange` events that carry a `ChangeKind` indicator (insert, remove, update) and enough detail for consumers to react intelligently to specific changes rather than being forced to reprocess the entire structure on every modification.
+A reactive value is a value that knows how to notify interested parties when it changes. In a
+non-reactive model, updating a value is a write to memory that produces no side effects. Any
+code that needs to reflect the new value must poll for it, or the producer must know every
+consumer and call them explicitly after the write. Both approaches break down as the application
+grows: polling wastes CPU and introduces display latency, and explicit notification coupling
+makes the codebase brittle and hard to extend because every new consumer requires a code change
+in the producer.
 
-The framework also provides `ComputedValue`, a derived observable that recomputes its value from one or more source observables whenever those sources change. A computed value makes derivation relationships explicit and localized: instead of scattering subscribe-and-copy callbacks across multiple features, you express a derivation once as a `ComputedValue` and it behaves like any other observable from the consumer's perspective. This is especially valuable when multiple controls or features all need to display a derived quantity, because the derivation logic exists in exactly one place.
+The reactive model inverts this. A reactive value holds a list of subscribers — callbacks that
+want to be notified on change. A producer writes to the value and the value notifies all
+subscribers automatically. Neither the producer nor the subscribers know about each other.
+The producer only knows the value; the subscriber only knows the value. This is the pattern
+that allows a feature's domain state to drive UI controls, other features, and diagnostic
+systems simultaneously, without any of them being coupled to each other.
 
-When multiple related observable mutations need to happen together, `reactive_batch` exists to batch them. Without batching, each individual assignment fires its subscribers immediately, which can cause intermediate inconsistent states to be observed. With `reactive_batch`, all mutations within the batch block are queued and subscribers are notified exactly once after all mutations are complete, seeing only the final coherent state. `is_batching` allows guarded logic to check whether a batch is currently open, which is useful in code that needs to behave differently during mass initialization. Batching is particularly valuable during workspace restore operations, where many observable values are updated simultaneously and you do not want UI components flashing through partial states.
+`gui_do` provides three core observable primitives. `ObservableValue` wraps a single value of
+any type. Calling `.set(new_value)` updates the value and fires all registered callbacks with
+the new value. Calling `.subscribe(callback)` returns a subscription handle; calling
+`.unsubscribe(handle)` (or calling the handle directly) removes the subscription. The
+`.get()` method reads the current value without triggering notifications.
+`ObservableList` provides the same semantics for a mutable list. Any mutation — append, insert,
+remove, sort — fires registered callbacks with a `CollectionChange` event that identifies
+the `ChangeKind` (added, removed, moved) and the affected indices or items. This is more
+informative than a simple "something changed" notification, and allows efficient incremental
+UI updates for controls like `ListViewControl` that display collections. `ObservableDict`
+does the same for mutable dictionaries.
 
-Subscription lifecycle is one of the most important operational concerns in a reactive system. Subscriptions hold references: the observable holds a reference to the callback, and the callback typically holds a reference to the subscribing object. If a feature is destroyed without unsubscribing, the observable continues to hold a live reference to the dead feature's methods, preventing garbage collection and causing the callback to fire on an object in an invalid state. The correct subscription pattern is: subscribe in `bind_runtime` or equivalent runtime-ready lifecycle hooks, and unsubscribe in `shutdown_runtime` or the feature's teardown path. Store the unsubscribe handles (the return values of `.subscribe(callback)`) on the feature instance and call them deterministically during cleanup. Features that follow this discipline never produce phantom callbacks or memory leaks.
+When multiple observable values must be updated atomically — for example, when updating both
+the title and body of a message object to keep them in sync — the `reactive_batch` context
+manager (and the companion predicate `is_batching`) allow all mutations inside the block to be
+queued, with subscribers notified only once after the block exits. This prevents intermediate
+states from propagating to subscribers and producing flickering or inconsistent UI.
 
-The control binding model in gui_do is built directly on reactive observables. Controls accept either a plain literal value or an observable for their primary data properties. When a control is bound to an observable, it registers an internal subscription and refreshes its displayed content whenever the observable changes. This means feature code never needs to reach into a control instance to update its display state — it only changes the observable, and the control responds. This decoupling has a practical benefit beyond cleanliness: it makes it straightforward to replace one control type with another because the business state (the observable) is not entangled with any specific control implementation. The observable does not know or care whether it is being observed by a label, a rich label, a tooltip, or a status bar slot.
+`ComputedValue` takes the reactive model one step further. It is an `ObservableValue` whose
+value is always the result of a pure function applied to one or more source observables. When
+any source changes, the computed value recomputes and notifies its own subscribers. This
+eliminates the common pattern of subscribing to a source, writing to a second observable, and
+hoping the two stay in sync. A `ComputedValue` makes the derivation declarative and automatic.
+Use it whenever one piece of state is a deterministic function of another — for example, a
+formatted display string derived from a numeric measurement value.
 
-For cross-feature reactive state, observable values are the preferred mechanism. One feature owns an `ObservableValue` and exposes it through its public interface or through a shared state store; other features subscribe to it in `bind_runtime`, when sibling features are guaranteed to already exist. This is looser coupling than direct method calls: the producing feature does not know who is observing, and the observing feature does not depend on the producer's internal structure. This makes features independently testable and makes composition of many features in one scene straightforward — each feature only declares its subscriptions; the runtime does not require any global coordination of which feature must be initialized first.
+Subscription lifecycle is the most important operational concern in a reactive system. A
+subscription holds a reference to the subscriber via the callback. If a feature creates a
+subscription in `build_runtime` and the feature is later destroyed (for example, by a scene
+transition), the subscription must be explicitly removed before destruction. Failing to do so
+keeps the feature's callback registered in the observable, which prevents garbage collection
+of the feature and causes the callback to fire on a dead object — typically producing
+attribute errors or corrupted state. The correct pattern is to store subscription handles
+returned by `.subscribe()` in a list, and to call unsubscribe on all handles in the feature's
+teardown phase. Subscriptions should be created in `bind_runtime` (when the runtime is ready
+and sibling features are built), not in `build` (when other features may not yet exist) or in
+`on_update` (which would create duplicate subscriptions on every frame).
 
-Several anti-patterns consistently cause problems in reactive code and should be actively avoided. Polling an observable in `on_update` instead of subscribing defeats the reactive model: it wastes CPU cycles every frame even when nothing changed, and introduces up to one frame of latency in updates. Subscribing in `build` before the runtime is ready can cause callbacks to fire before controls exist and produce null-reference exceptions. Forgetting to unsubscribe at teardown creates memory leaks and phantom callbacks that fire on destroyed features, often producing cryptic errors during scene transitions. Sharing mutable plain Python objects (plain dicts, plain lists) between features instead of observable wrappers breaks the reactive contract entirely: mutations to plain objects are invisible to any code that read them before the mutation, and the UI never updates. Use observable wrappers for any data that should automatically drive UI state.
+The binding model for controls follows naturally from this. Most `gui_do` controls accept an
+`ObservableValue` anywhere they accept a plain value for display properties — a label's text,
+a progress bar's value, a toggle's checked state. When a control receives an observable, it
+subscribes internally and redraws itself whenever the observable changes. The feature code
+never needs to reach into the control to update it — it only changes the observable, and the
+control updates itself. This separation means the control can be swapped for a different
+control type (or completely hidden) without changing the data logic at all.
+
+Observable values are also the preferred mechanism for cross-feature data sharing. One feature
+owns an `ObservableValue` and exposes it through its public interface or through the shared
+host attributes. Other features subscribe to it in their `bind_runtime` phase, when all
+sibling features are guaranteed to be built and their public attributes available. The
+producing feature never knows who is observing, and the observing features do not depend on
+the producer's internal implementation. The only shared contract is the observable itself — a
+stable public attribute on the producing feature or a shared state store.
+
+The most common reactive mistakes are: polling an observable in `on_update` instead of
+subscribing (this introduces one-frame latency and burns CPU every frame instead of running
+only when the value changes), subscribing in `build` before sibling features are ready
+(subscriptions to sibling observables must wait for `bind_runtime`), forgetting to unsubscribe
+when a feature is torn down (produces memory leaks and phantom callbacks that fire on dead
+objects), and passing mutable plain Python objects across features instead of wrapping them in
+`ObservableValue` or `ObservableList` (the receiving feature has no way to know when the value
+changes, so the reactive contract is broken and the UI stops updating correctly). These anti-
+patterns share a common root: they reintroduce the coupling and polling that reactive design
+is intended to eliminate.
+
+**[PRACTICE]**
+
+```python
+from gui_do import ObservableValue, ComputedValue
+
+# Plain observable
+count = ObservableValue(0)
+handle = count.subscribe(lambda v: print(f"Count changed to {v}"))
+count.set(1)   # prints "Count changed to 1"
+count.unsubscribe(handle)
+
+# Computed (derived) observable
+label_text = ComputedValue(count, lambda n: f"Items: {n}")
+# label_text.get() → "Items: 1"
+
+# Batch multiple mutations so subscribers fire only once
+from gui_do import reactive_batch
+title = ObservableValue("old title")
+body = ObservableValue("old body")
+with reactive_batch():
+    title.set("new title")
+    body.set("new body")
+# subscribers for title and body fire once each, after the block exits
+```
 
 ---
 
@@ -171,200 +414,367 @@ Several anti-patterns consistently cause problems in reactive code and should be
 
 [Back to Table of Contents](#table-of-contents)
 
-A Feature is the primary unit of application behavior in gui_do. It is a self-contained object that declares what resources it requires from the host, builds its own UI elements, registers its own event handlers and subscriptions, and tears itself down cleanly when it is no longer needed. Features are composable: a gui_do application is a collection of features that coexist within scenes, each managing its own slice of the UI and data. The framework orchestrates their lifecycle phases in the correct order and routes events to the correct feature based on scene membership, focus state, and event type.
+**[CONCEPT]**
 
-The framework exposes four primary feature types, and choosing the right one is the first design decision when implementing new functionality.
+A Feature is the primary unit of application behavior in `gui_do`. Everything that a `gui_do`
+application does — displaying UI, handling input, running background logic, managing state,
+responding to events — is organized into features. A feature is self-contained: it declares
+what host resources it needs, builds its own UI elements during construction, registers its own
+callbacks and subscriptions during runtime binding, processes events that are routed to it, and
+tears itself down cleanly when its scene exits. The framework is responsible only for
+orchestrating the lifecycle phases in the correct order and routing events to the correct
+features; the features are responsible for their own behavior.
 
-`DirectFeature` renders directly to the screen surface on every frame, bypassing the control tree entirely. It receives `draw(host, screen)` and `on_update(host, dt_seconds)` calls but does not build controls and does not participate in focus or hit-testing. Use `DirectFeature` for background elements such as animated backdrops, particle effects, and full-screen visual transitions that do not need interactive UI. It is the lowest-overhead feature type because it skips the control tree machinery.
+The framework provides four concrete feature base classes, each designed for a specific role:
 
-`Feature` is the standard interactive feature. It builds controls in the scene's control tree during `build`, participates in focus and hit-testing, and receives `handle_event` calls for routed events. Use `Feature` for any feature that shows interactive UI elements. Most application features are of this type.
+`DirectFeature` is the lightest-weight type. It renders directly to the screen surface on every
+frame but does not participate in the control tree, hit-testing, or focus management. Use it for
+background elements — animated backdrops, full-screen particle effects, looping visual scenes —
+where the overhead of the control tree is unnecessary and would add latency for no benefit. A
+`DirectFeature` implements `draw_direct(host, surface, theme)` for its per-frame drawing.
 
-`LogicFeature` has no UI of its own. It exists to hold domain logic, manage shared state, run background computations via the cooperative scheduler or data pipeline system, and publish results that other features react to. Use `LogicFeature` when behavior needs to be separated from presentation — for example, when you want to unit-test business logic independently of any display code. A `LogicFeature` and a `Feature` working together is one of the most powerful composition patterns in the framework.
+`Feature` is the standard workhorse. It builds controls in the scene's control tree during
+`build`, participates in focus management and hit-testing, and receives routed events. Use it
+for any feature that shows interactive UI. Most application features are `Feature` subclasses.
 
-`RoutedFeature` extends feature behavior with explicit participation in the action routing infrastructure. It can define route targets that receive named messages dispatched to specific handler methods. Use `RoutedFeature` when a feature must respond to framework-level actions, coordinate with the action registry, or integrate tightly with the routed runtime lifecycle managed by `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec`.
+`LogicFeature` has no UI of its own. It exists to hold domain logic, manage shared state, run
+background computations via `CooperativeScheduler` coroutines, and publish results as observables
+that UI features react to. A `LogicFeature` never creates controls and never handles GUI events;
+it only manages data and computation. Separating logic into `LogicFeature` instances makes the
+logic independently testable: it can be instantiated and exercised in unit tests with a mock
+host and no display.
 
-Every feature participates in a defined lifecycle, and keeping phase boundaries strict is essential for predictable behavior. The lifecycle phases are:
+`RoutedFeature` is a `Feature` that additionally participates in the action routing
+infrastructure. It can declare route targets — named handler methods that the framework
+dispatches named action messages to. Use a `RoutedFeature` when a feature must respond to
+framework-level named actions (such as "open_file", "undo", "show_help") in addition to raw
+GUI events.
 
-`build(host)` is called exactly once during scene construction. This is the phase for creating controls, adding them to the scene tree, building window specs, and setting up any static structure that does not depend on runtime state from sibling features. The `host` object provides all resources declared in `HOST_REQUIREMENTS["build"]`. Controls created in `build` exist for the entire lifetime of the scene; do not create controls in later phases. Subscriptions to observables should not be established here because sibling features may not yet be fully built.
+Every feature class defines a class attribute `HOST_REQUIREMENTS`, which is a dictionary
+mapping lifecycle method names to tuples of attribute names that the host must provide before
+calling that method. For example:
 
-`bind_runtime(host)` is called after all features in the scene have completed `build`. By this point, all controls exist and all sibling features are built. This is the phase for subscribing to observable values, binding controls to data, registering callbacks, initializing state from runtime sources (screen size, settings, workspace state), and wiring cross-feature interactions. The invariant that all sibling features are built before `bind_runtime` fires is a critical design guarantee: it makes safe cross-feature initialization possible without requiring features to have explicit ordering dependencies.
+```python
+class MyFeature(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app", "screen_rect", "my_logic_feature"),
+    }
+```
 
-`handle_event(host, event)` is called for every `GuiEvent` that the routing layer delivers to this feature. The routing layer filters events by scene membership, focus state, and overlay routing policy before calling this method. Return `True` to consume the event and stop further propagation; return `False` or `None` to pass it on to the next handler in the routing chain.
+The framework validates `HOST_REQUIREMENTS` at application startup, before any lifecycle
+methods are called. If a required attribute is missing from the host, the framework raises a
+clear error message identifying the missing binding and the feature that needs it. This
+transforms what would otherwise be a runtime `AttributeError` halfway through initialization
+into a startup-time configuration error. The `HOST_REQUIREMENTS` protocol is how features
+express their dependencies declaratively, and it replaces constructor injection as the
+primary dependency-declaration mechanism in `gui_do`.
 
-`on_update(host, dt_seconds)` is called every frame with the elapsed time in seconds. Use this for lightweight per-frame logic: progressing animations, polling background results, triggering timers, updating state that changes smoothly over time. Keep this method fast. Anything with non-trivial computational cost belongs in a cooperative scheduler coroutine or a data pipeline stage, not in `on_update`.
+The lifecycle phases execute in a fixed order. When a scene is first activated:
 
-`draw(host, screen)` is called every frame after `on_update`. Use this for custom rendering that bypasses the control tree: particles, canvas effects, debug overlays, procedural graphics. Most features do not need this hook because the control tree handles standard rendering. Only implement `draw` when controls genuinely cannot express the visual output you need.
+1. `build(host)` is called on every feature in the scene. Use this phase to create controls,
+   add them to the scene's control tree, create window presenters, and set up any static
+   structure that does not depend on runtime state or on other features. Controls created during
+   `build` live for the full lifetime of the scene.
 
-The `HOST_REQUIREMENTS` dictionary is the mechanism by which features declare their dependencies. It maps lifecycle method names to tuples of host attribute names that must be present before the method is called. For example, `{"build": ("app", "screen_rect", "scene_presentation")}` tells the framework that the `build` method needs `host.app`, `host.screen_rect`, and `host.scene_presentation` to be available. The framework validates these at startup and produces actionable error messages when a required attribute is missing. This explicit declaration replaces hidden constructor injection and makes dependency relationships both machine-verifiable and human-readable. Looking at a feature's `HOST_REQUIREMENTS` tells you exactly what the feature depends on — which is far more informative than having to read the method body to discover implicit attribute accesses.
+2. `bind_runtime(host)` is called on every feature in the scene after all features have
+   completed `build`. At this point, all controls exist, all sibling features are built and
+   their public attributes are set, and the runtime is fully initialized. Use this phase to
+   subscribe to observables, bind controls to data sources, register callbacks that depend on
+   sibling feature state, initialize display state from runtime sources (current screen size,
+   loaded settings, etc.), and wire cross-feature interactions.
 
-Feature messaging is the mechanism for loosely coupled communication between features. Features do not hold direct references to each other; instead, one feature publishes a `FeatureMessage` by name with an optional payload, and the framework delivers it to any feature that has registered a handler for that message name. This prevents features from coupling to each other's implementations. A `LogicFeature` can publish a `"data_ready"` message when a background computation finishes, and any number of UI features can register handlers for that message without the LogicFeature knowing anything about them. FeatureMessage is a good fit for discrete events — something happened, here is the result. For continuous state streams, observable values are usually the better choice.
+3. On every frame, `on_update(host)` is called on every active feature (passing
+   elapsed time in seconds via the `dt_seconds` argument on `Feature.on_update` — note that
+   `on_update(host)` is the actual signature; the elapsed time is typically read from the host).
+   Use this for animations, cooperative scheduler ticks, polling background results, and any
+   per-frame state changes. Keep this method fast: expensive computation in `on_update` directly
+   reduces frame rate.
 
-Scene assignment controls feature activation and deactivation. Each feature belongs to exactly one scene (specified via `scene_name` in its constructor). When the application transitions from one scene to another, the framework calls teardown lifecycle methods on the departing scene's features and calls `build` then `bind_runtime` on the arriving scene's features if they have not yet been initialized. Features from the previous scene do not receive events, `on_update` calls, or `draw` calls after the transition. This hard boundary prevents stale state from one scene from leaking into another, which is a common source of subtle bugs in imperative frameworks.
+4. On every frame after `on_update`, `draw(host, surface, theme)` is called on features that
+   override it. Use this for custom drawing that bypasses the control tree — particle overlays,
+   canvas effects, debug visualizations. Most features do not need to override `draw`.
 
-The folder and package composition convention used throughout `demo_features` is the recommended organizational pattern for any gui_do application. Each feature package lives in its own folder. The `__init__.py` is the sole public surface of the package: it exports the feature class and any public types, and nothing else. Internal files are separated strictly by concern: `*_feature.py` owns the feature class and lifecycle methods; `*_presenter.py` owns any `WindowPresenter` subclass; `*_specs.py` owns shared constants and spec objects; `*_logic_feature.py` owns a companion `LogicFeature` if one exists; standalone data types and models live in their own files. This separation makes each file's purpose immediately clear from its name and prevents concerns from bleeding across files. Critically, bootstrap code imports only from the package's `__init__.py` surface — never from internal submodules. This means any internal reorganization inside the package is completely transparent to bootstrap consumers. You can split a large feature file into five files, merge two files, or rename every internal helper, and nothing in the application's startup code needs to change.
+5. `handle_event(host, event)` is called whenever the event routing system delivers a
+   `GuiEvent` to the feature. Return `True` to consume the event and stop further propagation;
+   return `False` or `None` to pass it through. The framework filters events by scene scope,
+   focus state, and overlay state before delivering them, so features only receive events they
+   are eligible to handle.
 
-Three composition patterns recur in real applications and are worth naming explicitly. The **logic plus presentation split** pairs a `LogicFeature` that owns computation and publishes state through observable values with a `Feature` or `RoutedFeature` that subscribes to those values and drives the UI. The logic feature is independently testable because it has no UI dependencies; the presentation feature is testable with a mock logic feature. The **presenter pattern** uses a `WindowPresenter` subclass to encapsulate window content and layout, while the owning feature coordinates lifecycle and routing. The feature lazily constructs the presenter in `build` to avoid circular import issues. The **background workflow pattern** uses a `LogicFeature` with a `CooperativeScheduler` coroutine for long-running work such as file loading or complex computation. The coroutine publishes progress updates through an observable, and a UI feature subscribes to display a progress indicator. When the coroutine completes, it publishes a final result through another observable or a `FeatureMessage`, and the UI feature updates its display. This pattern keeps the frame loop responsive even during expensive operations because the coroutine yields control back to the scheduler on each iteration.
+When a scene transitions out, the framework calls shutdown lifecycle hooks on the departing
+scene's features. Features from the previous scene do not receive `on_update`, `draw`, or
+`handle_event` calls after the transition completes, so there is no risk of stale callbacks
+or data mutations from a previous scene leaking into the new one. The arriving scene's features
+go through `build` and `bind_runtime` fresh.
+
+Features communicate with each other through `FeatureMessage` publishing rather than through
+direct references. A feature publishes a message by name with an optional payload dictionary;
+the framework delivers it to any feature in the same scene that has registered a handler for
+that name. This loose-coupling mechanism prevents features from depending on each other's
+implementations: the producer never imports the consumer, and the consumer never imports the
+producer. Both depend only on the message name string, which serves as the contract. For
+tighter real-time coupling — when one feature must continuously reflect the state of another —
+observable values shared through the host's attributes are the preferred alternative to direct
+method calls.
+
+The organizational convention for feature packages — enforced by the architecture boundary
+contract and tested in `tests/test_architecture_boundary_docs_contracts.py` — is that each
+feature lives in its own folder as a Python package. The `__init__.py` of that package is the
+sole public surface: it exports the Feature class and any public types that outside code needs,
+and nothing else. Internal files are separated by concern and named descriptively:
+`myfeature_feature.py` owns the Feature class and lifecycle methods; `myfeature_presenter.py`
+owns the `WindowPresenter` subclass; `myfeature_specs.py` owns shared constants; logic
+companion files own background computation. Bootstrap code imports only from the package
+surface, never from the internal submodules. This means any internal reorganization is
+completely transparent to the bootstrap and to other packages that consume the feature.
+
+The most common multi-feature composition patterns are the logic-presentation split and the
+presenter pattern. In the logic-presentation split, a `LogicFeature` runs background
+computation (typically via `CooperativeScheduler` coroutines) and publishes results as
+`ObservableValue` or `ObservableList` instances on its public interface. A `RoutedFeature`
+subscribes to those observables in `bind_runtime` and uses them to drive the UI. The two
+features are independently testable: the logic feature can be tested with a mock host and
+verified to produce correct observable state; the presentation feature can be tested with a
+mock host whose attributes include a mock logic feature with pre-set observable values. In the
+presenter pattern, a `WindowPresenter` subclass handles the window layout and control
+construction, while the `Feature` handles lifecycle coordination and routing. The feature
+instantiates the presenter in `build` (lazily importing it to avoid circular imports) and
+delegates window-related work to it.
+
+**[PRACTICE]**
+
+```python
+from gui_do import Feature, LogicFeature, ObservableValue, FeatureMessage
+
+class CounterLogic(LogicFeature):
+    HOST_REQUIREMENTS = {"build": ("app",), "bind_runtime": ("app",)}
+
+    def build(self, host):
+        self.count = ObservableValue(0)
+
+    def increment(self):
+        self.count.set(self.count.get() + 1)
+        self.publish(FeatureMessage("count_changed", {"value": self.count.get()}))
+
+
+class CounterDisplay(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app", "counter_logic"),   # sibling feature attribute
+    }
+
+    def build(self, host):
+        from gui_do import LabelControl
+        self._label = LabelControl(text="Count: 0")
+        host.controls.add(self._label)
+
+    def bind_runtime(self, host):
+        # Bind label directly to the logic feature's observable
+        host.counter_logic.count.subscribe(
+            lambda v: self._label.set_text(f"Count: {v}")
+        )
+```
 
 ---
 
-## Quickstart Path (Practice)
+## Quickstart Path
 
 [Back to Table of Contents](#table-of-contents)
 
-This quickstart gives you a working gui_do application as quickly as possible. It is deliberately opinionated: start with Tier 1 configuration and bootstrap APIs, validate the build early with contract tests, and only then add complexity. The fastest path to a successful first application is to treat application startup and wiring as declarative data from the beginning.
+This chapter provides a practical path from zero to a working `gui_do` application. The steps
+are ordered to build understanding incrementally: each step introduces exactly one new concept
+so you can verify it works before moving on. After completing this path, you will have a
+functioning application and the mental scaffolding to read any system chapter independently.
 
 ### Step 1: Install and Verify
 
-Install the package in development mode and immediately run the public API export contract test:
+Install `gui_do` in editable mode and confirm the public API is intact:
 
 ```bash
 python -m pip install -e . --no-deps
 python -m pytest -q tests/test_public_api_exports.py
 ```
 
-Install the required runtime dependencies before running an app. `pygame` is required for input, surfaces, and the frame loop. `numpy` is used internally for pixel buffer operations via `PixelArray` in rendering paths. Running the export contract test immediately after installation confirms that your import surface is aligned with the package's public API specification.
+`gui_do` requires `pygame` and `numpy` (numpy is used internally for pixel buffer operations
+via `pygame.PixelArray`). Both must be installed before starting the application runtime.
 
-### Step 2: Create a Minimal Host
+### Step 2: Create a Minimal Host Configuration
 
-The simplest way to construct a working config is to populate `HostApplicationConfig` directly. The fields below are required:
+A `gui_do` application is bootstrapped by constructing a `HostApplicationBindingSpec`,
+converting it to a `HostApplicationConfig` with `build_host_application_config`, and then
+passing the config to `bootstrap_host_application`. The spec is where every structural
+decision is declared. The following shows a realistic minimal spec:
 
 ```python
 from gui_do import (
-    ActionSpec,
-    Feature,
-    FeatureSpec,
-    HostApplicationConfig,
-    RuntimeSceneSpec,
-    SceneSetupSpec,
+    build_host_application_config,
     bootstrap_host_application,
+    HostApplicationBindingSpec,
+    SceneBundleBindingSpec,
+    ActionBindingSpec,
+    TelemetryConfig,
+)
+from my_app.my_feature import MyFeature
+
+config = build_host_application_config(
+    HostApplicationBindingSpec(
+        display_size=(1280, 720),
+        window_title="My App",
+        initial_scene_name="main",
+        fonts={
+            "default": {"file": "assets/fonts/Body.ttf", "size": 14},
+        },
+        scene_bundle_entries=(
+            SceneBundleBindingSpec(
+                scene_name="main",
+                pretty_name="Main",
+                bind_escape_to_exit=True,
+            ),
+        ),
+        feature_entries=(
+            ("_my_feature", MyFeature),
+        ),
+        action_entries=(
+            ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+        ),
+        telemetry=TelemetryConfig(enabled=False),
+        target_fps=120,
+    )
 )
 
-
-class HelloFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("hello", scene_name="main")
-
-
-cfg = HostApplicationConfig(
-    display_size=(1280, 720),
-    window_title="My First App",
-    fonts={"default": {"system": "arial", "size": 14}},
-    font_role_specs=(),
-    cursors=(),
-    scene_specs=(SceneSetupSpec(scene_name="main", pretty_name="Main"),),
-    feature_specs=(FeatureSpec("hello_feature", HelloFeature),),
-    window_specs=(),
-    runtime_scene_specs=(RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),),
-    action_specs=(ActionSpec(action_id="exit", label="Exit", kind="exit"),),
-    static_accessibility_specs=(),
-    initial_scene_name="main",
-)
+bootstrap_host_application(config)
 ```
 
-For larger applications, use `build_host_application_config` with `HostApplicationBindingSpec` and bundle helpers such as `SceneBundleBindingSpec`, `FeatureWindowBundleBindingSpec`, `ActionBindingSpec`, `FontRoleBindingSpec`, and `CursorBindingSpec`. The bundle approach generates most of the boilerplate relationships automatically and scales well as scene and feature count grows.
+The key fields:
+
+| Field | Purpose |
+|---|---|
+| `display_size` | Window dimensions in pixels |
+| `window_title` | OS window title bar text |
+| `initial_scene_name` | Which scene activates on startup |
+| `fonts` | Font file paths and sizes keyed by role name |
+| `scene_bundle_entries` | Declares the application's scenes |
+| `feature_entries` | Declares features and their host attribute names |
+| `feature_window_bundle_entries` | Features with managed floating windows |
+| `action_entries` | Named application-level actions |
+| `target_fps` | Frame rate cap passed to the event loop |
 
 ### Step 3: Add a Feature with Observable State
 
-A minimal feature that creates a label and keeps it synchronized with an observable value:
+Every feature inherits from `Feature` and implements lifecycle methods. The following is a
+minimal feature that creates a label and updates it reactively from an observable value:
 
 ```python
-from pygame import Rect
+from gui_do import Feature, ObservableValue, LabelControl
 
-from gui_do import Feature, LabelControl, ObservableValue, PanelControl
+class MyFeature(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app",),
+    }
 
-
-class CounterFeature(Feature):
-    HOST_REQUIREMENTS = {"build": ("app",), "bind_runtime": ()}
-
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self._unsub = None
-
-    def build(self, host) -> None:
-        self.root = host.app.add(
-            PanelControl("counter_root", Rect(20, 20, 400, 120)),
-            scene_name="main",
+    def build(self, host):
+        self.message = ObservableValue("Hello, gui_do!")
+        rect = host.screen_rect.inflate(-40, -40)
+        self._label = LabelControl(
+            rect=rect,
+            text=self.message.get(),
         )
-        self.label = self.root.add(
-            LabelControl("count_label", Rect(8, 8, 200, 28), "Count: 0")
-        )
+        host.controls.add(self._label)
+        self._sub = None
 
-    def bind_runtime(self, host) -> None:
-        self._unsub = self.count.subscribe(
-            lambda v: setattr(self.label, "text", f"Count: {v}")
+    def bind_runtime(self, host):
+        self._sub = self.message.subscribe(
+            lambda v: self._label.set_text(v)
         )
 
-    def shutdown_runtime(self, host) -> None:
-        if self._unsub is not None:
-            self._unsub()
-            self._unsub = None
+    def shutdown_runtime(self, host):
+        if self._sub is not None:
+            self.message.unsubscribe(self._sub)
 ```
 
-Notice the strict phase separation: controls are created in `build`, subscriptions are wired in `bind_runtime`, and subscriptions are torn down in `shutdown_runtime`. This pattern prevents phantom callbacks and guarantees controls exist before bindings fire.
+`HOST_REQUIREMENTS` declares what the host must provide before each lifecycle method is called.
+The framework validates these at startup and raises clear errors if bindings are missing.
 
 ### Step 4: Add an Action and Runtime Scene Policy
 
-Declare actions in `action_specs` and scene behavior policies in `runtime_scene_specs`. The most common starter policy is `bind_escape_to_exit=True` in `RuntimeSceneSpec`, which wires a consistent exit behavior without custom event plumbing. To add keyboard shortcuts to feature-level actions, add `ActionHotkeySpec` or `ControlKeyBindingSpec` entries to the config:
+Actions let you declare named application behaviors and bind them to keyboard shortcuts:
 
 ```python
-from gui_do import ActionSpec, RuntimeSceneSpec
+from gui_do import ActionBindingSpec, SceneBundleBindingSpec
 
-action_specs = (
-    ActionSpec(action_id="exit", label="Exit", kind="exit"),
-    ActionSpec(action_id="palette_open", label="Open Command Palette", kind="palette_open"),
-)
-runtime_scene_specs = (
-    RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),
-)
+# In HostApplicationBindingSpec:
+scene_bundle_entries=(
+    SceneBundleBindingSpec(
+        scene_name="main",
+        pretty_name="Main",
+        bind_escape_to_exit=True,    # Pressing Escape exits the app
+        prewarm=True,                # Render the scene before first display
+    ),
+),
+action_entries=(
+    ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+    ActionBindingSpec(
+        kind="palette_open",
+        action_id="palette_open",
+        label="Open Command Palette",
+    ),
+),
 ```
 
-Keep action IDs stable across updates. They are referenced by routed runtime specs, input bindings, and command palette entries. Changing an action ID requires updating every binding that references it.
+### Step 5: Run the Application
 
-### Step 5: Run Loop
-
-Wrap the host object and run it:
+`bootstrap_host_application` builds all runtime systems and runs the event loop. It does not
+return until the application exits. The `target_fps` value controls the frame budget:
 
 ```python
-class Host:
-    def __init__(self) -> None:
-        bootstrap_host_application(self, cfg)
-
-    def run(self) -> int:
-        return self.app.run_entrypoint(target_fps=120)
-
-
-if __name__ == "__main__":
-    raise SystemExit(Host().run())
+bootstrap_host_application(config)
+# Application runs here. Control returns after the window closes.
 ```
 
-`bootstrap_host_application` sets `self.app` (a `GuiApplication` instance) plus all other host attributes derived from the config. `run_entrypoint` starts the pygame event loop and returns an integer exit code. It tolerates workspace load/save failures without aborting and reports runtime loop failures with a non-zero exit code.
+### Guided Build Track
 
-### Guided Build Track (Beginner)
+Six milestones for building confidence with the framework:
 
-Work through these milestones in order. Each builds on the previous.
-
-- **Milestone A:** App boots to a single scene with no display errors or import failures.
-- **Milestone B:** One feature creates one visible control that appears on screen.
-- **Milestone C:** One `ObservableValue` updates one control's text reactively when the value changes.
-- **Milestone D:** One `ActionSpec` and one hotkey binding produce the expected behavior when triggered.
-- **Milestone E:** One overlay surface and one toast both route correctly without leaking input to underlying controls.
-- **Milestone F:** Workspace save and load complete successfully and the app restores the same scene.
+- **Milestone A** — Application boots to a single scene with no errors. Confirm by running
+  the script and seeing the window open without tracebacks.
+- **Milestone B** — One feature creates one visible control. Add a `LabelControl` in `build`
+  and confirm it renders on screen.
+- **Milestone C** — One observable updates one control reactively. Change the observable
+  value from `on_update` or from an event handler and confirm the label text updates.
+- **Milestone D** — One action and one hotkey trigger expected behavior. Add an `ActionBindingSpec`
+  with a `key` field and confirm the callback fires when the key is pressed.
+- **Milestone E** — One overlay and one toast route without input leakage. Show a toast from
+  `ToastManager` and confirm input is not blocked while it is visible.
+- **Milestone F** — Workspace save/load roundtrip succeeds. Use `WorkspacePersistenceManager`
+  to save and restore scene state; confirm values survive an app restart.
 
 **Beginner confidence checklist:**
-- You can explain precisely where `build` ends and `bind_runtime` begins and why the boundary exists.
-- You can add or remove one feature entirely through spec configuration without touching any lifecycle code.
-- You can trace one keypress from the pygame event queue through event normalization, routing policy, and into action execution.
+- You can explain where `build` ends and `bind_runtime` begins, and why the split exists.
+- You can add and remove a feature by changing only the `HostApplicationBindingSpec`.
+- You can trace a keypress through routing: keyboard event → `InputMap` → `ActionManager` →
+  action handler.
 
 ### Quickstart Failure Modes
 
-**Feature never appears on screen.** Verify that the feature is listed in `feature_specs` and that its `scene_name` matches a `scene_name` declared in `scene_specs`. A mismatch silently places the feature in a scene that is never activated.
+**Feature never appears on screen:** Verify that the feature's `factory` is listed in
+`feature_entries` and that the feature's `scene_name` (or scene targeting) matches the
+`initial_scene_name` in the spec. If the feature does not set a `scene_name`, it defaults to
+all scenes; if it sets a scene name that does not match an active scene, it will not run.
 
-**Hotkey does nothing.** Verify that the action descriptor exists in `action_specs` and that the input binding scope matches the current scene and window context. Hotkeys bound to a specific window scope do not fire when that window is hidden or focus is elsewhere.
+**Hotkey does nothing:** Verify that the `ActionSpec` or `ActionBindingSpec` has a `key` field
+set, that the action's `action_id` matches what the handler is registered for, and that the
+input binding's scope does not restrict it to a specific window when no window is focused.
 
-**Overlay blocks unexpected keys.** Inspect the overlay's unhandled-key consumption policy and its dismissal configuration. Some overlay managers consume all keyboard input while open. If the behavior is wrong, configure the overlay to pass through specific key types or check whether the wrong overlay is being opened.
+**Overlay blocks unexpected keys:** Check the `consume_unhandled_keys` setting of the overlay
+or dialog. Some overlay types consume all keyboard input by default to prevent background
+features from receiving keys while a modal is active. Explicitly set the policy to allow
+passthrough if needed.
 
-**State updates but UI does not reflect the change.** Ensure subscriptions are established in `bind_runtime` and that `shutdown_runtime` is not being called prematurely. Also verify that the subscription callback is actually setting the correct control property and that the control is not being recreated after the subscription fires.
+**State updates but UI does not change:** Confirm that the observable subscription was created
+in `bind_runtime` (not in `build`), that the subscription handle was stored and not
+inadvertently disposed, and that the control's update callback correctly calls the control's
+setter method rather than trying to reassign a local variable.
 
 ---
 
@@ -372,65 +782,132 @@ Work through these milestones in order. Each builds on the previous.
 
 [Back to Table of Contents](#table-of-contents)
 
-This chapter describes the structural rules that govern how gui_do is organized and how its runtime operates. Understanding the architecture helps you place new code in the right layer, diagnose unexpected behavior, and read contract documentation with full context.
+Understanding `gui_do`'s architecture — how the framework is structured, where the boundaries
+are, and how the runtime operates at a systems level — is essential before you can reason
+confidently about why a particular behavior occurs and how to change it. This chapter describes
+the boundary model, the tiered API design, and the runtime's operational guarantees.
 
 ### Boundary Model: Framework vs Consumer
 
-The repository enforces a hard architectural boundary between the framework and consumer code. `gui_do/` is the reusable framework package. It contains the runtime, controls, events, layout engines, state and persistence systems, scheduling, theming, and all other infrastructure. It must not import from `demo_features/` or any other consumer code. This keeps `gui_do/` usable as a standalone package in any application.
+`gui_do` enforces a strict one-directional boundary between framework code and consumer code.
+The `gui_do/` package is the framework: a reusable runtime that knows nothing about any
+specific application. The `demo_features/` directory and `gui_do_demo.py` are the consumer
+integration layer for the reference demo application. Application developers create their own
+equivalent of `demo_features/` — their feature packages — and their own `demo_config.py`-
+equivalent — their bootstrap configuration.
 
-`demo_features/` and `gui_do_demo.py` form the consumer integration layer. They import from `gui_do` and compose features, scenes, and configurations, but they are not part of the framework. Changes to `demo_features/` never affect `gui_do/` behavior.
+The hard rule is: **`gui_do/` must not import from `demo_features/`**. The framework code
+must remain application-agnostic and independently deployable as a package. This boundary is
+not advisory — it is enforced by automated tests:
 
-Consumer entrypoints must import from the `gui_do` root package using explicit named imports. They must not import from `gui_do.*` internal submodules directly. This rule ensures that internal refactors inside the framework (moving a class from one internal module to another) cannot silently break consumer code. The root package's `__init__.py` is the stable consumer surface.
+```
+tests/test_boundary_contracts.py::test_gui_package_does_not_import_demo_features
+tests/test_boundary_contracts.py::test_demo_entrypoint_uses_gui_root_import
+```
 
-Both rules are enforced by automated tests: `tests/test_boundary_contracts.py` uses AST import inspection to verify that no file in `gui_do/` imports from `demo_features/`, and that consumer entrypoints use root package imports.
+The boundary exists to keep `gui_do/` reusable across multiple projects. Code in `gui_do/`
+can only depend on pygame, numpy, the standard library, and other modules within `gui_do/`.
+The framework never imports any application-specific class.
+
+The consumer side has a corresponding rule: consumer code (your application's feature packages
+and bootstrap script) imports from the `gui_do` root — `from gui_do import X` — never from
+`gui_do.*` internal submodules. The public API exported from `gui_do/__init__.py` is the
+stable surface; internal module paths can change without notice. This rule is part of the
+`docs/architecture_boundary_spec.md` contract.
 
 ### Tiered Public API Model
 
-`gui_do/__init__.py` organizes all public exports into numbered tiers. Each tier comment block (`# TIER N: NAME`) groups related exports and signals their intended usage level. Tier numbers are a guidance mechanism: when two tiers offer overlapping capability, you should prefer the lower-numbered (more abstract) tier first, because it typically carries better lifecycle integration and fewer manual responsibilities.
+`gui_do/__init__.py` organizes all public exports into numbered tiers. Each tier is a logical
+group of related functionality. The tier number conveys the recommended entry point order: when
+two tiers offer overlapping capability, start with the lower-numbered tier because it provides
+the more abstract, data-driven interface with more framework support.
 
-**Tier 1 — Primary Entry Points and Data-Driven APIs.** This is the recommended starting point for all new applications. Contains feature lifecycle base classes (`Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`), the complete family of declarative spec types (`FeatureSpec`, `WindowSpec`, `RuntimeSceneSpec`, `ActionSpec`, and all binding spec variants), and the bootstrap pipeline (`HostApplicationConfig`, `bootstrap_host_application`, `build_host_application_config`). If your application code primarily uses Tier 1 names, it is structured correctly.
+**Tier 1 — Primary Entry Points and Data-Driven APIs.** This tier contains everything a new
+application needs: the Feature base classes (`Feature`, `DirectFeature`, `LogicFeature`,
+`RoutedFeature`), the spec types (`FeatureSpec`, `WindowSpec`, `RuntimeSceneSpec`, `ActionSpec`,
+and dozens more), the builder (`build_host_application_config`), and the bootstrap entry point
+(`bootstrap_host_application`). Start every new `gui_do` application here and only descend to
+lower tiers when Tier 1 abstractions do not cover your need.
 
-**Tiers 2–7 — Core Runtime Systems.** These tiers expose the systems that Tier 1 bootstraps and manages: app and scene management (Tier 2), essential data and state primitives like `ObservableValue`, `ObservableList`, `CollectionView`, `Binding` (Tier 3), events, actions, focus, and input infrastructure (Tier 4), scheduling and animation (Tier 5), theme and font management (Tier 6), and telemetry (Tier 7). Feature code frequently uses names from these tiers.
+**Tiers 2–7 — Core Runtime Systems.** These tiers provide the systems that Tier 1 sits on top
+of. Tier 2 exposes `GuiApplication`, `create_display`, and `SceneTransitionManager` for
+direct application and scene control. Tier 3 provides the observable primitives
+(`ObservableValue`, `ObservableList`, `ObservableDict`, `ComputedValue`). Tier 4 covers events,
+actions, focus, and input primitives. Tier 5 is scheduling and animation. Tier 6 is theme and
+fonts. Tier 7 is telemetry and diagnostics.
 
-**Tiers 8 and above — Specialized Systems.** Layout engines (Tier 8), overlay managers (Tier 9), forms and validation (Tier 10), state and persistence (Tier 11), primary controls (Tier 12), extended controls (Tier 13), text and localization (Tier 14), data helpers (Tier 15), graphics and rendering (Tier 16), introspection (Tier 17), advanced bootstrap helpers (Tier 18), audio (Tier 20), accessibility (Tier 21), theme invalidation (Tier 22), undo routing (Tier 23), async validation (Tier 24), service scope (Tier 25), dataflow pipeline (Tier 26), transactional state store (Tier 27), adaptive constraint layout (Tier 28), virtualization (Tier 29), interaction state machine (Tier 30), schema form runtime (Tier 31), and snapshot migration (Tier 32). Use these when Tiers 1–7 do not provide sufficient abstraction for your specific need.
+**Tiers 8–32 — Specialized Systems.** These tiers cover layout engines, overlay managers, form
+models, controls, text and localization, data helpers, graphics, state machines, persistence,
+introspection, audio, accessibility, and advanced infrastructure. Use these tiers when you need
+capabilities not provided by the higher-level Tier 1 abstractions.
 
-The tier matrix in Appendix D.1 lists all tiers with their contained names for quick lookup.
+The tier numbering is not an arbitrary ordering — it reflects the dependency structure of the
+framework. Higher-tier code depends on lower-tier code. Application code should prefer the
+highest tier that meets its needs, which minimizes the amount of internal framework behavior it
+must manage explicitly.
+
+Tier 19 (`UiEngine`) is marked "Infrastructure & Internals — avoid in application code." Do
+not use it directly; it is exported only for advanced extension scenarios.
 
 ### Runtime Guarantees
 
-The following behavioral guarantees are contractually specified in `docs/runtime_operating_contracts.md` and enforced by automated tests:
+**[CONTRACT]** The following guarantees are contractually enforced by the runtime and verified by tests:
 
-**Canonical GuiEvent normalization.** All raw pygame input events are normalized to `GuiEvent` before any application-level dispatch occurs. Feature code always receives `GuiEvent` objects, never raw pygame events. This ensures consistent event semantics across all feature handlers.
+- **Canonical `GuiEvent` normalization.** Raw pygame events are normalized to `GuiEvent` objects
+  before any application-level dispatch. Application code only ever receives `GuiEvent` instances
+  in `handle_event`. The mapping from raw event types to `EventType` enum values is deterministic.
 
-**Scene-isolated update execution.** Scene-contained runtime systems (features, schedulers, tweens, timers, overlays registered to a scene) execute their update and event logic only when that scene is active. Deactivated scenes do not accumulate state or fire callbacks.
+- **Scene-isolated update execution.** Runtime systems that are scene-scoped (schedulers,
+  animation state machines, coroutine runners, etc.) execute only for the currently active scene.
+  Background scenes do not receive update ticks, animation steps, or coroutine progress.
 
-**Deterministic window focus cycling.** Window focus candidates within a scene are sorted by `control_id` before traversal. This makes keyboard focus navigation order predictable and testable.
+- **Deterministic focus candidate ordering.** Window focus cycling iterates candidates in
+  ascending `control_id` order. This means keyboard tab order and focus cycling behavior is
+  stable across runs and not dependent on creation order or memory layout.
 
-**Scheduler dispatch budget clamping.** The task scheduler's per-frame dispatch time is clamped to contract-defined bounds: a fraction of `0.12` of the frame's `dt` in milliseconds, with a floor of `0.5 ms` and a ceiling of `4.0 ms`. This prevents scheduler work from starving rendering under slow frames and prevents it from running unconstrained under fast frames.
+- **Scheduler dispatch budget clamping.** The `TaskScheduler` dispatches messages within a
+  per-frame budget calculated as `max(floor, min(ceiling, fraction × dt_ms))`. The values are:
+  `fraction = 0.12`, `floor = 0.5 ms`, `ceiling = 4.0 ms`. This gives predictable upper bounds
+  under slow frames (no starvation) and prevents over-allocation under fast frames.
 
-**Missing settings keys are skipped during workspace restore.** When restoring workspace state, settings keys that do not exist in the current application are silently skipped. The restore operation produces a detailed report with `applied_settings`, `skipped_settings`, and `missing_settings_blocks` fields rather than failing hard on unknown keys.
+- **Missing settings keys are skipped gracefully.** During workspace restore, unknown or missing
+  settings keys are recorded in the restore report's `skipped_settings` and `missing_settings_blocks`
+  fields but do not abort the restore process. The restore report is returned by
+  `WorkspacePersistenceManager.restore` and includes the fields: `target_scene`,
+  `switched_scene`, `restored_feature_states`, `restored_scene_nodes`, `applied_settings`,
+  `skipped_settings`, and `missing_settings_blocks`.
 
 ### Event Pipeline
 
-When `GuiApplication` processes an incoming pygame event, it executes a deterministic sequence:
+When a raw pygame event arrives at the runtime's process_event method, it passes through these
+stages in order:
 
-1. **Normalize to GuiEvent.** The raw pygame event is converted to a `GuiEvent` with a canonical type from `EventType`, a phase from `EventPhase`, and fully populated payload fields.
-2. **Handle quit events early.** QUIT events are handled before any further routing so application shutdown is never delayed by routing policy.
-3. **Update shared input state.** The `InputSnapshot` is updated with the current keyboard, mouse, and modifier state.
-4. **Update logical pointer state and apply capture clamping.** Pointer position is updated. If pointer capture or lock is active, coordinates are clamped to the capture region.
-5. **Logicalize pointer events.** Pointer events carry both raw screen coordinates and logicalized scene coordinates. Logicalization accounts for any viewport or camera transform in the active scene.
-6. **Route through overlay, toast, and focus management.** If a modal overlay, toast, or context menu is active, it receives the event first. Some overlay types consume all input while open.
-7. **Route keyboard events through key routing policy.** Global key bindings (registered via `bind_global_key`) are tested before focus dispatch. Scene-level and window-level key handlers are then dispatched in stable candidate order.
-8. **Dispatch to feature handlers and scene dispatch.** The event is delivered to feature `handle_event` methods in scene order, then to registered scene-level handlers. Fallthrough handlers receive events that no earlier handler consumed.
-9. **Respect hard stop signals.** `propagation_stopped` and `default_prevented` on a `GuiEvent` are checked after each handler. A handler that returns `True` or explicitly sets these flags stops further delivery. `GuiEvent.clone()` produces independent copies; mutations to a clone do not affect the original.
+1. **Normalization.** The raw event is converted to a `GuiEvent` with a typed `EventType`,
+   normalized coordinates, and metadata. At this point propagation and default behavior flags
+   are at their initial state.
 
-### Known Non-Goals
+2. **Quit handling.** `QUIT` events are intercepted early before reaching any feature code.
 
-The architecture intentionally does not address:
-- OS-native widget parity across all platforms. gui_do renders entirely to pygame surfaces.
-- Replacing application-specific domain architecture for business logic. The framework orchestrates UI behavior; it does not dictate application domain design.
-- Exposing internal infrastructure tiers as recommended entry points. Tiers 18 and above are for framework extension, not application bootstrapping.
-- Making star-import behavior part of the public compatibility contract. Use explicit named imports from `gui_do`.
+3. **Input state update.** Shared keyboard and pointer state is updated so downstream code
+   reads consistent state.
+
+4. **Pointer localization.** Pointer events receive scene-relative coordinates while retaining
+   raw screen coordinates. Pointer lock and capture constraints are applied here.
+
+5. **Overlay and focus routing.** If a modal overlay is active, keyboard and pointer events
+   are directed to the overlay. Focus manager state is updated. Toast hover reconciliation runs.
+
+6. **Keyboard routing.** Keyboard events pass through the global key bindings (registered via
+   `ActionManager.bind_global_key`), the active-window key handlers, and then the scene's
+   keyboard handler policy. The command palette activation key is a global key and therefore
+   checked before focus dispatch.
+
+7. **Feature and scene dispatch.** Events are delivered to active features via `handle_event`.
+   Features return `True` to consume an event and stop propagation.
+
+8. **Propagation enforcement.** If `propagation_stopped` or `default_prevented` is set on the
+   event, further delivery stops immediately. `GuiEvent.clone()` produces an independent copy;
+   mutations to the clone do not affect the original.
 
 ---
 
@@ -438,45 +915,123 @@ The architecture intentionally does not address:
 
 [Back to Table of Contents](#table-of-contents)
 
-The five-phase workflow is the practical core of gui_do application development. Every feature participates in some or all of these phases. Keeping phase boundaries strict produces applications that are easier to debug, test, and extend because each piece of code has one job at one point in the lifecycle.
+The five-phase workflow is the programming model for every feature in `gui_do`. Understanding
+what each phase is for, what invariants hold during it, and what must not cross phase boundaries
+gives you the mental model you need to write correct, maintainable features.
 
 ### Phase Reference
 
-**build** is the construction phase. Instantiate controls, create observable containers, and declare static structural relationships between UI elements. The invariant for `build` is: no runtime-dependent subscriptions and no cross-feature coordination. Controls added to the scene tree in `build` exist for the lifetime of the scene. Never create controls in `on_update`, `handle_event`, or `draw`.
+**Build** is the construction phase. When a scene activates, `build(host)` is called on every
+feature in that scene in registration order. During `build`, a feature creates its controls,
+adds them to the scene's control tree or window tree, allocates its observable values, and
+establishes any static structure that does not depend on runtime state. The critical invariant
+of `build` is: do not create subscriptions and do not access sibling features. At build time,
+sibling features may not yet have been built, and their public attributes may not yet exist.
+Subscriptions created during `build` may fire before controls are ready. Everything that
+depends on the runtime being fully initialized must wait for `bind_runtime`.
 
-**bind_runtime** is the wiring phase. All features in the scene have completed `build` before any feature's `bind_runtime` is called. This guarantees that sibling feature controls and host attributes are available. Use `bind_runtime` to subscribe to observables, bind controls to data, register cross-feature callbacks, apply initial state from workspace or runtime sources, and invoke routed lifecycle helpers like `setup_routed_runtime` or `bind_routed_feature_lifecycle`. The invariant for `bind_runtime` is: controls exist, siblings are built, runtime services are active.
+**Bind_runtime** is the wiring phase. It is called on every feature in the scene only after
+all features have completed `build`. At this point, every feature's controls exist, every
+sibling feature's `build` has completed and its public observable attributes are accessible,
+and the runtime infrastructure (theme, scheduler, font roles, etc.) is fully initialized. This
+is the correct phase for: subscribing to observable values, binding controls to data sources,
+registering callbacks that depend on sibling feature state, reading initial values from the
+host (screen rect, settings, scene state), and wiring up cross-feature coordination.
 
-**route** is the intent dispatch phase. Events delivered to `handle_event` and messages published through `FeatureMessage` flow through declared routing rules. Routing separates the recognition of user intent from the implementation of what to do about it. A feature that needs to respond to the action `"open_file"` registers a handler for that action ID; it does not parse keyboard codes directly. This separation makes the behavior testable and the UI remappable without code changes.
+**Route** is not a lifecycle method called by name — it describes what happens during event
+delivery. When the framework calls `handle_event(host, event)` on a feature, the feature is in
+the routing phase. The feature examines the event's `EventType` and decides whether to handle
+it. Returning `True` consumes the event; returning `False` or `None` passes it to the next
+eligible recipient. `RoutedFeature` subclasses additionally receive named action messages
+dispatched through the routing infrastructure, mapped to specific handler methods declared as
+route targets.
 
-**update** is the frame-time logic phase. Per-frame logic runs in `on_update(host, dt_seconds)`. Keep update logic bounded and lightweight. Use `dt_seconds` for smooth time-based animation rather than frame-count arithmetic. Anything with non-trivial cost — file loading, heavy computation, network round trips — belongs in a cooperative scheduler coroutine or a data pipeline stage, not in `on_update`. Features that block `on_update` for more than a millisecond will visibly degrade frame rate.
+**Update** is the per-frame logic phase. `on_update(host)` is called every frame on every
+active feature after all events have been processed. This is where animations advance, timers
+tick, cooperative scheduler coroutines run, and per-frame state transitions are calculated. The
+elapsed time between frames is available through the host or through the `Timers` system. Keep
+`on_update` implementations fast: any computation that takes significant time belongs in a
+`CooperativeScheduler` coroutine on a `LogicFeature`, not in the update loop directly.
 
-**draw** is the custom rendering escape hatch. Most features do not override `draw` because the control tree handles all standard rendering. Override `draw(host, screen)` only when controls genuinely cannot express the visual output you need — particles, procedural terrain, custom compositing effects, debug overlays. Keep rendering code separate from model mutation to prevent frame-order-dependent bugs.
+**Draw** is the custom rendering phase. `draw(host, surface, theme)` is called every frame
+after `on_update`, for features that override it. The feature receives the pygame `Surface`
+and the current `ThemeManager` instance and may render anything it wants. Most features do not
+need to override `draw` — the control tree handles all standard rendering. Override `draw`
+only for effects that controls cannot express: particle systems, procedural backgrounds, canvas
+overlays, debug visualizations.
 
 ### Message and Logic Coordination
 
-`FeatureMessage` enables loosely coupled communication between features. A feature calls its messaging API to publish a named message with an optional payload dictionary. Any feature that has registered a handler for that name receives the delivery. Neither party holds a direct reference to the other. This prevents features from coupling to each other's internal implementations and makes each feature independently replaceable.
+`FeatureMessage` publishing is the loose-coupling mechanism for cross-feature communication. A
+feature calls `self.publish(FeatureMessage("event_name", {"payload_key": value}))` and the
+framework delivers the message to any feature in the same scene that has registered a handler
+for `"event_name"`. Neither the publisher nor the subscribers hold references to each other.
+The message name string is the only shared contract.
 
-Use `FeatureMessage` for discrete events: "computation finished," "user confirmed dialog," "item selected." Use observable values for continuous state: "current count," "selected item," "progress fraction." The heuristic is: if a consumer needs the value over time and should display it in a reactive widget, use an observable. If a consumer needs to be notified that something happened once and should take an action in response, use a message.
+When real-time state sharing is needed — where one feature must continuously reflect the value
+of another — observable values are more appropriate than messages. A `LogicFeature` computes
+state and stores it in `ObservableValue` attributes. UI features subscribe to those attributes
+in `bind_runtime`. State updates flow automatically whenever the `LogicFeature` writes to an
+observable, without any explicit message passing. Observable state is preferred for continuous
+values; messages are preferred for discrete events ("computation complete", "user confirmed",
+"error occurred").
 
-`LogicFeature` naturally serves as the coordination hub in multi-feature scenes. A logic feature owns domain processing, maintains shared observable state, and publishes `FeatureMessage` events when significant state transitions occur. One or more UI features subscribe to the observables and handle the messages. This split keeps UI features small and focused on presentation and the logic feature independently testable.
+The `LogicFeature` class is the natural coordination hub for shared state in a multi-feature
+scene. It holds the observables, runs the background computation (typically in a
+`CooperativeScheduler` coroutine), and publishes both observable changes and event-style
+messages. UI features subscribe to its observables and listen for its messages without knowing
+anything about how the logic feature works internally.
 
 ### When to Use Routed Runtime Specs
 
-`RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec` reduce boilerplate for features with dense routing concerns. When a single feature needs to register multiple action hotkeys, a shortcut help overlay, a task-panel focus toggle, and several event subscriptions — all of which should bind and unbind in synchrony with the feature's lifecycle — declaring them as a `RoutedRuntimeSpec` is far cleaner than writing manual registration and cleanup code.
+For features that participate in the full data-driven runtime — with action hotkeys, shortcut
+overlay declarations, task-panel focus toggles, and event subscriptions — `RoutedRuntimeSpec`
+and `RoutedFeatureLifecycleSpec` reduce the boilerplate dramatically. Instead of manually
+calling `bind_input_map_actions`, `register_action_hotkeys`, `create_shortcut_help_overlay`,
+and `bind_task_panel_focus_toggle` in `build` and `bind_runtime`, you declare them once in a
+`RoutedRuntimeSpec` and call `setup_routed_runtime` to apply all wiring in a single call.
+`shutdown_routed_runtime` reverses the wiring during scene teardown.
 
-`setup_routed_runtime` performs coordinated registration of all elements declared in a `RoutedRuntimeSpec` during the bind phase. `bind_routed_feature_lifecycle` performs the corresponding setup for `RoutedFeatureLifecycleSpec`, registering action hotkeys, shortcut overlays, and event subscriptions as a single coordinated operation. `shutdown_routed_feature_lifecycle` is the symmetric teardown: it unregisters all elements that were registered during bind, preventing stale handlers from surviving scene transitions.
+`bind_routed_feature_lifecycle` and `shutdown_routed_feature_lifecycle` are the finer-grained
+equivalents — they apply the routed feature wiring for a single `RoutedFeature` within a
+scene, rather than for the full scene bundle. Use these when only one feature in a scene needs
+routed lifecycle management while others use manual wiring.
 
-The practical benefit of routed lifecycle specs is that registration and deregistration become a single declaration rather than paired imperative calls spread across `bind_runtime` and `shutdown_runtime`. This eliminates the class of bug where a feature registers a hotkey but forgets to unregister it, leaving an active binding after the feature is gone.
+A `RoutedRuntimeSpec` declaration looks like:
 
----
+```python
+from gui_do import RoutedRuntimeSpec, ActionHotkeySpec, ShortcutOverlaySpec
+import pygame
+
+ROUTED_SPEC = RoutedRuntimeSpec(
+    scene_name="main",
+    action_hotkeys=(
+        ActionHotkeySpec(
+            action_id="open_panel",
+            key=pygame.K_p,
+            label="Open Panel",
+        ),
+    ),
+    shortcut_overlay=ShortcutOverlaySpec(
+        activation_key=pygame.K_F1,
+        title="Keyboard Shortcuts",
+    ),
+)
+```
+
+This single spec drives hotkey registration, input map binding, shortcut overlay creation, and
+cleanup — all without the feature implementing any of that machinery manually.
+
+
 
 ## Main Systems Reference
 
 [Back to Table of Contents](#table-of-contents)
 
-The chapters below are organized in dependency order: each chapter assumes you have read the chapters before it. Every chapter follows the same structure: what it is and why it exists, mental model and lifecycle placement, primary public APIs and key types, typical usage flow, minimal example, advanced patterns, common mistakes, cross-links, and a back-to-top link.
-
----
+The Main Systems Reference contains one chapter for each of the 16 major system areas exposed
+by `gui_do`. Each chapter follows a fixed template: purpose, mental model, public APIs, typical
+usage flow, minimal example, advanced patterns, common mistakes, and cross-links to related
+systems.
 
 ### 8.1 Application Bootstrap and Host Configuration
 
@@ -484,133 +1039,158 @@ The chapters below are organized in dependency order: each chapter assumes you h
 
 #### What it is and why it exists
 
-Application bootstrap is the deterministic assembly layer for gui_do. Its job is to take a complete declarative description of an application — all scenes, features, actions, windows, fonts, cursors, accessibility annotations, and runtime policies — and materialize a fully wired runtime in a single coordinated pass. Without this layer, each application would have to manually construct and connect runtime services in the right order, which creates fragile setup code that is difficult to test and maintain. The bootstrap system eliminates that problem: you describe what you want, and the framework figures out how to produce it.
+Application bootstrap is the process of translating the developer's declarative spec graph
+into a live, running `gui_do` application. The bootstrap system exists because `gui_do` is
+built on the data-driven design principle: the developer describes what the application should
+be, and the framework builds it. Without a centralized bootstrap, each of the framework's
+systems — the action registry, the input map, the window presenter, the scene transition
+manager, the font role registry, the cursor manager — would need to be initialized and wired
+separately by hand, in the correct order, with correct cross-references. The bootstrap system
+performs all of that work in a single deterministic pass.
+
+The result of a successful bootstrap is that the host object (the Python namespace that the
+bootstrap populates) has every declared feature, scene, action, window, font role, cursor, and
+runtime system available as a named attribute. After `bootstrap_host_application` returns, the
+application is in its first scene, fully wired and ready to run its event loop.
 
 #### Mental model and lifecycle placement
 
-Think of the host object as a plain Python object that bootstrap populates. Before `bootstrap_host_application` is called, the host has no runtime attributes. After it returns, `host.app` is the live `GuiApplication` instance, and every declared feature, action registry entry, window presentation spec, font role, cursor, and scene is wired and ready. The entire application lifecycle then flows through `host.app.run_entrypoint()`.
+Think of the host as a plain Python object that starts empty and is progressively populated by
+the bootstrap. The bootstrap reads the `HostApplicationConfig`, resolves the spec graph, creates
+all the runtime systems, calls `build` and `bind_runtime` on all features in order, and then
+starts the event loop. Bootstrap is a one-time, startup-time operation. It runs once; everything
+after it is the steady-state event loop.
 
-Bootstrap sits at the very beginning of the application lifecycle, before any scene activates and before any feature lifecycle phase runs. It is intentionally a one-shot operation: you construct the config once, hand it to bootstrap, and then run the event loop.
+The builder function `build_host_application_config` operates at a higher level of abstraction
+than the raw `HostApplicationConfig` fields. It accepts a `HostApplicationBindingSpec` —
+a single top-level binding object that collects all of the application's structural declarations
+using bundle helpers — and produces a fully resolved `HostApplicationConfig`. The binding spec
+is designed for composability: instead of constructing every low-level spec individually, the
+developer uses bundles (`SceneBundleBindingSpec`, `FeatureWindowBundleBindingSpec`,
+`FontRoleBindingSpec`, `CursorBindingSpec`, `ActionBindingSpec`, `PaletteBindingSpec`) that
+the builder expands into the low-level specs automatically.
 
 #### Primary public APIs and key types
 
-**Config and bootstrap:** `HostApplicationConfig`, `bootstrap_host_application`, `build_host_application_config`, `HostApplicationBindingSpec`, `TelemetryConfig`.
+From **Tier 1**:
+- `bootstrap_host_application(config)` — builds all runtime systems and starts the event loop
+- `build_host_application_config(spec)` — converts `HostApplicationBindingSpec` to `HostApplicationConfig`
+- `HostApplicationConfig` — the fully resolved config structure passed to bootstrap
+- `HostApplicationBindingSpec` — the high-level binding spec; the recommended entry point
+- `SceneBundleBindingSpec` — bundles a scene's setup, pristine asset, and transition style
+- `FeatureWindowBundleBindingSpec` — bundles a feature with its managed floating window
+- `FontRoleBindingSpec` — binds a font role name to a size and font key
+- `CursorBindingSpec` — binds a cursor name to an image file and hotspot
+- `ActionBindingSpec` — declares a named application action with optional key and kind
+- `PaletteBindingSpec` — configures the command palette's entry groups
+- `TelemetryConfig` — controls telemetry collection
+- `SceneTransitionStyle` — enum for scene transition animations (e.g. `SLIDE_RIGHT`, `SLIDE_LEFT`)
+- `TelemetryConfig` — controls telemetry sampling behavior
+- All `build_*` builder functions: `build_feature_specs`, `build_action_specs`, `build_scene_bundle_specs`, etc.
 
-**Core spec types (Tier 1):** `FeatureSpec`, `WindowSpec`, `RuntimeSceneSpec`, `ActionSpec`, `StaticAccessibilitySpec`, `CursorSpec`, `SceneRootSpec`, `AnchoredWindowSpec`, `LogicBindingSpec`, `TaskPanelButtonSpec`, `TaskPanelWindowToggleGroupSpec`, `SceneCommandPaletteSpec`, `ActionHotkeySpec`, `ControlKeyBindingSpec`, `SceneTaskPanelSpec`, `TaskPanelLinearLayoutSpec`, `TaskPanelSceneNavButtonSpec`, `EventSubscriptionSpec`, `ShortcutOverlaySpec`, `TaskPanelFocusToggleSpec`, `RoutedRuntimeSpec`, `RoutedFeatureLifecycleSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`, `SceneSetupBindingSpec`, `RuntimeSceneBindingSpec`, `SceneRootBindingSpec`, `CursorBindingSpec`, `FontRoleBindingSpec`, `ActionBindingSpec`, `PaletteBindingSpec`, `SceneBundleBindingSpec`, `HostApplicationBindingSpec`, `TabbedPresenterSpec`, `AccessibilitySequenceSpec`, `TabBuilderSpec`, `NotificationSpec`.
-
-**Builder helpers (Tier 1):** `build_host_application_config`, `build_feature_specs`, `build_feature_window_bundle_specs`, `build_window_toggle_specs`, `build_scene_setup_specs`, `build_runtime_scene_specs`, `build_scene_root_specs`, `build_cursor_specs`, `build_font_role_specs`, `build_scene_nav_actions`, `build_action_specs`, `build_scene_bundle_specs`, `build_static_accessibility_specs`, `build_notification_center`, `make_window_toggle_spec`, `make_scene_nav_action`, `make_exit_action`, `make_palette_open_action`, `make_static_accessibility_spec`.
-
-**App and scene types (Tier 2):** `GuiApplication`, `create_display`, `SceneTransitionManager`, `SceneTransitionStyle`, `apply_scene_setup_specs`.
+From **Tier 2**:
+- `GuiApplication` — the live application runtime; available as `host.app` after bootstrap
+- `create_display` — creates the pygame display at the specified size
+- `SceneTransitionManager` — manages animated scene transitions
 
 #### Typical usage flow
 
-1. Choose between direct `HostApplicationConfig` construction or the `HostApplicationBindingSpec` + `build_host_application_config` approach. Direct construction is simpler for small apps; binding specs scale better.
-2. Declare all scenes via `SceneSetupSpec` (or `SceneBundleBindingSpec` in the binding approach).
-3. Declare all features via `FeatureSpec`.
-4. Declare actions, runtime scene policies, font roles, cursors, and accessibility specs.
-5. Call `bootstrap_host_application(host, config)`.
-6. Call `host.app.run_entrypoint(target_fps=...)`.
+1. Import `HostApplicationBindingSpec`, `build_host_application_config`, `bootstrap_host_application`.
+2. Import all feature classes used by the application.
+3. Construct a `HostApplicationBindingSpec` with `display_size`, `window_title`,
+   `initial_scene_name`, `fonts`, `scene_bundle_entries`, `feature_entries`, and any
+   additional binding entries for windows, actions, cursors, font roles, and palette.
+4. Pass the spec to `build_host_application_config` to produce a `HostApplicationConfig`.
+5. Pass the config to `bootstrap_host_application`. This is a blocking call — it runs the
+   event loop and returns only when the application exits.
 
 #### Minimal example
 
 ```python
 from gui_do import (
-    ActionSpec,
-    Feature,
-    FeatureSpec,
-    HostApplicationConfig,
-    RuntimeSceneSpec,
-    SceneSetupSpec,
-    bootstrap_host_application,
-)
-
-
-class MyFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("my_feature", scene_name="main")
-
-
-cfg = HostApplicationConfig(
-    display_size=(1280, 720),
-    window_title="My App",
-    fonts={"default": {"system": "arial", "size": 14}},
-    font_role_specs=(),
-    cursors=(),
-    scene_specs=(SceneSetupSpec(scene_name="main", pretty_name="Main"),),
-    feature_specs=(FeatureSpec("my_feature", MyFeature),),
-    window_specs=(),
-    runtime_scene_specs=(RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),),
-    action_specs=(ActionSpec(action_id="exit", label="Exit", kind="exit"),),
-    static_accessibility_specs=(),
-    initial_scene_name="main",
-)
-
-
-class Host:
-    pass
-
-
-host = Host()
-bootstrap_host_application(host, cfg)
-```
-
-#### Advanced pattern(s)
-
-For multi-scene, multi-window applications, use `HostApplicationBindingSpec` with bundle helpers. This approach automatically generates related spec cross-references that would be tedious to write manually:
-
-```python
-from gui_do import (
-    ActionBindingSpec,
-    FeatureWindowBundleBindingSpec,
     HostApplicationBindingSpec,
     SceneBundleBindingSpec,
+    ActionBindingSpec,
+    TelemetryConfig,
     build_host_application_config,
+    bootstrap_host_application,
 )
+from my_app.counter_feature import CounterFeature
 
-
-cfg = build_host_application_config(
+config = build_host_application_config(
     HostApplicationBindingSpec(
-        display_size=(1920, 1080),
-        window_title="Full App",
-        fonts={"default": {"system": "arial", "size": 14}},
+        display_size=(1280, 720),
+        window_title="Counter App",
         initial_scene_name="main",
+        fonts={"default": {"file": "assets/Body.ttf", "size": 14}},
         scene_bundle_entries=(
             SceneBundleBindingSpec(
                 scene_name="main",
                 pretty_name="Main",
-                include_nav_action=True,
-                nav_action_id="nav_main",
-                nav_label="Go to Main",
+                bind_escape_to_exit=True,
             ),
         ),
-        feature_window_bundle_entries=(
-            FeatureWindowBundleBindingSpec(
-                "_tools_feature",
-                ToolsFeature,
-                "tools",
-                task_panel_label="Tools",
-                task_panel_style="round",
-            ),
+        feature_entries=(
+            ("_counter", CounterFeature),
         ),
         action_entries=(
             ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
         ),
+        telemetry=TelemetryConfig(enabled=False),
+        target_fps=120,
     )
 )
+
+bootstrap_host_application(config)
 ```
 
-`SceneBundleBindingSpec` automatically generates the `SceneSetupSpec`, `RuntimeSceneSpec`, `SceneRootSpec`, and navigation action entries for a scene. `FeatureWindowBundleBindingSpec` generates all the window toggle wiring for a feature-window pair.
+#### Advanced pattern: multi-scene, multi-window composition
+
+`FeatureWindowBundleBindingSpec` is the recommended way to add a feature that owns a floating,
+toggle-able window. The bundle automatically creates a task panel button and a window toggle
+action for the window, links them, and registers them with the spec graph:
+
+```python
+from gui_do import FeatureWindowBundleBindingSpec
+
+feature_window_bundle_entries=(
+    FeatureWindowBundleBindingSpec(
+        "_inspector",
+        InspectorFeature,
+        "inspector",                     # key prefix for generated names
+        task_panel_label="Inspector",
+        task_panel_style="round",
+    ),
+),
+```
+
+`SceneBundleBindingSpec` with `include_nav_action=True` automatically creates a scene
+navigation action and registers it with the command palette, enabling scenes to be switched
+via the palette keyboard shortcut.
 
 #### Common mistakes and anti-patterns
 
-- Manually mutating host attributes after bootstrap in ways that bypass the spec graph. For example, registering new actions by reaching into `host.action_manager` directly after bootstrap creates entries that are not tracked by the declarative config, which breaks scene-scoped teardown.
-- Declaring feature `scene_name` values that do not match any `scene_name` in `scene_specs`. This silently places a feature in an unactivatable scene.
-- Forgetting `initial_scene_name` in `HostApplicationConfig`. Without it, the runtime has no entry scene and startup behavior is undefined.
-- Using `FeatureSpec` factory functions that have side effects at construction time. Spec factories should be pure — they should only create and return the feature instance.
+- **Setting `initial_scene_name` to a scene not declared in `scene_bundle_entries`** — bootstrap
+  will fail at startup with a scene resolution error. Every scene name referenced must have a
+  matching `SceneBundleBindingSpec`.
+- **Manually mutating host attributes after bootstrap** — the host is fully populated by
+  bootstrap; adding or replacing attributes after the fact bypasses the spec graph and can
+  produce inconsistent state.
+- **Creating features without `HOST_REQUIREMENTS`** — this is not a crash, but it silently
+  disables the framework's startup validation. Always declare `HOST_REQUIREMENTS` on every
+  feature so configuration errors are caught at startup, not at runtime.
+- **Calling framework APIs in feature `__init__`** — the feature constructor must not call
+  any `gui_do` runtime APIs. All runtime interactions must occur in `build` or later phases.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for how features are activated after bootstrap, [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-mapping-and-routing) for action registry wiring, and [8.11 Persistence and Workspace/Session State](#811-persistence-and-workspacesession-state) for workspace restore behavior that runs after bootstrap.
+- §8.2 Feature Lifecycle — features declared here run their lifecycle through the framework
+- §8.3 Events and Actions — `action_entries` drive action registration
+- §8.9 Scene, Window, and Task-Panel Presentation Models — `scene_bundle_entries` and
+  `feature_window_bundle_entries` configure presentation
+
+For field-level reference for all spec types listed above, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -622,116 +1202,142 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Feature lifecycle orchestration is the primary behavior model in gui_do. The lifecycle system provides a principled way to structure application code so that construction, wiring, event handling, frame updates, and rendering each happen in a defined phase with clear invariants. Without this structure, it is easy to accidentally write code that assumes something exists before it is created, or that leaves subscriptions active after a scene exits.
+The feature lifecycle system is what allows `gui_do` to compose applications from independent,
+self-contained behavioral units without any of them needing to know about each other. A
+`Feature` declares its resource requirements, receives those resources through the `host`
+argument during each lifecycle phase, and manages its own state. The framework provides the
+correct ordering of phases, the routing of events, and the cleanup of features on scene
+transitions. The feature author only needs to implement the methods and declare the requirements.
 
-The framework activates and deactivates complete feature sets as scenes transition. This makes multi-scene applications straightforward: each scene's features start cleanly and stop cleanly, with no risk of stale state leaking from one scene to the next.
+This system exists because the alternative — a monolithic application class that manages all
+state and behavior — does not scale. When an application grows beyond a few screens of code,
+a monolith becomes difficult to test, difficult to refactor, and difficult to extend. The
+feature model encourages small, focused, independently testable units with clearly separated
+concerns.
 
 #### Mental model and lifecycle placement
 
-Think of each feature as a self-contained behavioral object with separated phases. The lifecycle is not an ad-hoc collection of callbacks; it is a deliberate contract. `build` constructs; `bind_runtime` wires; `handle_event` routes; `on_update` progresses; `draw` renders. Mixing responsibilities across phases is the single most common source of lifecycle bugs.
+A Feature is a state machine with distinct phases. `build` is the construction state; it runs
+once when the scene activates. `bind_runtime` is the wiring state; it runs once after all
+features have been built. The event loop then repeatedly calls `on_update` and `draw` every
+frame, and `handle_event` for every routed event. When the scene exits, teardown hooks run
+and the feature is deactivated.
 
-Features are registered via `FeatureSpec` in the bootstrap config and instantiated by `FeatureManager`. They are not singletons; each feature instance belongs to exactly one scene context.
+The key mental model for lifecycle placement is: **build creates, bind connects, update drives,
+draw renders, handle_event responds**. Any code that violates this assignment — subscribing in
+`build`, creating controls in `bind_runtime`, running animations in `build` — will produce
+bugs that are often subtle and hard to diagnose.
 
 #### Primary public APIs and key types
 
-**Feature base classes (Tier 1):** `Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`, `FeatureMessage`, `FeatureManager`, `ScenePresentationModel`, `SceneSetupSpec`, `setup_standard_font_roles`.
+From **Tier 1**:
+- `Feature` — standard interactive feature; builds controls, handles events
+- `DirectFeature` — lightweight feature that renders directly to the surface without the control tree
+- `LogicFeature` — feature with no UI; for domain logic, shared state, background computation
+- `RoutedFeature` — a `Feature` that additionally participates in action routing
+- `FeatureMessage` — a named message with optional payload, for loose-coupled cross-feature events
+- `FeatureManager` — manages the collection of active features; usually not needed directly
+- `ScenePresentationModel` — holds scene-level presentation context; available on host
+- `SceneSetupSpec` — static specification for a scene's layout and feature list
 
-**Spec types:** `FeatureSpec`, `RoutedRuntimeSpec`, `RoutedFeatureLifecycleSpec`.
-
-**Routed lifecycle helpers (Tier 18):** `setup_routed_feature_runtime`, `register_routed_feature_companions`, `bind_routed_feature_lifecycle`, `shutdown_routed_feature_lifecycle`, `bind_feature_logic_aliases`, `register_companion_logic_features`, `ActiveTabUpdateRouter`, `TabLayoutContext`.
+From **Tier 18** (advanced wiring helpers):
+- `setup_routed_runtime`, `shutdown_routed_runtime` — wire/unwire a full `RoutedRuntimeSpec`
+- `bind_routed_feature_lifecycle`, `shutdown_routed_feature_lifecycle` — per-feature routed wiring
+- `register_routed_feature_companions` — register logic companion features alongside a routed feature
+- `bind_feature_event_subscription`, `unbind_feature_event_subscription` — managed event subscriptions
 
 #### Typical usage flow
 
-1. Choose the feature type that matches the responsibility: `Feature` for interactive UI, `LogicFeature` for background computation or shared state, `DirectFeature` for full-screen rendering, `RoutedFeature` for action-routing-heavy features.
-2. Declare `HOST_REQUIREMENTS` as a class attribute mapping phase names to required host attribute tuples.
-3. Implement `build` to create controls and observables.
-4. Implement `bind_runtime` to wire subscriptions, cross-feature links, and routed lifecycle helpers.
-5. Implement `handle_event`, `on_update`, and `draw` as needed.
-6. Implement `shutdown_runtime` to dispose subscriptions and clean up routed registrations.
-7. Register the feature via `FeatureSpec` in the bootstrap config.
+1. Subclass the appropriate Feature type (`Feature`, `LogicFeature`, etc.).
+2. Declare `HOST_REQUIREMENTS` — a dict mapping lifecycle method names to tuples of required
+   host attribute names.
+3. Implement `build(host)` — create controls, initialize observable state.
+4. Implement `bind_runtime(host)` — subscribe to observables, bind controls to data, wire
+   cross-feature interactions.
+5. Optionally implement `on_update(host)`, `handle_event(host, event)`, `draw(host, surface, theme)`.
+6. Implement `shutdown_runtime(host)` — dispose subscriptions and any managed resources.
+7. Register the feature via `feature_entries` in `HostApplicationBindingSpec`.
 
 #### Minimal example
 
 ```python
-from pygame import Rect
+from gui_do import Feature, ObservableValue, LabelControl
 
-from gui_do import Feature, LabelControl, ObservableValue, PanelControl
+class GreetingFeature(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app",),
+    }
 
-
-class StatusFeature(Feature):
-    HOST_REQUIREMENTS = {"build": ("app",), "bind_runtime": ()}
-
-    def __init__(self) -> None:
-        super().__init__("status", scene_name="main")
-        self.status_text = ObservableValue("Ready")
-        self._unsub = None
-
-    def build(self, host) -> None:
-        self.root = host.app.add(
-            PanelControl("status_root", Rect(8, 8, 320, 80)),
-            scene_name="main",
+    def build(self, host):
+        self.greeting = ObservableValue("Hello!")
+        self._label = LabelControl(
+            rect=host.screen_rect.inflate(-40, -40),
+            text=self.greeting.get(),
         )
-        self.label = self.root.add(
-            LabelControl("status_label", Rect(8, 8, 260, 24), "Ready")
-        )
+        host.controls.add(self._label)
+        self._sub = None
 
-    def bind_runtime(self, host) -> None:
-        self._unsub = self.status_text.subscribe(
-            lambda text: setattr(self.label, "text", text)
+    def bind_runtime(self, host):
+        self._sub = self.greeting.subscribe(
+            lambda v: self._label.set_text(v)
         )
 
-    def shutdown_runtime(self, host) -> None:
-        if self._unsub is not None:
-            self._unsub()
-            self._unsub = None
+    def shutdown_runtime(self, host):
+        if self._sub is not None:
+            self.greeting.unsubscribe(self._sub)
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: logic-presentation split
 
-The most scalable pattern for complex features is the logic plus presentation split. A `LogicFeature` owns all domain state and computation; a companion `RoutedFeature` owns all UI and action routing. Wire them together through `register_routed_feature_companions` so their lifecycles are synchronized:
+A `LogicFeature` computes state and exposes it as observables; a `RoutedFeature` subscribes
+and drives the UI. The two are registered as companions:
 
 ```python
-class AnalysisLogicFeature(LogicFeature):
-    HOST_REQUIREMENTS = {"bind_runtime": ()}
+# Logic side
+class CountLogic(LogicFeature):
+    HOST_REQUIREMENTS = {"build": ("app",)}
+    def build(self, host):
+        self.count = ObservableValue(0)
+    def increment(self):
+        self.count.set(self.count.get() + 1)
 
-    def __init__(self) -> None:
-        super().__init__("analysis_logic", scene_name="analysis")
-        self.result = ObservableValue(None)
-        self.progress = ObservableValue(0.0)
-
-    def bind_runtime(self, host) -> None:
-        # Start background work via cooperative scheduler
-        pass
-
-
-class AnalysisFeature(RoutedFeature):
-    HOST_REQUIREMENTS = {"build": ("app",), "bind_runtime": ()}
-
-    def __init__(self) -> None:
-        super().__init__("analysis", scene_name="analysis")
-
-    def build(self, host) -> None:
-        # Create UI controls for result display
-        pass
-
-    def bind_runtime(self, host) -> None:
-        logic: AnalysisLogicFeature = host.analysis_logic
-        self._unsub_result = logic.result.subscribe(self._on_result)
-        self._unsub_progress = logic.progress.subscribe(self._on_progress)
+# Presentation side
+class CountDisplay(RoutedFeature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app", "_count_logic"),
+    }
+    def build(self, host):
+        self._label = LabelControl(rect=host.screen_rect, text="0")
+        host.controls.add(self._label)
+    def bind_runtime(self, host):
+        self._sub = host._count_logic.count.subscribe(
+            lambda v: self._label.set_text(str(v))
+        )
 ```
-
-Use `RoutedFeatureLifecycleSpec` with `bind_routed_feature_lifecycle` to declaratively register action hotkeys, shortcut overlays, focus toggles, and event subscriptions together in one coordinated operation. Call `shutdown_routed_feature_lifecycle` in teardown to ensure symmetric cleanup.
 
 #### Common mistakes and anti-patterns
 
-- Subscribing to observables in `build` before sibling features and their state are guaranteed to exist. Always subscribe in `bind_runtime`.
-- Implementing expensive computation directly in `on_update` instead of delegating to a cooperative scheduler coroutine or data pipeline.
-- Using `RoutedFeatureLifecycleSpec` without implementing the matching `shutdown_routed_feature_lifecycle` call. This leaves action hotkeys and event subscriptions active after the feature's scene deactivates.
-- Creating controls in `handle_event` or `on_update`. Controls must be created in `build` to participate in the scene tree correctly.
+- **Subscribing in `build`** — sibling feature observables may not exist yet. Always subscribe
+  in `bind_runtime`.
+- **Accessing sibling features in `build`** — sibling build order is not guaranteed. Use
+  `bind_runtime` for any cross-feature access.
+- **Skipping `shutdown_runtime` cleanup** — subscriptions not disposed during shutdown
+  produce memory leaks and phantom callbacks.
+- **Creating controls outside of `build`** — controls created in `bind_runtime` or later may
+  miss the initial layout pass.
+- **Using `DirectFeature` for interactive UI** — `DirectFeature` bypasses the control tree
+  and does not participate in hit-testing or focus. Use `Feature` for any interactive element.
 
 #### Cross-links to related systems
 
-See [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap-and-host-configuration) for how features are registered, [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-mapping-and-routing) for event routing to feature handlers, [8.4 State and Observables](#84-state-and-observables) for the reactive data model, and [8.10 Scheduling, Timing, Animation, and Transitions](#810-scheduling-timing-animation-and-transitions) for background work patterns.
+- §8.1 Bootstrap — features are registered via `feature_entries` in the bootstrap spec
+- §8.3 Events and Actions — events are routed to `handle_event`; `RoutedFeature` receives named action messages
+- §8.4 State and Observables — observables drive cross-feature reactive state
+
+For field-level reference for `FeatureSpec`, `RoutedRuntimeSpec`, and `RuntimeSceneSpec`, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -743,96 +1349,145 @@ See [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap
 
 #### What it is and why it exists
 
-The events, actions, and input mapping system translates raw pygame input into stable semantic events and routes them through a deterministic policy chain. Without this layer, every feature would need to implement its own input interpretation, key-scope filtering, and routing fallback logic, producing inconsistent behavior and duplicate code across the application. This system centralizes all of that so feature authors deal only with clean, typed `GuiEvent` objects and named action identifiers.
+`gui_do` maintains a strict normalization layer between raw pygame input and application-level
+event handling. Every raw pygame event is converted to a `GuiEvent` before any framework or
+application code sees it. This normalization exists for three reasons: it provides a type-safe,
+semantically meaningful event type (via the `EventType` enum) instead of raw integer event
+types; it attaches metadata that the framework adds during routing (such as scene-local pointer
+coordinates, control identifiers, and window focus context); and it provides propagation
+control (`propagation_stopped`, `default_prevented`) that allows features to intercept and
+consume events in a predictable, documented way.
+
+The action system provides a named command abstraction on top of the event system. Instead of
+checking for specific key codes in every feature's `handle_event`, a developer declares a named
+action (e.g., `"open_panel"`) and binds it to a key via the `InputMap`. The `ActionManager`
+dispatches the named action when the key is pressed. Features respond to action names, not to
+raw key codes, making it trivial to rebind keys without changing any feature code.
 
 #### Mental model and lifecycle placement
 
-The mental model has three distinct concerns. The event system normalizes and routes `GuiEvent` objects through a stable dispatch pipeline — overlays first, then focus-based keyboard routing, then scene and feature handlers. The action system maps semantic action names to executing handlers. The input map bridges the two: keys and chords in the input map fire action IDs when triggered, and the action manager looks up and executes the corresponding handler.
-
-This system operates during the frame loop, after features have been built and bound. It does not participate in `build` or `bind_runtime` directly, though features register action handlers and subscriptions during those phases.
+Think of the event system as a funnel that narrows from raw input to typed events to named
+actions. At the wide end, raw pygame events arrive in arbitrary order. The funnel normalizes
+them to `GuiEvent` objects, applies routing logic (overlay state, focus state, scene scope),
+and delivers them either to features via `handle_event` or to action handlers via the action
+registry. Named actions are the narrowest part of the funnel: by the time an action fires, the
+platform-specific key code is gone and only the semantic intent ("open panel", "exit") remains.
 
 #### Primary public APIs and key types
 
-**Event types (Tier 4):** `GuiEvent`, `EventType`, `EventPhase`, `EventManager`, `EventBus`, `InputSnapshot`, `Signal`, `SignalConnection`, `ValueChangeCallback`, `ValueChangeReason`, `GestureRecognizer`, `EventRecorder`, `EventPlayback`, `RecordedEvent`.
+From **Tier 4**:
+- `GuiEvent` — canonical normalized event object
+- `EventType` — enum: `PASS`, `QUIT`, `KEY_DOWN`, `KEY_UP`, `MOUSE_BUTTON_DOWN`, `MOUSE_BUTTON_UP`, `MOUSE_MOTION`, `MOUSE_WHEEL`, `TEXT_INPUT`, `TEXT_EDITING`
+- `EventPhase` — enum: `CAPTURE`, `TARGET`, `BUBBLE`
+- `EventManager` — manages event normalization and dispatch
+- `EventBus` — pub/sub bus for typed events
+- `ActionManager` — registers and dispatches named actions; provides `bind_global_key`, `unbind_global_key`, `trigger_global_key_from_event`
+- `ActionRegistry` — holds `ActionDescriptor` entries by action id
+- `ActionDescriptor` — describes a named action with label and optional callback
+- `InputMap` — maps (key, modifier, scope) tuples to action ids; provides `InputBinding`
+- `InputBinding` — a single key-to-action mapping with optional modifier and scope
+- `KeyChordManager`, `KeyChord`, `ChordStep` — multi-key chord sequences
+- `FocusManager` — tracks which control has keyboard focus
+- `FocusScope`, `FocusScopeManager` — named focus groups for tab-order scoping
+- `WindowFocusManager` — manages focus cycling between floating windows
+- `FocusRing` — ordered cycle of focus candidates within a scope
+- `GestureRecognizer` — recognizes multi-step pointer gestures
+- `EventRecorder`, `EventPlayback`, `RecordedEvent` — record and replay event sequences for testing
+- `InputSnapshot` — immutable snapshot of keyboard/pointer state at a point in time
+- `Signal`, `SignalConnection` — typed callback signal for one-to-many synchronous dispatch
 
-**Action and input types (Tier 4):** `ActionManager`, `ActionDescriptor`, `ActionRegistry`, `ActionContext`, `ActionMiddleware`, `InputMap`, `InputBinding`, `KeyChordManager`, `KeyChord`, `ChordStep`.
+From **Tier 1** (spec types):
+- `ActionSpec` — declarative action descriptor for bootstrap
+- `ActionHotkeySpec` — binds a hotkey to an action id
+- `ControlKeyBindingSpec` — binds a key to a specific control
+- `EventSubscriptionSpec` — declarative event handler registration
 
-**Focus routing types (Tier 4):** `FocusManager`, `FocusScope`, `FocusScopeManager`, `WindowFocusManager`, `FocusRing`.
+From **Tier 30**:
+- `InteractionStateMachine`, `InteractionPhase`, `InteractionContext`, `InteractionTransition` — multi-phase pointer/keyboard gesture state machine
 
-**Interaction state machine (Tier 30):** `InteractionPhase`, `InteractionContext`, `InteractionTransition`, `InteractionStateMachine`.
-
-**Spec types (Tier 1):** `ActionSpec`, `ActionHotkeySpec`, `ControlKeyBindingSpec`, `EventSubscriptionSpec`, `SceneCommandPaletteSpec`.
-
-**`EventType` values:** `PASS`, `QUIT`, `KEY_DOWN`, `KEY_UP`, `MOUSE_BUTTON_DOWN`, `MOUSE_BUTTON_UP`, `MOUSE_MOTION`, `MOUSE_WHEEL`, `TEXT_INPUT`, `TEXT_EDITING`.
-
-**`EventPhase` values:** `CAPTURE`, `TARGET`, `BUBBLE`.
-
-**`GuiEvent` fields:** `kind`, `type`, `key`, `pos`, `rel`, `raw_pos`, `raw_rel`, `button`, `wheel_x`, `wheel_y`, `mod`, `text`, `control_id`, `group`, `window`, `task_panel`, `task_id`, `error`, `source_event`, `phase`, `propagation_stopped`, `default_prevented`.
-
-**`GuiEvent` helpers:** `is_kind`, `is_key_down`, `is_key_up`, `is_mouse_down`, `is_mouse_up`, `is_mouse_motion`, `is_mouse_wheel`, `is_text_event`, `is_left_down`, `is_left_up`, `is_right_down`, `is_right_up`, `is_middle_down`, `is_middle_up`, `clone`, `with_phase`, `stop_propagation`, `prevent_default`, `wheel_delta`, `collides`.
+From **Tier 4** (action middleware):
+- `ActionContext`, `ActionMiddleware` — middleware pipeline for action dispatch interception
 
 #### Typical usage flow
 
-1. Declare named actions with `ActionSpec` entries in the bootstrap config.
-2. Bind hotkeys with `ActionHotkeySpec` or `ControlKeyBindingSpec` entries, or use `RoutedRuntimeSpec` for auto-wiring.
-3. Implement action handlers on the host object or in feature code.
-4. In `handle_event`, use `GuiEvent` helper methods rather than raw attribute comparisons for readable, future-proof event checks.
-5. Return `True` from `handle_event` when the event is consumed; return `None` or `False` to pass it on.
+1. Declare named actions via `ActionBindingSpec` entries in `HostApplicationBindingSpec`.
+2. Optionally declare `ActionHotkeySpec` entries (or include them in `RoutedRuntimeSpec`)
+   to bind keys to action ids.
+3. In feature code, implement `handle_event` to check `event.type` and `event.key` for
+   events not covered by named actions.
+4. For multi-phase pointer interactions, use `InteractionStateMachine` to track phases
+   (pressed, dragging, released) with guarded transitions.
 
 #### Minimal example
 
 ```python
-# In bootstrap config
-action_specs = (
-    ActionSpec(action_id="exit", label="Exit", kind="exit"),
-    ActionSpec(action_id="palette_open", label="Open Command Palette", kind="palette_open"),
-)
+import pygame
+from gui_do import Feature, GuiEvent, EventType
 
-# In a feature's handle_event
-def handle_event(self, host, event) -> bool:
-    if event.is_key_down() and event.key == pygame.K_r:
-        self._refresh()
-        return True
-    return False
+class KeyboardFeature(Feature):
+    HOST_REQUIREMENTS = {"build": ("app",), "bind_runtime": ("app",)}
+
+    def build(self, host):
+        pass
+
+    def bind_runtime(self, host):
+        pass
+
+    def handle_event(self, host, event: GuiEvent) -> bool:
+        if event.type == EventType.KEY_DOWN and event.key == pygame.K_SPACE:
+            print("Space pressed!")
+            return True   # consume the event
+        return False
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: interaction state machine for drag tracking
 
-Use `InteractionStateMachine` for guarded multi-phase pointer interactions. This is useful for drag-and-drop, resize handles, and multi-step gesture recognition where each phase has explicit entry conditions and exit transitions:
+`InteractionStateMachine` tracks pointer gestures through phases without writing ad-hoc state
+machines in `handle_event`:
 
 ```python
-from gui_do import (
-    InteractionPhase,
-    InteractionStateMachine,
-    InteractionTransition,
-)
+from gui_do import InteractionStateMachine, InteractionPhase, InteractionContext
 
+class DragFeature(Feature):
+    HOST_REQUIREMENTS = {"build": ("app", "screen_rect", "controls"), "bind_runtime": ("app",)}
 
-sm = InteractionStateMachine(initial=InteractionPhase.IDLE)
-sm.add_transition(
-    InteractionTransition(
-        from_phase=InteractionPhase.IDLE,
-        to_phase=InteractionPhase.PRESSING,
-        guard=lambda ctx: ctx.event.is_left_down(),
-        action=self._begin_drag,
-    )
-)
+    def build(self, host):
+        self._ism = InteractionStateMachine()
+
+    def handle_event(self, host, event: GuiEvent) -> bool:
+        ctx = InteractionContext(event=event)
+        new_phase = self._ism.process(ctx)
+        if new_phase == InteractionPhase.DRAG:
+            # respond to drag motion
+            return True
+        return False
 ```
 
-For deterministic regression testing, record live event sequences with `EventRecorder` and replay them with `EventPlayback`. This captures the exact sequence of normalized `GuiEvent` objects seen during a test run and allows the sequence to be replayed precisely later.
-
-For complex multi-step key sequences, use `KeyChordManager` with `KeyChord` and `ChordStep` to register chord sequences that fire only when the full sequence is completed.
+`EventRecorder` and `EventPlayback` are used in the test suite to deterministically replay
+sequences of events — see §9 Testing for usage.
 
 #### Common mistakes and anti-patterns
 
-- Handling raw pygame events in feature code by checking `event.source_event` attributes directly instead of using `GuiEvent` helper methods. This bypasses normalization and produces platform-dependent behavior.
-- Assuming action handlers are globally registered. Actions registered via `ActionSpec` are scene-scoped. They are active only when the scene they belong to is active.
-- Forgetting to respect `propagation_stopped`. When processing events in custom routing loops or feature composites, always check whether the event has been consumed before processing it further.
-- Using `bind_global_key` for non-command-palette uses without understanding that global keys fire before any focus or overlay check.
+- **Handling raw pygame events instead of `GuiEvent`** — raw events lack the routing metadata
+  that gui_do attaches. Always receive events through `handle_event`, which already receives
+  normalized `GuiEvent` instances.
+- **Registering scene-scoped actions as global keys** — global keys (`bind_global_key`) are
+  checked before focus dispatch and apply to all scenes. If an action should only be active in
+  one scene, use scene-scoped `InputMap` bindings instead.
+- **Forgetting to return `True` when consuming** — if `handle_event` handles an event but
+  returns `None` or `False`, the event continues to propagate to other features. This can
+  produce double-handling and unexpected behavior.
+- **Not checking `propagation_stopped`** — if custom routing code delivers events manually,
+  always check `event.propagation_stopped` before delivering to the next recipient.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for how features receive and handle events, [8.7 Focus and Accessibility](#87-focus-and-accessibility) for how focus state affects routing order, and [8.8 Overlays, Dialogs, Notifications, and Command Surfaces](#88-overlays-dialogs-notifications-and-command-surfaces) for how overlays intercept routing.
+- §8.2 Feature Lifecycle — events are delivered through `handle_event`
+- §8.7 Focus and Accessibility — focus state affects which features receive keyboard events
+- §8.8 Overlays — overlays intercept events before features during modal operation
+
+For field-level reference for `ActionSpec`, `ActionHotkeySpec`, `InputBinding`, and shortcut specs, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -844,104 +1499,149 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Reactive state management is the preferred data model for any value in gui_do that drives UI. Instead of writing imperative refresh calls every time a value changes, you express values as observables and let consumers subscribe once. The producer changes the value; all consumers update automatically. This decoupling makes features independently testable, makes UI consistently synchronized, and eliminates an entire category of "forgot to update the label" bugs.
+The state and observables system provides the reactive data layer that decouples producers of
+data from consumers of data. In `gui_do`, the state system exists at two levels. At the local
+level, individual features own `ObservableValue`, `ObservableList`, and `ObservableDict`
+instances that drive their controls and are accessible to sibling features. At the application
+level, `AppStateStore` provides a single source of truth for state that must be shared across
+scenes or that benefits from transactional update semantics.
+
+Without a reactive state layer, feature code would need to imperatively update every control
+that displays a piece of data whenever that data changes — the exact coupling problem that the
+framework's data-driven design is built to avoid. Observable values solve this by making state
+self-notifying: write to the value, and every subscriber (control, sibling feature, diagnostic
+system) is updated automatically.
 
 #### Mental model and lifecycle placement
 
-Observables are the data bus. Features write values into observables; controls and sibling features read values from observables through subscriptions. The framework itself is not in this path — observable subscriptions are pure Python callbacks, and the reactive system is entirely library-level, not framework-level. This means you can use observables in tests without any framework initialization.
+Observables are created during `build` (or in the feature's `__init__` for values that exist
+before the feature is built). Subscriptions are created during `bind_runtime`. Subscriptions
+are disposed during `shutdown_runtime`. Observable values are written from any phase — from
+`on_update` for per-frame state, from `handle_event` for event-driven state, or from background
+coroutines for async state.
 
-Create observables in feature `__init__` or `build`. Subscribe in `bind_runtime`. Dispose subscriptions in `shutdown_runtime`. This ordering guarantees that subscribers are active when they should be and inactive when the feature is gone.
+Think of observables as the "wires" in the data-driven model. The spec graph describes the
+structure; the observables carry the live data through that structure at runtime.
 
 #### Primary public APIs and key types
 
-**Reactive primitives (Tier 3):** `ObservableValue`, `ObservableList`, `ObservableDict`, `CollectionChange`, `ChangeKind`, `ComputedValue`, `PresentationModel`, `reactive_batch`, `is_batching`, `InvalidationTracker`.
+From **Tier 3**:
+- `ObservableValue` — wraps a single reactive value; `.subscribe(cb)` returns a handle; `.get()` / `.set(v)` for access
+- `ComputedValue` — derived `ObservableValue` that recomputes from source observables automatically
+- `PresentationModel` — base class for view-model objects; holds a collection of `ObservableValue` fields
+- `ObservableList` — reactive mutable list; fires `CollectionChange` events with `ChangeKind` on mutation
+- `ObservableDict` — reactive mutable dict; same semantics as `ObservableList`
+- `ChangeKind` — enum: added, removed, moved, replaced
+- `CollectionChange` — event carrying kind, affected index/key, old and new values
+- `CollectionViewQuery` — filter/sort/group specification for a live collection view
+- `CollectionView` — a live filtered/sorted view over an `ObservableList`
+- `Binding`, `BindingGroup` — named property-to-observable bindings for controls
+- `ObservableStream` — push-based observable sequence (event stream, not value)
+- `SelectionModel`, `SelectionMode` — single/multi-selection tracking over a collection
+- `InvalidationTracker` — mark-and-sweep dirty tracking for explicit invalidation patterns
+- `reactive_batch` — context manager that batches all subscriber notifications until exit
+- `is_batching` — predicate: returns `True` if currently inside a `reactive_batch` block
 
-**Binding and view helpers (Tier 3):** `Binding`, `BindingGroup`, `CollectionView`, `CollectionViewQuery`, `ObservableStream`, `SelectionModel`, `SelectionMode`.
-
-**Transactional state store (Tier 27):** `AppStateStore`, `StateSelector`, `StateTransaction`.
+From **Tier 27**:
+- `AppStateStore` — single-source-of-truth state container with selector and transaction support
+- `StateSelector` — derives a computed slice of `AppStateStore` state
+- `StateTransaction` — atomic multi-field update; subscribers fire once when transaction commits
 
 #### Typical usage flow
 
-1. Create an `ObservableValue` (or `ObservableList`/`ObservableDict`) in feature initialization.
-2. Create controls that will display the value in `build`.
-3. Subscribe the control update logic to the observable in `bind_runtime`.
-4. Mutate the observable's `.value` attribute anywhere business logic requires it; subscribers are notified automatically.
-5. Dispose the subscription callable in `shutdown_runtime`.
+1. Create `ObservableValue` instances in feature `__init__` or `build`.
+2. Pass them to controls during `build` for automatic binding.
+3. In `bind_runtime`, subscribe to sibling features' observables using `.subscribe(callback)`.
+4. Store subscription handles; dispose them in `shutdown_runtime`.
+5. Write to observables from event handlers, `on_update`, or background coroutines.
+6. For application-wide state, use `AppStateStore` with `StateSelector` for derived slices.
 
 #### Minimal example
 
 ```python
-from gui_do import ObservableValue
+from gui_do import ObservableValue, ObservableList, reactive_batch, ComputedValue
 
+# Simple reactive value
+score = ObservableValue(0)
+handle = score.subscribe(lambda v: print(f"Score: {v}"))
+score.set(42)          # prints "Score: 42"
+score.unsubscribe(handle)
 
-class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self._unsub = None
+# Derived value via ComputedValue
+display_text = ComputedValue(score, lambda s: f"Score: {s:,}")
+# display_text.get() → "Score: 42"
 
-    def bind_runtime(self, host) -> None:
-        self._unsub = self.count.subscribe(
-            lambda v: setattr(self.label, "text", str(v))
-        )
+# Reactive list
+items = ObservableList()
+items.subscribe(lambda change: print(f"Changed: {change.kind}"))
+items.append("item_a")  # fires subscriber
 
-    def on_update(self, host, dt) -> None:
-        self.count.value += 1
-
-    def shutdown_runtime(self, host) -> None:
-        if self._unsub is not None:
-            self._unsub()
-            self._unsub = None
+# Atomic batch update
+x = ObservableValue(0)
+y = ObservableValue(0)
+with reactive_batch():
+    x.set(10)
+    y.set(20)
+# both subscribers fire once after the block exits
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: AppStateStore with selectors and transactions
 
-For applications with many features sharing the same domain state, use `AppStateStore` as a single source of truth. Derive feature-local reactive slices with `StateSelector`, which creates computed observables derived from specific store fields. Apply coordinated multi-field mutations with `StateTransaction` so subscribers see the fully updated state rather than intermediate partial states:
+`AppStateStore` provides a Redux-style central state store for application-wide data. Selectors
+derive computed values; transactions batch updates atomically:
 
 ```python
 from gui_do import AppStateStore, StateSelector, StateTransaction
 
+store = AppStateStore({"score": 0, "level": 1})
 
-store = AppStateStore({"count": 0, "name": "", "active": False})
-count_selector = StateSelector(store, lambda s: s["count"])
+score_selector = StateSelector(store, lambda s: s["score"])
+score_selector.subscribe(lambda v: print(f"Score changed to {v}"))
 
-# count_selector behaves like ObservableValue for consumers
-count_selector.subscribe(lambda v: print(f"Count changed to {v}"))
-
-# Atomic multi-field update
 with StateTransaction(store) as tx:
-    tx["count"] = 42
-    tx["name"] = "Alice"
+    tx.set("score", 100)
+    tx.set("level", 2)
+# score_selector and any "level" selectors fire once after transaction
 ```
 
-Use `CollectionView` with `CollectionViewQuery` to create sorted and filtered live views of `ObservableList` data. The view re-sorts and re-filters automatically when the source list changes, making it suitable for driving `ListViewControl` or `DataGridControl` with minimal coupling between the data model and the presentation layer.
-
-Use `reactive_batch` whenever you need to apply multiple related observable updates that should fire downstream subscribers only once:
+`CollectionView` provides a live filtered/sorted view over an `ObservableList` using a
+`CollectionViewQuery`. The view updates automatically when the source list changes and applies
+the filter/sort without modifying the source:
 
 ```python
-from gui_do import reactive_batch
+from gui_do import ObservableList, CollectionView, CollectionViewQuery
 
-with reactive_batch():
-    self.title.value = "New Title"
-    self.count.value = 0
-    self.active.value = True
-# All three subscribers fire here, once, after all mutations
+raw = ObservableList([3, 1, 4, 1, 5, 9, 2])
+view = CollectionView(raw, CollectionViewQuery(sort_key=lambda x: x, filter_fn=lambda x: x > 2))
+# view contains [3, 4, 5, 9], sorted, filtered live
 ```
 
 #### Common mistakes and anti-patterns
 
-- **Polling in `on_update`.** Calling `observable.value` every frame to check for changes wastes CPU and introduces up to one frame of latency. Subscribe to the observable and react only when the value actually changes.
-- **Subscribing in `build`.** Sibling features may not have finished building yet, so cross-feature observables may not exist. Always subscribe in `bind_runtime`.
-- **Leaking subscriptions.** `subscribe` returns a callable that must be called to unsubscribe. If you discard the return value or forget to call it at teardown, the subscription remains active and fires on dead objects.
-- **Using plain Python lists or dicts for shared state.** Plain collections are invisible to the reactive system. If two features share a plain list, mutations in one feature do not notify the other. Always use `ObservableList` or `ObservableDict` for shared mutable collections.
+- **Polling `.get()` in `on_update`** — this burns CPU every frame and introduces one-frame
+  display latency. Subscribe once and update the UI in the callback.
+- **Subscribing in `build`** — at `build` time, sibling features may not have been built yet.
+  Observable subscriptions that depend on sibling state must be created in `bind_runtime`.
+- **Not disposing subscriptions in `shutdown_runtime`** — undisposed subscriptions prevent the
+  feature from being garbage-collected and cause callbacks to fire on destroyed objects.
+- **Sharing mutable plain Python `list` or `dict` across features** — plain collections have no
+  notification mechanism. Use `ObservableList` and `ObservableDict` whenever a collection is
+  shared between features and one feature must react to changes made by another.
+- **Using `StateTransaction` for local-only state** — `AppStateStore` and `StateTransaction`
+  are for application-wide shared state. For state that is local to a single feature, plain
+  `ObservableValue` instances are more appropriate and carry less overhead.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for lifecycle-safe subscription management, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for how controls bind to observable values, and [8.11 Persistence and Workspace/Session State](#811-persistence-and-workspacesession-state) for serializing and restoring state store snapshots.
+- §8.2 Feature Lifecycle — observables are created in `build`, subscribed in `bind_runtime`
+- §8.5 Controls — controls accept observables for reactive data binding
+- §8.11 Persistence — `WorkspacePersistenceManager` saves and restores application state
+- §8.14 Data and Dataflow Helpers — `CollectionView`, `SortFilterProxySource`, and `DataflowPipeline` extend the observable model for data-intensive scenarios
 
 [Back to Table of Contents](#table-of-contents)
 
 ---
+
 
 ### 8.5 Controls and Control Composition
 
@@ -949,98 +1649,172 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Controls are the reusable UI primitives from which gui_do interfaces are assembled. Rather than drawing directly to surfaces in every feature, you compose typed control objects that handle hit-testing, focus eligibility, layout participation, and rendering in a consistent, predictable way. The control tree model ensures that all of these concerns are coordinated without features needing to implement any of them manually.
+Controls are the reusable visual and interactive primitives that features compose to build
+their UI. They handle their own rendering, hit-testing, and event dispatch within the control
+tree. By using controls rather than drawing directly to the screen surface, features benefit
+from the framework's layout engine, focus system, accessibility tree, and theme system — all
+without any additional work. A feature creates controls in `build`, configures them in
+`bind_runtime`, and lets the framework drive rendering from that point on.
+
+The control system is organized into two tiers: primary controls (Tier 12) cover the
+essential building blocks for any interactive UI, and extended controls (Tier 13) provide
+specialized components for richer interfaces.
 
 #### Mental model and lifecycle placement
 
-Controls form a parent–child tree rooted at scene root panels. A feature owns exactly one root `PanelControl` that it registers with the scene, and all of its UI lives inside that root. Controls never reach across feature boundaries — a feature that needs data from another feature reads that data through observables and messages, not by holding a reference to a sibling feature's control.
-
-Controls are created in `build` and wired in `bind_runtime`. Modifying the control tree outside `build` requires care; adding or removing controls at runtime can affect layout passes and focus ring state in ways that are not always obvious.
+Controls are children of panels which are children of scene roots. A feature owns one root
+`PanelControl` (or a `WindowPresenter` that owns the panel). Every control a feature creates
+lives inside that root panel. Controls from different features never share parent panels —
+cross-feature interactions go through observables and messages, not direct control references.
+Controls are created once during `build` and persist for the scene's lifetime.
 
 #### Primary public APIs and key types
 
-**Primary controls (Tier 12):** `PanelControl`, `LabelControl`, `ButtonControl`, `ToggleControl`, `SliderControl`, `ScrollbarControl`, `CanvasControl`, `CanvasEventPacket`, `CanvasViewport`, `FrameControl`, `ImageControl`, `ArrowBoxControl`, `ButtonGroupControl`, `TabControl`, `TabItem`, `DockWorkspacePanel`.
+From **Tier 12** (Primary Controls):
+- `PanelControl` — container for other controls; the standard root element
+- `LabelControl` — static or dynamic text display
+- `ButtonControl` — clickable button with optional icon and label
+- `ToggleControl` — boolean on/off control
+- `SliderControl` — continuous value selection along an axis
+- `ScrollbarControl` — scroll position indicator and drag handle
+- `CanvasControl`, `CanvasEventPacket` — raw drawing surface with pointer event support
+- `CanvasViewport` — scrollable/zoomable wrapper around `CanvasControl`
+- `FrameControl` — bordered container; provides visual grouping
+- `ImageControl` — displays a pygame surface or loaded image asset
+- `ArrowBoxControl` — a box with a directional arrow indicator
+- `ButtonGroupControl` — mutually exclusive button selection group
+- `TabControl`, `TabItem` — tabbed panel switcher
+- `DockWorkspacePanel` — panel embedding a `DockWorkspace` layout
 
-**Extended controls (Tier 13):** `TextInputControl`, `TextAreaControl`, `RichLabelControl`, `DropdownControl`, `DropdownOption`, `ListViewControl`, `ListItem`, `OverlayPanelControl`, `DataGridControl`, `GridColumn`, `GridRow`, `TreeControl`, `TreeNode`, `SplitterControl`, `SpinnerControl`, `RangeSliderControl`, `ColorPickerControl`, `ScrollViewControl`, `ProgressBarControl`, `AnimatedImageControl`, `ErrorBoundary`, `WindowControl`, `TaskPanelControl`, `WindowPresenter`, `MenuBarControl`, `MenuEntry`, `SceneMenuStripControl`, `NotificationPanelControl`, `PropertyInspectorPanel`, `ToolbarControl`, `ToolbarItem`, `StatusBarControl`, `StatusSlot`, `ExpanderControl`, `DatePickerControl`, `TimePickerControl`, `BreadcrumbControl`, `BreadcrumbItem`, `SplitButtonControl`, `SplitButtonOption`, `ChipInputControl`.
+From **Tier 13** (Extended Controls):
+- `TextInputControl` — single-line text entry with cursor and selection
+- `TextAreaControl` — multi-line text editing area
+- `RichLabelControl` — text label with inline markup and mixed styling
+- `DropdownControl`, `DropdownOption` — collapsible option picker
+- `ListViewControl`, `ListItem` — virtualized scrollable item list
+- `OverlayPanelControl` — panel that renders as a floating overlay layer
+- `DataGridControl`, `GridColumn`, `GridRow` — tabular data display with sortable columns
+- `TreeControl`, `TreeNode` — hierarchical expandable item tree
+- `SplitterControl` — resizable split between two child panels
+- `SpinnerControl` — numeric value spinner with increment/decrement
+- `RangeSliderControl` — dual-handle range selection slider
+- `ColorPickerControl` — interactive color selection widget
+- `ScrollViewControl` — scrollable container with automatic scrollbars
+- `ProgressBarControl` — linear progress indicator
+- `AnimatedImageControl` — animated image display with frame control
+- `ErrorBoundary` — renders a fallback if child controls raise during render or event handling
+- `WindowControl` — chrome control for a floating draggable/resizable window
+- `TaskPanelControl` — chrome control for the scene's task panel
+- `WindowPresenter` — base class for window-level UI construction; subclass for custom windows
+- `MenuBarControl`, `MenuEntry` — horizontal menu bar with drop-down menus
+- `SceneMenuStripControl` — scene-level navigation menu strip
+- `NotificationPanelControl` — inline notification display panel
+- `PropertyInspectorPanel` — auto-generated property inspector from `PropertyRegistry`
+- `ToolbarControl`, `ToolbarItem` — horizontal toolbar with icon buttons
+- `StatusBarControl`, `StatusSlot` — bottom-of-window status bar with labeled slots
+- `ExpanderControl` — collapsible section with toggle header
+- `DatePickerControl` — calendar-based date selection
+- `TimePickerControl` — time-of-day selection
+- `BreadcrumbControl`, `BreadcrumbItem` — hierarchical path navigation
+- `SplitButtonControl`, `SplitButtonOption` — button with drop-down secondary actions
+- `ChipInputControl` — tag entry with removable chips
 
-**Builder helpers (Tier 1):** `ControlDefinition`, `build_specs_from_column_section`.
+From **Tier 1** (spec-driven control helpers):
+- `ControlDefinition` — declarative descriptor for a control spec
+- `build_specs_from_column_section` — builds control specs from a column-based section layout
 
 #### Typical usage flow
 
-1. In `build`, create a root `PanelControl` with the desired bounds and add it to the scene via `host.app.add(root, scene_name=...)`.
-2. Add child controls to the root with `root.add(...)`.
-3. Connect observable subscriptions and callback wiring in `bind_runtime`.
-4. Clean up subscriptions in `shutdown_runtime`.
+1. In `build(host)`, create a root `PanelControl` and register it with the scene via
+   `host.app.add_control(root, scene_name="main")` or equivalent.
+2. Add child controls to the root using `root.add(child_control)`.
+3. In `bind_runtime(host)`, subscribe to observables and bind callbacks to control event
+   handlers (e.g., `button.on_click = self._handle_click`).
+4. Let the framework drive rendering — do not call render methods manually.
 
 #### Minimal example
 
 ```python
-from pygame import Rect
+import pygame
+from gui_do import Feature, PanelControl, LabelControl, ButtonControl, ObservableValue
 
-from gui_do import (
-    ButtonControl,
-    Feature,
-    LabelControl,
-    ObservableValue,
-    PanelControl,
-)
+class CounterFeature(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app",),
+    }
 
-
-class MyFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("my_feature", scene_name="main")
-        self.message = ObservableValue("Ready")
-        self._unsub = None
-
-    def build(self, host) -> None:
-        self.root = host.app.add(
-            PanelControl("my_root", Rect(0, 0, 400, 300)),
-            scene_name="main",
+    def build(self, host):
+        self._count = ObservableValue(0)
+        root = PanelControl(rect=pygame.Rect(50, 50, 300, 120))
+        self._label = LabelControl(
+            rect=pygame.Rect(8, 8, 284, 30),
+            text="Count: 0",
         )
-        self.label = self.root.add(LabelControl("msg", Rect(8, 8, 384, 24), "Ready"))
-        self.root.add(
-            ButtonControl("action_btn", Rect(8, 40, 120, 28), "Do It", on_click=self._on_click)
+        btn = ButtonControl(
+            rect=pygame.Rect(8, 50, 120, 32),
+            label="Increment",
+            on_click=lambda e: self._count.set(self._count.get() + 1),
         )
+        root.add(self._label)
+        root.add(btn)
+        host.controls.add(root)
 
-    def bind_runtime(self, host) -> None:
-        self._unsub = self.message.subscribe(
-            lambda text: setattr(self.label, "text", text)
+    def bind_runtime(self, host):
+        self._sub = self._count.subscribe(
+            lambda v: self._label.set_text(f"Count: {v}")
         )
 
-    def shutdown_runtime(self, host) -> None:
-        if self._unsub:
-            self._unsub()
-
-    def _on_click(self, event) -> None:
-        self.message.value = "Done"
+    def shutdown_runtime(self, host):
+        self._count.unsubscribe(self._sub)
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: WindowPresenter for floating windows
 
-The presenter pattern separates window construction from feature lifecycle management. Subclass `WindowPresenter` and implement the window's control layout inside its `build` method. Instantiate the presenter from the feature's `build`. This is especially effective when combined with `TabbedPresenterSpec` and `TabBuilderSpec` for multi-tab window content where each tab section has its own builder:
+`WindowPresenter` is the recommended pattern for features with floating, toggle-able windows.
+Subclass it to own window layout, then instantiate it in the feature's `build`:
 
 ```python
-class ToolsWindowPresenter(WindowPresenter):
-    def build(self, host, root) -> None:
-        self.input = root.add(TextInputControl("query", Rect(8, 8, 300, 28)))
-        self.results = root.add(ListViewControl("results", Rect(8, 44, 300, 200)))
+from gui_do import WindowPresenter, LabelControl, PanelControl
+
+class InspectorPresenter(WindowPresenter):
+    def build(self, host, window_rect):
+        panel = PanelControl(rect=window_rect)
+        panel.add(LabelControl(rect=..., text="Inspector"))
+        return panel
+
+class InspectorFeature(Feature):
+    HOST_REQUIREMENTS = {"build": ("app", "screen_rect"), "bind_runtime": ("app",)}
+
+    def build(self, host):
+        from my_app.inspector_presenter import InspectorPresenter
+        self._presenter = InspectorPresenter()
+        self._presenter.build(host, window_rect=pygame.Rect(200, 100, 400, 500))
 ```
 
-Use `ErrorBoundary` to wrap any control subtree where third-party or plugin-managed controls might raise during rendering. The boundary catches the exception and renders a neutral fallback frame rather than crashing the entire scene frame.
-
-Use `CanvasControl` with `CanvasViewport` for custom drawing surfaces that need pan/zoom. `CanvasEventPacket` delivers pointer events in canvas-local coordinates, so your drawing code does not need to perform coordinate transforms manually.
-
-For declarative property panels with labeled columns, use `ControlDefinition` objects and `build_specs_from_column_section` to generate the control and label pairs from a data-driven description.
+Combine with `TabbedPresenterSpec` and `TabBuilderSpec` for multi-tab window content.
+`ErrorBoundary` wraps subtrees that may throw during rendering, rendering a fallback instead
+of crashing the frame.
 
 #### Common mistakes and anti-patterns
 
-- Creating direct cross-feature control references. If Feature A holds a reference to Feature B's `LabelControl`, changing Feature B's internal structure breaks Feature A. Always use observables or `FeatureMessage` for cross-feature communication.
-- Using controls as the source of truth for application state. Reading `label.text` to determine application state is fragile. Controls should mirror observable state, not own it.
-- Building or modifying controls outside the `build` phase (e.g., adding child panels in `on_update`). Late control additions can miss layout registration and may not appear in the focus ring.
+- **Direct cross-feature control references** — one feature holding a reference to another
+  feature's control creates hidden coupling. Share data via observables; let each feature
+  manage its own controls.
+- **Using controls as state** — a label's displayed text is not the source of truth for the
+  underlying value. Observable values own the state; controls mirror it.
+- **Creating controls outside `build`** — controls created in `bind_runtime`, `on_update`, or
+  event handlers miss the initial layout pass and may not be correctly registered with the
+  focus and hit-testing systems.
+- **Not adding a root to the scene** — a `PanelControl` created but not added to the scene
+  via the host's control registration will never be rendered or receive events.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for when and how controls are created, [8.4 State and Observables](#84-state-and-observables) for binding observable values to control properties, [8.6 Layout Systems](#86-layout-systems) for positioning controls without hardcoded pixel arithmetic, and [8.9 Scene, Window, and Task-Panel Presentation Models](#89-scene-window-and-task-panel-presentation-models) for window-level composition.
+- §8.2 Feature Lifecycle — controls are created in `build`
+- §8.6 Layout Systems — controls are positioned by layout engines
+- §8.7 Focus and Accessibility — controls participate in the focus ring and accessibility tree
+- §8.9 Scene, Window, and Task-Panel Presentation Models — `WindowPresenter` and window chrome
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1052,81 +1826,142 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Layout engines manage spatial relationships between controls so that features do not need to hardcode pixel positions that break when the display size changes. gui_do provides a family of layout engines covering the common spatial patterns: flex-direction flow, fixed grid tracks, wrapping flow, anchor-based constraints, adaptive breakpoint switching, and dock-pane workbenches.
+`gui_do` provides multiple layout engines because no single algorithm is optimal for all use
+cases. A toolbar has different spatial requirements than a data grid, which has different
+requirements than a responsive dialog that rearranges at narrow widths. Rather than exposing
+one general-purpose layout engine that requires complex configuration for every case, the
+framework provides a family of engines, each optimized for a specific spatial pattern. The
+developer chooses the simplest engine that covers the spatial requirement, keeping configuration
+minimal and readable.
+
+Layout engines exist in the framework because hardcoded pixel positions produce interfaces that
+break on window resize, on different DPI settings, and on dynamic content changes. Layout
+engines compute positions deterministically from constraints, ensuring the interface adapts
+correctly.
 
 #### Mental model and lifecycle placement
 
-Each layout engine owns a region and arranges its children according to its own rules. Engines run as a coordinated layout pass triggered by the framework's `LayoutManager` before each draw. You do not call layout manually per frame; you describe the spatial policy once, and the framework applies it when needed.
-
-Choose the simplest layout family that satisfies your requirements. Use flex for toolbars and side-by-side panels. Use grid for forms and data tables. Use constraint for dialogs with relative placement. Use adaptive policy when the arrangement must change at specific display size thresholds.
+Layout runs as a pass triggered by `LayoutManager` during the frame cycle — after controls
+are built and before drawing. Features create layout objects during `build` and register them
+with their root panel. The layout pass then measures and arranges all registered controls
+according to the engine's constraints. Changing a layout constraint after initial layout
+triggers a re-layout on the next frame.
 
 #### Primary public APIs and key types
 
-**Core layout types (Tier 8):** `LayoutAxis`, `LayoutManager`, `WindowTilingManager`, `ConstraintLayout`, `AnchorConstraint`, `DockPane`, `DockTabs`, `DockSplit`, `DockWorkspace`, `FlexLayout`, `FlexItem`, `FlexDirection`, `FlexAlign`, `FlexJustify`, `GridLayout`, `GridTrack`, `GridPlacement`, `CellCaretLayout`, `CellCaretState`, `LayoutAnimator`, `LayoutPass`, `MeasureContext`, `ArrangeContext`, `LayoutRoot`, `ResponsiveLayout`, `Breakpoint`, `SnapGrid`, `AlignmentGuide`, `SnapComposer`, `SnapTarget`, `FlowLayout`, `FlowItem`, `Viewport`.
+From **Tier 8** (Layout & Spatial):
+- `LayoutAxis` — axis enum (horizontal/vertical) used by flex and flow layouts
+- `LayoutManager` — manages layout passes for a scene's control tree
+- `WindowTilingManager` — arranges floating windows in tiling mode (split, cascade, fill)
+- `ConstraintLayout`, `AnchorConstraint` — anchor-based relationships between controls
+- `DockPane`, `DockTabs`, `DockSplit`, `DockWorkspace` — workbench-style multi-pane dock layout
+- `FlexLayout`, `FlexItem`, `FlexDirection`, `FlexAlign`, `FlexJustify` — flexbox-style row/column layout
+- `GridLayout`, `GridTrack`, `GridPlacement` — fixed-track grid layout with spanning
+- `CellCaretLayout`, `CellCaretState` — cell-by-cell caret navigation for grid-style editors
+- `LayoutAnimator` — animates layout transitions when constraints change
+- `LayoutPass`, `MeasureContext`, `ArrangeContext`, `LayoutRoot` — low-level layout pass primitives for custom engines
+- `ResponsiveLayout`, `Breakpoint` — selects a layout policy based on a width breakpoint
+- `SnapGrid`, `AlignmentGuide`, `SnapComposer`, `SnapTarget` — snap-to-grid alignment for drag-placed controls
+- `FlowLayout`, `FlowItem` — wrapping flow layout for tag/chip collections
+- `Viewport` — scrollable/zoomable view over a larger content area
 
-**Adaptive constraint layout (Tier 28):** `ConstraintAttr`, `LayoutConstraint`, `ConstraintSet`, `ConstraintLayoutEngine`, `AdaptivePolicy`, `resolve_adaptive_policy`.
+From **Tier 28** (Adaptive Constraint Layout v2):
+- `ConstraintAttr` — attribute enum for constraint anchors (left, right, top, bottom, centerX, centerY, width, height)
+- `LayoutConstraint` — declarative constraint between two control attributes
+- `ConstraintSet` — collection of constraints for a layout scope
+- `ConstraintLayoutEngine` — priority-based constraint solver; resolves conflicting constraints by priority
+- `AdaptivePolicy` — breakpoint-aware constraint policy selection
+- `resolve_adaptive_policy` — selects the appropriate `ConstraintSet` for a given viewport width
 
-**Virtualization core (Tier 29):** `MeasureMode`, `MeasurePolicy`, `VirtualizedWindow`, `RecyclePool`, `VirtualizationCore`.
+From **Tier 29** (Unified Virtualization Core):
+- `MeasureMode` — enum for measurement semantics
+- `MeasurePolicy` — specifies how items are measured in the virtualized window
+- `VirtualizedWindow` — windowing structure for a virtualized list/tree/grid
+- `RecyclePool` — recycles control instances for re-use across item scroll positions
+- `VirtualizationCore` — manages windowing, recycling, and identity tracking for large collections
 
 #### Typical usage flow
 
-1. Choose the layout family for the region.
-2. Instantiate the layout engine with its configuration parameters.
-3. Add controls as layout items with their sizing policies.
-4. Attach the engine to the root panel or region. The framework will run layout before draw.
+**FlexLayout (recommended for toolbars and panels):**
+```python
+from gui_do import FlexLayout, FlexItem, FlexDirection
+
+layout = FlexLayout(direction=FlexDirection.ROW, gap=8)
+layout.add(FlexItem(control=sidebar_panel, grow=0, basis=200))
+layout.add(FlexItem(control=main_panel, grow=1))
+root_panel.set_layout(layout)
+```
+
+**GridLayout (recommended for forms and data grids):**
+```python
+from gui_do import GridLayout, GridTrack, GridPlacement
+
+grid = GridLayout(
+    columns=[GridTrack(size=120), GridTrack(grow=1)],
+    rows=[GridTrack(size=32), GridTrack(size=32)],
+    gap=4,
+)
+grid.place(label_control, GridPlacement(row=0, column=0))
+grid.place(field_control, GridPlacement(row=0, column=1))
+root_panel.set_layout(grid)
+```
 
 #### Minimal example
 
 ```python
-from gui_do import FlexAlign, FlexDirection, FlexItem, FlexJustify, FlexLayout
+from gui_do import FlexLayout, FlexItem, FlexDirection, PanelControl, LabelControl, ButtonControl
+import pygame
 
-layout = FlexLayout(direction=FlexDirection.ROW, gap=8, align=FlexAlign.CENTER)
-layout.add(FlexItem(control=self.sidebar, grow=0, basis=200))
-layout.add(FlexItem(control=self.main_area, grow=1))
-self.root.layout = layout
+def build(self, host):
+    root = PanelControl(rect=pygame.Rect(0, 0, 600, 400))
+    sidebar = PanelControl(rect=pygame.Rect(0, 0, 200, 400))
+    content = PanelControl(rect=pygame.Rect(0, 0, 400, 400))
+    layout = FlexLayout(direction=FlexDirection.ROW, gap=0)
+    layout.add(FlexItem(control=sidebar, grow=0, basis=200))
+    layout.add(FlexItem(control=content, grow=1))
+    root.set_layout(layout)
+    root.add(sidebar)
+    root.add(content)
+    host.controls.add(root)
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: adaptive constraint layout with breakpoints
 
-Use `ConstraintLayoutEngine` combined with `AdaptivePolicy` and `resolve_adaptive_policy` for panels that rearrange at specific viewport width breakpoints. This pattern is useful for responsive panels that need to switch from a two-column arrangement at wide display sizes to a single-column stack at narrow sizes:
+`ConstraintLayoutEngine` with `AdaptivePolicy` for responsive rearrangement:
 
 ```python
-from gui_do import (
-    AdaptivePolicy,
-    ConstraintAttr,
-    ConstraintLayoutEngine,
-    ConstraintSet,
-    LayoutConstraint,
-    resolve_adaptive_policy,
-)
-
+from gui_do import ConstraintLayoutEngine, ConstraintSet, LayoutConstraint, ConstraintAttr, AdaptivePolicy, resolve_adaptive_policy
 
 wide_constraints = ConstraintSet([
-    LayoutConstraint(target=self.sidebar, attr=ConstraintAttr.WIDTH, constant=200),
-    LayoutConstraint(target=self.main_area, attr=ConstraintAttr.LEFT,
-                     source=self.sidebar, source_attr=ConstraintAttr.RIGHT, constant=8),
+    LayoutConstraint(ConstraintAttr.LEFT, sidebar, ConstraintAttr.RIGHT),
 ])
 narrow_constraints = ConstraintSet([
-    LayoutConstraint(target=self.sidebar, attr=ConstraintAttr.WIDTH, multiplier=1.0),
+    LayoutConstraint(ConstraintAttr.TOP, sidebar, ConstraintAttr.BOTTOM),
 ])
-policy = AdaptivePolicy(breakpoints={800: wide_constraints, 0: narrow_constraints})
-engine = ConstraintLayoutEngine(resolve_adaptive_policy(policy, current_width=1280))
-self.root.layout = engine
+policy = AdaptivePolicy(
+    breakpoints={600: wide_constraints, 0: narrow_constraints}
+)
+active = resolve_adaptive_policy(policy, viewport_width=800)
+engine = ConstraintLayoutEngine(active)
 ```
 
-For dock-based workbench layouts, use `DockWorkspace` with `DockPane`, `DockSplit`, and `DockTabs`. This provides the familiar split-pane, tabbed-editor pattern seen in IDE-style applications.
-
-Use `VirtualizationCore` with `RecyclePool` when building list or grid views with thousands of items. Virtualization ensures that only the visible subset of controls is instantiated and rendered, reducing memory and draw time proportionally.
+`VirtualizationCore` with `RecyclePool` enables O(visible rows) rendering of lists with
+thousands of items by reusing control instances as they scroll in and out of the viewport.
 
 #### Common mistakes and anti-patterns
 
-- Mixing conflicting layout systems in one container without clear ownership. When a container has both a `FlexLayout` assigned and manually positioned children, the manual positions will be overwritten by the flex pass.
-- Hardcoding pixel dimensions in `FlexItem` `basis` values instead of using `Breakpoint`-based responsive policies. This prevents the layout from adapting to different display sizes.
-- Calling layout methods before controls are added to the tree. Layout runs a measure pass that requires the control's preferred size, which is not valid until the control is initialized and parented.
+- **Mixing conflicting layout systems in one container** — a panel can have one active layout
+  engine. Applying both `FlexLayout` and `GridLayout` to the same panel produces undefined results.
+- **Hardcoding pixel positions where responsive layout is needed** — if the window is resizable,
+  fixed positions break. Use a layout engine instead.
+- **Calling layout APIs before controls are added to the container** — layout is computed at
+  the layout pass, but controls must be registered with the panel before the pass runs.
 
 #### Cross-links to related systems
 
-See [8.5 Controls and Control Composition](#85-controls-and-control-composition) for how controls are added to layout containers, [8.7 Focus and Accessibility](#87-focus-and-accessibility) for how layout affects focus ring membership, and [8.9 Scene, Window, and Task-Panel Presentation Models](#89-scene-window-and-task-panel-presentation-models) for how layout engines apply within floating windows.
+- §8.5 Controls — layouts position controls
+- §8.7 Focus — layout order affects focus cycling order
+- §8.9 Window presentation — window chrome uses layout engines internally
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1138,67 +1973,117 @@ See [8.5 Controls and Control Composition](#85-controls-and-control-composition)
 
 #### What it is and why it exists
 
-Focus management keeps keyboard interaction coherent: at any given moment exactly one control receives keyboard events. Accessibility semantics expose a parallel, machine-readable role tree that testing tools and assistive technology can read without any dependency on control rendering. These two concerns are logically separate but operationally linked: losing focus ring coherence silently breaks keyboard accessibility.
+Keyboard focus is the mechanism by which the framework routes keyboard events to the correct
+control. Without a focus system, every control would need to check whether it is the intended
+recipient for every key event — an O(n) problem that also requires controls to know about
+each other. The focus system solves this by maintaining a single focused control at all times
+and delivering keyboard events only to that control's subtree, plus any global bindings.
+
+The accessibility system provides a parallel semantic tree that mirrors the control tree in
+a machine-readable format. This enables testing tools, diagnostic inspectors, and assistive
+technology integrations to traverse the application's UI without parsing pixel data.
 
 #### Mental model and lifecycle placement
 
-`FocusManager` maintains the focused control. `FocusScopeManager` groups controls into scopes so that when a modal surface is active, focus can be locked to that scope's subtree and cannot cycle out to the underlying scene's controls. `AccessibilityTree` is a parallel tree of `AccessibilityNode` objects that mirrors the semantic structure of the live control tree; `AccessibilityBus` delivers `AccessibilityAnnouncement` events for live-region updates.
+`FocusManager` is the single source of truth for which control holds focus. Controls join
+the focus ring during `build`; the ring is an ordered cycle that Tab and Shift+Tab navigate.
+`FocusScopeManager` allows focus to be locked to a subtree — for example, to keep focus
+inside a modal dialog while it is open. When the dialog closes, the lock is released and
+focus returns to its previous position.
 
-Focus membership is determined at `build` time when controls are added to the scene tree. Removing a control from the tree (or hiding it) must be coordinated with the focus ring so that subsequent Tab navigation does not stall on invisible targets.
+Accessibility nodes are created during `build` alongside their corresponding controls, and
+removed during teardown. The `AccessibilityBus` delivers announcements for live-region
+changes — for example, when a status label updates to reflect a completed operation.
 
 #### Primary public APIs and key types
 
-**Focus types (Tier 4):** `FocusManager`, `FocusScope`, `FocusScopeManager`, `WindowFocusManager`, `FocusRing`.
+From **Tier 4** (Focus):
+- `FocusManager` — tracks the currently focused control; provides `set_focus`, `clear_focus`, `get_focused`
+- `FocusScope` — named focus group; groups controls for Tab-order scoping
+- `FocusScopeManager` — manages multiple `FocusScope` instances; locks/unlocks scope on demand
+- `WindowFocusManager` — manages focus cycling between floating windows (Alt+Tab style)
+- `FocusRing` — ordered cycle of focusable controls; wraps around at ends
 
-**Accessibility types (Tier 21):** `AccessibilityRole`, `LivePoliteness`, `AccessibilityNode`, `AccessibilityTree`, `AccessibilityAnnouncement`, `AccessibilityBus`.
+From **Tier 21** (Accessibility):
+- `AccessibilityRole` — enum: BUTTON, LABEL, TEXT_INPUT, CHECKBOX, SLIDER, PANEL, DIALOG, MENU, LIST, etc.
+- `LivePoliteness` — enum for live-region announcement priority: OFF, POLITE, ASSERTIVE
+- `AccessibilityNode` — semantic node with role, name, description, live politeness, and child nodes
+- `AccessibilityTree` — the root tree structure; provides traversal and lookup
+- `AccessibilityAnnouncement` — an event emitted when a live-region node changes
+- `AccessibilityBus` — pub/sub bus for `AccessibilityAnnouncement` events
 
-**Spec types (Tier 1):** `StaticAccessibilitySpec`, `AccessibilitySequenceSpec`, `TaskPanelFocusToggleSpec`.
-
-**Utility helpers (Tier 18):** `apply_accessibility_sequence`, `apply_accessibility_sequence_from_attrs`, `apply_window_toggle_accessibility`, `collect_window_toggle_controls`, `add_window_toggle_task_panel_controls`, `bind_task_panel_focus_toggle`.
+From **Tier 1** (spec types):
+- `StaticAccessibilitySpec` — declarative accessibility annotation for a host-level control
+- `AccessibilitySequenceSpec` — declares the full sequential focus order for a scene
+- `TaskPanelFocusToggleSpec` — automatically excludes a window's controls from the focus ring when the window is hidden
 
 #### Typical usage flow
 
-1. Declare `StaticAccessibilitySpec` entries in `HostApplicationConfig` with semantic `role` and `name` values for each key control.
-2. For scene-level sequential focus ordering, declare an `AccessibilitySequenceSpec` and call `apply_accessibility_sequence` in `bind_runtime`.
-3. For windows managed by the task panel, declare a `TaskPanelFocusToggleSpec` in `RoutedRuntimeSpec` to ensure that hidden windows are automatically excluded from the focus ring.
-4. For custom `CanvasControl` widgets, create `AccessibilityNode` entries with the appropriate role and add them to `AccessibilityTree`.
-5. Use `AccessibilityBus` to post `AccessibilityAnnouncement` events when significant runtime state changes (e.g., operation completed, error occurred).
+1. During `build`, add accessibility nodes to the `AccessibilityTree` for custom controls
+   that are not automatically annotated by the control base class.
+2. Declare `StaticAccessibilitySpec` entries in `HostApplicationBindingSpec` for top-level
+   controls that need accessibility labels.
+3. Use `AccessibilitySequenceSpec` to specify the full Tab order for a scene.
+4. For modal dialogs, use `FocusScopeManager.lock(scope)` when the dialog opens and
+   `FocusScopeManager.unlock()` when it closes.
+5. Use `TaskPanelFocusToggleSpec` in `RoutedRuntimeSpec` to automatically manage focus
+   exclusion for task-panel-toggled windows.
 
 #### Minimal example
 
 ```python
-from gui_do import AccessibilityNode, AccessibilityRole, AccessibilityTree
+from gui_do import AccessibilityTree, AccessibilityNode, AccessibilityRole
 
-tree = AccessibilityTree()
-node = AccessibilityNode(role=AccessibilityRole.BUTTON, name="Submit Form")
-tree.root.add_child(node)
+def build(self, host):
+    # ... create controls ...
+    tree = AccessibilityTree()
+    node = AccessibilityNode(
+        role=AccessibilityRole.BUTTON,
+        name="Submit Form",
+        description="Submits the current form values",
+    )
+    tree.root.add_child(node)
+    host.app.set_accessibility_tree(tree)
 ```
 
-#### Advanced pattern(s)
-
-Use `FocusScope` to lock focus inside a modal dialog's control subtree during its lifetime. When the dialog opens, activate the scope to prevent Tab from cycling out to underlying scene controls. When the dialog closes, deactivate the scope to restore normal focus cycling:
+#### Advanced pattern: modal focus locking and live announcements
 
 ```python
-from gui_do import FocusScope, FocusScopeManager
+from gui_do import FocusScopeManager, FocusScope, AccessibilityBus, AccessibilityAnnouncement, LivePoliteness
 
-scope = FocusScope(controls=[self.dialog_ok, self.dialog_cancel])
-manager = FocusScopeManager()
-manager.push_scope(scope)
-# ... dialog in use ...
-manager.pop_scope()
+# Lock focus to dialog scope on open
+scope_manager = FocusScopeManager()
+dialog_scope = FocusScope("dialog")
+scope_manager.lock(dialog_scope)
+
+# Announce a live-region change
+bus = AccessibilityBus()
+bus.announce(AccessibilityAnnouncement(
+    message="Operation complete",
+    politeness=LivePoliteness.POLITE,
+))
 ```
-
-Combine `AccessibilitySequenceSpec` with `apply_accessibility_sequence_from_attrs` for a data-driven approach that assigns Tab order and semantic names from a declarative list. This is simpler and more maintainable than adding nodes individually when the scene has many sequentially ordered controls.
 
 #### Common mistakes and anti-patterns
 
-- Leaving hidden windows in the focus ring. If a window becomes hidden without removing its controls from the ring, Tab navigation stalls on invisible targets. Use `TaskPanelFocusToggleSpec` to handle this automatically for task-panel-managed windows.
-- Omitting semantic roles on custom `CanvasControl` widgets. From an accessibility perspective a canvas is opaque; you must add `AccessibilityNode` entries with meaningful roles and names for any interactive regions inside the canvas.
-- Building accessibility nodes before the `AccessibilityTree` is initialized. Nodes must be added in `build` or `bind_runtime`, not in `__init__`.
+- **Window controls still in focus ring when window is hidden** — if a floating window is
+  hidden via task panel toggle but its controls remain in the focus ring, Tab navigation
+  will stall invisibly. Use `TaskPanelFocusToggleSpec` to handle this automatically.
+- **Missing semantic roles on custom canvas widgets** — `CanvasControl` is opaque to the
+  accessibility tree. If you build interactive content on a canvas, create corresponding
+  `AccessibilityNode` entries manually.
+- **Building accessibility nodes before the tree is initialized** — accessibility trees are
+  initialized during bootstrap. Create nodes in `build`, not in `__init__`.
 
 #### Cross-links to related systems
 
-See [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-mapping-and-routing) for how focus state affects keyboard event routing, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for how controls participate in the focus ring, and [8.8 Overlays, Dialogs, Notifications, and Command Surfaces](#88-overlays-dialogs-notifications-and-command-surfaces) for modal focus capture during overlay lifetime.
+- §8.3 Events — focus state determines which feature receives keyboard events
+- §8.5 Controls — controls register with the focus ring during `build`
+- §8.8 Overlays — modal dialogs lock the focus scope
+- §8.9 Window presentation — `WindowFocusManager` handles inter-window focus
+
+For field-level reference for `StaticAccessibilitySpec` and `AccessibilitySequenceSpec`, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1210,90 +2095,166 @@ See [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-m
 
 #### What it is and why it exists
 
-Transient and modal surfaces require their own routing and dismissal contract. Overlays intercept events before the main control tree; if an overlay consumes an event, the scene underneath never sees it. Each overlay family (dialogs, toasts, context menus, command palette, tooltips, menu bar, file dialogs, notifications, drag-and-drop, clipboard) has a dedicated manager so that routing, animation, and teardown concerns are localized.
+Transient and modal surfaces — dialogs, toast notifications, context menus, tooltips, the
+command palette, shortcut help overlays — need their own event routing layer so they do not
+destabilize the main control tree's event flow. A modal dialog must intercept all keyboard and
+mouse input while it is open; a toast notification must not intercept any input. A context
+menu must dismiss when the user clicks outside it. Each of these behaviors requires a different
+routing contract, and mixing them into the main control tree would make the main tree's routing
+logic exponentially more complex.
+
+`gui_do` addresses this by providing a family of overlay managers, each responsible for one
+surface kind and one dismissal contract. Features use the managers through their host-provided
+handles; the managers handle routing, z-ordering, and cleanup.
 
 #### Mental model and lifecycle placement
 
-Overlays sit on top of the main scene. The `OverlayManager` processes events first in each frame. Only after the overlay pass concludes do scene-level and feature-level handlers receive events. Handles returned by manager `show` methods are valid only while the overlay is open; always check handle validity before attempting updates on a surface that may have been dismissed.
+Overlay managers sit above the main control tree in the event routing order. When an overlay
+is active, events pass through the overlay's routing layer first. If the overlay consumes an
+event, the main tree never sees it. Different overlay types intercept different event sets:
+modal dialogs consume all input; toasts consume only clicks within their bounds; tooltips
+consume no input.
+
+Overlay managers are available on the host after bootstrap and are used from `build`,
+`bind_runtime`, and event handlers — wherever the feature needs to show or update a surface.
 
 #### Primary public APIs and key types
 
-**Tier 9:** `OverlayManager`, `OverlayHandle`, `Alignment`, `PlacementResult`, `PopupPlacement`, `Side`, `compute_popup_rect`, `DialogManager`, `DialogHandle`, `ToastManager`, `ToastHandle`, `ToastSeverity`, `ContextMenuManager`, `ContextMenuItem`, `ContextMenuHandle`, `CommandPaletteManager`, `CommandEntry`, `CommandPaletteHandle`, `TooltipManager`, `TooltipHandle`, `MenuBarManager`, `FileDialogManager`, `FileDialogOptions`, `FileDialogHandle`, `NotificationCenter`, `NotificationRecord`, `ResizeManager`, `CursorManager`, `CursorHandle`, `CursorShape`, `DragDropManager`, `DragPayload`, `ClipboardManager`, `TransferData`, `TransferManager`, `ShortcutHelpOverlay`, `ShortcutSection`, `ShortcutEntry`.
+From **Tier 9** (Overlay Managers & Windows):
+- `OverlayManager`, `OverlayHandle` — generic overlay placement with configurable event interception
+- `Alignment`, `PlacementResult`, `PopupPlacement`, `Side`, `compute_popup_rect` — popup anchor and placement utilities
+- `DialogManager`, `DialogHandle` — modal and non-modal dialog surfaces
+- `ToastManager`, `ToastHandle`, `ToastSeverity` — transient notification banners (INFO, SUCCESS, WARNING, ERROR)
+- `ContextMenuManager`, `ContextMenuItem`, `ContextMenuHandle` — right-click context menus with dismissal
+- `CommandPaletteManager`, `CommandEntry`, `CommandPaletteHandle` — searchable command palette
+- `TooltipManager`, `TooltipHandle` — hover-dwell tooltips with configurable delay
+- `MenuBarManager` — drop-down menu bar management
+- `FileDialogManager`, `FileDialogOptions`, `FileDialogHandle` — native file open/save dialogs
+- `NotificationCenter`, `NotificationRecord` — persistent notification log
+- `ResizeManager` — manages resize handles on floating windows
+- `CursorManager`, `CursorHandle`, `CursorShape` — cursor shape management with stacking
+- `DragDropManager`, `DragPayload` — drag-and-drop source/target coordination
+- `ClipboardManager` — clipboard read/write
+- `TransferData`, `TransferManager` — typed data transfer between controls
+- `ShortcutHelpOverlay`, `ShortcutSection`, `ShortcutEntry` — full-screen/partial shortcut reference overlay
 
-**Spec types (Tier 1):** `ShortcutOverlaySpec`, `NotificationSpec`, `CursorSpec`, `CursorBindingSpec`.
-
-#### Dismissal contracts
-
-- **Toasts:** Shown for a configured duration and then auto-dismissed. Pointer clicks within toast bounds are consumed; they do not pass through to underlying controls.
-- **Dialogs:** Modal by default. Can be configured to dismiss on Escape or outside-click.
-- **Context menus:** Dismiss on outside click or Escape.
-- **Command palette:** Dismiss on Escape or after a command is selected.
-- **Tooltip:** Shown after pointer dwell; dismissed on pointer leave.
-- **File dialog:** Platform-delegated; future native integration may apply.
+From **Tier 1** (spec types):
+- `ShortcutOverlaySpec` — configuration for shortcut help overlay behavior
+- `NotificationSpec` — declarative notification entry for the notification center
 
 #### Typical usage flow
 
+**Toast notification:**
 ```python
-# Toast
-host.toasts.show("File saved", severity=ToastSeverity.SUCCESS)
+host.toast_manager.show("File saved!", severity=ToastSeverity.SUCCESS)
+```
 
-# Modal dialog
-handle = host.dialogs.show(my_dialog_control, modal=True)
-handle.on_dismiss = lambda: self._on_dialog_dismissed()
+**Modal dialog:**
+```python
+dialog_control = MyDialogControl(rect=pygame.Rect(200, 150, 400, 300))
+handle = host.dialog_manager.show(dialog_control, modal=True)
+handle.on_dismiss = lambda: self._on_dialog_closed()
+```
 
-# Context menu
-items = [ContextMenuItem("Copy", on_click=self._copy), ContextMenuItem("Paste", on_click=self._paste)]
-host.context_menus.show(items, at=event.pos)
+**Context menu:**
+```python
+items = [
+    ContextMenuItem("cut", "Cut", on_select=self._cut),
+    ContextMenuItem("copy", "Copy", on_select=self._copy),
+    ContextMenuItem("paste", "Paste", on_select=self._paste),
+]
+host.context_menu_manager.show(items, anchor=event.pos)
 ```
 
 #### Minimal example
 
 ```python
-from gui_do import ToastSeverity
+from gui_do import Feature, ButtonControl, ToastSeverity
+import pygame
 
+class NotificationFeature(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls", "toast_manager"),
+        "bind_runtime": ("app",),
+    }
 
-def _on_save(self, event) -> None:
-    self._do_save()
-    self.host.toasts.show("Saved successfully", severity=ToastSeverity.SUCCESS)
+    def build(self, host):
+        btn = ButtonControl(
+            rect=pygame.Rect(20, 20, 140, 32),
+            label="Show Toast",
+            on_click=lambda e: host.toast_manager.show(
+                "Operation complete!",
+                severity=ToastSeverity.SUCCESS,
+            ),
+        )
+        host.controls.add(btn)
+
+    def bind_runtime(self, host):
+        pass
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: shortcut help overlay with manual sections
 
-`ShortcutHelpOverlay` with `ShortcutOverlaySpec` in `RoutedRuntimeSpec` provides a toggleable shortcut reference screen that automatically populates itself from the action registry. You can inject `ShortcutSection` entries for manually-documented shortcuts and filter out sections from the action registry that should not be exposed:
+`ShortcutHelpOverlay` renders the action registry's shortcuts alongside manually declared
+sections. Configure via `ShortcutOverlaySpec` in `RoutedRuntimeSpec`:
 
 ```python
-from gui_do import ShortcutEntry, ShortcutOverlaySpec, ShortcutSection
+from gui_do import ShortcutOverlaySpec, ShortcutSection, ShortcutEntry
 
-spec = ShortcutOverlaySpec(
-    toggle_action_name="toggle_shortcuts",
-    toggle_key="F1",
-    manual_shortcut_lines=[
-        ShortcutSection("Canvas", [
-            ShortcutEntry("Pan", "Middle-drag"),
-            ShortcutEntry("Zoom", "Ctrl+Scroll"),
-        ])
+shortcut_overlay=ShortcutOverlaySpec(
+    activation_key=pygame.K_F1,
+    manual_sections=[
+        ShortcutSection(
+            title="Navigation",
+            entries=[
+                ShortcutEntry(label="Next Scene", key_display="Ctrl+Tab"),
+                ShortcutEntry(label="Previous Scene", key_display="Ctrl+Shift+Tab"),
+            ],
+        ),
     ],
     exclude_section_titles=["Debug"],
 )
 ```
 
-Use `PopupPlacement` and `compute_popup_rect` to position context menus and dropdowns so they avoid clipping at screen edges. Pass the anchor control's screen rect, the preferred `Side`, and the `Alignment`, and the function returns a `PlacementResult` with the final rect.
+`CommandPaletteManager` can be populated with dynamic `CommandEntry` values from a callable,
+allowing the palette to reflect the current application state (e.g., recently opened files,
+active window names) without rebuilding the spec:
 
-For drag-and-drop, initiate a drag with `DragDropManager.begin_drag(payload)` where `payload` is a `DragPayload` carrying the transfer data. Register drop targets by calling the manager's registration API. The manager fires drag-enter, drag-leave, and drop events on registered targets.
+```python
+from gui_do import CommandEntry
+
+def get_recent_entries():
+    return [
+        CommandEntry(id=f"recent_{i}", label=path, on_select=lambda p=path: self._open(p))
+        for i, path in enumerate(self._recent_files)
+    ]
+# Pass get_recent_entries as the custom_entries_provider in PaletteBindingSpec
+```
 
 #### Common mistakes and anti-patterns
 
-- Creating overlays without a dismissal contract. An overlay with no Escape handler, no close button, and no timeout leaves the user stuck with no way to dismiss the surface.
-- Expecting toast clicks to pass through to underlying controls. Toast bounds consume pointer events; design toast interactions (e.g., undo actions) to be self-contained within the toast.
-- Holding an `OverlayHandle` and calling methods on it after the overlay is dismissed. Always check handle validity or gate on an `on_dismiss` callback.
+- **Overlay without a dismissal contract** — if a user cannot close an overlay, they are
+  stuck. Always provide at least one reliable dismissal path (Escape, button, outside click).
+- **Expecting toast clicks to pass through to underlying controls** — `ToastManager` consumes
+  clicks within the toast rect. Do not place interactive UI under a toast.
+- **Using `OverlayHandle` after the overlay is dismissed** — check that the handle is still
+  valid before calling methods on it. A dismissed overlay's handle is invalidated.
+- **Showing a dialog without a host reference in scope** — dialog handles deliver callbacks
+  asynchronously; ensure the feature that shows the dialog is still alive when callbacks fire.
 
 #### Cross-links to related systems
 
-See [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-mapping-and-routing) for how overlay routing intercepts the event pipeline, [8.7 Focus and Accessibility](#87-focus-and-accessibility) for modal focus capture during dialog lifetime, and [8.9 Scene, Window, and Task-Panel Presentation Models](#89-scene-window-and-task-panel-presentation-models) for how the command palette and menu bar integrate with scene-level layout.
+- §8.3 Events — overlays intercept events before features
+- §8.7 Focus — modal dialogs lock the focus scope via `FocusScopeManager`
+- §8.9 Scene, Window, and Task-Panel Presentation Models — command palette is declared per-scene
+
+For field-level reference for `NotificationSpec`, `FileDialogOptions`, `CursorSpec`, and overlay specs, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
 ---
+
 
 ### 8.9 Scene, Window, and Task-Panel Presentation Models
 
@@ -1301,85 +2262,153 @@ See [8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-m
 
 #### What it is and why it exists
 
-Scenes, windows, and task panels are the primary spatial organizing structures in a gui_do application. A scene defines a top-level interaction mode (e.g., a main desktop, a control gallery, a simulation view). Within a scene, windows are focused work surfaces that can be shown, hidden, and repositioned by the user or by application logic. The task panel is a persistent chrome element that provides discoverable access to window toggles, scene navigation, and frequently used commands. This system coordinates visibility state, focus assignment, action availability, and scene-menu presentation without requiring features to implement any of that coordination themselves.
+Scenes are the top-level interaction contexts of a `gui_do` application. Each scene is a
+named configuration of features, windows, and chrome elements that is activated as a unit
+and deactivated as a unit during scene transitions. Within a scene, windows are floating or
+docked UI surfaces that can be individually shown and hidden. The task panel is a persistent
+chrome element at the edge of the screen that houses toggle buttons for windows and provides
+scene-navigation access. Menu strips expose scene navigation and window visibility commands
+through a familiar horizontal menu.
+
+This system exists because different phases of an application's workflow often require
+completely different UI configurations. A "settings" scene, a "main workspace" scene, and an
+"onboarding" scene each have entirely different feature layouts, window arrangements, and
+available commands. By making scenes a first-class concept, `gui_do` allows each configuration
+to be independently specified, tested, and transitioned between with smooth animations.
 
 #### Mental model and lifecycle placement
 
-Think of scenes as application "modes". The active scene determines which features, windows, task panel, and menu strip are live. Windows are independent surfaces within a scene; each can be shown or hidden independently without affecting other windows or the scene itself. The task panel is anchored to the scene chrome and contains buttons wired to window-visibility actions.
+Think of scenes as top-level "modes." Each mode is a named collection of features and their
+associated windows, chrome, and actions. When the active scene changes, the departing scene's
+features are deactivated and the arriving scene's features are activated and built fresh (or
+restored from a prewarm cache). Windows are registered within scenes and track their own
+visibility state through `ScenePresentationModel`.
 
-This system is configured in the bootstrap spec (scene specs, window specs, task panel specs) and realized at startup. Runtime state changes (toggling windows, transitioning scenes) operate on the live scene presentation model.
+The task panel and scene menu strip are optional per-scene chrome elements. They are declared
+in the spec and built during the scene's activation phase. The `ScenePresentationModel` object
+coordinates window visibility state across the task panel toggle buttons, the scene menu strip's
+Windows section, and the command palette's window entries.
 
 #### Primary public APIs and key types
 
-**Spec types (Tier 1):** `ScenePresentationModel`, `WindowSpec`, `AnchoredWindowSpec`, `SceneRootSpec`, `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelLinearLayoutSpec`, `TaskPanelWindowToggleGroupSpec`, `TaskPanelFocusToggleSpec`, `TaskPanelSceneNavButtonSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`, `SceneSetupBindingSpec`, `RuntimeSceneBindingSpec`, `SceneRootBindingSpec`, `TabbedPresenterSpec`, `TabBuilderSpec`, `SceneCommandPaletteSpec`.
+From **Tier 1** (spec types relevant to scene/window presentation):
+- `ScenePresentationModel` — tracks registered windows and their visibility state per scene
+- `WindowSpec` — declarative descriptor for a feature's floating window
+- `AnchoredWindowSpec` — window with a fixed anchor point and size
+- `SceneTaskPanelSpec` — declares a scene's task panel chrome element
+- `TaskPanelButtonSpec` — a single button entry in the task panel
+- `TaskPanelWindowToggleGroupSpec` — a group of auto-generated window toggle buttons
+- `TaskPanelFocusToggleSpec` — auto-manages focus exclusion when a window is hidden
+- `TaskPanelSceneNavButtonSpec` — a scene-navigation button in the task panel
+- `TabbedPresenterSpec` — specifies tabbed content inside a window
+- `TabBuilderSpec` — factory spec for one tab's control tree
+- `FeatureWindowBundleBindingSpec` — bundles a feature with its managed window and task panel button
+- `WindowToggleBindingSpec` — binding for a window visibility toggle action
+- `SceneMenuStripSpec` — declares a scene's menu strip chrome element
 
-**Presentation helpers (Tier 18):** `set_window_visible_state`, `toggle_window_visibility`, `create_anchored_feature_window`, `create_feature_presented_window`, `create_presented_anchored_window`, `create_presented_window_from_spec`, `add_window_scene_menu_strip`, `ensure_scene_task_panel`, `create_task_panel_linear_layout`, `add_task_panel_button`, `add_task_panel_buttons`, `add_task_panel_scene_nav_button`, `add_scene_task_panel_items`, `add_task_panel_window_toggle_group`, `sorted_window_bindings`, `collect_window_toggle_controls`, `apply_window_toggle_accessibility`, `add_window_toggle_task_panel_controls`, `setup_scene_command_palette_key`, `register_window_toggle_tooltips`, `minimize_window_menu_entries`, `build_tools_menu_entries`, `add_standard_scene_menu_strip`, `setup_feature_presenter_tabs`, `setup_feature_presenter_tabs_from_window_content`, `register_window_tab_builder_specs`, `register_window_tab_builders`, `build_tab_builder_specs`, `create_tab_control_from_specs`, `compute_tabbed_window_layout`, `register_window_presentation_specs`, `ActiveTabUpdateRouter`, `TabLayoutContext`.
-
-**Tier 2:** `SceneTransitionManager`, `SceneTransitionStyle`, `apply_scene_setup_specs`.
+From **Tier 18** (advanced presentation helpers):
+- `set_window_visible_state` — programmatically show or hide a window
+- `toggle_window_visibility` — toggle a window's current visibility
+- `create_anchored_feature_window` — creates a floating anchored window for a feature
+- `create_feature_presented_window` — creates a window using a `WindowPresenter` subclass
+- `add_window_scene_menu_strip` — adds a menu strip entry for a window
+- `ensure_scene_task_panel` — initializes the task panel for the current scene
+- `add_task_panel_buttons` — registers buttons with the task panel
+- `add_task_panel_window_toggle_group` — registers the auto-toggle-button group
+- `add_task_panel_scene_nav_button` — adds a scene navigation button to the task panel
+- `add_window_toggle_task_panel_controls` — wires window visibility to task panel controls
+- `ActiveTabUpdateRouter` — routes updates only to the active tab's presenter efficiently
+- `TabLayoutContext` — provides layout context for tabbed window content
+- `setup_routed_runtime`, `shutdown_routed_runtime` — wire and unwire the full `RoutedRuntimeSpec`
+- `setup_routed_feature_runtime`, `register_routed_feature_companions` — per-feature routed wiring
 
 #### Typical usage flow
 
-1. Declare `WindowSpec` or `AnchoredWindowSpec` entries in the bootstrap config.
-2. Implement `WindowPresenter` subclasses to own each window's internal control layout.
-3. Use `FeatureWindowBundleBindingSpec` to wire each feature–window pair, including task panel button configuration, in a single binding spec entry.
-4. Set `TaskPanelFocusToggleSpec` in `RoutedRuntimeSpec` so the framework automatically removes hidden windows from the focus ring on toggle.
-5. At runtime, call `set_window_visible_state` or `toggle_window_visibility` to change window visibility, or use registered action IDs for user-initiated toggles.
+1. Declare `SceneBundleBindingSpec` entries in `HostApplicationBindingSpec` for each scene.
+2. For features with managed windows, use `FeatureWindowBundleBindingSpec` instead of
+   plain `feature_entries`.
+3. If the scene needs a task panel, declare `SceneTaskPanelSpec` and use
+   `ensure_scene_task_panel` in the feature's `build`.
+4. For tabbed windows, declare `TabbedPresenterSpec` with `TabBuilderSpec` factories.
+5. Use `TaskPanelFocusToggleSpec` in `RoutedRuntimeSpec` to auto-manage focus on toggle.
+6. Optionally declare a `SceneMenuStripSpec` for scene navigation and window menu access.
 
 #### Minimal example
 
 ```python
 from gui_do import (
-    AnchoredWindowSpec,
-    Feature,
-    FeatureSpec,
-    FeatureWindowBundleBindingSpec,
     HostApplicationBindingSpec,
+    FeatureWindowBundleBindingSpec,
     SceneBundleBindingSpec,
-    WindowPresenter,
     build_host_application_config,
+    bootstrap_host_application,
 )
+from my_app.inspector_feature import InspectorFeature
 
-
-class InfoPresenter(WindowPresenter):
-    def build(self, host, root) -> None:
-        self.label = root.add(LabelControl("info_label", Rect(8, 8, 300, 24), "Ready"))
-
-
-class InfoFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("info", scene_name="main")
-
-    def build(self, host) -> None:
-        self.presenter = InfoPresenter()
-        create_feature_presented_window(host, self, self.presenter, scene_name="main")
+config = build_host_application_config(
+    HostApplicationBindingSpec(
+        display_size=(1280, 720),
+        window_title="My App",
+        initial_scene_name="main",
+        fonts={"default": {"file": "assets/Body.ttf", "size": 14}},
+        scene_bundle_entries=(
+            SceneBundleBindingSpec(scene_name="main", pretty_name="Main"),
+        ),
+        feature_window_bundle_entries=(
+            FeatureWindowBundleBindingSpec(
+                "_inspector",
+                InspectorFeature,
+                "inspector",
+                task_panel_label="Inspector",
+                task_panel_style="round",
+            ),
+        ),
+    )
+)
+bootstrap_host_application(config)
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: tabbed windows with ActiveTabUpdateRouter
 
-Multi-window scenes with tabbed content use `TabbedPresenterSpec` and `TabBuilderSpec` to declaratively describe each tab's control factory. `create_tab_control_from_specs` assembles the `TabControl` from the specs. `ActiveTabUpdateRouter` routes `on_update` and `draw` calls only to the active tab's presenter, preventing background tabs from performing unnecessary work:
+For windows with multiple tabs where only the active tab should receive updates:
 
 ```python
-from gui_do import ActiveTabUpdateRouter, TabBuilderSpec, TabbedPresenterSpec
+from gui_do import TabbedPresenterSpec, TabBuilderSpec, ActiveTabUpdateRouter
 
-specs = TabbedPresenterSpec(tabs=[
-    TabBuilderSpec(tab_id="props", label="Properties", build_fn=self._build_props_tab),
-    TabBuilderSpec(tab_id="preview", label="Preview", build_fn=self._build_preview_tab),
-])
-tab_control = create_tab_control_from_specs(host, specs)
-self.router = ActiveTabUpdateRouter(tab_control, specs)
+TABBED_SPEC = TabbedPresenterSpec(
+    tabs=[
+        TabBuilderSpec(tab_id="overview", label="Overview", factory=OverviewPresenter),
+        TabBuilderSpec(tab_id="details", label="Details", factory=DetailsPresenter),
+    ],
+)
+# ActiveTabUpdateRouter routes on_update calls only to the active tab's presenter,
+# avoiding unnecessary computation in hidden tabs.
 ```
 
-Pair `add_standard_scene_menu_strip` with `ScenePresentationModel` to add a consistent window-management menu strip to every scene. The menu strip lists all registered windows with checkmarks indicating current visibility and dispatches `toggle_window_visibility` on selection.
+`ScenePresentationModel.handle_window_toggle` coordinates the task panel button and the scene
+menu strip's Windows section when `connect_window_presentation=True` in `PaletteBindingSpec`.
 
 #### Common mistakes and anti-patterns
 
-- Mismatching scene scope and window scope for action handlers. Action handlers registered for a different scene than the window's scene will not be active when the window is visible.
-- Not synchronizing task panel button state with window visibility when toggling windows programmatically outside the spec-managed action system.
-- Creating window controls in `bind_runtime` instead of `build`. Window controls must exist before sibling features bind so that cross-feature observable wiring has valid targets.
+- **Mismatching scene scope for action handlers** — an action declared as scene-scoped will
+  not fire when a different scene is active. Verify that action scope matches the intended
+  triggering scene.
+- **Not synchronizing task panel button state with window visibility** — if you show/hide a
+  window programmatically via `set_window_visible_state`, ensure the task panel button's
+  toggle state is updated via `ScenePresentationModel`.
+- **Creating window controls in `bind_runtime`** — window controls must be created in `build`
+  so that sibling features can access them during their own `bind_runtime` phase.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for feature lifecycle phases, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for window-internal control layout, [8.7 Focus and Accessibility](#87-focus-and-accessibility) for focus ring exclusion on window hide, and [8.8 Overlays, Dialogs, Notifications, and Command Surfaces](#88-overlays-dialogs-notifications-and-command-surfaces) for command palette integration.
+- §8.2 Feature Lifecycle — scenes activate and deactivate features
+- §8.5 Controls — `WindowControl` and `TaskPanelControl` are Tier 13 controls
+- §8.7 Focus — `TaskPanelFocusToggleSpec` manages focus ring membership
+- §8.8 Overlays — command palette integration via `SceneCommandPaletteSpec`
+
+For field-level reference for `WindowSpec`, `AnchoredWindowSpec`, `SceneTaskPanelSpec`,
+`TaskPanelFocusToggleSpec`, and presentation specs, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1391,97 +2420,149 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Time-based work — animations, deferred callbacks, multi-step workflows, and cooperative background tasks — must execute within deterministic per-frame budgets to avoid blocking the render path. gui_do provides a layered scheduling system that covers simple timers, property tweens, state-machine-driven animation sequences, coroutine-based cooperative tasks, scene timelines, and rate-limiting utilities.
+GUI applications must execute time-based work — animations, timed callbacks, multi-step
+workflows — without blocking the main thread or disrupting the frame budget. `gui_do` provides
+a layered scheduling system that spans the full range from simple one-shot timers up to full
+cooperative coroutine scheduling. Each layer is designed to match a specific use case: tweens
+for value interpolation, `AnimationStateMachine` for state-driven animations, `SceneTimeline`
+for scripted sequences, and `CooperativeScheduler` for general multi-step workflows.
+
+All of these systems respect the frame budget. The scheduler has a contractual budget:
+`fraction = 0.12` of `dt_ms`, clamped to a `floor = 0.5 ms` and a `ceiling = 4.0 ms`. This
+ensures that scheduling work cannot starve rendering under slow frames or over-allocate under
+fast frames. The contract is enforced by `tests/test_runtime_operating_contracts.py`.
 
 #### Mental model and lifecycle placement
 
-The scheduler is a per-scene resource that the framework ticks each frame. Frame time is divided between rendering and scheduling work. The scheduler's budget is clamped: it runs for at most a fraction of the available frame time (`fraction = 0.12` of dt in milliseconds), with a hard floor of `0.5 ms` and a ceiling of `4.0 ms`. Coroutines that yield control at safe points are resumed each frame within budget. Animations and tweens are registered once and ticked automatically.
+Think of the scheduling layer as a time-sliced cooperative multitasking system embedded in
+the frame loop. Each frame, the scheduler is given a budget slice and runs as many pending
+tasks as fit. Tasks that exceed the budget are resumed on the next frame. This is the
+mechanism that allows long-running workflows to proceed incrementally without ever blocking
+the UI thread.
 
-Register coroutines and timers in `bind_runtime`. Cancel them in `shutdown_runtime` to prevent stale callbacks from firing after the scene deactivates.
+Tweens, animations, and timers register themselves with the appropriate manager in `build` or
+`bind_runtime` and are ticked automatically by the framework on each frame. Features do not
+need to drive them manually from `on_update` — they only need to register and configure them.
 
 #### Primary public APIs and key types
 
-**Tier 5:** `TaskEvent`, `TaskScheduler`, `Timers`, `TweenManager`, `TweenHandle`, `Easing`, `AnimationSequence`, `AnimationHandle`, `TransitionManager`, `TransitionSpec`, `TransitionEvent`, `AnimationStateMachine`, `AnimationTransitionMode`, `SceneTimeline`, `Debouncer`, `Throttler`, `CooperativeScheduler`, `CoroutineHandle`, `Pause`, `Sleep`, `WaitForEvent`, `WaitForSignal`, `WaitUntil`, `WaitForAll`.
+From **Tier 5** (Scheduling & Animation):
+- `TaskEvent`, `TaskScheduler` — per-scene message dispatch scheduler with budget clamping
+- `Timers` — one-shot and repeating timer callbacks; automatically ticked each frame
+- `TweenManager`, `TweenHandle`, `Easing` — property interpolation with easing functions
+- `AnimationSequence`, `AnimationHandle` — sequence of timed animation steps
+- `TransitionManager`, `TransitionSpec`, `TransitionEvent` — scene and value transition coordination
+- `AnimationStateMachine`, `AnimationTransitionMode` — state-machine-driven animation control
+- `SceneTimeline` — scripted event sequence relative to scene entry time
+- `Debouncer`, `Throttler` — rate-limiting for high-frequency callbacks
+- `CooperativeScheduler`, `CoroutineHandle` — frame-budgeted cooperative coroutine runner
+- `Pause`, `Sleep`, `WaitForEvent`, `WaitForSignal`, `WaitUntil`, `WaitForAll` — yield primitives for `CooperativeScheduler` coroutines
 
-**Tier 26 (Dataflow Pipeline):** `CancellationToken`, `PipelineStage`, `DataflowPipeline`, `PipelineHandle`.
-
-**Tier 18 helper:** `ensure_scene_scheduler`.
-
-#### Scheduler budget contract
-
-The cooperative scheduler's dispatch budget is defined in `docs/runtime_operating_contracts.md` Section 6:
-
-- **fraction:** 0.12 of dt milliseconds — the scheduler may use up to 12% of the frame's dt
-- **floor:** 0.5 ms — minimum guaranteed budget per frame even on very fast frames
-- **ceiling:** 4.0 ms — hard cap per frame to protect rendering from runaway coroutines
+From **Tier 26** (Cancelable Dataflow Pipeline):
+- `CancellationToken`, `PipelineStage`, `DataflowPipeline`, `PipelineHandle` — multi-stage
+  cancelable async processing pipeline (also see §8.14 Data and Dataflow Helpers)
 
 #### Typical usage flow
 
-1. Create timer, tween, or coroutine handles in `bind_runtime`.
-2. Register coroutines with the scene scheduler using `ensure_scene_scheduler(host, scene_name)` then `scheduler.run(coroutine)`.
-3. Cancel all active handles in `shutdown_runtime` to prevent stale mutations on dead controls.
-
+**Tween (value interpolation):**
 ```python
-# Tween a panel's alpha on show
-self._fade_tween = host.tweens.to(self.panel, "alpha", target=255, duration=0.2, easing=Easing.EASE_OUT)
+# In bind_runtime:
+handle = host.tween_manager.to(self.panel, "alpha", target=255, duration=0.3, easing=Easing.EASE_OUT)
+```
 
-# Cooperative coroutine
-def startup_sequence(host):
-    yield Sleep(0.5)
-    self.status.value = "Initialized"
-    yield WaitForSignal(self.ready_signal)
-    self.status.value = "Ready"
+**Cooperative coroutine:**
+```python
+from gui_do import CooperativeScheduler, Sleep, WaitForSignal
 
-scheduler = ensure_scene_scheduler(host, "main")
-scheduler.run(startup_sequence(host))
+def confirm_and_delete(host, item):
+    handle = host.dialog_manager.show(ConfirmDialog(), modal=True)
+    confirmed = yield WaitForSignal(handle.on_confirm)
+    if confirmed:
+        host.toasts.show("Item deleted")
+
+# In bind_runtime:
+host.scheduler.run(confirm_and_delete(host, self._selected_item))
+```
+
+**Debounced search:**
+```python
+from gui_do import Debouncer
+
+self._debounce = Debouncer(delay=0.3, callback=self._run_search)
+# In handle_event:
+if event.type == EventType.TEXT_INPUT:
+    self._debounce.trigger()
 ```
 
 #### Minimal example
 
 ```python
-from gui_do import Easing, TweenHandle
+from gui_do import TweenManager, Easing, Feature, ButtonControl, PanelControl
+import pygame
 
-class AnimatedPanel(Feature):
-    def bind_runtime(self, host) -> None:
-        self._tween: TweenHandle = host.tweens.to(
-            self.root, "alpha", target=255, duration=0.3, easing=Easing.EASE_OUT
+class FadeFeature(Feature):
+    HOST_REQUIREMENTS = {"build": ("app", "screen_rect", "controls", "tween_manager"), "bind_runtime": ("app",)}
+
+    def build(self, host):
+        self._panel = PanelControl(rect=pygame.Rect(50, 50, 200, 100))
+        self._panel.alpha = 0
+        btn = ButtonControl(
+            rect=pygame.Rect(8, 8, 120, 32),
+            label="Fade In",
+            on_click=lambda e: host.tween_manager.to(
+                self._panel, "alpha", 255, duration=0.4, easing=Easing.EASE_OUT
+            ),
         )
+        self._panel.add(btn)
+        host.controls.add(self._panel)
 
-    def shutdown_runtime(self, host) -> None:
-        if self._tween and self._tween.is_active():
-            self._tween.cancel()
+    def bind_runtime(self, host):
+        pass
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: AnimationStateMachine for sprite animation
 
-Use `CooperativeScheduler` coroutines with `WaitForSignal` to implement multi-step workflows that span many frames without blocking the UI thread. This is the preferred alternative to threading for sequential async work:
+`AnimationStateMachine` manages state-driven animations — for example, a character sprite that
+transitions between idle, walking, and running states:
 
 ```python
-from gui_do import Sleep, WaitForSignal, WaitUntil
+from gui_do import AnimationStateMachine, AnimationTransitionMode
 
-def analysis_workflow(host):
-    self.progress.value = 0.0
-    yield Sleep(0.1)                         # yield to let UI redraw first
-    yield WaitUntil(lambda: self.data_ready)  # wait for data without spinning
-    self.progress.value = 0.5
-    yield WaitForSignal(self.confirm_signal)  # wait for user confirmation
-    self.progress.value = 1.0
-    self.status.value = "Complete"
+asm = AnimationStateMachine()
+asm.add_state("idle", loop=True, frames=[...])
+asm.add_state("walk", loop=True, frames=[...])
+asm.add_transition("idle", "walk", trigger="start_walk", mode=AnimationTransitionMode.IMMEDIATE)
+asm.add_transition("walk", "idle", trigger="stop_walk", mode=AnimationTransitionMode.ON_COMPLETE)
+asm.set_state("idle")
+
+# Each frame:
+asm.update(dt)
+asm.trigger("start_walk")  # transitions to walk state
 ```
 
-Use `AnimationStateMachine` to drive complex multi-state visual feedback. Declare named animation states and transitions; the machine applies the correct `AnimationSequence` when transitioning between states. Use `AnimationTransitionMode` to control whether the current animation completes or is immediately interrupted.
-
-Use `Debouncer` for search inputs that should not trigger a backend query on every keystroke, and `Throttler` for resize or scroll handlers where firing on every pixel change is wasteful.
+`CooperativeScheduler` with `WaitForAll` enables fan-out workflows — launch multiple sub-tasks
+and wait for all to complete before proceeding.
 
 #### Common mistakes and anti-patterns
 
-- Performing unbounded computation in `on_update` directly. Heavy work in `on_update` blocks every render frame. Move multi-step work into a `CooperativeScheduler` coroutine.
-- Placing blocking I/O inside coroutines. Coroutines run on the main thread within the frame budget. Blocking I/O (file reads, network calls) will freeze the frame. Use `DataflowPipeline` with a `CancellationToken` for I/O-bound work.
-- Forgetting to cancel tweens on scene exit. Active tweens continue to apply mutations to target controls each frame. A tween on a dead control will raise or silently corrupt state.
+- **Unbounded computation in `on_update`** — any work that takes significant time belongs in
+  a `CooperativeScheduler` coroutine, not directly in `on_update`. Long `on_update` implementations
+  block rendering and produce frame drops.
+- **Blocking I/O inside coroutines** — `CooperativeScheduler` coroutines run on the main
+  thread. Blocking I/O (file read, network request) will freeze the frame. Use
+  `DataflowPipeline` with background threads for I/O-bound work.
+- **Not canceling tweens on scene exit** — if a tween is still active when the scene
+  transitions out, it will try to apply mutations to controls that no longer exist. Cancel
+  active tweens in `shutdown_runtime` or use `TweenHandle.cancel()`.
+- **Using `Sleep` in a coroutine expecting frame-exact timing** — `Sleep` waits at least
+  the specified duration but is not frame-exact. For frame-synchronized timing, use
+  `Timers` or `SceneTimeline`.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for the `on_update` frame contract, [8.14 Data and Dataflow Helpers](#814-data-and-dataflow-helpers) for the pipeline stage model for I/O-bound work, and [8.16 Telemetry, Diagnostics, and Introspection](#816-telemetry-diagnostics-and-introspection) for measuring scheduler performance.
+- §8.2 Feature Lifecycle — `on_update` is the frame-level hook that drives scheduling
+- §8.10 (self) — `DataflowPipeline` (Tier 26) is also documented in §8.14
+- §8.16 Telemetry — scheduler telemetry spans measure dispatch budget usage
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1493,91 +2574,154 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Users expect their application state — open windows, scene selection, feature-specific data, and settings — to survive application restarts. gui_do provides a workspace persistence layer that snapshots the session to JSON on save and restores it deterministically on load. The restore operation produces a structured report so that application code can detect and surface any gaps in the restored state.
+Applications that require session continuity — remembering which scene the user was in,
+which windows were open, what values were typed into settings — need a persistence layer.
+`gui_do` provides workspace persistence through `WorkspacePersistenceManager`, which saves
+and restores a structured snapshot of the session. The snapshot includes scene identity,
+feature-level state, scene node positions, and named settings values.
+
+The persistence system also provides stateful undo/redo via `CommandHistory`, a versioned
+snapshot and migration system via `SnapshotMigrator`, and named settings via `SettingsRegistry`.
+These systems are composable: workspace persistence uses `SettingsRegistry` for settings
+round-trips, and `SnapshotMigrator` provides schema evolution for snapshots saved by older
+versions of the application.
 
 #### Mental model and lifecycle placement
 
-The workspace is a JSON document containing the saved scene, feature states, scene node snapshots, and settings values. On restore, the runtime switches to the saved scene, replays feature states, restores scene snapshots, and applies settings. Unknown keys are skipped without aborting the restore. The restore report enumerates what was applied, what was skipped, and which settings blocks were missing.
+The workspace is a JSON snapshot taken at a save point. On restore, `GuiApplication.restore_workspace`
+(or `load_workspace`) reads the snapshot, switches to the saved scene, replays feature states,
+restores scene node positions, and replays settings values. The restore report is a structured
+object that identifies what was applied, what was skipped (unknown keys), and what was missing
+(expected but not found settings blocks).
 
-This system sits at the application lifecycle boundary: save is called on shutdown, load is called on startup before scene activation.
+`CommandHistory` is a per-feature or per-context undo stack. `Command` objects are executable
+and undoable operations that can be composed into `CommandTransaction` for grouped undo steps.
+`UndoContextManager` provides named routing across multiple independent undo stacks.
 
 #### Primary public APIs and key types
 
-**Tier 11:** `CommandHistory`, `Command`, `CommandTransaction`, `StateMachine`, `HierarchicalStateMachine`, `Router`, `RouteEntry`, `SettingsRegistry`, `SettingDescriptor`, `WorkspaceState`, `WorkspacePersistenceManager`, `DEFAULT_WORKSPACE_STATE_PATH`, `SceneSnapshot`, `NodeSnapshot`.
+From **Tier 11** (State & Persistence):
+- `CommandHistory`, `Command`, `CommandTransaction` — undo/redo stack with grouped operations
+- `StateMachine` — simple explicit state machine with transition guards
+- `HierarchicalStateMachine` — nested state machine with enter/exit hooks and history
+- `Router`, `RouteEntry` — URL-style feature routing for navigation history
+- `SettingsRegistry`, `SettingDescriptor` — typed named settings with defaults and validation
+- `WorkspaceState`, `WorkspacePersistenceManager`, `DEFAULT_WORKSPACE_STATE_PATH` — session save/restore
+- `SceneSnapshot`, `NodeSnapshot` — snapshot of scene or node state for save/restore
 
-**Tier 32 (snapshot migration):** `SchemaVersion`, `VersionedSnapshot`, `MigrationStep`, `MigrationRegistry`, `SnapshotMigrator`, `MigrationError`, `make_snapshot`, `read_version`.
+From **Tier 23** (Undo Context Routing):
+- `UndoContextManager` — routes undo/redo operations to the correct named stack
 
-**Tier 23 (undo context):** `UndoContextManager`.
+From **Tier 32** (Portable Snapshot & Migration Layer):
+- `SchemaVersion` — version identifier for a snapshot schema
+- `VersionedSnapshot` — snapshot payload with embedded version metadata
+- `MigrationStep` — a single transformation from version N to version N+1
+- `MigrationRegistry` — registers all known migration steps
+- `SnapshotMigrator` — BFS migration graph that walks from old version to current
+- `MigrationError` — raised when no migration path exists to the target version
+- `make_snapshot` — creates a `VersionedSnapshot` with the current schema version
+- `read_version` — reads the schema version from a snapshot without deserializing the payload
 
-**Restore report fields** (from `docs/runtime_operating_contracts.md` Section 4):
-
-- `target_scene`
-- `switched_scene`
-- `restored_feature_states`
-- `restored_scene_nodes`
-- `applied_settings`
-- `skipped_settings`
-- `missing_settings_blocks`
+**[CONTRACT]** Workspace restore report fields (from `docs/runtime_operating_contracts.md`):
+- `target_scene` — the scene name the restore targeted
+- `switched_scene` — whether the active scene was actually switched
+- `restored_feature_states` — list of feature state keys that were restored
+- `restored_scene_nodes` — list of scene node identifiers that were restored
+- `applied_settings` — list of settings keys successfully applied
+- `skipped_settings` — list of settings keys that were unknown and skipped
+- `missing_settings_blocks` — list of expected settings blocks not found in snapshot
 
 #### Typical usage flow
 
-1. Call `host.app.save_workspace(path)` at application shutdown or at checkpoint save points.
-2. On startup, call `report = host.app.load_workspace(path)` before the first scene activates.
-3. Inspect the restore report to surface warnings about missing or skipped settings to the user.
-
+**Save workspace:**
 ```python
-# Save workspace
-host.app.save_workspace(DEFAULT_WORKSPACE_STATE_PATH)
+host.app.save_workspace(path="./session.json")
+```
 
-# Load workspace
-report = host.app.load_workspace(DEFAULT_WORKSPACE_STATE_PATH)
-if report and report.skipped_settings:
-    host.toasts.show(
-        f"Could not restore {len(report.skipped_settings)} settings",
+**Load workspace:**
+```python
+report = host.app.load_workspace(path="./session.json")
+if report.skipped_settings:
+    host.toast_manager.show(
+        f"{len(report.skipped_settings)} settings could not be restored",
         severity=ToastSeverity.WARNING,
     )
+```
+
+**Undo/redo:**
+```python
+history = CommandHistory()
+history.execute(PaintCommand(canvas, color, position))
+history.undo()   # reverts the paint
+history.redo()   # re-applies it
 ```
 
 #### Minimal example
 
 ```python
-from gui_do import DEFAULT_WORKSPACE_STATE_PATH, WorkspacePersistenceManager
+from gui_do import WorkspacePersistenceManager, SettingsRegistry, SettingDescriptor
 
-manager = WorkspacePersistenceManager(DEFAULT_WORKSPACE_STATE_PATH)
-snapshot = manager.load()
-if snapshot is not None:
-    report = manager.restore(host.app, snapshot)
+# Register typed settings
+settings = SettingsRegistry()
+settings.register(SettingDescriptor(key="theme", dtype=str, default="light"))
+settings.register(SettingDescriptor(key="font_size", dtype=int, default=14))
+
+# Save
+manager = WorkspacePersistenceManager(path="./workspace.json")
+manager.save(host.app, settings)
+
+# Restore
+report = manager.restore(host.app, settings)
+print(f"Applied: {report.applied_settings}")
+print(f"Skipped: {report.skipped_settings}")
 ```
 
-#### Advanced pattern(s)
+#### Advanced pattern: versioned snapshots with migration
 
-Use `SnapshotMigrator` when the schema of persisted state evolves across releases. Register `MigrationStep` objects that transform a `VersionedSnapshot` from one version to the next. On load, call `read_version` to detect the snapshot's version, then have the migrator walk the registered steps forward to the current schema version before restoring:
+When the application's persistence schema evolves between versions, `SnapshotMigrator`
+ensures old snapshots can still be loaded:
 
 ```python
-from gui_do import MigrationRegistry, MigrationStep, SnapshotMigrator, read_version
+from gui_do import (
+    SchemaVersion, VersionedSnapshot, MigrationStep, MigrationRegistry, SnapshotMigrator, make_snapshot, read_version
+)
+
+v1 = SchemaVersion(major=1, minor=0)
+v2 = SchemaVersion(major=2, minor=0)
+
+def migrate_v1_to_v2(data: dict) -> dict:
+    # Rename "color" to "theme_color"
+    data["theme_color"] = data.pop("color", "white")
+    return data
 
 registry = MigrationRegistry()
-registry.register(MigrationStep(from_version="1.0", to_version="1.1", apply=migrate_v1_to_v1_1))
-migrator = SnapshotMigrator(registry)
+registry.register(MigrationStep(from_version=v1, to_version=v2, migrate=migrate_v1_to_v2))
 
-raw = load_raw_snapshot(path)
-version = read_version(raw)
-migrated = migrator.migrate(raw, to_version="1.1")
+migrator = SnapshotMigrator(registry=registry, current_version=v2)
+snapshot = load_raw_snapshot_from_disk()
+current_data = migrator.migrate(snapshot)
 ```
-
-Use `UndoContextManager` to provide independent undo/redo stacks for different editor panels in the same application. For example, a text editor panel and a property inspector panel can each have their own stack, with their respective `CommandHistory` instances registered under named contexts.
-
-Use `SettingsRegistry` with typed `SettingDescriptor` entries to define application settings declaratively. Registered settings participate automatically in workspace save/restore without additional plumbing.
 
 #### Common mistakes and anti-patterns
 
-- Assuming all settings keys exist in a loaded workspace. Always inspect `restore_report.skipped_settings` and `missing_settings_blocks` before relying on restored values.
-- Restoring snapshots without calling `read_version` first. When the schema has evolved, restoring an unversioned snapshot may silently apply stale field mappings.
-- Using `DEFAULT_WORKSPACE_STATE_PATH` without qualification in multi-instance scenarios. Multiple application instances sharing the same path will overwrite each other's workspace on save.
+- **Assuming all settings keys exist after restore** — always use the restore report's
+  `skipped_settings` and `missing_settings_blocks` fields to handle partial restores gracefully.
+- **Restoring snapshots without version checks** — always call `read_version` before
+  deserializing payload. An old snapshot with a newer schema will produce incorrect data.
+- **Using `DEFAULT_WORKSPACE_STATE_PATH` in multi-instance scenarios** — multiple concurrent
+  instances will clobber each other's workspace. Use per-instance paths derived from a unique
+  identifier.
+- **Forgetting to register settings before save/restore** — a setting that is not registered
+  in `SettingsRegistry` will not be included in saves or restores.
 
 #### Cross-links to related systems
 
-See [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap-and-host-configuration) for how workspace load integrates with application startup, [8.4 State and Observables](#84-state-and-observables) for `AppStateStore` as the in-memory state layer, and [8.16 Telemetry, Diagnostics, and Introspection](#816-telemetry-diagnostics-and-introspection) for measuring restore performance.
+- §8.1 Bootstrap — workspace restore is initiated during `GuiApplication.run_entrypoint`
+- §8.2 Feature Lifecycle — `shutdown_runtime` is the correct place to save per-feature state
+- §8.16 Telemetry — telemetry logs can be saved alongside workspace state for diagnostics
+
+For field-level reference for `SchemaVersion`, `VersionedSnapshot`, and `MigrationStep`, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1589,85 +2733,138 @@ See [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap
 
 #### What it is and why it exists
 
-Theming centralizes all design decisions — colors, spacing, border radii, typography, cursor shapes — into a single authoritative source. Without a theme system, color literals and size constants scatter across hundreds of draw calls, making a visual style change a multi-day refactoring exercise. With the theme system, changing the active theme is a single operation; every control picks up the updated values on the next frame.
+The theme system centralizes all visual design decisions — colors, font sizes, spacing values,
+border radii, icon sizes — into named tokens that controls and features read at render time.
+Without a centralized theme system, changing the visual style of an application requires finding
+and updating every hardcoded color literal and font size across the codebase. With a theme system,
+the developer changes one set of tokens and all controls that use those tokens update automatically.
+
+`gui_do`'s theme system also provides the mechanism for switching between themes at runtime
+(for example, between a light and a dark mode). The `ThemeInvalidationBus` ensures that all
+cached rendered surfaces are flushed when the theme changes, so stale visuals never appear
+after a theme switch.
 
 #### Mental model and lifecycle placement
 
-The `ThemeManager` holds the active `ColorTheme`. Controls and features query `DesignTokens` for named values at render time rather than using literals. `FontRoleRegistry` maps semantic role names (e.g., `"heading"`, `"body"`, `"caption"`) to font configurations. When the theme changes, `ThemeInvalidationBus` broadcasts to all registered subscribers so caches of pre-rendered surfaces are invalidated and re-rendered on the next frame.
+The `ThemeManager` holds the active `ColorTheme` and `DesignTokens`. Controls read theme
+values at render time — they do not cache colors at construction time. This means a theme
+switch takes effect on the next frame without requiring any control to be rebuilt. The
+`FontRoleRegistry` maps semantic role names (such as "heading", "body.small", "caption") to
+configured font objects. Features declare font roles in the bootstrap spec; controls reference
+roles by name.
 
-This system is initialized during bootstrap via the `fonts` dict and `FontRoleBindingSpec` entries in `HostApplicationConfig`, and is then available throughout the feature lifecycle.
+`ScopedTheme` and `ScopedThemeManager` allow a subtree to override specific theme tokens
+locally — for example, applying a dark panel style to a sidebar while the rest of the
+application uses a light theme.
 
 #### Primary public APIs and key types
 
-**Tier 6:** `FontManager`, `FontRoleRegistry`, `ColorTheme`, `ThemeManager`, `DesignTokens`, `ScopedTheme`, `ScopedThemeManager`.
+From **Tier 6** (Theme & Font Management):
+- `FontManager` — loads and caches font objects; resolves font role names to pygame font instances
+- `FontRoleRegistry` — maps semantic role names to font configurations (size, weight, file, system name)
+- `ColorTheme` — a named set of color mappings from semantic role names to RGBA tuples
+- `ThemeManager`, `DesignTokens` — active theme holder and named scalar/color token store
+- `ScopedTheme`, `ScopedThemeManager` — per-subtree theme overrides
 
-**Tier 22:** `ThemeInvalidationBus`.
+From **Tier 22** (Theme Invalidation):
+- `ThemeInvalidationBus` — broadcast channel for theme change notifications; subscribe to invalidate surface caches on theme switch
 
-**Tier 1 spec types:** `FontRoleBindingSpec`, `CursorSpec`, `CursorBindingSpec`.
-
-**Tier 1 helper:** `setup_standard_font_roles`.
+From **Tier 1** (spec helpers):
+- `FontRoleBindingSpec` — declarative binding of a semantic role name to a font config and size
+- `setup_standard_font_roles` — convenience function to register a standard set of roles from a fonts dictionary
 
 #### Typical usage flow
 
-1. Declare a `fonts` dict in `HostApplicationConfig` with font configuration entries.
-2. Add `FontRoleBindingSpec` entries to map semantic role names to font configurations. Or call `setup_standard_font_roles` with the fonts dict to register a standard role set in one call.
-3. In controls and features, query the active theme's color via `host.theme_manager.active_theme` and `host.design_tokens.get(token_name)` rather than using hard-coded literals.
-4. To switch themes at runtime, call `host.theme_manager.set_theme(name)`. `ThemeInvalidationBus` handles cache flush.
+1. Declare the `fonts` dictionary in `HostApplicationBindingSpec` with named font configurations.
+2. Add `FontRoleBindingSpec` entries to map semantic role names to the configured fonts.
+3. Controls reference font roles by name; they are resolved through `FontRoleRegistry` at render time.
+4. For custom rendering in `draw`, query `host.theme_manager` for design tokens and the
+   active color theme.
+5. If the application supports theme switching, register surface caches with
+   `ThemeInvalidationBus` so they flush on theme change.
 
 #### Minimal example
 
 ```python
-# In bootstrap config
-fonts = {
-    "default": {"system": "arial", "size": 14},
-    "heading": {"system": "arial", "size": 20, "bold": True},
-}
-font_role_specs = (
-    FontRoleBindingSpec(role="body", font_key="default"),
-    FontRoleBindingSpec(role="heading", font_key="heading"),
+from gui_do import (
+    HostApplicationBindingSpec,
+    FontRoleBindingSpec,
+    setup_standard_font_roles,
 )
 
-# In feature draw code (using design tokens)
-color = host.design_tokens.get("panel_bg")
-pygame.draw.rect(surface, color, self.root.rect)
+# In HostApplicationBindingSpec:
+fonts={
+    "default": {"file": "assets/fonts/Body.ttf", "size": 14},
+    "window": "assets/fonts/Title.ttf",
+},
+font_role_entries=(
+    FontRoleBindingSpec("title", size=18, font="window"),
+    FontRoleBindingSpec("body", size=14, font="default"),
+    FontRoleBindingSpec("caption", size=11, font="default"),
+),
 ```
 
-#### Advanced pattern(s)
+Controls that accept a `font_role` parameter will automatically resolve the correct font at
+render time. Custom draw code reads from the theme:
 
-Use `ScopedThemeManager` to apply per-window or per-subtree theme overrides. For example, a dark sidebar panel in an otherwise light-themed application can register its root control as a `ScopedTheme` override context:
+```python
+def draw(self, host, surface, theme):
+    color = theme.color_theme.get("panel.background")
+    font = host.font_manager.get_role("body")
+    rendered = font.render("Hello", True, color)
+    surface.blit(rendered, self._rect.topleft)
+```
+
+#### Advanced pattern: ScopedTheme for per-window overrides
 
 ```python
 from gui_do import ScopedTheme, ScopedThemeManager
 
-dark_tokens = DesignTokens({"panel_bg": (30, 30, 30, 255), "label_fg": (220, 220, 220, 255)})
-scoped = ScopedTheme(root_control=self.sidebar, tokens=dark_tokens)
-host.scoped_theme_manager.register(scoped)
+# Create a dark overlay for one window only
+dark_theme = ScopedTheme(overrides={"panel.background": (30, 30, 30, 255)})
+scope_manager = ScopedThemeManager()
+scope_manager.push(dark_theme)
+# Controls inside this scope read the overridden background
+scope_manager.pop()
 ```
 
-Subscribe to `ThemeInvalidationBus` in any custom control that caches pre-rendered surface content (e.g., rich text rendered to an offscreen surface). When invalidation fires, clear the cached surface so it is re-rendered with the updated theme values on the next draw call:
+`ThemeInvalidationBus` subscription for cached surfaces:
 
 ```python
 from gui_do import ThemeInvalidationBus
 
-self._unsub_theme = ThemeInvalidationBus.subscribe(self._on_theme_changed)
+class CachingControl:
+    def __init__(self):
+        self._cache = None
+        ThemeInvalidationBus.instance().subscribe(self._invalidate)
 
-def _on_theme_changed(self) -> None:
-    self._cached_surface = None  # cleared; will re-render on next draw
+    def _invalidate(self):
+        self._cache = None  # force re-render on next draw
 ```
 
 #### Common mistakes and anti-patterns
 
-- Hardcoding `pygame` color tuples in feature or control draw code. Literals break theme switching and make visual audits impossible. Always reference a `DesignTokens` key.
-- Switching themes without invalidating surface caches. If your control pre-renders content to an offscreen surface and does not subscribe to `ThemeInvalidationBus`, stale colors will persist until the next forced redraw.
-- Registering fonts in feature `build` methods rather than in the bootstrap config. The `FontRoleRegistry` may not be fully initialized or associated with the scene at that point.
+- **Hardcoding color literals in draw code** — this bypasses the theme system and breaks
+  theme switching. Always read colors from `theme.color_theme` or `theme.design_tokens`.
+- **Caching rendered text surfaces without invalidation** — text surfaces baked at one theme's
+  font and color will be stale after a theme switch. Subscribe to `ThemeInvalidationBus`.
+- **Registering fonts outside the bootstrap phase** — font role registration happens during
+  bootstrap. Attempting to call `FontRoleRegistry.define` after bootstrap completes may not
+  take effect in all font consumers.
 
 #### Cross-links to related systems
 
-See [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap-and-host-configuration) for how font configs and `CursorSpec` entries are declared, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for how controls consume theme values in rendering, and [8.16 Telemetry, Diagnostics, and Introspection](#816-telemetry-diagnostics-and-introspection) for identifying theme-switch performance regressions.
+- §8.1 Bootstrap — `fonts` and `font_role_entries` are declared in the bootstrap spec
+- §8.5 Controls — all standard controls read font roles and color theme at render time
+- §8.16 Telemetry — theme invalidation events can be tracked through telemetry spans
+
+For field-level reference for `FontRoleBindingSpec`, `CursorSpec`, and `CursorBindingSpec`, see
+[Appendix F: Specifications and Option Reference](#appendix-f-specifications-and-option-reference).
 
 [Back to Table of Contents](#table-of-contents)
 
 ---
+
 
 ### 8.13 Text, Input, Forms, and Validation Systems
 
@@ -1675,88 +2872,140 @@ See [8.1 Application Bootstrap and Host Configuration](#81-application-bootstrap
 
 #### What it is and why it exists
 
-Structured text entry, document editing, form modeling, and validation logic are features common enough across applications to warrant a first-class system rather than ad hoc implementations scattered across features. gui_do provides a layered text and forms stack: low-level input controls handle keystroke-level entry; `FormModel` and `FormSchema` sit above them managing logical form state, field validation, and cross-field dependencies; `SchemaFormRuntime` drives declarative validation policy; and `AsyncFormValidator` handles debounced remote validation against backend services.
+Structured text entry, document editing, form modeling, and field validation appear in nearly
+every non-trivial application. Implementing these from scratch in each feature produces
+inconsistent UX, duplicated validation logic, and fragile cross-field dependency handling.
+`gui_do` provides a layered system that separates the concerns: input controls handle
+keystroke-level editing, `FormModel` models the logical form, `ValidationRule` and
+`FieldError` carry validation results, and `SchemaFormRuntime` drives the full validation
+lifecycle with a configurable `ValidationPolicy`.
 
 #### Mental model and lifecycle placement
 
-Think in layers. `TextInputControl` and `TextAreaControl` (Tier 13) handle raw text entry. `FormModel`, `FormField`, `FormSchema`, and `SchemaField` (Tier 10) model the logical form above the controls — they track field values, dirty state, and validation status independently of how the controls are rendered. `SchemaFormRuntime` (Tier 31) drives a `FieldGraphSchema` (a DAG of fields with visibility dependencies) through a `ValidationPolicy`. `AsyncFormValidator` (Tier 24) wraps `AsyncFieldValidator` instances with debouncing and stale-result suppression.
-
-Form modeling happens in `build` and `bind_runtime`. Validation policies run as reactive responses to field value changes.
+Think of text input as a three-layer stack. At the bottom, `TextInputControl` and
+`TextAreaControl` handle raw keystroke processing, selection, cursor movement, and IME
+input. At the middle, `FormField` binds a control's value to a `FormModel`, converting
+raw strings into typed domain values. At the top, `ValidationRule` objects run on each
+change or on submission and produce `FieldError` objects displayed beside the field.
+`SchemaFormRuntime` orchestrates this whole stack from a declarative `FieldGraphSchema`.
 
 #### Primary public APIs and key types
 
-**Forms and validation (Tier 10):** `FormModel`, `FormField`, `ValidationRule`, `FieldError`, `FormSchema`, `SchemaField`, `DocumentModel`, `WizardFlow`, `WizardStep`, `WizardHandle`, `ValidationResult`, `Validator`, `RequiredValidator`, `RangeValidator`, `LengthValidator`, `PatternValidator`, `CustomValidator`, `DependentValidator`, `ValidationPipeline`.
+From **Tier 10** (Forms, Validation, and Document Editing):
+- `FormModel`, `FormField` — logical form with typed fields
+- `ValidationRule`, `FieldError` — validation contract and error result
+- `FormSchema`, `SchemaField` — declarative schema for a form's fields and constraints
+- `DocumentModel` — rich-text document backing for `TextAreaControl`; spans and editing operations
+- `WizardFlow`, `WizardStep`, `WizardHandle` — multi-step guided workflow with per-step validation
+- `RequiredValidator`, `LengthValidator`, `PatternValidator`, `RangeValidator`, `DependentValidator` — built-in validators
+- `CompositeValidator` — runs multiple validators in sequence; stops at first failure or collects all
 
-**Async validation (Tier 24):** `AsyncFieldValidator`, `AsyncFormValidator`.
+From **Tier 14** (Text, Formatting, and Localization):
+- `TextFormatter`, `NumericFormatter`, `PatternFormatter`, `FixedPatternFormatter` — format value to string
+- `TextFlow`, `TextSpan` — multi-run text layout with mixed styling
+- `TextSearcher`, `TextMatch` — substring and regex search over text content
+- `StringTable`, `LocaleRegistry` — locale-keyed string tables for internationalization
 
-**Schema-driven form runtime (Tier 31):** `FieldSchema`, `FieldGraphSchema`, `ValidationPolicy`, `SchemaFormRuntime`.
+From **Tier 24** (Async Form Validation):
+- `AsyncFieldValidator` — async validation for a single field (e.g., server-side uniqueness check)
+- `AsyncFormValidator` — coordinates multiple `AsyncFieldValidator` instances with debouncing and stale-result suppression
 
-**Text utilities (Tier 14):** `TextFormatter`, `NumericFormatter`, `PatternFormatter`, `FixedPatternFormatter`, `TextFlow`, `TextSpan`, `TextSearcher`, `TextMatch`, `StringTable`, `LocaleRegistry`.
+From **Tier 31** (Schema Form Runtime):
+- `FieldSchema`, `FieldGraphSchema` — DAG of fields with visibility and dependency declarations
+- `ValidationPolicy` — controls when validation fires: `ON_CHANGE`, `ON_BLUR`, `ON_SUBMIT`, `ALWAYS`
+- `SchemaFormRuntime` — drives `FieldGraphSchema` with a `ValidationPolicy`, manages field lifecycle
 
-**Input controls (Tier 13):** `TextInputControl`, `TextAreaControl`, `RichLabelControl`, `SpinnerControl`, `DatePickerControl`, `TimePickerControl`, `ColorPickerControl`, `ChipInputControl`.
+From **Tier 13** (Extended Controls — input-specific):
+- `TextInputControl`, `TextAreaControl` — single-line and multi-line text entry
+- `SpinnerControl`, `RangeSliderControl` — numeric entry with increment/decrement
+- `DatePickerControl`, `TimePickerControl` — date and time selection
+- `ColorPickerControl` — interactive color selection
+- `ChipInputControl` — tag entry with removable chips
 
 #### Typical usage flow
 
-1. Define a `FormSchema` with `SchemaField` entries specifying field names, types, and validation rules.
-2. Build a `FieldGraphSchema` from the schema to capture field visibility dependencies.
-3. Construct a `SchemaFormRuntime` with the field graph schema and a `ValidationPolicy` (e.g., `ON_CHANGE` for continuous feedback).
-4. Bind each `FormField`'s value to its corresponding `TextInputControl` via observables in `bind_runtime`.
-5. React to `FieldError` events from the runtime to display inline error labels near each field.
+1. Declare `FormSchema` with `SchemaField` entries for each field (name, dtype, validators).
+2. Build a `FieldGraphSchema` from the schema (for visibility dependencies).
+3. Construct `SchemaFormRuntime` with the graph schema and a `ValidationPolicy`.
+4. In the feature's `build`, create `TextInputControl` instances for each field and bind them
+   to the `FormModel` via `FormField`.
+5. In `bind_runtime`, subscribe to the form model's `on_validation_changed` to update error
+   display labels beside each field.
+6. For async validation (e.g., email availability), add `AsyncFieldValidator` instances to an
+   `AsyncFormValidator` and connect it to the form model.
 
 #### Minimal example
 
 ```python
 from gui_do import (
-    FieldError,
-    FormField,
-    FormSchema,
-    PatternValidator,
-    RequiredValidator,
-    SchemaField,
-    ValidationPipeline,
-    ValidationPolicy,
-    FieldGraphSchema,
-    SchemaFormRuntime,
+    FormSchema, SchemaField, SchemaFormRuntime, FieldGraphSchema,
+    ValidationPolicy, RequiredValidator, PatternValidator,
+    LengthValidator, FieldError,
 )
 
+EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
-schema = FormSchema(fields=[
-    SchemaField(name="email", validators=[RequiredValidator(), PatternValidator(r".+@.+\..+")]),
-    SchemaField(name="password", validators=[RequiredValidator(), LengthValidator(min_len=8)]),
+schema = FormSchema([
+    SchemaField(key="email", dtype=str, validators=[
+        RequiredValidator(),
+        PatternValidator(pattern=EMAIL_PATTERN, message="Enter a valid email address"),
+    ]),
+    SchemaField(key="password", dtype=str, validators=[
+        RequiredValidator(),
+        LengthValidator(minimum=8, message="Password must be at least 8 characters"),
+    ]),
 ])
+
 graph = FieldGraphSchema.from_form_schema(schema)
-runtime = SchemaFormRuntime(graph, policy=ValidationPolicy.ON_CHANGE)
+runtime = SchemaFormRuntime(graph_schema=graph, policy=ValidationPolicy.ON_CHANGE)
+
+# On submit:
+errors: dict[str, FieldError] = runtime.validate_all()
+if not errors:
+    submit_form(runtime.get_values())
 ```
 
-#### Advanced pattern(s)
-
-Use `AsyncFormValidator` for registration forms that need server-side uniqueness checks. The validator debounces each keystroke and suppresses results from earlier generations when the user keeps typing:
+#### Advanced pattern: AsyncFormValidator for server-side checks
 
 ```python
 from gui_do import AsyncFieldValidator, AsyncFormValidator
 
+async def check_username_available(value: str) -> str | None:
+    exists = await my_api.check_username(value)
+    return "Username already taken" if exists else None
 
-class UsernameAvailabilityValidator(AsyncFieldValidator):
-    async def validate(self, value: str) -> FieldError | None:
-        available = await check_username_api(value)
-        return None if available else FieldError("username", "Username already taken")
-
-
-validator = AsyncFormValidator(debounce_ms=400)
-validator.add_field("username", UsernameAvailabilityValidator())
+async_validator = AsyncFormValidator()
+async_validator.add(AsyncFieldValidator(
+    key="username",
+    validate=check_username_available,
+    debounce=0.4,
+))
+runtime.set_async_validator(async_validator)
 ```
 
-Use `WizardFlow` with `WizardStep` entries to guide users through a multi-page form sequence where each step can independently validate before allowing progression. `WizardHandle.next()` runs the current step's validation; it advances only if the step passes.
+`DependentValidator` fires only when a condition on another field passes:
+
+```python
+from gui_do import DependentValidator
+
+DependentValidator(
+    condition=lambda form: form.get("type") == "company",
+    validators=[RequiredValidator()],
+)
+```
 
 #### Common mistakes and anti-patterns
 
-- Validating only on submit when the UX expectation is continuous per-field feedback. Use `ValidationPolicy.ON_CHANGE` for responsive validation.
-- Wiring `AsyncFormValidator` without stale-generation suppression. If the user types quickly and the first async request resolves after the second, the older error will overwrite the current result.
-- Mixing validation logic into `handle_event` callbacks. All validation should flow through the `FormModel` or `SchemaFormRuntime` so the policy layer controls when and how errors are surfaced.
+- **Validating only on submit** — use `ValidationPolicy.ON_CHANGE` or `ON_BLUR` for continuous feedback.
+- **Wiring async validators without stale-result suppression** — `AsyncFormValidator` handles
+  this via generation tracking; custom async paths must suppress stale results manually.
+- **Using `TextInputControl.value` as source of truth** — the `FormField` or `FormModel` owns the typed value.
 
 #### Cross-links to related systems
 
-See [8.4 State and Observables](#84-state-and-observables) for how to bind form field values reactively, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for the input control family, and [8.14 Data and Dataflow Helpers](#814-data-and-dataflow-helpers) for cancelable async pipelines.
+- §8.4 State and Observables — `FormField` binds to `ObservableValue`
+- §8.5 Controls — input controls are Tier 13 extended controls
+- §8.14 Data and Dataflow Helpers — `DataflowPipeline` for search-as-you-type patterns
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1768,89 +3017,98 @@ See [8.4 State and Observables](#84-state-and-observables) for how to bind form 
 
 #### What it is and why it exists
 
-Data-heavy features — search results, inventory lists, property grids, trees — require efficient loading, sorting, filtering, and virtualized rendering to remain responsive with large datasets. gui_do provides a composable pipeline from async loading through sort/filter proxies to virtualized display, with cancellation support to handle rapidly changing user inputs without stale results appearing.
+Features that display large datasets — file listings, search results, log records, entity
+tables — need efficient loading, sorting, filtering, diff-based updates, and virtualized
+rendering. `gui_do` provides a composable data pipeline: async loading, sort/filter projection,
+diff calculation, and virtualized windowing, available as composable building blocks.
 
 #### Mental model and lifecycle placement
 
-Data flows downstream: a source (`AsyncDataProvider`, `FixedItemSource`) feeds a `SortFilterProxySource`, which feeds a virtualized display control (`ListViewControl`, `DataGridControl`, `TreeControl`, or the lower-level `VirtualizationCore`). For processing-heavy transformation pipelines, `DataflowPipeline` coordinates multi-stage work with per-stage `CancellationToken` objects so that starting a new user input immediately cancels stale in-progress pipeline runs.
+Data flows from a source through a projection layer into a virtualized rendering layer.
+The source is a `FixedItemSource` or `AsyncDataProvider`. The projection layer is a
+`SortFilterProxySource`. The rendering layer is `ListViewControl` or `VirtualizationCore`.
+`ListDiffCalculator` computes minimal patches for incremental updates. `DataflowPipeline`
+provides multi-stage cancelable processing with `CancellationToken`.
 
 #### Primary public APIs and key types
 
-**Virtual sources (Tier 15):** `VirtualItemSource`, `FixedItemSource`, `SortFilterProxySource`, `AsyncDataProvider`, `LoadState`, `LoadStateKind`, `ObjectPool`, `DataCache`, `CacheStats`, `ListDiffCalculator`, `ListDiff`, `DiffInsert`, `DiffRemove`, `DiffMove`.
+From **Tier 15** (Data & Collections):
+- `VirtualItemSource` — abstract base: `count` and `get_item(index)` on demand
+- `FixedItemSource` — wraps a plain list as a `VirtualItemSource`
+- `SortFilterProxySource` — sort/filter projection without copying source data
+- `AsyncDataProvider`, `LoadState`, `LoadStateKind` — async loading with `IDLE/LOADING/LOADED/ERROR` state
+- `ObjectPool` — pre-allocated pool for high-churn objects; reduces GC pressure
+- `DataCache`, `CacheStats` — LRU-style keyed cache with hit/miss metrics
+- `ListDiffCalculator`, `ListDiff`, `DiffInsert`, `DiffRemove`, `DiffMove` — minimal list patch computation
 
-**Dataflow pipeline (Tier 26):** `CancellationToken`, `PipelineStage`, `DataflowPipeline`, `PipelineHandle`.
+From **Tier 26** (Cancelable Dataflow Pipeline):
+- `CancellationToken` — generation-based cancellation for stale pipeline runs
+- `PipelineStage` — a single transformation stage
+- `DataflowPipeline` — multi-stage cancelable processing pipeline
+- `PipelineHandle` — handle for monitoring and canceling a running pipeline
 
-**Transactional state (Tier 27):** `AppStateStore`, `StateSelector`, `StateTransaction`.
+From **Tier 27** (Transactional App State Store):
+- `AppStateStore` — centralized state container with immutable transactions
+- `StateSelector` — derived slice of store state subscribed to relevant keys
+- `StateTransaction` — atomic state update across multiple keys
 
-**Virtualization (Tier 29):** `MeasureMode`, `MeasurePolicy`, `VirtualizedWindow`, `RecyclePool`, `VirtualizationCore`.
+From **Tier 29** (Unified Virtualization Core):
+- `MeasureMode`, `MeasurePolicy` — measurement semantics for virtualized windows
+- `VirtualizedWindow` — windowing structure for virtualized list/tree/grid rendering
+- `RecyclePool` — recycles control instances across scroll positions
+- `VirtualizationCore` — manages windowing, recycling, and identity tracking for large collections
 
 #### Typical usage flow
 
 ```python
 from gui_do import FixedItemSource, SortFilterProxySource
 
-# Wrap a plain list in a virtual source
-source = FixedItemSource(items)
-
-# Apply sort and filter
+source = FixedItemSource(items=my_item_list)
 proxy = SortFilterProxySource(source)
-proxy.set_filter(lambda item: item.active)
+proxy.set_filter(lambda item: item.is_active)
 proxy.set_sort_key(lambda item: item.name.lower())
+list_view.set_source(proxy)
 
-# Connect to a list view
-self.list_view.set_source(proxy)
+# Change filter live — ListViewControl reacts automatically:
+proxy.set_filter(lambda item: query in item.name.lower())
 ```
 
 #### Minimal example
 
 ```python
-from gui_do import AsyncDataProvider, LoadStateKind
+from gui_do import DataflowPipeline, PipelineStage, CancellationToken
 
-class FileLoader(AsyncDataProvider):
-    async def load(self) -> list:
-        return await fetch_files()
+def search_stage(query, token: CancellationToken):
+    if token.is_cancelled:
+        return []
+    return [item for item in full_dataset if query in item.name]
 
-loader = FileLoader()
-self._sub = loader.state.subscribe(
-    lambda state: self.spinner.visible if state.kind == LoadStateKind.LOADING else None
-)
-```
+def rank_stage(results, token: CancellationToken):
+    if token.is_cancelled:
+        return []
+    return sorted(results, key=lambda i: i.relevance, reverse=True)
 
-#### Advanced pattern(s)
-
-Use `DataflowPipeline` with multiple `PipelineStage` steps and per-stage `CancellationToken` for search pipelines that can be preempted by new user input:
-
-```python
-from gui_do import CancellationToken, DataflowPipeline, PipelineStage
-
-pipeline = DataflowPipeline([
-    PipelineStage("load", self._load_stage),
-    PipelineStage("filter", self._filter_stage),
-    PipelineStage("rank", self._rank_stage),
+pipeline = DataflowPipeline(stages=[
+    PipelineStage(search_stage),
+    PipelineStage(rank_stage),
 ])
 
-def _on_query_changed(self, query: str) -> None:
-    if self._pipeline_handle:
-        self._pipeline_handle.cancel()
-    token = CancellationToken()
-    self._pipeline_handle = pipeline.run(query, token=token)
-    self._pipeline_handle.on_complete = self._on_results_ready
+# On new search query — cancels previous run automatically:
+handle = pipeline.run(query=user_query, on_complete=self._on_results_ready)
 ```
-
-Use `ListDiffCalculator` to produce minimal `DiffInsert`/`DiffRemove`/`DiffMove` patches when the dataset changes. Apply these patches incrementally to the control source rather than performing full redraws, which significantly reduces visual flicker in live-updating lists.
-
-`VirtualizationCore` with `RecyclePool` is the correct model for lists or grids with more items than can fit on screen. Only visible item views are instantiated; as the user scrolls, off-screen views are recycled and repopulated from the pool.
 
 #### Common mistakes and anti-patterns
 
-- Full-list redraws on every data change when `ListDiffCalculator` could produce incremental updates.
-- Forgetting to cancel in-flight `DataflowPipeline` runs when new input arrives. Stale pipeline completions write old results to UI, overwriting the newer result.
-- Holding large datasets in unbounded memory structures without `DataCache` expiry policies for infrequently accessed items.
-- Returning pooled objects from `ObjectPool` that are still referenced elsewhere. Once an object is returned to the pool it may immediately be handed to another consumer.
+- **Full-list redraws without `ListDiffCalculator`** — computing which rows changed is cheap; full redraws are not.
+- **Not canceling stale `DataflowPipeline` generations** — results from earlier runs may arrive after later ones.
+- **Using `ObjectPool` with objects still referenced elsewhere** — produces silent aliasing bugs.
 
 #### Cross-links to related systems
 
-See [8.4 State and Observables](#84-state-and-observables) for observable collection primitives, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for `ListViewControl`, `DataGridControl`, and `TreeControl`, [8.10 Scheduling, Timing, Animation, and Transitions](#810-scheduling-timing-animation-and-transitions) for coordinating pipeline work with the cooperative scheduler, and [8.16 Telemetry, Introspection, and Operational Hooks](#816-telemetry-introspection-and-operational-hooks) for measuring pipeline stage latency.
+- §8.4 State and Observables — `StateSelector` subscribes to `AppStateStore`
+- §8.5 Controls — `ListViewControl`, `DataGridControl`, `TreeControl` consume item sources
+- §8.10 Scheduling — `CooperativeScheduler` for background work
+- §8.16 Telemetry — pipeline stage timing via telemetry spans
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1862,97 +3120,121 @@ See [8.4 State and Observables](#84-state-and-observables) for observable collec
 
 #### What it is and why it exists
 
-Some features require rendering that goes beyond what the control tree provides — particle effects, tile maps, hierarchical 2D transform scenes, and custom sprite animations. Others require sound feedback tied to semantic application events. gui_do provides a set of graphics helpers and an audio event bus that integrate with the feature lifecycle without requiring direct dependency on mixer or surface internals.
+Some features require rendering beyond the standard control tree: particle effects, tile-based
+maps, 2D scene graphs with camera transforms, custom draw overlays, or post-processing effects.
+`gui_do` provides a graphics abstraction layer built on pygame for this. For audio, a semantic
+event bus decouples features from mixer internals.
 
 #### Mental model and lifecycle placement
 
-Custom rendering lives in the feature's `draw(host, screen)` method or inside a `CanvasControl`. Graphics helpers are surface-level utilities that build on pygame; they do not replace the control tree but augment it for regions that need low-level control. Audio cues are published to `SoundEventBus` as named events; the bus routes them to the mixer without the publishing feature needing to know mixer configuration.
+Custom rendering lives in the feature's `draw(host, screen)` hook or inside `CanvasControl`.
+Heavy geometry or texture operations should be precomputed in `on_update` or cached in an
+`OffscreenRenderTarget`. Audio cues are event-driven: declare named cues in `SoundBankRegistry`
+and publish them via `SoundEventBus`. Features never call the mixer directly.
 
 #### Primary public APIs and key types
 
-**Graphics (Tier 16):** `BuiltInGraphicsFactory`, `DirtyRegionTracker`, `DrawContext`, `DrawPhase`, `AssetRegistry`, `DebugOverlay`, `SurfaceCompositor`, `Layer`, `ShapeRenderer`, `SurfaceEffects`, `VectorPath`, `SpriteSheet`, `FrameAnimation`, `ParticleSystem`, `Emitter`, `ParticleLayer`, `TileSet`, `TileMap`, `RenderTarget`, `LiveRenderTarget`, `OffscreenRenderTarget`, `create_render_target`, `create_surface`, `Node2D`, `SceneGraph2D`, `Camera2D`.
+From **Tier 16** (Graphics and Rendering):
+- `DrawContext`, `DrawPhase` — structured draw pass with explicit phases
+- `DirtyRegionTracker` — per-frame dirty-rect accumulation; gates re-rendering of unchanged regions
+- `SurfaceCompositor`, `Layer` — layered compositing pipeline with z-order and blend modes
+- `ShapeRenderer` — convenience renderer for rounded rects, arrows, circles, lines
+- `SurfaceEffects` — post-processing effects (blur, tint, darken)
+- `VectorPath` — declarative path builder (move_to, line_to, curve_to, arc)
+- `SpriteSheet`, `FrameAnimation` — frame extraction from a sprite atlas with playback control
+- `ParticleSystem`, `Emitter`, `ParticleLayer` — particle emission with configurable spawn rate, velocity, lifetime, color
+- `TileSet`, `TileMap` — grid-based tile rendering; only visible tiles are drawn
+- `SceneGraph2D`, `Node2D`, `Camera2D` — hierarchical 2D transform tree with camera viewport
+- `RenderTarget`, `LiveRenderTarget`, `OffscreenRenderTarget`, `create_render_target`, `create_surface` — offscreen surface management
+- `AssetRegistry` — centralized loaded-asset registry; prevents duplicate loading
+- `BuiltInGraphicsFactory` — factory for standard built-in graphics components
+- `DebugOverlay` — renders diagnostic overlays over the live scene
 
-**Audio (Tier 20):** `SoundCue`, `SoundBankRegistry`, `SoundEventBus`.
+From **Tier 20** (Audio):
+- `SoundCue` — a named sound event
+- `SoundBankRegistry` — registry of named sound files or generated tones
+- `SoundEventBus` — semantic event bus routing `SoundCue` publications to the mixer
 
 #### Typical usage flow
 
 ```python
-# Particle system — tick in on_update, draw in draw
-def on_update(self, host, dt) -> None:
-    self.particles.tick(dt)
+# Particle effect — in build:
+from gui_do import ParticleSystem, Emitter
+self.particles = ParticleSystem()
+self.emitter = Emitter(spawn_rate=30, lifetime=1.5)
+self.particles.add_emitter(self.emitter)
 
-def draw(self, host, screen) -> None:
-    self.particles.draw(screen)
-```
+# In on_update:
+self.particles.tick(dt)
 
-```python
-# Sound cue on semantic action
-host.sound_bus.publish(SoundCue("notify"))
+# In draw:
+self.particles.draw(screen)
+
+# Audio cue — in event handler:
+from gui_do import SoundCue
+host.sound_bus.publish(SoundCue("button_click"))
 ```
 
 #### Minimal example
 
 ```python
-from gui_do import DirtyRegionTracker, OffscreenRenderTarget, create_render_target
+from gui_do import OffscreenRenderTarget, create_render_target, ShapeRenderer
+import pygame
 
-class MiniMapFeature(Feature):
-    def build(self, host) -> None:
-        self.cache = create_render_target(OffscreenRenderTarget, size=(256, 256))
-        self.dirty = DirtyRegionTracker()
+class BackgroundFeature(Feature):
+    HOST_REQUIREMENTS = {"build": ("app", "screen_rect"), "bind_runtime": ("app",)}
 
-    def on_update(self, host, dt) -> None:
-        if self._world_changed:
-            self.dirty.mark_dirty(pygame.Rect(0, 0, 256, 256))
+    def build(self, host):
+        self._target: OffscreenRenderTarget = create_render_target(
+            size=(host.screen_rect.width, host.screen_rect.height)
+        )
+        renderer = ShapeRenderer(surface=self._target.surface)
+        renderer.draw_rounded_rect(
+            rect=pygame.Rect(0, 0, host.screen_rect.width, host.screen_rect.height),
+            radius=12,
+            color=(30, 30, 40, 255),
+        )
 
-    def draw(self, host, screen) -> None:
-        if self.dirty.has_dirty():
-            self._render_to_cache()
-            self.dirty.consume_dirty_regions()
-        screen.blit(self.cache.surface, self.root.rect.topleft)
+    def draw(self, host, screen):
+        screen.blit(self._target.surface, (0, 0))
+
+    def bind_runtime(self, host):
+        pass
 ```
 
-#### Advanced pattern(s)
-
-Combine `DirtyRegionTracker` with `OffscreenRenderTarget` for a complex canvas that changes rarely. Only re-render the dirty tiles from the offscreen cache on each frame; composite the final result in one blit. Layer `SceneGraph2D` with `Camera2D` on top for a scrollable 2D world view where node transforms apply hierarchically and the camera provides viewport panning and zoom:
+#### Advanced pattern: SceneGraph2D with Camera2D
 
 ```python
-from gui_do import Camera2D, Node2D, SceneGraph2D
+from gui_do import SceneGraph2D, Node2D, Camera2D
+import pygame
 
 graph = SceneGraph2D()
-world_root = Node2D("world")
-graph.root.add_child(world_root)
-self.camera = Camera2D(position=(0, 0), zoom=1.0)
+camera = Camera2D(viewport=pygame.Rect(0, 0, 800, 600))
+camera.set_position(100, 200)
 
-def draw(self, host, screen) -> None:
-    transform = self.camera.get_transform()
-    graph.draw(screen, transform)
-```
+world_node = Node2D(position=(0, 0))
+sprite_node = Node2D(position=(250, 300))
+sprite_node.surface = my_sprite_surface
+world_node.add_child(sprite_node)
+graph.root.add_child(world_node)
 
-Use `SpriteSheet` with `FrameAnimation` to play sprite animations without manual frame index tracking. `FrameAnimation` handles frame timing and looping:
-
-```python
-from gui_do import FrameAnimation, SpriteSheet
-
-sheet = SpriteSheet(surface, frame_size=(32, 32))
-anim = FrameAnimation(sheet, frames=[0, 1, 2, 3], fps=12, loop=True)
-
-def on_update(self, host, dt) -> None:
-    anim.tick(dt)
-
-def draw(self, host, screen) -> None:
-    screen.blit(anim.current_frame(), self.sprite_rect)
+# In draw:
+graph.draw(screen, camera=camera)
 ```
 
 #### Common mistakes and anti-patterns
 
-- Full surface redraws every frame when `DirtyRegionTracker` could gate unnecessary work. Even simple background panels benefit from dirty tracking under frequent motion.
-- Loading assets (`SpriteSheet`, fonts, tilesets) in `draw` or `on_update`. Asset loading causes disk I/O that stalls the frame. Load all assets in `build` or `bind_runtime`.
-- Triggering `SoundCue` events from low-level pointer noise (every mouse motion) instead of from semantic application events. This floods the audio bus and produces unpleasant repeated sound.
-- Creating `ParticleSystem` emitters without bounding their spawn radius, allowing particles to escape the intended rendering region and corrupt adjacent control areas.
+- **Full-surface redraw every frame** — use `DirtyRegionTracker` to gate rendering to changed regions only.
+- **Loading assets in `draw`** — `AssetRegistry.load` involves disk I/O; load in `build`.
+- **Audio cues on pointer-move events** — pointer-move fires every frame; trigger cues on semantic actions.
+- **Particles without viewport bounds** — unconstrained particles render outside the visual area.
 
 #### Cross-links to related systems
 
-See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-types) for the `draw` hook contract, [8.5 Controls and Control Composition](#85-controls-and-control-composition) for `CanvasControl` integration, [8.10 Scheduling, Timing, Animation, and Transitions](#810-scheduling-timing-animation-and-transitions) for particle tick timing, and [8.16 Telemetry, Introspection, and Operational Hooks](#816-telemetry-introspection-and-operational-hooks) for profiling draw cost.
+- §8.2 Feature Lifecycle — `draw` and `on_update` hooks
+- §8.5 Controls — `CanvasControl` embeds custom 2D content
+- §8.10 Scheduling — particle tick in `on_update`
+- §8.16 Telemetry — instrument draw cost
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -1964,79 +3246,73 @@ See [8.2 Feature Lifecycle and Feature Types](#82-feature-lifecycle-and-feature-
 
 #### What it is and why it exists
 
-Runtime observability — performance measurement, live property inspection, and spatial query support — enables developers to diagnose behavioral and performance issues without relying on visual inspection alone. Telemetry spans instrument hot paths and accumulate structured records for offline analysis. The property registry and inspector model expose control attributes for live examination during development. The spatial index answers geometric queries about control positions for both feature logic and debugging tools.
+When frame rate drops, a layout pass is slow, or a routing decision is wrong, developers
+need structured observability rather than visual inspection. `gui_do` provides `TelemetryCollector`
+for performance sampling, `PropertyRegistry` for runtime property inspection, and
+`SceneSpatialIndex` for geometric queries about control layout.
 
 #### Mental model and lifecycle placement
 
-Telemetry is a passive instrumentation layer: spans record start and end times without altering runtime behavior. `PropertyRegistry` is populated at module load time by `@ui_property` decorators on control classes; `PropertyInspectorModel` drives the `PropertyInspectorPanel` control to show live property values. `SceneSpatialIndex` is a scene-level query engine that the runtime maintains as controls are added and moved.
+Telemetry is frame-sampling based: the collector records `TelemetrySample` objects with span
+names, durations, and metadata. Telemetry is off by default; enable via
+`configure_telemetry(enabled=True)` or `TelemetryConfig` in `HostApplicationConfig`.
+
+`PropertyRegistry` is populated via `@ui_property` decorators on control classes.
+`PropertyInspectorModel` reads the registry to drive `PropertyInspectorPanel`.
+
+`SceneSpatialIndex` answers layout queries: which controls overlap a rect, which control is
+at a point. It is rebuilt after each layout pass.
 
 #### Primary public APIs and key types
 
-**Telemetry (Tier 7):** `TelemetryCollector`, `TelemetrySample`, `configure_telemetry`, `telemetry_collector`, `analyze_telemetry_log_file`, `analyze_telemetry_records`, `load_telemetry_log_file`, `render_telemetry_report`.
+From **Tier 7** (Telemetry):
+- `TelemetryCollector`, `TelemetrySample` — collector and sample record
+- `configure_telemetry` — enables/disables the global collector
+- `telemetry_collector` — module-level singleton for the active `TelemetryCollector`
+- `analyze_telemetry_log_file`, `analyze_telemetry_records` — offline and live analysis
+- `load_telemetry_log_file` — loads a saved telemetry log for offline inspection
+- `render_telemetry_report` — formats an analysis result for human-readable display
 
-**Tier 1 config:** `TelemetryConfig`.
-
-**Introspection (Tier 17):** `SceneSpatialIndex`, `ui_property`, `PropertyDescriptor`, `PropertyRegistry`, `property_registry`, `PropertyInspectorModel`, `InspectedProperty`.
-
-#### Typical usage flow
-
-```python
-from gui_do import analyze_telemetry_records, configure_telemetry, telemetry_collector
-
-configure_telemetry(enabled=True)
-
-# ... run representative scenarios ...
-
-report = analyze_telemetry_records(telemetry_collector.records)
-print(render_telemetry_report(report))
-```
+From **Tier 17** (Introspection):
+- `SceneSpatialIndex` — geometric query engine for the control tree
+- `ui_property` — decorator that marks a control attribute as inspectable
+- `PropertyDescriptor`, `PropertyRegistry`, `property_registry` — property metadata and registry
+- `PropertyInspectorModel` — view model driving `PropertyInspectorPanel`
+- `InspectedProperty` — a single inspected property with current value and metadata
 
 #### Minimal example
 
 ```python
-from gui_do import TelemetryConfig, bootstrap_host_application, HostApplicationConfig
+from gui_do import configure_telemetry, telemetry_collector, analyze_telemetry_records, render_telemetry_report
 
-cfg = HostApplicationConfig(
-    # ...
-    telemetry=TelemetryConfig(enabled=True, log_path="telemetry.jsonl"),
-)
-bootstrap_host_application(host, cfg)
-```
-
-#### Advanced pattern(s)
-
-Combine telemetry traces with `PropertyInspectorModel` snapshots to localize layout or routing regressions. Build a `DebugOverlay` that renders `SceneSpatialIndex` query results as colored rects overlaid on the live scene, making the spatial index structure visible:
-
-```python
-from gui_do import DebugOverlay, SceneSpatialIndex
-
-spatial = SceneSpatialIndex(scene=host.active_scene)
-overlay = DebugOverlay(surface=screen)
-
-def draw(self, host, screen) -> None:
-    hits = spatial.query_point(host.pointer.pos)
-    for hit in hits:
-        overlay.draw_rect(hit.bounds, color=(255, 0, 0, 100))
-```
-
-Use `analyze_telemetry_log_file` to post-process telemetry stored from production runs and identify which feature or system is exceeding the scheduler budget:
-
-```python
-from gui_do import analyze_telemetry_log_file, render_telemetry_report
-
-report = analyze_telemetry_log_file("telemetry.jsonl")
+configure_telemetry(enabled=True)
+# ... run application scenarios ...
+report = analyze_telemetry_records(telemetry_collector.records)
 print(render_telemetry_report(report))
+```
+
+#### Advanced pattern: DebugOverlay with spatial index
+
+```python
+from gui_do import SceneSpatialIndex, DebugOverlay
+
+def draw(self, host, screen):
+    index: SceneSpatialIndex = host.app.get_spatial_index()
+    hits = index.query_point(self._mouse_pos)
+    DebugOverlay(screen).draw_bounds(hits, color=(255, 0, 0))
 ```
 
 #### Common mistakes and anti-patterns
 
-- Profiling during idle or trivial scenarios. The telemetry record is only meaningful when it captures representative user interaction flows.
-- Forgetting to call `configure_telemetry(enabled=True)` before the scenarios you want to measure. The collector is disabled by default to avoid overhead in production.
-- Using `SceneSpatialIndex` for per-frame hit-testing in production code. The index is a diagnostic and layout aid, not a replacement for the control tree's built-in hit-testing.
+- **Profiling during idle loop** — profile during active user scenarios, not quiet frames.
+- **Relying on visual inspection alone** — telemetry records actual durations; the eye cannot distinguish 16ms from 18ms.
+- **Forgetting to call `configure_telemetry` before scenarios** — early frames are not recorded.
 
 #### Cross-links to related systems
 
-See [8.10 Scheduling, Timing, Animation, and Transitions](#810-scheduling-timing-animation-and-transitions) for scheduler budget values, [8.11 Persistence and Workspace/Session State](#811-persistence-and-workspacesession-state) for telemetry log paths, and [8.15 Graphics and Audio Integration Points](#815-graphics-and-audio-integration-points) for profiling draw cost.
+- §8.10 Scheduling — scheduler budget tracked via telemetry spans
+- §8.11 Persistence — telemetry logs alongside workspace state
+- §8.15 Graphics — `DebugOverlay` visualizes spatial index results
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -2046,245 +3322,245 @@ See [8.10 Scheduling, Timing, Animation, and Transitions](#810-scheduling-timing
 
 [Back to Table of Contents](#table-of-contents)
 
-This section presents four end-to-end composition recipes for common patterns in gui_do applications. Each recipe shows the goal, explains why this particular combination of systems is the right approach, provides step-by-step wiring instructions, and includes a complete code example with a validation checklist.
+This chapter collects four composite patterns that each combine multiple `gui_do` systems into
+a production-ready configuration. Each recipe explains the goal, the rationale for the
+combination, step-by-step implementation, a complete code listing, and validation notes.
 
 ---
 
 ### Recipe 1: Routed Feature + Actions + Shortcut Overlay
 
-**Goal:** A feature with discoverable keyboard shortcuts, auto-wired via `RoutedRuntimeSpec` so the shortcut help overlay automatically reflects the registered action list without manual maintenance.
+**Goal:** A feature with discoverable keyboard shortcuts, auto-wired via `RoutedRuntimeSpec`.
 
-**Why this combination:** Declaring shortcuts in `RoutedRuntimeSpec` with `ShortcutOverlaySpec` means the overlay content is always consistent with the actual registered bindings. There is no separate "shortcut help data" to keep synchronized with the actual hotkeys — the overlay queries the action registry directly.
+**Why this combination:** `RoutedRuntimeSpec` with `ShortcutOverlaySpec` eliminates boilerplate
+for action registration, keyboard shortcut binding, and keeping the help overlay synchronized
+with the registered action list.
 
 **Step-by-step:**
-
-1. Declare `ActionSpec` entries in `HostApplicationConfig` with `action_id`, `label`, and `category`.
-2. In the feature's `__init__`, build a `RoutedRuntimeSpec` that includes a `ShortcutOverlaySpec` referencing the overlay toggle action and key.
-3. Build a `RoutedFeatureLifecycleSpec` that references the runtime spec.
+1. Declare `ActionSpec` entries in `HostApplicationConfig.action_entries`.
+2. Build a `RoutedRuntimeSpec` with a `ShortcutOverlaySpec`.
+3. Build a `RoutedFeatureLifecycleSpec` referencing the runtime spec.
 4. In `bind_runtime`, call `bind_routed_feature_lifecycle(self, host, self._lifecycle_spec)`.
-5. In `shutdown_runtime`, call `shutdown_routed_feature_lifecycle(self, host, self._lifecycle_spec)` to clean up all registrations symmetrically.
+5. In `shutdown_runtime`, call `shutdown_routed_feature_lifecycle(self, host, self._lifecycle_spec)`.
 
 ```python
+import pygame
 from gui_do import (
-    ActionSpec,
-    FeatureSpec,
-    RoutedFeature,
-    RoutedFeatureLifecycleSpec,
-    RoutedRuntimeSpec,
+    RoutedFeature, RoutedRuntimeSpec, RoutedFeatureLifecycleSpec,
     ShortcutOverlaySpec,
-    bind_routed_feature_lifecycle,
-    shutdown_routed_feature_lifecycle,
+    bind_routed_feature_lifecycle, shutdown_routed_feature_lifecycle,
+    PanelControl, LabelControl,
 )
 
+class ToolFeature(RoutedFeature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app",),
+        "shutdown_runtime": ("app",),
+    }
 
-class EditorFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("editor", scene_name="main")
-        runtime_spec = RoutedRuntimeSpec(
-            shortcut_overlay=ShortcutOverlaySpec(
-                toggle_action_name="toggle_shortcuts",
-                toggle_key="F1",
-            ),
+    def __init__(self):
+        self._lifecycle_spec = RoutedFeatureLifecycleSpec(
+            runtime_spec=RoutedRuntimeSpec(
+                shortcut_overlay=ShortcutOverlaySpec(activation_key=pygame.K_F9),
+            )
         )
-        self._lifecycle_spec = RoutedFeatureLifecycleSpec(runtime_spec=runtime_spec)
 
-    def build(self, host) -> None:
-        # build controls here
-        pass
+    def build(self, host):
+        root = PanelControl(rect=pygame.Rect(0, 0, 800, 600))
+        root.add(LabelControl(rect=pygame.Rect(8, 8, 300, 24), text="Ready"))
+        host.controls.add(root)
 
-    def bind_runtime(self, host) -> None:
+    def bind_runtime(self, host):
         bind_routed_feature_lifecycle(self, host, self._lifecycle_spec)
 
-    def shutdown_runtime(self, host) -> None:
+    def shutdown_runtime(self, host):
         shutdown_routed_feature_lifecycle(self, host, self._lifecycle_spec)
 ```
 
-**Validation:** Press `F1` — the shortcut overlay appears and lists all registered actions. Press `F1` again or `Escape` — overlay dismisses. Add a new `ActionSpec` — it appears in the overlay without any other change.
+**Validation:** F9 toggles the shortcut overlay. All registered `ActionSpec` entries appear
+in the overlay automatically.
 
 ---
 
 ### Recipe 2: Window Presenter + Task Panel + Focus Toggle
 
-**Goal:** A floating window in a scene that is toggled from the task panel with correct focus routing — when the window is hidden, its controls are excluded from Tab-key cycling.
+**Goal:** A floating window in a scene, toggled from the task panel, with correct focus routing.
 
-**Why this combination:** `TaskPanelFocusToggleSpec` inside `RoutedRuntimeSpec` automates the focus ring exclusion. Without it, Tab navigation stalls on hidden window controls. This approach ensures the window toggle button state, focus ring membership, and accessibility annotations stay synchronized.
+**Why this combination:** `WindowPresenter` separates window layout from the owning feature.
+`FeatureWindowBundleBindingSpec` wires feature, window, and task panel in one spec.
+`TaskPanelFocusToggleSpec` auto-excludes the window's controls from Tab cycling while hidden.
 
 **Step-by-step:**
-
-1. Implement a `WindowPresenter` subclass with the window's internal control layout.
-2. Declare the window's size and chrome properties in `AnchoredWindowSpec`.
-3. In the feature's `build`, call `create_feature_presented_window` to instantiate the presenter and register the window.
-4. In `RoutedRuntimeSpec`, declare a `TaskPanelFocusToggleSpec` referencing the window.
-5. Wire the window toggle button to `set_window_visible_state` via the task panel spec.
+1. Implement a `WindowPresenter` subclass owning the window's control layout.
+2. In feature `build`, call `create_feature_presented_window`.
+3. In `RoutedRuntimeSpec`, add a `TaskPanelFocusToggleSpec`.
+4. Wire the task panel toggle to `set_window_visible_state` (automatic with bundle spec).
 
 ```python
-from pygame import Rect
-
 from gui_do import (
-    AnchoredWindowSpec,
-    LabelControl,
-    RoutedFeature,
-    RoutedFeatureLifecycleSpec,
-    RoutedRuntimeSpec,
+    WindowPresenter, PanelControl, LabelControl,
     TaskPanelFocusToggleSpec,
-    WindowPresenter,
-    bind_routed_feature_lifecycle,
+    RoutedFeature, RoutedRuntimeSpec, RoutedFeatureLifecycleSpec,
     create_feature_presented_window,
-    set_window_visible_state,
-    shutdown_routed_feature_lifecycle,
+    bind_routed_feature_lifecycle, shutdown_routed_feature_lifecycle,
 )
+import pygame
 
+class InspectorPresenter(WindowPresenter):
+    def build(self, host, window_rect):
+        panel = PanelControl(rect=window_rect)
+        panel.add(LabelControl(rect=pygame.Rect(8, 8, 200, 24), text="Inspector"))
+        return panel
 
-class InfoPresenter(WindowPresenter):
-    def build(self, host, root) -> None:
-        self.label = root.add(LabelControl("info_text", Rect(8, 8, 300, 24), "Details"))
+class InspectorFeature(RoutedFeature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app",),
+        "shutdown_runtime": ("app",),
+    }
 
-
-class InfoFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("info", scene_name="main")
-        runtime_spec = RoutedRuntimeSpec(
-            focus_toggle=TaskPanelFocusToggleSpec(
-                window_id="info_window",
-                toggle_action_name="toggle_info",
-                task_panel_label="Info",
-            ),
+    def __init__(self):
+        self._lifecycle_spec = RoutedFeatureLifecycleSpec(
+            runtime_spec=RoutedRuntimeSpec(
+                task_panel_focus_toggles=[
+                    TaskPanelFocusToggleSpec(window_key="inspector"),
+                ],
+            )
         )
-        self._lifecycle_spec = RoutedFeatureLifecycleSpec(runtime_spec=runtime_spec)
 
-    def build(self, host) -> None:
-        self.presenter = InfoPresenter()
+    def build(self, host):
         create_feature_presented_window(
-            host, self, self.presenter, window_id="info_window", scene_name="main"
+            host=host,
+            window_key="inspector",
+            presenter_class=InspectorPresenter,
+            window_rect=pygame.Rect(900, 50, 350, 500),
         )
 
-    def bind_runtime(self, host) -> None:
+    def bind_runtime(self, host):
         bind_routed_feature_lifecycle(self, host, self._lifecycle_spec)
 
-    def shutdown_runtime(self, host) -> None:
+    def shutdown_runtime(self, host):
         shutdown_routed_feature_lifecycle(self, host, self._lifecycle_spec)
 ```
 
-**Validation:** Open the app — the info window is visible and `Tab` cycles through its controls. Press the toggle action or task panel button — the window hides and `Tab` no longer visits its controls. Press again — the window reappears and focus cycling resumes.
+**Validation:** Task panel toggle button shows/hides the window. While hidden, Tab does not
+cycle into the inspector's controls. Button toggle state matches window visibility.
 
 ---
 
 ### Recipe 3: State Store + Persistence + Snapshot Migration
 
-**Goal:** Centralized application state that survives schema evolution across releases, with a restore report so the application can surface gaps to the user.
+**Goal:** Centralized application state that survives schema evolution across releases.
 
-**Why this combination:** `AppStateStore` provides a single source of truth for domain state; `StateSelector` gives each feature a reactive slice without coupling them to the full store shape; `SnapshotMigrator` ensures that snapshots written by older releases can be upgraded before being applied, preventing silent data loss or corrupt restores.
+**Why this combination:** `AppStateStore` is the single source of truth. `WorkspacePersistenceManager`
+saves and restores it. `SnapshotMigrator` forward-migrates old snapshots so schema-breaking
+updates do not lose user data.
 
 **Step-by-step:**
-
-1. Define `AppStateStore` with the initial state shape.
-2. Create `StateSelector` instances in each feature's `__init__` for the fields they care about.
-3. On save, serialize the store's state via `make_snapshot(version, state_dict)` and persist it.
-4. On load, call `read_version(raw)` to detect the snapshot's schema version.
-5. Call `SnapshotMigrator.migrate(snapshot, to_version=CURRENT_VERSION)` to upgrade old snapshots.
-6. Inspect the restore report's fields (`skipped_settings`, `missing_settings_blocks`) to surface warnings.
+1. Define `AppStateStore` with initial state.
+2. Use `StateSelector` in features to derive needed state slices.
+3. On save, call `make_snapshot(version, store.get_all())` and persist.
+4. On load, call `read_version(raw)` then `SnapshotMigrator.migrate(snapshot)`.
+5. Register `MigrationStep` objects for each schema transition.
 
 ```python
 from gui_do import (
-    AppStateStore,
-    MigrationRegistry,
-    MigrationStep,
-    SnapshotMigrator,
-    StateSelector,
-    StateTransaction,
-    make_snapshot,
-    read_version,
+    AppStateStore, StateSelector,
+    SchemaVersion, MigrationStep, MigrationRegistry,
+    SnapshotMigrator, make_snapshot, read_version,
+    WorkspacePersistenceManager,
 )
 
-CURRENT_VERSION = "2.0"
+V1 = SchemaVersion(major=1, minor=0)
+V2 = SchemaVersion(major=2, minor=0)
 
-store = AppStateStore({"selected_scene": "main", "last_query": "", "panel_visible": True})
-selected_selector = StateSelector(store, lambda s: s["selected_scene"])
+def migrate_v1_to_v2(data: dict) -> dict:
+    data["accent_color"] = data.pop("highlight_color", "#007AFF")
+    return data
 
 registry = MigrationRegistry()
-registry.register(
-    MigrationStep(
-        from_version="1.0",
-        to_version="2.0",
-        apply=lambda snap: {**snap, "panel_visible": True},  # added in v2
-    )
-)
-migrator = SnapshotMigrator(registry)
+registry.register(MigrationStep(from_version=V1, to_version=V2, migrate=migrate_v1_to_v2))
+migrator = SnapshotMigrator(registry=registry, current_version=V2)
 
-def save_state(path: str) -> None:
-    snapshot = make_snapshot(CURRENT_VERSION, store.state)
-    write_json(path, snapshot)
+store = AppStateStore(initial={"accent_color": "#007AFF", "font_size": 14})
 
-def load_state(path: str) -> None:
-    raw = read_json(path)
-    version = read_version(raw)
-    migrated = migrator.migrate(raw, to_version=CURRENT_VERSION)
-    store.apply(migrated)
+def save(path: str):
+    snapshot = make_snapshot(version=V2, data=store.get_all())
+    WorkspacePersistenceManager(path=path).save_raw(snapshot)
+
+def load(path: str):
+    raw = WorkspacePersistenceManager(path=path).load_raw()
+    migrated_data = migrator.migrate(raw)
+    store.replace_all(migrated_data)
 ```
 
-**Validation:** Save state with version 1.0 schema; reload with version 2.0 migrator — `panel_visible` field appears with its default. Introduce an unknown key in the saved JSON — restore report's `skipped_settings` list contains the unknown key and the app continues normally.
+**Validation:** Loading a V1 snapshot applies the migration and produces a V2 state dict.
+Restore report's `skipped_settings` and `missing_settings_blocks` are non-fatal.
 
 ---
 
-### Recipe 4: Dataflow Pipeline + Telemetry + Error Boundary
+### Recipe 4: Dataflow Pipeline + Telemetry + ErrorBoundary
 
-**Goal:** Safe background processing with measurable per-stage performance and UI failure containment so that a rendering error in one feature does not crash the entire frame.
+**Goal:** Safe background processing with measurable performance and UI failure containment.
 
-**Why this combination:** `DataflowPipeline` with per-stage `CancellationToken` prevents stale results from overwriting fresh ones when user input arrives faster than the pipeline completes. Telemetry spans on stage callbacks expose which stage is the performance bottleneck. `ErrorBoundary` wrapping the output control tree ensures that rendering failures in the result display degrade gracefully to a neutral fallback.
+**Why this combination:** `DataflowPipeline` with `CancellationToken` ensures stale runs do
+not corrupt results. Telemetry spans identify bottlenecks. `ErrorBoundary` wraps the output
+control tree so rendering exceptions degrade gracefully rather than crashing the frame.
 
 **Step-by-step:**
-
-1. Stage pipeline work in `DataflowPipeline` with each `PipelineStage` checking its `CancellationToken`.
-2. Wrap stage callbacks with telemetry spans using the `telemetry_collector`.
-3. Wrap the output control subtree in `ErrorBoundary` during `build`.
-4. Drive progress feedback via `ObservableValue` subscribed to in `bind_runtime`.
-5. On new input, cancel the current `PipelineHandle` and start a fresh generation.
+1. Define `DataflowPipeline` with per-stage `PipelineStage` functions.
+2. Each stage checks its `CancellationToken` before expensive work.
+3. Instrument stage callbacks with `telemetry_collector` calls.
+4. Wrap the result presenter in `ErrorBoundary` in `build`.
+5. Expose progress via `ObservableValue[LoadStateKind]`.
 
 ```python
+import time
 from gui_do import (
-    CancellationToken,
-    DataflowPipeline,
-    ErrorBoundary,
-    ObservableValue,
-    PipelineStage,
-    configure_telemetry,
-    telemetry_collector,
+    DataflowPipeline, PipelineStage, CancellationToken,
+    configure_telemetry, telemetry_collector,
+    ErrorBoundary, ObservableValue, LoadStateKind,
+    RoutedFeature, PanelControl,
 )
 
+configure_telemetry(enabled=True)
+
+def search_stage(query: str, token: CancellationToken):
+    t0 = time.perf_counter()
+    if token.is_cancelled:
+        return []
+    results = [item for item in big_dataset if query.lower() in item.name.lower()]
+    telemetry_collector.record("search_stage", duration=time.perf_counter() - t0)
+    return results
+
+def rank_stage(results: list, token: CancellationToken):
+    if token.is_cancelled:
+        return []
+    return sorted(results, key=lambda i: i.relevance, reverse=True)
+
+pipeline = DataflowPipeline(stages=[
+    PipelineStage(search_stage),
+    PipelineStage(rank_stage),
+])
 
 class SearchFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("search", scene_name="main")
-        self.progress = ObservableValue(0.0)
-        self._pipeline = DataflowPipeline([
-            PipelineStage("load", self._load_stage),
-            PipelineStage("filter", self._filter_stage),
-            PipelineStage("rank", self._rank_stage),
-        ])
-        self._handle = None
+    def build(self, host):
+        self._status = ObservableValue(LoadStateKind.IDLE)
+        result_panel = PanelControl(rect=...)
+        safe_panel = ErrorBoundary(child=result_panel, fallback_text="Results unavailable")
+        host.controls.add(safe_panel)
 
-    def build(self, host) -> None:
-        self.root = host.app.add(
-            ErrorBoundary("search_boundary", Rect(0, 0, 800, 600)),
-            scene_name="main",
-        )
-        self.results = self.root.add(ListViewControl("results", Rect(8, 8, 784, 580)))
+    def _run_search(self, query: str):
+        self._status.set(LoadStateKind.LOADING)
+        pipeline.run(query, on_complete=self._on_results_ready)
 
-    def _on_query_changed(self, query: str) -> None:
-        if self._handle:
-            self._handle.cancel()
-        token = CancellationToken()
-        self._handle = self._pipeline.run(query, token=token)
-        self._handle.on_complete = self._apply_results
-
-    def _load_stage(self, query: str, token: CancellationToken) -> list:
-        with telemetry_collector.span("search.load"):
-            if token.is_cancelled():
-                return []
-            return fetch_items(query)
+    def _on_results_ready(self, results):
+        self._status.set(LoadStateKind.LOADED)
 ```
 
-**Validation:** Type quickly in the search input — only the result from the final keystroke appears (stale pipeline runs are cancelled). Enable telemetry and run the search — `render_telemetry_report` identifies the slowest stage. Introduce a rendering error in the results presenter — `ErrorBoundary` renders a fallback frame instead of crashing.
+**Validation:** Rapid typing produces only the latest result. Telemetry report identifies
+the slowest stage. A deliberate presenter exception renders the fallback text.
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -2294,156 +3570,145 @@ class SearchFeature(RoutedFeature):
 
 [Back to Table of Contents](#table-of-contents)
 
-The following self-contained listing demonstrates the core gui_do assembly pattern in one place. It is intended as a verified reference, not a minimal Hello World — every line corresponds to a real system documented in this manual.
+The following listing is a self-contained reference application demonstrating the core
+`gui_do` systems in combination. It is intentionally short and pedagogical — production
+applications will extend each section significantly.
 
 ```python
 """
-gui_do End-to-End Reference Application.
+gui_do End-to-End Reference Application
 
-Demonstrates: bootstrap, RoutedFeature lifecycle, ObservableValue → LabelControl binding,
-RoutedRuntimeSpec + ShortcutOverlaySpec, ActionSpec, RuntimeSceneSpec, TelemetryConfig,
-workspace save/load, and the host run_entrypoint pattern.
+Demonstrates:
+  - HostApplicationConfig construction with real field names
+  - A RoutedFeature with build / bind_runtime / shutdown_runtime
+  - ObservableValue subscribed to a LabelControl
+  - RoutedRuntimeSpec with ShortcutOverlaySpec
+  - RoutedFeatureLifecycleSpec + bind_routed_feature_lifecycle
+  - ActionSpec entries (exit + help)
+  - RuntimeSceneSpec with bind_escape_to_exit=True
+  - TelemetryConfig enabled
+  - Workspace save/load hooks
 """
 
-from pygame import Rect
-
 import pygame
-
 from gui_do import (
-    ActionSpec,
-    ButtonControl,
-    FeatureSpec,
     HostApplicationConfig,
-    LabelControl,
-    ObservableValue,
-    PanelControl,
-    RoutedFeature,
-    RoutedFeatureLifecycleSpec,
-    RoutedRuntimeSpec,
-    RuntimeSceneSpec,
-    SceneSetupSpec,
-    ShortcutOverlaySpec,
+    HostApplicationBindingSpec,
+    SceneBundleBindingSpec,
+    ActionSpec,
     TelemetryConfig,
-    bind_routed_feature_lifecycle,
+    FontRoleBindingSpec,
+    build_host_application_config,
     bootstrap_host_application,
-    configure_telemetry,
+    RoutedFeature,
+    RoutedRuntimeSpec,
+    RoutedFeatureLifecycleSpec,
+    RuntimeSceneSpec,
+    ShortcutOverlaySpec,
+    bind_routed_feature_lifecycle,
     shutdown_routed_feature_lifecycle,
+    PanelControl,
+    LabelControl,
+    ButtonControl,
+    ObservableValue,
+    WorkspacePersistenceManager,
+    configure_telemetry,
+    telemetry_collector,
 )
 
-
-# ---------------------------------------------------------------------------
-# Feature
-# ---------------------------------------------------------------------------
+WORKSPACE_PATH = "./my_app_session.json"
 
 
 class CounterFeature(RoutedFeature):
-    """Simple counter feature — demonstrates the full feature lifecycle."""
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "controls"),
+        "bind_runtime": ("app",),
+        "shutdown_runtime": ("app",),
+    }
 
-    HOST_REQUIREMENTS = {"build": ("app",), "bind_runtime": ()}
-
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self._unsub = None
-        runtime_spec = RoutedRuntimeSpec(
-            shortcut_overlay=ShortcutOverlaySpec(
-                toggle_action_name="toggle_shortcuts",
-                toggle_key="F1",
-            ),
-        )
-        self._lifecycle_spec = RoutedFeatureLifecycleSpec(runtime_spec=runtime_spec)
-
-    def build(self, host) -> None:
-        self.root = host.app.add(
-            PanelControl("counter_root", Rect(40, 40, 400, 200)),
-            scene_name="main",
-        )
-        self.label = self.root.add(
-            LabelControl("count_label", Rect(8, 8, 384, 40), "Count: 0")
-        )
-        self.root.add(
-            ButtonControl(
-                "increment_btn",
-                Rect(8, 60, 160, 36),
-                "Increment",
-                on_click=self._on_increment,
+    def __init__(self):
+        self._count = ObservableValue(0)
+        self._lifecycle_spec = RoutedFeatureLifecycleSpec(
+            runtime_spec=RoutedRuntimeSpec(
+                scene_spec=RuntimeSceneSpec(bind_escape_to_exit=True),
+                shortcut_overlay=ShortcutOverlaySpec(activation_key=pygame.K_F9),
             )
         )
 
-    def bind_runtime(self, host) -> None:
-        self._unsub = self.count.subscribe(
-            lambda v: setattr(self.label, "text", f"Count: {v}")
+    def build(self, host):
+        root = PanelControl(rect=pygame.Rect(40, 40, 400, 160))
+        self._label = LabelControl(
+            rect=pygame.Rect(8, 8, 380, 32),
+            text="Count: 0",
+        )
+        btn = ButtonControl(
+            rect=pygame.Rect(8, 56, 140, 36),
+            label="Increment",
+            on_click=lambda _e: self._count.set(self._count.get() + 1),
+        )
+        save_btn = ButtonControl(
+            rect=pygame.Rect(160, 56, 140, 36),
+            label="Save Session",
+            on_click=lambda _e: self._save_workspace(host),
+        )
+        root.add(self._label)
+        root.add(btn)
+        root.add(save_btn)
+        host.controls.add(root)
+
+    def bind_runtime(self, host):
+        self._sub = self._count.subscribe(
+            lambda v: self._label.set_text(f"Count: {v}")
         )
         bind_routed_feature_lifecycle(self, host, self._lifecycle_spec)
+        self._restore_workspace(host)
 
-    def shutdown_runtime(self, host) -> None:
-        if self._unsub:
-            self._unsub()
-            self._unsub = None
+    def shutdown_runtime(self, host):
+        self._count.unsubscribe(self._sub)
         shutdown_routed_feature_lifecycle(self, host, self._lifecycle_spec)
 
-    def _on_increment(self, event) -> None:
-        self.count.value += 1
+    def _save_workspace(self, host):
+        WorkspacePersistenceManager(path=WORKSPACE_PATH).save(host.app)
+
+    def _restore_workspace(self, host):
+        manager = WorkspacePersistenceManager(path=WORKSPACE_PATH)
+        if manager.has_saved_state():
+            report = manager.restore(host.app)
+            if report and report.skipped_settings:
+                print(f"Skipped settings: {report.skipped_settings}")
 
 
-# ---------------------------------------------------------------------------
-# Bootstrap configuration
-# ---------------------------------------------------------------------------
-
-
-cfg = HostApplicationConfig(
-    display_size=(1280, 720),
-    window_title="gui_do Reference App",
-    fonts={"default": {"system": "arial", "size": 14}},
-    font_role_specs=(),
-    cursors=(),
-    scene_specs=(SceneSetupSpec(scene_name="main", pretty_name="Main"),),
-    feature_specs=(FeatureSpec("counter", CounterFeature),),
-    window_specs=(),
-    runtime_scene_specs=(
-        RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),
-    ),
-    action_specs=(
-        ActionSpec(action_id="exit", label="Exit", kind="exit", category="File"),
-        ActionSpec(
-            action_id="toggle_shortcuts",
-            label="Toggle Shortcut Help",
-            kind="shortcut_overlay",
-            category="Help",
-        ),
-    ),
-    static_accessibility_specs=(),
-    initial_scene_name="main",
-    telemetry=TelemetryConfig(enabled=True, log_path="telemetry.jsonl"),
-)
-
-
-# ---------------------------------------------------------------------------
-# Host
-# ---------------------------------------------------------------------------
-
-
-class AppHost:
-    """Plain object populated by bootstrap_host_application."""
-
-
-def main() -> None:
+def main():
     configure_telemetry(enabled=True)
-    host = AppHost()
-    bootstrap_host_application(host, cfg)
 
-    # Attempt workspace restore (non-fatal if missing)
-    try:
-        report = host.app.load_workspace("workspace.json")
-        if report and report.skipped_settings:
-            print(f"Skipped settings: {report.skipped_settings}")
-    except FileNotFoundError:
-        pass
+    config: HostApplicationConfig = build_host_application_config(
+        HostApplicationBindingSpec(
+            display_size=(900, 600),
+            window_title="gui_do Reference App",
+            initial_scene_name="main",
+            fonts={
+                "default": {"file": "assets/fonts/Body.ttf", "size": 14},
+            },
+            font_role_entries=(
+                FontRoleBindingSpec("body", size=14, font="default"),
+                FontRoleBindingSpec("caption", size=11, font="default"),
+            ),
+            action_entries=(
+                ActionSpec(action_id="exit", label="Exit", key=pygame.K_ESCAPE),
+                ActionSpec(action_id="help", label="Shortcuts", key=pygame.K_F9),
+            ),
+            scene_bundle_entries=(
+                SceneBundleBindingSpec(
+                    scene_name="main",
+                    pretty_name="Main",
+                    feature_entries=(CounterFeature,),
+                ),
+            ),
+            telemetry=TelemetryConfig(enabled=True),
+        )
+    )
 
-    host.app.run_entrypoint(target_fps=60)
-
-    # Save workspace on clean exit
-    host.app.save_workspace("workspace.json")
+    bootstrap_host_application(config)
 
 
 if __name__ == "__main__":
@@ -2452,140 +3717,249 @@ if __name__ == "__main__":
 
 ### What This Listing Demonstrates
 
-**Bootstrap configuration.** `HostApplicationConfig` declares all scenes, features, actions, font configurations, and runtime scene policies in one place. After `bootstrap_host_application(host, cfg)` returns, the application is fully wired and `host.app` is live.
+**Bootstrap pipeline** — `HostApplicationBindingSpec` is the single declarative entry point.
+Fonts, actions, scenes, and features are all registered before `bootstrap_host_application`
+wires them together. `build_host_application_config` validates the spec and produces a typed
+`HostApplicationConfig`.
 
-**Feature lifecycle.** `CounterFeature` subclasses `RoutedFeature` and implements all four lifecycle phases: `build` creates controls, `bind_runtime` subscribes observables and registers routed lifecycle bindings, `shutdown_runtime` disposes them symmetrically.
+**RoutedFeature + RoutedRuntimeSpec** — `CounterFeature` extends `RoutedFeature` and declares
+a `RoutedFeatureLifecycleSpec`. This auto-registers actions, wires the shortcut overlay, and
+binds escape-to-exit without the feature explicitly calling action registry APIs.
 
-**Reactive state.** `ObservableValue(0)` holds the counter state. A single `subscribe` call in `bind_runtime` keeps the `LabelControl`'s text property synchronized without polling.
+**ObservableValue + LabelControl** — the counter is an `ObservableValue`. The label subscribes
+to it and updates on every change. The button mutates the observable; the label reacts. The
+control is never queried for state.
 
-**Routed runtime spec.** `RoutedRuntimeSpec` with `ShortcutOverlaySpec` registers the `F1` shortcut help overlay toggle declaratively. `bind_routed_feature_lifecycle` applies all registrations in one coordinated call; `shutdown_routed_feature_lifecycle` removes them symmetrically on teardown.
+**Shortcut overlay** — F9 toggles the shortcut help overlay, which renders all registered
+`ActionSpec` entries automatically.
 
-**Action specs.** `ActionSpec` entries declare named actions for `exit` and the shortcut overlay toggle. `bind_escape_to_exit=True` in `RuntimeSceneSpec` binds Escape to the exit action automatically.
+**Workspace persistence** — "Save Session" calls `WorkspacePersistenceManager.save`;
+`bind_runtime` calls `restore` if saved state exists. The restore report's `skipped_settings`
+field is checked and logged — it is non-fatal.
 
-**Telemetry.** `TelemetryConfig(enabled=True, log_path=...)` enables the telemetry collector at bootstrap. `configure_telemetry(enabled=True)` confirms it before the run loop starts.
-
-**Workspace save/load.** `host.app.load_workspace` is called before the first scene activates; `host.app.save_workspace` is called after `run_entrypoint` returns. A missing workspace file is tolerated without aborting startup.
+**Telemetry** — `configure_telemetry(enabled=True)` is called before bootstrap. After the
+session ends, call `analyze_telemetry_records` and `render_telemetry_report`.
 
 ### Validation Checklist
 
-1. Application opens to a 1280×720 window with the counter panel visible.
-2. Clicking "Increment" increments the label text from "Count: 0" to "Count: 1", "Count: 2", etc.
-3. Pressing `F1` opens the shortcut help overlay listing both registered actions.
-4. Pressing `F1` again (or `Escape` while the overlay is open) dismisses the overlay.
-5. Pressing `Escape` while the overlay is not visible triggers the exit action and closes the application.
-6. On second run, `workspace.json` is found and loaded without error.
-7. Telemetry records are written to `telemetry.jsonl` and can be analyzed via `analyze_telemetry_log_file`.
+1. The application opens a 900×600 window titled "gui_do Reference App".
+2. Clicking "Increment" updates the label to "Count: N" on each click.
+3. Pressing F9 toggles the shortcut help overlay showing Exit and Shortcuts actions.
+4. Pressing Escape exits the application.
+5. Clicking "Save Session" writes `./my_app_session.json` without errors.
+6. Closing and reopening the application restores the previous session without fatal errors.
+7. Loading a workspace with an unknown settings key places it in `skipped_settings`, not an exception.
+8. Telemetry records are non-empty after the session ends.
 
 [Back to Table of Contents](#table-of-contents)
 
 ---
 
+
 ## Testing, Diagnostics, and Reliability
 
 [Back to Table of Contents](#table-of-contents)
 
-Reliable gui_do applications are tested at two complementary levels: a contract test suite that verifies framework-level behavioral guarantees, and feature-level runtime behavior tests that cover application-specific scenarios. This chapter describes both levels, the diagnostic tools available for investigation, the maintainer release runbook, and the operational checklist that governs manual updates.
-
 ### Contract Tests
 
-The contract test suite is the primary gate for confirming that the framework's behavioral guarantees are intact. Run it before and after any significant change to the framework itself, to documentation contracts, or to the public API surface:
+The `gui_do` test suite contains a dedicated contract-test layer. These tests verify
+framework-level behavioral guarantees that must remain stable across all changes to
+implementation details. Run them before any release or significant refactor:
 
-```bash
+```
 python -m pytest -q tests/test_public_api_exports.py tests/test_public_api_docs_contracts.py tests/test_runtime_operating_contracts.py tests/test_boundary_contracts.py tests/test_gui_application_workspace_contracts.py
 ```
 
-Each file in this suite has a specific scope:
+Each file covers a distinct guarantee:
 
-- **`test_public_api_exports.py`** — Verifies that every name listed in `gui_do.__all__` is importable from the root package and that no names are missing. If a name appears in `__init__.py` but fails import, this test catches it. Run after any public API addition or removal.
-
-- **`test_public_api_docs_contracts.py`** — Verifies that the API names documented in the contract specification files (`docs/public_api_spec.md`, `docs/package_contracts.md`) match the names actually exported. Catches staleness in both directions: a contract that documents a name that has been removed, or an export that is missing from the contract documentation.
-
-- **`test_runtime_operating_contracts.py`** — Verifies the runtime behavioral guarantees: scheduler budget clamping (fraction 0.12, floor 0.5 ms, ceiling 4.0 ms), event normalization to `GuiEvent` before dispatch, scene-isolated update execution, and deterministic focus candidate ordering by `control_id`. This is the primary test for Section 1 and Section 6 of `docs/runtime_operating_contracts.md`.
-
-- **`test_boundary_contracts.py`** — Verifies the architectural isolation rule: no module in `gui_do/` imports from `demo_features/`. Any violation of this rule breaks the library–demo separation contract specified in `docs/architecture_boundary_spec.md` and `docs/library_demo_separation_contract.md`. Run after any import change in the library or demo packages.
-
-- **`test_gui_application_workspace_contracts.py`** — Verifies the workspace restore behavior: `GuiApplication.restore_workspace` and `load_workspace` return structured restore reports; missing settings keys are skipped without aborting restore; unknown keys appear in `skipped_settings`; the full set of restore report fields is present. Run after any change to workspace persistence or the settings registry.
+- **`test_public_api_exports.py`** — verifies that all names listed in `gui_do.__all__` are
+  importable and present. Catches renames, deletions, and refactors that accidentally break
+  the public surface without updating the `__init__.py` exports.
+- **`test_public_api_docs_contracts.py`** — verifies that API names match the contract
+  documentation in `docs/public_api_spec.md`. If a name is added to exports but not to the
+  contract doc (or vice versa), this test fails.
+- **`test_runtime_operating_contracts.py`** — verifies runtime guarantees: scheduler budget
+  values (fraction, floor, ceiling), event normalization behavior, scene isolation, and
+  deterministic candidate ordering in routing. These are the numeric and behavioral contracts
+  that this manual references in `[CONTRACT]`-tagged statements.
+- **`test_boundary_contracts.py`** — verifies the `gui_do` / `demo_features` boundary: no
+  module in `gui_do/` imports from `demo_features/`; consumer code imports from the `gui_do`
+  root only.
+- **`test_gui_application_workspace_contracts.py`** — verifies workspace restore report
+  behavior: all expected fields are present, unknown settings keys appear in `skipped_settings`
+  rather than raising, missing settings blocks appear in `missing_settings_blocks`.
 
 ### Runtime Behavior Tests
 
-Beyond contract tests, the test suite includes focused runtime behavior tests. Key areas covered:
+Beyond contract tests, the test suite covers runtime behaviors that validate day-to-day
+feature development patterns:
 
-- **Workspace load and save behavior** — `test_gui_application_workspace_contracts.py` and related persistence tests verify save/load round-trips, version handling, and restore report completeness.
-- **Overlay, tooltip, and cursor routing** — Tests that confirm overlay surfaces intercept events before the control tree, and that cursor and tooltip state changes are applied correctly.
-- **Layout and animation determinism** — Tests that verify `FlexLayout`, `ConstraintLayoutEngine`, and `AdaptivePolicy` produce the same output given the same input, and that tween animations reach their target values at the declared duration.
-- **Control runtime behavior** — Tests for individual controls (`test_canvas_viewport_scrollbar_slider.py`, `test_cell_caret_layout.py`, `test_data_grid_text_input.py`, etc.) that verify input handling, state transitions, and rendering invariants.
-- **Accessibility specs** — `test_demo_accessibility_specs.py` verifies that declared `StaticAccessibilitySpec` entries resolve to valid `AccessibilityNode` trees with correct roles and names.
+- **Workspace load/save behavior** — verifies that save/restore round-trips through
+  `WorkspacePersistenceManager` preserve scene identity and settings values.
+- **Overlay, tooltip, and cursor routing** — verifies that overlays correctly intercept or
+  pass through events according to their dismissal contract (modal dialogs consume all input;
+  toasts consume only intra-bound clicks; tooltips consume nothing).
+- **Layout and animation determinism** — verifies that repeated layout passes over identical
+  constraints produce identical control positions, and that tweens applied with the same
+  parameters produce consistent interpolation curves.
+- **Control runtime** — verifies that controls correctly register with focus rings, respond
+  to accessibility queries, and produce consistent hit-test results.
+- **Accessibility specs** — verifies that `StaticAccessibilitySpec` and
+  `AccessibilitySequenceSpec` annotations produce the expected `AccessibilityTree` structure.
 
 ### Debug and Trace Tools
 
-When a behavioral issue occurs that is not caught by tests, the following tools provide runtime visibility:
+`gui_do` provides built-in tools for diagnosing runtime issues without external debuggers:
 
-- **`EventRecorder` / `EventPlayback`** — Record the exact sequence of normalized `GuiEvent` objects seen during a live session. Replay the recording to reproduce the issue deterministically in a later session. This is the primary tool for reproducing routing and focus issues that are difficult to trigger manually.
-- **`DebugOverlay`** — Visual inspection layer that renders control tree state (bounds, IDs, focus ring state) as colored rects over the live scene. Activate at runtime to inspect layout problems without modifying feature code.
-- **`PropertyInspectorPanel`** — Driven by `PropertyInspectorModel`, this panel lists all `@ui_property` descriptors on live controls and shows their current values. Use to inspect control state during development without print statements.
-- **`analyze_telemetry_records` / `render_telemetry_report`** — Offline analysis of telemetry records. After enabling `TelemetryConfig` and running representative scenarios, call `analyze_telemetry_records(telemetry_collector.records)` to identify which frame path, feature, or pipeline stage is exceeding the scheduler budget.
-- **`analyze_telemetry_log_file`** — Same analysis pipeline applied to a persisted `telemetry.jsonl` log. Useful for comparing baseline performance across releases.
+- **`EventRecorder` / `EventPlayback`** — records a stream of input events to a log file and
+  replays it deterministically. Use to reproduce rare interaction bugs: record the session,
+  share the log file, replay to reproduce. This is the recommended first step in any
+  regression triage workflow.
+- **`DebugOverlay`** — renders diagnostic information over the live scene: control bounds,
+  focus ring state, hit regions, and spatial index query results. Enable in `build` and
+  disable in production by checking a feature flag.
+- **`PropertyInspectorPanel`** — a live runtime inspector driven by `PropertyInspectorModel`
+  and `PropertyRegistry`. Add `@ui_property` decorators to custom controls to expose their
+  attributes for inspection without modifying the draw code.
+- **Telemetry log analysis** — `analyze_telemetry_log_file(path)` and `render_telemetry_report`
+  provide frame-budget and pipeline profiling from recorded sessions. Use `load_telemetry_log_file`
+  to load a saved log for offline analysis.
 
 ### Maintainer Release Runbook
 
-Before tagging a release, run through this sequence in order. Each step is a gate: if it fails, fix the issue before proceeding.
+Follow this gate sequence before each release:
 
-1. Run the full test suite: `python -m pytest -q`.
-2. Run the contract tests explicitly (see command above) and verify all pass.
-3. Compare `gui_do/__init__.py` tier blocks against Appendix D and Appendix D.1 in this manual. Correct any gaps.
-4. Verify `docs/runtime_operating_contracts.md` values (scheduler budget Section 6, restore report fields Section 4) are accurately reflected in the manual.
-5. Check `docs/architecture_boundary_spec.md` — confirm no new cross-boundary imports have been introduced.
-6. Run `test_public_api_docs_contracts.py` to confirm the contract documentation and the exports are synchronized.
-7. Verify the End-to-End Reference Application listing compiles without import errors.
-8. Run the telemetry baseline scenario and confirm the scheduler does not exceed its ceiling budget under representative load.
+1. **Run the full contract test suite** (five files listed above). All tests must pass with
+   no unexpected xfails.
+2. **Verify `__all__` completeness** — run `test_public_api_exports.py` in isolation to
+   confirm every name in `__all__` is importable.
+3. **Confirm boundary integrity** — run `test_boundary_contracts.py` to confirm no reverse
+   imports from `demo_features` to `gui_do`.
+4. **Review the Maintainer Diff Checklist** — work through all four categories below. Resolve
+   any delta or record explicit TODO entries in the Migration chapter.
+5. **Run telemetry baseline** — run the demo application through a representative scenario
+   with telemetry enabled. Compare the resulting report against the previous baseline. Flag any
+   regression in scheduler budget usage, overlay routing cost, or draw time.
+6. **Build the demo** — run `python gui_do_demo.py` and exercise the primary demo features.
+   Confirm no import errors, no uncaught exceptions, and no visual regressions.
 
 ### Regression Triage Workflow
 
-When a behavioral regression is reported:
+When a regression is reported, follow this sequence to localize it efficiently:
 
-1. **Reproduce.** Use `EventRecorder` to capture the exact event sequence that triggers the issue. If the issue involves scene transitions, record from scene entry.
-2. **Trace.** Enable telemetry and replay the recording. Identify the frame or event where behavior diverges from expectation.
-3. **Localize.** Use `DebugOverlay` or `PropertyInspectorPanel` to narrow the issue to a specific control, feature, or routing step.
-4. **Test first.** Before patching, write a failing test that encodes the expected behavior. Prefer adding it to the relevant contract test file if it represents a framework-level guarantee.
-5. **Patch.** Fix the issue. Verify the new test passes and no regression tests regress.
-6. **Adjacent contracts.** After patching, run the full contract test suite. A routing or visibility fix may inadvertently break a sibling behavioral guarantee.
+1. **Reproduce** — use `EventRecorder` / `EventPlayback` to capture a deterministic
+   reproduction. If the bug is in a layout or rendering issue, use `DebugOverlay` to snapshot
+   control bounds before and after the regression commit.
+2. **Trace** — enable telemetry and replay the reproduction. Use `analyze_telemetry_records`
+   to identify which system's latency changed.
+3. **Localize** — run the relevant contract test file in isolation. If a contract test fails,
+   the regression is in the system that contract covers. If all contract tests pass, the
+   regression is in a behavior that lacks contract coverage — add a contract test as part of
+   the fix.
+4. **Test-first** — write a failing test that reproduces the bug before writing the fix.
+5. **Patch** — implement the minimal fix. Rerun the full contract suite and the regression test.
+6. **Adjacent contracts** — scan for other contracts that exercise the same system path. Run
+   them to confirm the fix does not introduce adjacent failures.
 
 ### Maintainer Diff Checklist
 
-This checklist is an operational guide for anyone regenerating or significantly updating this manual. Run through every item in every category before publishing an updated version. The goal is to ensure that the manual accurately reflects the current state of the codebase no more and no less.
+[Back to Table of Contents](#table-of-contents)
+
+This checklist must be run at the start of every manual regeneration pass. It ensures the
+manual stays synchronized with the codebase as it evolves. Work through each category in
+order. Record unresolved ambiguities as explicit TODO notes in the
+[Migration, Versioning, and Deprecation Notes](#migration-versioning-and-deprecation-notes) section.
 
 #### Inventory Delta Checks
 
-1. **Root export changes.** Open gui_do/__init__.py and compare its tier comment blocks and exported names against Appendix D and Appendix D.1. Any tier that does not appear in the appendix is a gap. Any name in the appendix that is no longer exported is a stale reference. Record additions and removals, then propagate them to the relevant system chapter, the quick-index table, and the tier matrix.
-2. **Docs contract changes.** Read each file under docs/ and compare its content against the manual section that cites it. If a contract document has changed its guarantee, policy, or boundary rule, update the corresponding manual section accordingly. In particular check scheduler budget values in docs/runtime_operating_contracts.md Section 6, restore report fields in Section 4, and tier stability policies in docs/public_api_spec.md.
-3. **Contract and runtime test additions.** List the tests/ directory and filter for files matching test_*_contracts.py and test_runtime_*. Any file that does not appear in the Testing chapter contract test list is a new test that may imply new behavioral guarantees to document. Check whether the new test subject is already covered in the relevant system chapter.
-4. **Demo composition pattern changes.** Browse demo_features/ and compare the feature package structures and composition patterns against the Integration Patterns and Feature Lifecycle chapters. New demo patterns that represent best-practice composition should be documented as recipes. Removed demo patterns that were used as examples in the manual should be replaced with current equivalents.
+1. **Root export changes** — Compare current `gui_do/__init__.py` tier sections with
+   [Appendix D (API Quick Index)](#appendix-d-api-quick-index) and [D.1 (Tier Matrix)](#d1-tier-matrix).
+   For every tier block in `__init__.py`:
+   - Are all exported names listed in the correct chapter's "Primary public APIs" section?
+   - Are any names present in `__init__.py` but missing from the manual?
+   - Are any names present in the manual but no longer exported by `__init__.py`?
+   - Has a new tier been added? If yes, assign it to the most thematically appropriate
+     system chapter and add it to the Tier Matrix.
+
+2. **Docs contract changes** — Review `docs/` for changes since the last manual regeneration:
+   - `docs/public_api_spec.md` — has the tier grouping or stability policy changed?
+   - `docs/runtime_operating_contracts.md` — have scheduler budget values (fraction/floor/ceiling),
+     restore report fields, or cross-system guarantees changed?
+   - `docs/architecture_boundary_spec.md` — are there new boundary rules that affect which
+     patterns are recommended?
+   - `docs/event_system_spec.md` — are there changes to event routing or `EventType` members?
+
+3. **Contract and runtime test additions** — List `tests/` and filter for new files matching
+   `test_*_contracts.py` or `test_runtime_*`. For each new file:
+   - Identify which system chapter it covers.
+   - Ensure that chapter's `[CONTRACT]`-tagged statements are consistent with the new tests.
+   - Update the contract test command in [Contract Alignment](#contract-alignment) if the
+     set of high-priority tests has changed.
+
+4. **Demo composition pattern changes** — Scan `demo_features/` for new feature packages,
+   new `__init__.py` exports, or new usage patterns:
+   - Have any new composition patterns been established that the Integration Patterns chapter
+     should document?
+   - Have any existing patterns been deprecated or replaced?
 
 #### Content Integrity Checks
 
-1. **Changed systems: chapter narrative and quick-index reconciliation.** For every system that had API additions or removals, update both the full chapter prose (the Primary Public APIs subsection at minimum) and the corresponding rows in Appendix D. Partial updates that fix the chapter but leave the appendix stale create confusion and must be caught here.
-2. **Removed APIs: clean sweep.** After identifying removed exports, search the entire manual for each removed name. Remove or replace every occurrence. Do not leave phantom API names in examples, recipes, or appendix rows.
-3. **Added APIs: abstraction-level placement.** Every new API should be introduced at the abstraction level appropriate to its tier. Tier 1 names belong in the earliest practical system chapter and in the Quickstart Path. Higher-tier names belong in the relevant system chapter and the appendix. Avoid surfacing Tier 18+ names in the Quickstart or in the introductory paragraphs of system chapters unless they are genuinely required for common usage.
+1. **API reconciliation** — For every system chapter that covers a changed tier:
+   - Update the "Primary public APIs and key types" list to match `__init__.py`.
+   - Update any code examples that reference removed or renamed symbols.
+   - Verify that the [API Quick Index](#appendix-d-api-quick-index) and
+     [Tier Matrix](#d1-tier-matrix) reflect the same changes.
+
+2. **Removed API cleanup** — Search `MANUAL.md` for any API name that no longer appears in
+   `gui_do/__init__.py`. Remove it from examples, recipes, and appendix entries. If the removal
+   is significant, add a migration note in
+   [Migration, Versioning, and Deprecation Notes](#migration-versioning-and-deprecation-notes).
+
+3. **Abstraction-level placement** — Verify that Tier 1 APIs are presented first in every
+   system chapter that has a Tier 1 entry. Lower-tier APIs should appear in "Advanced patterns"
+   or "Primary public APIs" sections, not in the opening overview. This keeps the beginner path
+   clean and ensures experienced users can find lower-level hooks.
 
 #### Navigation and Structure Checks
 
-1. **TOC completeness.** Verify that every top-level section and every system sub-chapter (8.1 through 8.N) appears in the Table of Contents with a working anchor link. After adding new sections, regenerate or manually update the TOC entry.
-2. **Back-to-top links.** Every major section (every ## and ### that corresponds to a distinct manual topic) must have a Back to Table of Contents link immediately below its heading. Check that no sections added during an update pass are missing this link.
-3. **Anchor stability.** Section heading text drives GitHub-Flavored Markdown anchor names. If a section heading is renamed, all TOC entries and cross-references that point to the old anchor must be updated. Prefer heading renames only when necessary, and always do a full-document anchor scan afterward.
+1. **TOC and anchor integrity** — For every new section added to the manual:
+   - Confirm the section heading has a matching entry in the [Table of Contents](#table-of-contents)
+     with a correct `(#anchor-name)` link.
+   - Confirm the anchor name is stable and matches the heading text after GitHub-Flavored Markdown
+     anchor normalization (lowercase, spaces to hyphens, punctuation stripped).
+
+2. **Back-to-top links** — Verify that every major section (H2) and every system chapter (H3)
+   has a `[Back to Table of Contents](#table-of-contents)` link immediately below its heading.
+
+3. **Chapter order stability** — Confirm the top-level section order matches the fixed order
+   defined in the orchestrator prompt. If a structural reorder is intentional, record the reason
+   in migration notes.
 
 #### Operational Checks
 
-1. **Re-run high-priority contract tests.** Before publishing the updated manual, run the following command to confirm the behavioral guarantees cited in the manual are still enforced by the test suite:
+1. **Contract test run** — Execute the high-priority contract test suite before finalizing:
 
    ```bash
-   python -m pytest -q tests/test_public_api_exports.py tests/test_public_api_docs_contracts.py tests/test_runtime_operating_contracts.py tests/test_boundary_contracts.py tests/test_gui_application_workspace_contracts.py
+   python -m pytest -q \
+     tests/test_public_api_exports.py \
+     tests/test_public_api_docs_contracts.py \
+     tests/test_runtime_operating_contracts.py \
+     tests/test_boundary_contracts.py \
+     tests/test_gui_application_workspace_contracts.py
    ```
 
-   If any of these tests fail, the manual content derived from those contracts is potentially incorrect. Fix the discrepancy before publishing.
+   All tests must pass. Any failure indicates a discrepancy between the manual content,
+   the contract docs, and the code that must be resolved before publication.
 
-2. **End-to-end reference application assumptions.** The End-to-End Reference Application chapter describes a concrete application structure tied to real demo feature packages. After updating, verify that the feature class names, spec types, and lifecycle method signatures referenced in that chapter still match what is actually exported from the relevant packages. If the demo features have been restructured, update the examples to match.
+2. **End-to-end reference validation** — Verify the assumptions made in the
+   [End-to-End Reference Application](#end-to-end-reference-application) chapter against the
+   current demo runner. Confirm that the listed feature classes, spec types, and configuration
+   patterns still exist and function as described.
 
-3. **Unresolved ambiguities.** If any behavioral question arose during the update that could not be resolved from code or contracts, record it as an explicit TODO comment in the draft. Do not publish the TODO; resolve it before merging. If resolution requires a contract change, file that separately and leave the section conservative.
+3. **Unresolved ambiguities** — Record any gaps discovered during this checklist pass as
+   explicit TODO notes in
+   [Migration, Versioning, and Deprecation Notes](#migration-versioning-and-deprecation-notes)
+   rather than leaving them as silent omissions.
 
 ---
 
@@ -2595,40 +3969,59 @@ This checklist is an operational guide for anyone regenerating or significantly 
 
 ### Scheduler Budget Contract
 
-The cooperative scheduler's per-frame dispatch budget is governed by three values defined in `docs/runtime_operating_contracts.md` Section 6:
+The cooperative scheduler operates under a frame-budget contract documented in
+`docs/runtime_operating_contracts.md` §6. The budget for each frame is:
 
-- **fraction = 0.12** — The scheduler may use up to 12% of the frame's dt in milliseconds. On a 60 FPS frame (dt ≈ 16.7 ms) this is approximately 2 ms.
-- **floor = 0.5 ms** — The minimum guaranteed budget per frame. Even on a very fast frame where 12% of dt is less than 0.5 ms, the scheduler receives at least 0.5 ms. This prevents starvation of background coroutines during burst performance scenarios.
-- **ceiling = 4.0 ms** — The hard maximum per frame. Even on a very slow frame (e.g., dt = 50 ms, 12% = 6 ms), the scheduler is capped at 4.0 ms to protect render time from runaway scheduling work.
+- **fraction** = `0.12` of `dt_ms` (12% of the elapsed frame time)
+- **floor** = `0.5 ms` (minimum budget even on very fast frames)
+- **ceiling** = `4.0 ms` (maximum budget even on very slow frames)
 
-These bounds together give predictable scheduling behavior across a wide range of frame rates. Coroutines that yield at safe points will make progress every frame, but they cannot monopolize the render budget. Design coroutines to yield frequently for best responsiveness — any coroutine that does more than 1–2 ms of work before yielding may spike above the floor and delay subsequent features.
+This contract ensures that the scheduler cannot starve rendering under slow frames (the ceiling
+prevents unlimited task expansion) and cannot under-utilize on fast frames (the floor provides
+a minimum slice). The values are verified by `tests/test_runtime_operating_contracts.py`.
+Application code that runs in scheduled tasks should be written to complete within a single
+budget slice; tasks that exceed the slice are resumed on the next frame.
 
 ### Dirty-Region Rendering
 
-`DirtyRegionTracker` is the primary frame-rate optimization for complex scenes with large but mostly static control trees. Instead of redrawing the entire screen surface every frame, you mark only the regions that actually changed as dirty, then check each expensive draw region against the dirty set before drawing.
+For scenes with complex or frequently changing visual content, `DirtyRegionTracker` is the
+primary frame-rate optimization. The tracker accumulates dirty rects over a frame and maintains
+an incremental union rect. `overlaps_dirty(rect)` is O(1) because it tests against the union
+rect, not each individual dirty rect. `consume_dirty_regions()` returns the accumulated dirty
+list and resets the tracker for the next frame.
 
-The key performance characteristic: `overlaps_dirty(rect)` is O(1). The tracker maintains a running union rectangle of all dirty rects added in the current frame. An overlaps check tests only against the union rect, not against each individual dirty rect. This means the cost of checking many controls against the dirty set is essentially constant regardless of how many individual dirty regions were added.
-
-Use `consume_dirty_regions()` at the end of each frame's draw pass to retrieve the final dirty list and reset the tracker for the next frame.
+The recommended pattern is to mark only changed regions as dirty during `on_update`, then in
+`draw`, check `overlaps_dirty(my_rect)` before re-rendering. For large scenes, this reduces
+per-frame draw cost from O(all controls) to O(changed controls).
 
 ### Virtualization and Incremental Rendering
 
-For controls that display large datasets (`ListViewControl`, `DataGridControl`, `TreeControl`), the framework provides virtualization primitives that ensure rendering and memory costs scale with the visible viewport, not the full dataset:
+For features that display large collections (thousands of items), `VirtualizationCore` and
+`VirtualizedWindow` provide O(visible rows) rendering by maintaining a sliding window over
+the full dataset. `RecyclePool` recycles control instances as rows scroll in and out of view,
+eliminating the cost of constructing new control objects on every scroll event.
 
-- **`VirtualizationCore` with `RecyclePool`** — Only the visible subset of item views is instantiated. As the user scrolls, off-screen views are returned to the `RecyclePool` and repopulated with new data for newly visible items. This keeps the instantiated control count constant regardless of dataset size.
-- **`VirtualizedWindow`** — A higher-level wrapper around `VirtualizationCore` suitable for most list-of-items use cases.
-- **`ListDiffCalculator`** — When the dataset changes, compute a minimal `ListDiff` (insertions, removals, moves) and apply the patch incrementally to the control source rather than replacing the entire dataset. This eliminates full-list redraws and significantly reduces visual flicker in live-updating lists.
+`ListDiffCalculator` reduces the cost of incremental updates: instead of rebuilding the full
+list on every data change, compute a minimal patch (`DiffInsert`, `DiffRemove`, `DiffMove`)
+and apply only the changed operations to the live list view. This is especially important
+for features that subscribe to fast-changing data streams.
 
 ### Practical Scaling Checklist
 
-Apply these practices when a feature is growing in complexity or when frame rate becomes a concern:
-
-- **Enforce scene-scoped updates and handlers.** Features registered to the wrong scene may receive unnecessary `on_update` calls. Confirm `scene_name` is correct in every `FeatureSpec`.
-- **Avoid per-frame collection reallocation.** Allocating a new list or dict inside `on_update` every frame creates GC pressure. Use `ObjectPool` for high-churn temporary objects (particles, event records).
-- **Debounce expensive operations.** Search inputs, resize handlers, and filter callbacks that trigger expensive work should use `Debouncer` (fires after a quiet period) or `Throttler` (fires at most once per interval).
-- **Use `DataflowPipeline` + `CancellationToken` for preemptible background work.** Any processing pipeline that may be superseded by new user input should be cancelable. Never let a stale pipeline run write to live UI.
-- **Profile representative scenarios.** Idle loop performance is not meaningful. Profile while simulating real user interactions — search, scroll, scene transitions, window toggles.
-- **Gate expensive draw regions with `DirtyRegionTracker`.** Any `draw` method that builds a complex composited surface should check `dirty.overlaps_dirty(self.rect)` before doing any work.
+- **Enforce scene-scoped updates** — features should only process updates when their scene is
+  active. Guard `on_update` and event handlers with a scene-active check.
+- **Avoid per-frame full collection reallocation** — use `ObjectPool` for high-churn objects
+  such as particle records, event records, and temporary render items.
+- **Debounce expensive form and search operations** — use `Debouncer` to rate-limit calls
+  to validation pipelines, search queries, and layout recomputes triggered by text input.
+- **Use `DataflowPipeline` + `CancellationToken`** — for any background processing that may
+  be preempted by new user input; this prevents stale results from appearing in the UI.
+- **Profile representative user interactions** — idle loop telemetry does not reflect real
+  frame cost. Profile search queries, scene transitions, and scroll events.
+- **Use `DirtyRegionTracker` to gate draw regions** — even simple scenes benefit from skipping
+  unchanged regions during the draw pass.
+- **Prefer `SortFilterProxySource`** — for filtered list views, prefer proxy-based filtering
+  over allocating new lists; the proxy maintains the original source reference.
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -2640,46 +4033,58 @@ Apply these practices when a feature is growing in complexity or when frame rate
 
 ### Versioned Snapshot Strategy
 
-When the schema of persisted workspace state evolves across releases, `SnapshotMigrator` provides a safe forward-migration path that prevents both silent data loss and runtime errors on old snapshots. The recommended workflow is:
+When a workspace snapshot schema changes between application versions, `SnapshotMigrator`
+provides a BFS migration graph that transforms old snapshots forward to the current schema
+without requiring all-at-once rewrites.
 
-1. When saving, call `make_snapshot(current_version, state_dict)` to produce a `VersionedSnapshot` tagged with the current schema version string.
-2. On load, call `read_version(raw)` to read the snapshot's stored schema version before attempting to restore it.
-3. If the stored version is older than the current version, call `SnapshotMigrator.migrate(snapshot, to_version=CURRENT_VERSION)`. The migrator walks the `MigrationRegistry` in BFS order, applying each registered `MigrationStep` in sequence from the stored version to the target.
-4. If no migration path exists from the stored version to the current version, `MigrationError` is raised. Catch this at the application level and fall back to a fresh default state rather than crashing.
-5. Restore the migrated snapshot into the runtime.
+The recommended workflow:
 
-Register migration steps as part of application startup, before any load attempt:
+1. Write snapshots with `make_snapshot(current_version, state_dict)`. The resulting
+   `VersionedSnapshot` embeds the `SchemaVersion` alongside the payload.
+2. On load, call `read_version(raw)` to extract the stored version before deserializing the
+   payload. This allows early detection of unsupported or future versions.
+3. Pass the raw snapshot to `SnapshotMigrator.migrate(snapshot)`. The migrator walks
+   registered `MigrationStep` objects in BFS order from the stored version to the current
+   schema version, applying each step's `migrate` function in sequence.
+4. Restore the migrated data into the runtime.
 
-```python
-registry = MigrationRegistry()
-registry.register(MigrationStep(from_version="1.0", to_version="1.1", apply=upgrade_1_0_to_1_1))
-registry.register(MigrationStep(from_version="1.1", to_version="2.0", apply=upgrade_1_1_to_2_0))
-migrator = SnapshotMigrator(registry)
-```
+`MigrationStep` objects are registered on `MigrationRegistry`, one per version transition.
+Each step knows its source and target version and provides a pure function that transforms
+the data dict. `MigrationError` is raised if no registered path exists from the stored
+version to the current version.
 
-Migration steps are one-directional. Each step knows its source and target version. There is no automatic rollback; downgrade paths must be registered separately if required.
+**Contract:** old snapshots must never be silently discarded. If migration fails (no path),
+the application must inform the user and provide a recovery option — either manual migration
+or starting with defaults while preserving the old file.
 
 ### Deprecation Handling
 
-The recommended policy for deprecating public API elements is additive transition: add the new form first, keep the old form with a deprecation warning, then remove the old form in a subsequent release. This gives consumers a migration window. Removals without a deprecation window are breaking changes.
+The recommended deprecation policy for `gui_do` changes:
 
-Preferred practices:
+- **Prefer additive transitions** — add new fields or parameters alongside old ones. Mark
+  old names with Python deprecation warnings (`warnings.warn(..., DeprecationWarning)`).
+  Keep old behavior functional for at least one release cycle.
+- **Remove legacy behavior only with a migration path** — before removing a deprecated API,
+  document the replacement and provide a migration note in this section.
+- **Centralize all deprecation notes here** — this section is the canonical record of pending
+  and completed deprecations.
 
-- Add new fields or parameters alongside old ones; mark old ones with a deprecation comment in the source and in this section.
-- For renamed types, expose the new name and alias the old name pointing to the new type with a deprecation note.
-- Remove legacy behavior only after the migration path has been available for at least one release.
-
-No deprecated public APIs are cataloged as of this generation. Maintainers must add explicit entries here when formal deprecations are introduced. Each entry should specify: the deprecated name, the replacement, the release it was deprecated, and the release it will be removed.
+As of this generation, no formal deprecations are cataloged in the public API. Maintainers
+should add entries to this section whenever a formal deprecation is introduced.
 
 ### Upgrade Checklist
 
-When upgrading an application or the framework itself:
+When upgrading the `gui_do` version used by a dependent application:
 
-1. Run contract tests before and after the upgrade to identify behavioral changes.
-2. Verify all imports use the `from gui_do import ...` form from the root package. Internal submodule imports (`gui_do.features.*`, `gui_do.controls.*`, etc.) are not part of the stable surface.
-3. Check action routing, input binding, and focus cycling behavior in all active scenes — these are the most common surfaces for behavioral regressions.
-4. Validate workspace restore: load an existing saved workspace and inspect the restore report for unexpected `skipped_settings` or `missing_settings_blocks` entries.
-5. Re-run the telemetry baseline scenarios and compare against the previous baseline. A scheduler budget increase is a performance regression even if no tests fail.
+1. Run the full contract test suite before the upgrade.
+2. Apply the upgrade and run the contract test suite again. Investigate all new failures.
+3. Verify that all consumer imports use `from gui_do import ...` from the root; confirm no
+   submodule imports that bypass the public surface.
+4. Check action, input, and focus routing behavior in all active scenes for behavioral
+   regressions.
+5. Load an existing workspace file and inspect the restore report for new entries in
+   `skipped_settings` or `missing_settings_blocks`.
+6. Re-run telemetry baseline scenarios and compare to the pre-upgrade baseline report.
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -2689,394 +4094,979 @@ When upgrading an application or the framework itself:
 
 [Back to Table of Contents](#table-of-contents)
 
-**Q: Should I build applications directly with controls, or should I use features?**
+**Q: Should I build apps directly with controls or with features?**
 
-Use features as the primary architectural unit. Controls are implementation details inside feature boundaries — they handle rendering and user interaction primitives, but they have no lifecycle orchestration, no event routing integration, no observable wiring protocol, and no clean teardown contract. A feature provides all of these things. Think of a feature as a bounded context: it builds its controls, wires its reactive subscriptions, handles relevant events, and tears down cleanly when its scene exits. A control alone cannot do any of this. Reserve direct control use for simple utility compositions inside a feature's `build` method.
+Use features as the architectural unit. Controls are implementation details inside feature
+boundaries. Features provide lifecycle orchestration, event routing, observable wiring, and
+clean teardown. A control alone cannot do any of these things — it has no `bind_runtime`,
+no `on_update`, and no clean way to subscribe to observables or actions. Every interactive
+behavior in a `gui_do` application belongs in a feature; controls are the visual representation
+that features build and manage.
 
-**Q: When should I use `RoutedFeature` instead of `Feature`?**
+**Q: When should I use `RoutedFeature` over `Feature`?**
 
-Use `RoutedFeature` when your feature needs two or more of the following: topic-based message dispatch via `FeatureMessage`, declarative hotkey registration, shortcut overlay integration, task panel window toggle with automatic focus exclusion, or event subscription specs. `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec` wire all of these together in one coordinated bind/shutdown pair. If your feature only needs basic lifecycle phases, a control tree, and reactive observable subscriptions, plain `Feature` is simpler and entirely sufficient.
+Use `RoutedFeature` when you need topic-based message dispatch, declarative keyboard shortcut
+binding, shortcut overlay integration, or task-panel focus toggle management — wired from a
+single `RoutedRuntimeSpec`. If your feature only needs basic lifecycle phases (`build`,
+`bind_runtime`, `on_update`, `draw`, `shutdown_runtime`) and a control tree with no
+cross-system routing requirements, plain `Feature` is sufficient and has less overhead.
 
 **Q: Why are some key handlers not firing?**
 
-There are four common causes. First, focus ownership: if a `TextInputControl` or similar text-capturing control has focus, it consumes key events before they reach feature handlers. Second, window scope: if the action was registered with a window scope and the window is hidden, the action's handler is not active. Third, overlay modal capture: if a dialog, context menu, or command palette is open, it intercepts key events before the scene's routing chain. Fourth, scene scope mismatch: an action registered for `scene_name="settings"` does not fire in `scene_name="main"`. Use `EventRecorder` to trace exactly which routing layer consumed the event.
+Check in order: (1) **Focus ownership** — is another control capturing keyboard input? Use
+`DebugOverlay` to confirm which control holds focus. (2) **Window scope** — is the action
+registered as window-scoped but the target window is hidden or inactive? (3) **Overlay modal
+capture** — is a modal overlay consuming all keyboard events before they reach your handler?
+(4) **Scene scope** — is the action registered for a different scene than the currently
+active one? Use `EventRecorder` to trace the exact event routing sequence.
 
-**Q: Why do toast clicks not pass through to controls underneath?**
+**Q: Why do toast clicks not pass through to underlying controls?**
 
-By contract, toast surface bounds consume left-click pointer events. This prevents accidental button activations underneath a transient notification. Design all intentional interactions within toasts using the `on_click` callback provided by the toast API.
+By contract, a toast's bounding rect consumes left-click events to prevent accidental
+activation of controls beneath the toast. This is an intentional part of the toast routing
+contract. If you need intentional interaction with a toast, use the `on_click` callback in
+the toast API. If you need controls beneath a toast to remain interactive, dismiss the toast
+before displaying the interactive content.
 
-**Q: How do I avoid breaking workspace restore across schema versions?**
+**Q: How do I avoid breaking workspace restore across versions?**
 
-Use `VersionedSnapshot` with `SchemaVersion` tagging; register a `MigrationStep` for every schema version transition; always call `read_version` before restoring; and inspect the restore report's `skipped_settings` and `missing_settings_blocks` fields after every load. Surface gaps to the user via a toast rather than silently ignoring them. See [8.11 Persistence and Workspace/Session State](#811-persistence-and-workspacesession-state) for the full workflow.
+Use `VersionedSnapshot` with `SchemaVersion` and register `MigrationStep` objects for every
+schema change. On each load, call `read_version` before deserializing and run the migrator.
+Always inspect the restore report: `skipped_settings` identifies unknown keys (non-fatal,
+but worth logging), and `missing_settings_blocks` identifies expected blocks that were absent
+from the snapshot. Handle these gracefully — for example, with a toast notification — rather
+than raising exceptions.
 
 **Q: How do I confirm my API usage is within the supported surface?**
 
-Use explicit named imports from the `gui_do` root package only: `from gui_do import Feature, ObservableValue, ...`. Do not import from internal submodules like `gui_do.features.feature_lifecycle` or `gui_do.controls.button`. Run `tests/test_public_api_exports.py` to verify that every name you use appears in `gui_do.__all__`. The root import surface is the only surface covered by stability guarantees.
+Use explicit named imports from the `gui_do` root: `from gui_do import Feature`. Run
+`tests/test_public_api_exports.py` to verify all names you use are present in `gui_do.__all__`.
+Avoid importing from internal submodules (`gui_do.features.*`, `gui_do.controls.*`, etc.) —
+these are not part of the public contract and may change without notice.
 
-**Q: Why does my feature's `bind_runtime` seem to run before a sibling feature's `build` completes?**
+**Q: Why does my feature's `bind_runtime` run before my sibling's `build`?**
 
-It does not. The framework guarantees that all features registered to the same scene complete their `build` phase before any feature's `bind_runtime` is invoked. If you see ordering issues, confirm that both features declare the same `scene_name` in their `FeatureSpec` entries. A feature whose `scene_name` does not match the active scene will not be built in the same pass.
+It does not. The framework guarantees that all features in a scene complete their `build`
+calls before any feature's `bind_runtime` is called. This ordering is enforced by the scene
+activation sequence in the bootstrap runtime. If you observe ordering problems, confirm that
+the affected features are declared in the same scene in their `SceneBundleBindingSpec` entries
+— features in different scenes do not share this ordering guarantee across scene boundaries.
 
-**Q: How do I add a keyboard shortcut without touching event handler code?**
+**Q: How do I add a keyboard shortcut without manually wiring every event handler?**
 
-Declare an `ActionSpec` in `HostApplicationConfig` with a unique `action_id`. Then declare an `ActionHotkeySpec` with the `action_id` and the key binding, either as a top-level entry in the config or inside a `RoutedRuntimeSpec` applied to the owning feature. The framework registers the binding with the action registry and input map automatically. No direct wiring in `handle_event` is needed for command-style shortcuts.
+Declare an `ActionSpec` in `HostApplicationConfig.action_entries` with the desired `key`.
+Include it in a `RoutedRuntimeSpec` via `ShortcutOverlaySpec` or `ActionHotkeySpec`. The
+framework registers the action with the action registry and input map automatically, and the
+shortcut appears in the help overlay without any additional wiring in your event handlers.
 
 [Back to Table of Contents](#table-of-contents)
 
 ---
 
-## Appendix
+## Appendix A: Glossary
 
 [Back to Table of Contents](#table-of-contents)
 
-### Appendix A: Glossary
+**Feature** — the primary lifecycle-managed unit of application behavior in `gui_do`. A feature
+encapsulates a coherent piece of UI or logic: it creates controls in `build`, wires observables
+and actions in `bind_runtime`, processes time-based work in `on_update`, renders custom content
+in `draw`, and cleans up in `shutdown_runtime`. Features belong to exactly one scene and are
+never shared across scenes. The four feature types (`DirectFeature`, `Feature`, `LogicFeature`,
+`RoutedFeature`) differ in which host attributes they can access and what routing capabilities
+they provide.
+
+**Spec** — a declarative data object that describes runtime wiring, configuration, or behavior
+without executing it. Specs are pure data: they are constructed before bootstrap and processed
+by the framework during activation. Examples include `ActionSpec`, `WindowSpec`, `RoutedRuntimeSpec`,
+and `FontRoleBindingSpec`. Using specs instead of procedural registration keeps bootstrap code
+readable and testable.
+
+**Host** — a plain Python namespace object passed to each lifecycle method. It receives all
+runtime members as attributes during bootstrap: `app`, `controls`, `action_registry`, `toast_manager`,
+etc. Features declare which host attributes they require via `HOST_REQUIREMENTS`. The host is the
+only mechanism through which features interact with framework services.
+
+**Scene** — a named top-level interaction context. Each scene is an independently specified
+collection of features, windows, chrome elements, and actions. Activating a scene activates its
+features; deactivating it runs their `shutdown_runtime`. Features from different scenes are
+completely isolated at the control, event, and observable levels.
+
+**Window presentation** — the system that manages floating or docked UI surfaces within a scene:
+which windows are registered, which are visible, how the task panel toggle buttons drive
+visibility, and how `FocusScopeManager` excludes hidden windows from the focus ring.
+
+**Routed runtime** — a declarative bundle of hotkeys, shortcut overlays, task-panel focus
+toggles, and message subscriptions for a feature, declared in `RoutedRuntimeSpec` and wired
+via `bind_routed_feature_lifecycle`. Features that use routed runtime avoid manually calling
+action registry and input map APIs.
+
+**Observable** — a value container with automatic subscriber notification on change.
+`ObservableValue` is the primary type. Subscribers are callables registered via `subscribe`;
+they are called synchronously when the value changes via `set`. Subscriptions must be canceled
+in `shutdown_runtime` to prevent memory leaks. `ComputedValue` derives its value from other
+observables and recomputes automatically.
+
+**Workspace state** — the persisted runtime context saved by `WorkspacePersistenceManager`.
+It contains the active scene name, feature-level states, scene node positions, and named
+settings values. On restore, the runtime switches to the saved scene, replays feature states,
+and applies settings. The restore report identifies applied, skipped, and missing entries.
+
+**Contract test** — an automated test in the `tests/` suite that verifies a framework-level
+behavioral guarantee rather than implementation details. Contract tests cover the scheduler
+budget, event routing, workspace restore behavior, boundary integrity, and API surface
+completeness. They are intended to remain stable across refactors and serve as the primary
+compatibility signal for library consumers.
+
+**Tier** — a grouping of public API exports in `gui_do/__init__.py` organized by abstraction
+level and recommended usage priority. Tier 1 is the most stable and most commonly needed;
+higher tiers provide more specialized capabilities. Tier 19 contains infrastructure internals
+not intended for application code. See the Tier Matrix in §D.1.
 
 [Back to Table of Contents](#table-of-contents)
-
-**Feature** — The primary unit of application behavior in gui_do. A feature is a Python class that subclasses one of the feature base types (`Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`) and implements lifecycle phases (`build`, `bind_runtime`, `handle_event`, `on_update`, `draw`, `shutdown_runtime`). Features own a subtree of controls, hold observable state, subscribe to other features' observables, and handle input events within their scope. Features are registered via `FeatureSpec` in `HostApplicationConfig` and are instantiated and orchestrated by `FeatureManager`. A feature's identity is tied to a single scene; features do not span scenes.
-
-**Spec** — A declarative data object that describes a runtime entity, wiring relationship, or configuration policy without executing any behavior itself. Spec objects are pure data: `FeatureSpec`, `ActionSpec`, `WindowSpec`, `RuntimeSceneSpec`, `RoutedRuntimeSpec`, `RoutedFeatureLifecycleSpec`, and so on. Bootstrap resolves all specs into live runtime objects in one coordinated pass. Using specs keeps application setup declarative and testable without requiring a running framework.
-
-**Host** — A plain Python object (no special base class required) that is passed to `bootstrap_host_application`. Bootstrap populates it with runtime attributes: `host.app` becomes the live `GuiApplication`; other attributes hold managers, registries, and feature references as declared in the bootstrap config. Features receive the host object in every lifecycle method, giving them access to the full runtime surface through a single object rather than through global singletons.
-
-**Scene** — A top-level interaction context within an application. Each scene has its own set of active features, windows, task panel, and action bindings. Only one scene is active at any time; scene transitions activate the arriving scene's features and deactivate the departing scene's features. Scenes are declared via `SceneSetupSpec` and given runtime policies via `RuntimeSceneSpec`. The `initial_scene_name` in `HostApplicationConfig` determines which scene is active on startup.
-
-**Window presentation** — The system that coordinates floating window visibility, focus routing, task panel integration, and scene-menu toggle binding. A window is a focused work surface within a scene, implemented by a `WindowPresenter` subclass. Windows can be shown and hidden independently. Task panel buttons toggle window visibility. `TaskPanelFocusToggleSpec` ensures that hidden windows are excluded from the focus ring. The `ScenePresentationModel` tracks window registration and visibility state within a scene.
-
-**Routed runtime** — A declarative bundle of per-feature runtime wiring: action hotkeys, shortcut overlay spec, task panel focus toggle spec, event subscription specs, and related registrations. Expressed as a `RoutedRuntimeSpec` and applied via `RoutedFeatureLifecycleSpec`. A single call to `bind_routed_feature_lifecycle` applies all registrations; `shutdown_routed_feature_lifecycle` removes them symmetrically. The routed runtime pattern is the preferred approach for features with complex wiring needs.
-
-**Observable** — A value container that notifies all subscribed callbacks when its value changes. `ObservableValue`, `ObservableList`, and `ObservableDict` are the three observable primitives. `subscribe(callback)` returns a callable that, when called, removes the subscription. `ComputedValue` derives a new observable from one or more source observables. `reactive_batch` defers all subscriber notifications to the end of a `with` block. Observables are the mechanism for reactive state propagation in gui_do — they are not pygame or framework primitives, they are pure Python objects.
-
-**Workspace state** — The persisted runtime context for a session: current scene name, feature-specific state, scene node snapshots, and settings values. Saved to JSON by `WorkspacePersistenceManager`. Restored by `GuiApplication.load_workspace`, which produces a structured restore report listing what was applied, skipped, and missing. Workspace state evolution across releases is managed by `SnapshotMigrator` with registered `MigrationStep` objects.
-
-**Contract test** — An automated test in `tests/` that verifies a framework-level behavioral guarantee rather than an application-level behavior. Examples: `test_public_api_exports.py` guarantees all `__all__` names are importable; `test_boundary_contracts.py` guarantees no reverse imports from `gui_do/` into `demo_features/`; `test_runtime_operating_contracts.py` guarantees scheduler budget clamping. Contract tests are the release gate for the framework surface.
-
-**Tier** — A grouping of related public API exports in `gui_do/__init__.py`, organized by abstraction level and recommended usage priority. Tier 1 contains the highest-level, most commonly used bootstrap and feature types. Higher tier numbers represent lower-level or more specialized primitives. The tier organization is documented in `docs/public_api_spec.md` and reflected in Appendix D.1.
 
 ---
 
-### Appendix B: Lifecycle and Event Routing Sequence
+## Appendix B: Lifecycle and Event Routing Sequence
 
 [Back to Table of Contents](#table-of-contents)
 
-The following numbered sequence is the authoritative reference for the order in which framework operations execute. Use this as a debugging aid when behavior occurs at an unexpected point.
+The following numbered sequence is the authoritative reference for the order of operations
+from bootstrap through frame rendering and scene transitions.
 
-1. **`bootstrap_host_application(host, config)`** — All spec objects in `HostApplicationConfig` are resolved into runtime objects in one pass: scenes, features, actions, windows, font roles, cursors, accessibility specs, telemetry, and workspace managers are initialized. `host.app` becomes the live `GuiApplication`. All registered features are instantiated but no lifecycle phases have run yet.
+1. **Bootstrap** — `bootstrap_host_application(config)` reads `HostApplicationConfig`,
+   initializes pygame, builds the `GuiApplication`, registers actions and input maps, loads
+   fonts, and prepares the initial scene.
+2. **Scene activation — build pass** — all features in the initial scene receive their
+   `build(host)` call in declaration order. All features in the scene complete `build`
+   before any feature's `bind_runtime` is called.
+3. **Scene activation — bind pass** — all features receive `bind_runtime(host)` in declaration
+   order. At this point, all sibling controls are already built and all host services are
+   available.
+4. **Runtime loop begins** — `GuiApplication.run_entrypoint()` enters the frame loop.
+5. **Event normalization** — raw pygame events are converted to `GuiEvent` objects with
+   `EventType` and normalized coordinates, captured state, and focus context.
+6. **Routing pass** — `GuiEvent` objects pass through the overlay/focus/window/scene routing
+   layers in order: modal overlay (if active) → window focus → scene event routing →
+   feature `handle_event` calls.
+7. **Feature `handle_event`** — features receive events in routing order. An event consumed
+   by a higher-priority handler (overlay, modal dialog) does not reach lower-priority handlers.
+8. **Feature `on_update`** — features receive the frame's `dt` value in declaration order.
+   After all feature `on_update` calls, the cooperative scheduler dispatches pending scheduled
+   tasks within the frame budget.
+9. **Draw pass** — feature `draw` calls in declaration order, then control tree rendering,
+   then overlay rendering, then present to the display surface.
+10. **Scene transition** — on a scene switch, departing features receive `shutdown_runtime`
+    in reverse declaration order. Arriving features receive `build` then `bind_runtime` in
+    declaration order.
+11. **App exit** — on `GuiApplication.quit()` or the escape-to-exit action, active features
+    receive `shutdown_runtime` in reverse declaration order. If a workspace auto-save is
+    configured, it runs before exit.
 
-2. **Feature `build(host)` calls** — All features registered to the initial scene have their `build` method called. Controls are created and added to the scene tree. Observables are created. The framework guarantees that all `build` calls for a scene are completed before any `bind_runtime` call begins.
-
-3. **Feature `bind_runtime(host)` calls** — After all `build` calls are complete, all features in the scene have `bind_runtime` called. Reactive subscriptions are wired. Routed lifecycle registrations are applied. Cross-feature references are established. At this point the full scene graph is available.
-
-4. **Runtime loop begins** — `host.app.run_entrypoint(target_fps=...)` enters the frame loop.
-
-5. **Each frame: pygame event polling and `GuiEvent` normalization** — Raw pygame events are polled. Each event is converted to a `GuiEvent` via `EventManager.to_gui_event`. Unknown event types map to `EventType.PASS`.
-
-6. **Overlay / focus / window / scene routing pass** — Normalized events are processed by the overlay manager first. If an overlay is open and consumes the event, no further routing occurs. Otherwise, focus management and keyboard routing proceed based on scope (global, window, scene).
-
-7. **Feature `handle_event(host, event)` calls** — Events not consumed by overlay/focus routing are passed to scene-registered feature handlers in stable order. A handler returns `True` to consume the event; returning `False` or `None` passes it to the next handler.
-
-8. **Feature `on_update(host, dt)` calls; scheduler dispatch** — All scene features have `on_update` called. The cooperative scheduler dispatches coroutines within its per-frame budget (fraction 0.12, floor 0.5 ms, ceiling 4.0 ms). Tweens, timers, and animation state machines tick.
-
-9. **Feature `draw(host, screen)` calls; control tree render; present** — All scene features with a `draw` method are called. The control tree renders all visible controls. The compositor presents the frame to the display surface.
-
-10. **On scene transition** — `shutdown_runtime` is called for all features in the departing scene (in reverse build order). `build` and then `bind_runtime` are called for all features in the arriving scene.
-
-11. **On application exit** — `shutdown_runtime` is called for all active features. The cooperative scheduler is stopped. Workspace state is saved if configured. `run_entrypoint` returns.
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
-### Appendix C: System Dependency Map
+## Appendix C: System Dependency Map
 
 [Back to Table of Contents](#table-of-contents)
 
-The following map describes which systems depend on which, expressed as directional dependency relationships. Use this as an architecture reasoning tool when planning changes that might have cascading effects.
+This map describes the dependency relationships between the major systems. Understanding
+these relationships helps maintainers identify the impact radius of a change.
 
-**Bootstrap (Tier 1) is the root assembly layer.** It depends on every spec type (Tier 1 spec objects), the feature lifecycle system, the scene/window presentation system, the action/input system, and the font/theme configuration. Changes to the bootstrap API surface ripple into all dependent systems.
+**Bootstrap (Tier 1)** is the integration layer. It depends on every other system: spec types,
+feature lifecycle, scene and window presentation, action and input systems, font and theme
+configuration, and telemetry. Changes to any spec type must be verified against the bootstrap
+spec processing path.
 
-**Features (Tiers 1–2) depend on controls, data/observables, and event/action systems.** A feature builds its control subtree (Tier 12–13), holds observable state (Tier 3), subscribes to other observables, and handles events routed by the event/action system (Tier 4). Features are the primary integration point for nearly every other system.
+**Features (Tiers 1–2)** depend on the control system, observable state, event and action
+systems, and focus management. Features are the primary consumer of all other systems — any
+change to a system that features use must be checked for feature-level behavioral impact.
 
-**Layout (Tier 8) and focus (Tier 4) depend on the control tree and scene/window visibility.** Layout engines operate on control bounds declared in `build`. Focus ring membership is determined by which controls are in the scene tree and which windows are currently visible. Changes to window visibility must be coordinated with both layout and focus.
+**Layout (Tier 8) and Focus (Tier 4)** depend on the control tree and scene/window visibility
+state. `FocusManager` and `LayoutManager` operate on the same control tree that window
+presentation manages. Hiding a window (scene/window presentation) must notify both the layout
+and focus systems.
 
-**Overlays (Tier 9) depend on event routing and focus policy.** Overlays intercept events before the main routing chain. Modal overlays activate a `FocusScope` to lock Tab cycling to their control subtree. Overlay dismissal restores focus to the pre-overlay state.
+**Overlays (Tier 9)** depend on event routing and focus policy. Overlay managers intercept
+events before feature handlers and may lock the focus scope. Changes to overlay routing
+directly affect all features that use the event system.
 
-**Persistence (Tiers 11, 32) depends on state models and scene/window registration.** Workspace save reads the active scene name, registered feature states, scene node snapshots, and settings registry values. Workspace restore replays these into the live runtime via `WorkspacePersistenceManager`. `SnapshotMigrator` sits above persistence and transforms old snapshots forward before they reach the runtime.
+**Persistence (Tiers 11, 32)** depends on state models and scene/window registration.
+`WorkspacePersistenceManager` records scene identity and settings; `SnapshotMigrator` depends
+on stable `SchemaVersion` contracts. Changes to scene names or settings keys are breaking
+changes from the persistence perspective.
 
-**Scheduling and animation (Tier 5) depend on the feature update loop and scene scope.** The cooperative scheduler is a per-scene resource. Coroutines, tweens, and timers are all cancelled when a scene deactivates. Animation state machines tick inside `on_update`, which only runs for active scene features.
+**Scheduling (Tier 5) and Animation** depend on the feature update loop and scene scope.
+The cooperative scheduler and tween system are driven by `on_update`; they are scoped to the
+active scene and must be cleaned up in `shutdown_runtime`.
 
-**Telemetry and introspection (Tiers 7, 17) cross-cut all runtime layers.** Telemetry spans can be placed anywhere. `PropertyRegistry` collects `@ui_property` descriptors at module load time. `SceneSpatialIndex` is maintained alongside the live scene control tree. Neither system depends on other runtime systems, but both observe them.
+**Telemetry and Introspection (Tiers 7, 17)** cross-cut all runtime layers. They observe
+the frame loop, layout pass, event routing, and scheduler without altering behavior. They are
+safe to enable or disable without breaking correctness.
 
-**Audio (Tier 20) depends on the pygame mixer through `SoundEventBus`.** Features publish `SoundCue` events to `SoundEventBus`. The bus routes to the mixer without requiring the publishing feature to hold a mixer reference. This is a deliberate indirection: feature code is mixer-agnostic.
+**Audio (Tier 20)** depends on pygame's mixer and is surfaced through `SoundEventBus`. It
+has no dependency on the control tree or layout system, making it safe to modify independently.
 
-**Service scope (Tier 25) is usable at any tier as a dependency container.** `ServiceScope` and `ScopeStack` provide a lightweight inversion-of-control container that is independent of the gui_do bootstrap lifecycle.
+**Service scope (Tier 25)** is available at any tier as a dependency injection container.
+`ServiceScope` and `ScopeStack` can be used to provide optional services to features without
+adding them to the host namespace.
+
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
-### Appendix D: API Quick Index
+## Appendix D: API Quick Index
 
 [Back to Table of Contents](#table-of-contents)
 
-This index groups all `gui_do` public API names by topic for quick lookup. Names are taken from the verified tier blocks in `gui_do/__init__.py`.
+This index organizes all public `gui_do` exports by functional topic. Every name in
+`gui_do.__all__` appears in exactly one topic group. Use this index when you know the
+functional area but not the exact type name. For tier-to-system mappings, see §D.1.
 
-#### Bootstrap and Configuration
+**Bootstrap and Application Setup**
+`bootstrap_host_application`, `build_host_application_config`, `HostApplicationConfig`,
+`HostApplicationBindingSpec`, `FeatureWindowBundleBindingSpec`, `SceneBundleBindingSpec`,
+`TelemetryConfig`, `GuiApplication`, `create_display`, `SceneTransitionManager`, `SceneTransitionStyle`
 
-`HostApplicationConfig`, `HostApplicationBindingSpec`, `TelemetryConfig`, `bootstrap_host_application`, `build_host_application_config`, `declare_host_actions`, `build_host_main_tab_order`, `apply_host_main_accessibility`
+**Feature Types and Lifecycle**
+`Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`, `FeatureSpec`,
+`RoutedRuntimeSpec`, `RoutedFeatureLifecycleSpec`, `RuntimeSceneSpec`,
+`bind_routed_feature_lifecycle`, `shutdown_routed_feature_lifecycle`,
+`bind_routed_scene_lifecycle`, `setup_routed_feature_runtime`, `register_routed_feature_companions`,
+`setup_routed_runtime`, `shutdown_routed_runtime`
 
-#### Feature Types and Lifecycle
+**Scene, Window, and Task Panel**
+`ScenePresentationModel`, `WindowSpec`, `AnchoredWindowSpec`, `WindowPresenter`,
+`SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelWindowToggleGroupSpec`,
+`TaskPanelFocusToggleSpec`, `TaskPanelSceneNavButtonSpec`,
+`TabbedPresenterSpec`, `TabBuilderSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`,
+`SceneMenuStripSpec`, `set_window_visible_state`, `toggle_window_visibility`,
+`create_anchored_feature_window`, `create_feature_presented_window`,
+`add_window_scene_menu_strip`, `ensure_scene_task_panel`, `add_task_panel_buttons`,
+`add_task_panel_window_toggle_group`, `add_task_panel_scene_nav_button`,
+`add_window_toggle_task_panel_controls`, `ActiveTabUpdateRouter`, `TabLayoutContext`
 
-`Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`, `FeatureMessage`, `FeatureManager`, `FeatureSpec`, `RoutedRuntimeSpec`, `RoutedFeatureLifecycleSpec`
+**Specs and Configuration**
+`ActionSpec`, `ActionHotkeySpec`, `FontRoleBindingSpec`, `CursorSpec`, `CursorBindingSpec`,
+`StaticAccessibilitySpec`, `AccessibilitySequenceSpec`,
+`ShortcutOverlaySpec`, `ShortcutSection`, `ShortcutEntry`,
+`NotificationSpec`, `ControlDefinition`, `build_specs_from_column_section`,
+`setup_standard_font_roles`
 
-#### Spec Objects (Bootstrap Declarations)
+**Events and Routing**
+`GuiEvent`, `EventType`, `EventPhase`, `EventManager`, `EventRecorder`, `EventPlayback`,
+`GuiEventPump`, `EventFilter`, `EventBus`, `EventSubscription`
 
-`ScenePresentationModel`, `SceneSetupSpec`, `WindowSpec`, `RuntimeSceneSpec`, `ActionSpec`, `StaticAccessibilitySpec`, `CursorSpec`, `SceneRootSpec`, `AnchoredWindowSpec`, `LogicBindingSpec`, `TaskPanelButtonSpec`, `TaskPanelWindowToggleGroupSpec`, `SceneCommandPaletteSpec`, `ActionHotkeySpec`, `ControlKeyBindingSpec`, `SceneTaskPanelSpec`, `TaskPanelLinearLayoutSpec`, `TaskPanelSceneNavButtonSpec`, `EventSubscriptionSpec`, `ShortcutOverlaySpec`, `TaskPanelFocusToggleSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`, `SceneSetupBindingSpec`, `RuntimeSceneBindingSpec`, `SceneRootBindingSpec`, `CursorBindingSpec`, `FontRoleBindingSpec`, `ActionBindingSpec`, `PaletteBindingSpec`, `SceneBundleBindingSpec`, `TabbedPresenterSpec`, `AccessibilitySequenceSpec`, `TabBuilderSpec`, `NotificationSpec`
+**Actions and Input Mapping**
+`ActionManager`, `ActionRegistry`, `ActionHandle`, `InputMap`, `InputBinding`,
+`HotkeyListener`, `GestureRecognizer`, `ActionMiddleware`
 
-#### Builder and Factory Helpers (Tier 1)
-
-`setup_standard_font_roles`, `make_window_toggle_spec`, `make_scene_nav_action`, `make_exit_action`, `make_palette_open_action`, `make_static_accessibility_spec`, `build_feature_specs`, `build_feature_window_bundle_specs`, `build_window_toggle_specs`, `build_scene_setup_specs`, `build_runtime_scene_specs`, `build_scene_root_specs`, `build_cursor_specs`, `build_font_role_specs`, `build_scene_nav_actions`, `build_action_specs`, `build_scene_bundle_specs`, `build_static_accessibility_specs`, `build_notification_center`, `ControlDefinition`, `build_specs_from_column_section`
-
-#### Application and Scene Runtime (Tier 2)
-
-`GuiApplication`, `create_display`, `SceneTransitionManager`, `SceneTransitionStyle`, `apply_scene_setup_specs`
-
-#### Observables and Reactive State (Tier 3)
-
-`ObservableValue`, `PresentationModel`, `ComputedValue`, `reactive_batch`, `is_batching`, `InvalidationTracker`, `ChangeKind`, `CollectionChange`, `ObservableList`, `ObservableDict`, `CollectionViewQuery`, `CollectionView`, `Binding`, `BindingGroup`, `ObservableStream`, `SelectionModel`, `SelectionMode`
-
-#### Events and Input (Tier 4)
-
-`EventPhase`, `EventType`, `GuiEvent`, `ValueChangeCallback`, `ValueChangeReason`, `EventManager`, `EventBus`, `GestureRecognizer`, `EventRecorder`, `EventPlayback`, `RecordedEvent`, `InputSnapshot`, `Signal`, `SignalConnection`
-
-#### Actions and Input Map (Tier 4)
-
-`ActionManager`, `ActionContext`, `ActionMiddleware`, `ActionDescriptor`, `ActionRegistry`, `InputMap`, `InputBinding`, `KeyChordManager`, `KeyChord`, `ChordStep`
-
-#### Focus (Tier 4)
-
+**Focus and Focus Scope**
 `FocusManager`, `FocusScope`, `FocusScopeManager`, `WindowFocusManager`, `FocusRing`
 
-#### Scheduling and Animation (Tier 5)
+**State and Observables**
+`ObservableValue`, `ComputedValue`, `PresentationModel`, `ObservableList`, `ObservableDict`,
+`Binding`, `BindingGroup`, `AppStateStore`, `StateSelector`, `StateTransaction`
 
-`TaskEvent`, `TaskScheduler`, `Timers`, `TweenManager`, `TweenHandle`, `Easing`, `AnimationSequence`, `AnimationHandle`, `TransitionManager`, `TransitionSpec`, `TransitionEvent`, `AnimationStateMachine`, `AnimationTransitionMode`, `SceneTimeline`, `Debouncer`, `Throttler`, `CooperativeScheduler`, `CoroutineHandle`, `Pause`, `Sleep`, `WaitForEvent`, `WaitForSignal`, `WaitUntil`, `WaitForAll`
+**Controls — Primary (Tier 12)**
+`PanelControl`, `LabelControl`, `ButtonControl`, `ToggleControl`, `SliderControl`,
+`ScrollbarControl`, `CanvasControl`, `CanvasEventPacket`, `CanvasViewport`, `FrameControl`,
+`ImageControl`, `ArrowBoxControl`, `ButtonGroupControl`, `TabControl`, `TabItem`,
+`DockWorkspacePanel`
 
-#### Theme, Font, and Design Tokens (Tier 6)
+**Controls — Extended (Tier 13)**
+`TextInputControl`, `TextAreaControl`, `RichLabelControl`, `DropdownControl`, `DropdownOption`,
+`ListViewControl`, `ListItem`, `OverlayPanelControl`, `DataGridControl`, `GridColumn`, `GridRow`,
+`TreeControl`, `TreeNode`, `SplitterControl`, `SpinnerControl`, `RangeSliderControl`,
+`ColorPickerControl`, `ScrollViewControl`, `ProgressBarControl`, `AnimatedImageControl`,
+`ErrorBoundary`, `WindowControl`, `TaskPanelControl`, `MenuBarControl`, `MenuEntry`,
+`SceneMenuStripControl`, `NotificationPanelControl`, `PropertyInspectorPanel`,
+`ToolbarControl`, `ToolbarItem`, `StatusBarControl`, `StatusSlot`, `ExpanderControl`,
+`DatePickerControl`, `TimePickerControl`, `BreadcrumbControl`, `BreadcrumbItem`,
+`SplitButtonControl`, `SplitButtonOption`, `ChipInputControl`
 
-`FontManager`, `FontRoleRegistry`, `ColorTheme`, `ThemeManager`, `DesignTokens`, `ScopedTheme`, `ScopedThemeManager`
-
-#### Telemetry (Tier 7)
-
-`TelemetryCollector`, `TelemetrySample`, `configure_telemetry`, `telemetry_collector`, `analyze_telemetry_log_file`, `analyze_telemetry_records`, `load_telemetry_log_file`, `render_telemetry_report`
-
-#### Layout (Tier 8)
-
-`LayoutAxis`, `LayoutManager`, `WindowTilingManager`, `ConstraintLayout`, `AnchorConstraint`, `DockPane`, `DockTabs`, `DockSplit`, `DockWorkspace`, `FlexLayout`, `FlexItem`, `FlexDirection`, `FlexAlign`, `FlexJustify`, `GridLayout`, `GridTrack`, `GridPlacement`, `CellCaretLayout`, `CellCaretState`, `LayoutAnimator`, `LayoutPass`, `MeasureContext`, `ArrangeContext`, `LayoutRoot`, `ResponsiveLayout`, `Breakpoint`, `SnapGrid`, `AlignmentGuide`, `SnapComposer`, `SnapTarget`, `FlowLayout`, `FlowItem`, `Viewport`
-
-#### Overlays, Dialogs, and Notifications (Tier 9)
-
-`OverlayManager`, `OverlayHandle`, `Alignment`, `PlacementResult`, `PopupPlacement`, `Side`, `compute_popup_rect`, `DialogManager`, `DialogHandle`, `ToastManager`, `ToastHandle`, `ToastSeverity`, `ContextMenuManager`, `ContextMenuItem`, `ContextMenuHandle`, `CommandPaletteManager`, `CommandEntry`, `CommandPaletteHandle`, `TooltipManager`, `TooltipHandle`, `MenuBarManager`, `FileDialogManager`, `FileDialogOptions`, `FileDialogHandle`, `NotificationCenter`, `NotificationRecord`, `ResizeManager`, `CursorManager`, `CursorHandle`, `CursorShape`, `DragDropManager`, `DragPayload`, `ClipboardManager`, `TransferData`, `TransferManager`, `ShortcutHelpOverlay`, `ShortcutSection`, `ShortcutEntry`
-
-#### Forms and Validation (Tier 10)
-
-`FormModel`, `FormField`, `ValidationRule`, `FieldError`, `FormSchema`, `SchemaField`, `DocumentModel`, `WizardFlow`, `WizardStep`, `WizardHandle`, `ValidationResult`, `Validator`, `RequiredValidator`, `RangeValidator`, `LengthValidator`, `PatternValidator`, `CustomValidator`, `DependentValidator`, `ValidationPipeline`
-
-#### Persistence and State Management (Tier 11)
-
-`CommandHistory`, `Command`, `CommandTransaction`, `StateMachine`, `HierarchicalStateMachine`, `Router`, `RouteEntry`, `SettingsRegistry`, `SettingDescriptor`, `WorkspaceState`, `WorkspacePersistenceManager`, `DEFAULT_WORKSPACE_STATE_PATH`, `SceneSnapshot`, `NodeSnapshot`
-
-#### Primary Controls (Tier 12)
-
-`PanelControl`, `LabelControl`, `ButtonControl`, `ToggleControl`, `SliderControl`, `ScrollbarControl`, `CanvasControl`, `CanvasEventPacket`, `CanvasViewport`, `FrameControl`, `ImageControl`, `ArrowBoxControl`, `ButtonGroupControl`, `TabControl`, `TabItem`, `DockWorkspacePanel`
-
-#### Extended Controls (Tier 13)
-
-`TextInputControl`, `TextAreaControl`, `RichLabelControl`, `DropdownControl`, `DropdownOption`, `ListViewControl`, `ListItem`, `OverlayPanelControl`, `DataGridControl`, `GridColumn`, `GridRow`, `TreeControl`, `TreeNode`, `SplitterControl`, `SpinnerControl`, `RangeSliderControl`, `ColorPickerControl`, `ScrollViewControl`, `ProgressBarControl`, `AnimatedImageControl`, `ErrorBoundary`, `WindowControl`, `TaskPanelControl`, `WindowPresenter`, `MenuBarControl`, `MenuEntry`, `SceneMenuStripControl`, `NotificationPanelControl`, `PropertyInspectorPanel`, `ToolbarControl`, `ToolbarItem`, `StatusBarControl`, `StatusSlot`, `ExpanderControl`, `DatePickerControl`, `TimePickerControl`, `BreadcrumbControl`, `BreadcrumbItem`, `SplitButtonControl`, `SplitButtonOption`, `ChipInputControl`
-
-#### Text and Localization (Tier 14)
-
-`TextFormatter`, `NumericFormatter`, `PatternFormatter`, `FixedPatternFormatter`, `TextFlow`, `TextSpan`, `TextSearcher`, `TextMatch`, `StringTable`, `LocaleRegistry`
-
-#### Data and Collections (Tier 15)
-
-`VirtualItemSource`, `FixedItemSource`, `SortFilterProxySource`, `AsyncDataProvider`, `LoadState`, `LoadStateKind`, `ObjectPool`, `DataCache`, `CacheStats`, `ListDiffCalculator`, `ListDiff`, `DiffInsert`, `DiffRemove`, `DiffMove`
-
-#### Graphics and Rendering (Tier 16)
-
-`BuiltInGraphicsFactory`, `DirtyRegionTracker`, `DrawContext`, `DrawPhase`, `AssetRegistry`, `DebugOverlay`, `SurfaceCompositor`, `Layer`, `ShapeRenderer`, `SurfaceEffects`, `VectorPath`, `SpriteSheet`, `FrameAnimation`, `ParticleSystem`, `Emitter`, `ParticleLayer`, `TileSet`, `TileMap`, `RenderTarget`, `LiveRenderTarget`, `OffscreenRenderTarget`, `create_render_target`, `create_surface`, `Node2D`, `SceneGraph2D`, `Camera2D`
-
-#### Introspection (Tier 17)
-
-`SceneSpatialIndex`, `ui_property`, `PropertyDescriptor`, `PropertyRegistry`, `property_registry`, `PropertyInspectorModel`, `InspectedProperty`
-
-#### Advanced Runtime Helpers (Tier 18)
-
-`FrameTimer`, `TabPanelManager`, `WindowRelativeRect`, `resolve_scene_selection_callback`, `minimize_window_menu_entries`, `set_window_visible_state`, `toggle_window_visibility`, `create_anchored_feature_window`, `add_window_scene_menu_strip`, `inset_rect`, `centered_horizontal_strip_layout`, `split_slot_bounds`, `partition_rects`, `place_control`, `place_control_unlabeled`, `register_placed_control`, `add_group_label`, `PlacedControl`, `make_labeled_slot_height_fn`, `ControlRegistry`, `build_tools_menu_entries`, `add_standard_scene_menu_strip`, `apply_accessibility_sequence`, `apply_accessibility_sequence_from_attrs`, `register_companion_logic_features`, `ensure_scene_scheduler`, `sorted_window_bindings`, `collect_window_toggle_controls`, `apply_window_toggle_accessibility`, `add_window_toggle_task_panel_controls`, `add_task_panel_window_toggle_group`, `setup_scene_command_palette_key`, `register_window_toggle_tooltips`, `initialize_locale_registry`, `bind_input_map_actions`, `register_descriptors`, `resolve_canvas_local_point`, `apply_runtime_scene_pristine_assets`, `bind_runtime_scene_exit_keys`, `prewarm_runtime_scenes`, `add_task_panel_button`, `add_task_panel_buttons`, `register_tooltip_specs`, `register_action_hotkeys`, `draw_controls_prewarm`, `ensure_scene_task_panel`, `create_task_panel_linear_layout`, `add_task_panel_scene_nav_button`, `add_scene_task_panel_items`, `centered_overlay_rect`, `create_shortcut_help_overlay`, `bind_feature_event_subscription`, `unbind_feature_event_subscription`, `setup_routed_runtime`, `shutdown_routed_runtime`, `bind_task_panel_focus_toggle`, `add_window_control`, `add_window_label`, `add_window_button`, `add_window_button_row`, `instantiate_features_from_specs`, `register_features_from_specs`, `register_window_presentation_specs`, `register_window_tab_builders`, `build_tab_builder_specs`, `create_tab_control_from_specs`, `compute_tabbed_window_layout`, `setup_feature_presenter_tabs_from_window_content`, `register_window_tab_builder_specs`, `setup_feature_presenter_tabs`, `register_tab_update_handlers`, `create_presented_anchored_window`, `create_presented_window_from_spec`, `create_feature_presented_window`, `bind_feature_logic_aliases`, `setup_routed_feature_runtime`, `register_routed_feature_companions`, `bind_routed_feature_lifecycle`, `shutdown_routed_feature_lifecycle`, `ActiveTabUpdateRouter`, `TabLayoutContext`
-
-#### Infrastructure Internals (Tier 19)
-
-`UiEngine` — Avoid using directly in application code; this is framework infrastructure.
-
-#### Audio (Tier 20)
-
-`SoundCue`, `SoundBankRegistry`, `SoundEventBus`
-
-#### Accessibility (Tier 21)
-
-`AccessibilityRole`, `LivePoliteness`, `AccessibilityNode`, `AccessibilityTree`, `AccessibilityAnnouncement`, `AccessibilityBus`
-
-#### Theme Invalidation (Tier 22)
-
-`ThemeInvalidationBus`
-
-#### Undo Context (Tier 23)
-
-`UndoContextManager`
-
-#### Async Form Validation (Tier 24)
-
-`AsyncFieldValidator`, `AsyncFormValidator`
-
-#### Service Scope (Tier 25)
-
-`ServiceKey`, `ServiceScope`, `ScopeStack`
-
-#### Dataflow Pipeline (Tier 26)
-
-`CancellationToken`, `PipelineStage`, `DataflowPipeline`, `PipelineHandle`
-
-#### Transactional App State (Tier 27)
-
-`AppStateStore`, `StateSelector`, `StateTransaction`
-
-#### Adaptive Constraint Layout (Tier 28)
-
-`ConstraintAttr`, `LayoutConstraint`, `ConstraintSet`, `ConstraintLayoutEngine`, `AdaptivePolicy`, `resolve_adaptive_policy`
-
-#### Virtualization (Tier 29)
-
+**Layout**
+`LayoutAxis`, `LayoutManager`, `WindowTilingManager`, `ConstraintLayout`, `AnchorConstraint`,
+`DockPane`, `DockTabs`, `DockSplit`, `DockWorkspace`, `FlexLayout`, `FlexItem`, `FlexDirection`, `FlexAlign`, `FlexJustify`,
+`GridLayout`, `GridTrack`, `GridPlacement`, `CellCaretLayout`, `CellCaretState`,
+`LayoutAnimator`, `LayoutPass`, `MeasureContext`, `ArrangeContext`, `LayoutRoot`,
+`ResponsiveLayout`, `Breakpoint`, `SnapGrid`, `AlignmentGuide`, `SnapComposer`, `SnapTarget`,
+`FlowLayout`, `FlowItem`, `Viewport`,
+`ConstraintAttr`, `LayoutConstraint`, `ConstraintSet`, `ConstraintLayoutEngine`, `AdaptivePolicy`, `resolve_adaptive_policy`,
 `MeasureMode`, `MeasurePolicy`, `VirtualizedWindow`, `RecyclePool`, `VirtualizationCore`
 
-#### Interaction State Machine (Tier 30)
+**Overlays and Transient Surfaces**
+`OverlayManager`, `OverlayHandle`, `Alignment`, `PlacementResult`, `PopupPlacement`, `Side`, `compute_popup_rect`,
+`DialogManager`, `DialogHandle`, `ToastManager`, `ToastHandle`, `ToastSeverity`,
+`ContextMenuManager`, `ContextMenuItem`, `ContextMenuHandle`,
+`CommandPaletteManager`, `CommandEntry`, `CommandPaletteHandle`,
+`TooltipManager`, `TooltipHandle`, `MenuBarManager`,
+`FileDialogManager`, `FileDialogOptions`, `FileDialogHandle`,
+`NotificationCenter`, `NotificationRecord`, `ResizeManager`,
+`CursorManager`, `CursorHandle`, `CursorShape`,
+`DragDropManager`, `DragPayload`, `ClipboardManager`,
+`TransferData`, `TransferManager`, `ShortcutHelpOverlay`
 
-`InteractionPhase`, `InteractionContext`, `InteractionTransition`, `InteractionStateMachine`
-
-#### Schema-Driven Forms (Tier 31)
-
+**Forms and Validation**
+`FormModel`, `FormField`, `ValidationRule`, `FieldError`, `FormSchema`, `SchemaField`,
+`DocumentModel`, `WizardFlow`, `WizardStep`, `WizardHandle`,
+`RequiredValidator`, `LengthValidator`, `PatternValidator`, `RangeValidator`, `DependentValidator`, `CompositeValidator`,
+`AsyncFieldValidator`, `AsyncFormValidator`,
 `FieldSchema`, `FieldGraphSchema`, `ValidationPolicy`, `SchemaFormRuntime`
 
-#### Snapshot Migration (Tier 32)
+**Text and Localization**
+`TextFormatter`, `NumericFormatter`, `PatternFormatter`, `FixedPatternFormatter`,
+`TextFlow`, `TextSpan`, `TextSearcher`, `TextMatch`, `StringTable`, `LocaleRegistry`
 
-`SchemaVersion`, `VersionedSnapshot`, `MigrationStep`, `MigrationRegistry`, `SnapshotMigrator`, `MigrationError`, `make_snapshot`, `read_version`
+**Data and Collections**
+`VirtualItemSource`, `FixedItemSource`, `SortFilterProxySource`, `AsyncDataProvider`, `LoadState`, `LoadStateKind`,
+`ObjectPool`, `DataCache`, `CacheStats`, `ListDiffCalculator`, `ListDiff`, `DiffInsert`, `DiffRemove`, `DiffMove`
+
+**Dataflow Pipeline**
+`CancellationToken`, `PipelineStage`, `DataflowPipeline`, `PipelineHandle`
+
+**Graphics and Rendering**
+`BuiltInGraphicsFactory`, `DirtyRegionTracker`, `DrawContext`, `DrawPhase`, `AssetRegistry`, `DebugOverlay`,
+`SurfaceCompositor`, `Layer`, `ShapeRenderer`, `SurfaceEffects`, `VectorPath`,
+`SpriteSheet`, `FrameAnimation`, `ParticleSystem`, `Emitter`, `ParticleLayer`,
+`TileSet`, `TileMap`, `RenderTarget`, `LiveRenderTarget`, `OffscreenRenderTarget`,
+`create_render_target`, `create_surface`, `Node2D`, `SceneGraph2D`, `Camera2D`
+
+**Audio**
+`SoundCue`, `SoundBankRegistry`, `SoundEventBus`
+
+**Scheduling and Animation**
+`TaskEvent`, `TaskScheduler`, `Timers`, `TweenManager`, `TweenHandle`, `Easing`,
+`AnimationSequence`, `AnimationHandle`, `TransitionManager`, `TransitionSpec`, `TransitionEvent`,
+`AnimationStateMachine`, `AnimationTransitionMode`, `SceneTimeline`, `Debouncer`, `Throttler`,
+`CooperativeScheduler`, `CoroutineHandle`, `Pause`, `Sleep`, `WaitForEvent`, `WaitForSignal`, `WaitUntil`, `WaitForAll`
+
+**Theme and Fonts**
+`FontManager`, `FontRoleRegistry`, `ColorTheme`, `ThemeManager`, `DesignTokens`, `ScopedTheme`, `ScopedThemeManager`,
+`ThemeInvalidationBus`
+
+**Telemetry**
+`TelemetryCollector`, `TelemetrySample`, `configure_telemetry`, `telemetry_collector`,
+`analyze_telemetry_log_file`, `analyze_telemetry_records`, `load_telemetry_log_file`, `render_telemetry_report`
+
+**Introspection**
+`SceneSpatialIndex`, `ui_property`, `PropertyDescriptor`, `PropertyRegistry`, `property_registry`,
+`PropertyInspectorModel`, `InspectedProperty`
+
+**Accessibility**
+`AccessibilityRole`, `LivePoliteness`, `AccessibilityNode`, `AccessibilityTree`,
+`AccessibilityAnnouncement`, `AccessibilityBus`
+
+**Persistence and State Management**
+`CommandHistory`, `Command`, `CommandTransaction`, `StateMachine`, `HierarchicalStateMachine`,
+`Router`, `RouteEntry`, `SettingsRegistry`, `SettingDescriptor`,
+`WorkspaceState`, `WorkspacePersistenceManager`, `DEFAULT_WORKSPACE_STATE_PATH`,
+`SceneSnapshot`, `NodeSnapshot`, `UndoContextManager`
+
+**Snapshot and Migration**
+`SchemaVersion`, `VersionedSnapshot`, `MigrationStep`, `MigrationRegistry`, `SnapshotMigrator`,
+`MigrationError`, `make_snapshot`, `read_version`
+
+**Service Scope**
+`ServiceKey`, `ServiceScope`, `ScopeStack`
+
+**Interaction State Machine**
+`InteractionStateMachine`, `InteractionPhase`, `InteractionContext`
+
+### D.1 Tier Matrix
 
 [Back to Table of Contents](#table-of-contents)
 
----
+The tier matrix maps every public tier in `gui_do/__init__.py` to its corresponding system
+chapter, stability level, and primary contents. Tiers are listed in ascending order; Tier 1
+is the most stable entry point for new applications.
 
-#### D.1 Tier-to-System Reference Matrix
+| Tier | Name | System Chapter | Key Exports (representative) |
+|------|------|---------------|------------------------------|
+| 1 | Primary Entry Points & Data-Driven APIs | 8.1, 8.2 | `bootstrap_host_application`, `HostApplicationConfig`, `Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`, `FeatureSpec`, `WindowSpec`, `RuntimeSceneSpec`, `ActionSpec` |
+| 2 | Core Application & Scene Management | 8.1 | `GuiApplication`, `create_display`, `SceneTransitionManager`, `SceneTransitionStyle` |
+| 3 | Essential Data & State Management | 8.4 | `ObservableValue`, `PresentationModel`, `ComputedValue`, `ObservableList`, `ObservableDict`, `Binding`, `BindingGroup` |
+| 4 | Events, Actions, Focus & Input | 8.3, 8.7 | `GuiEvent`, `EventType`, `EventPhase`, `EventManager`, `ActionManager`, `InputMap`, `FocusManager`, `FocusScope` |
+| 5 | Scheduling & Animation | 8.10 | `TaskScheduler`, `Timers`, `TweenManager`, `CooperativeScheduler`, `TransitionManager`, `AnimationStateMachine` |
+| 6 | Theme & Font Management | 8.12 | `ThemeManager`, `ColorTheme`, `FontManager`, `FontRoleRegistry`, `ScopedTheme` |
+| 7 | Telemetry & Diagnostics | 8.16 | `TelemetryCollector`, `TelemetrySample`, `configure_telemetry`, `telemetry_collector` |
+| 8 | Layout & Spatial | 8.6 | `LayoutManager`, `ConstraintLayout`, `DockWorkspace`, `FlexLayout`, `GridLayout`, `SnapGrid`, `Viewport` |
+| 9 | Overlay Managers & Windows | 8.8 | `OverlayManager`, `DialogManager`, `ToastManager`, `ContextMenuManager`, `CommandPaletteManager`, `TooltipManager`, `FileDialogManager` |
+| 10 | Forms & Data Binding | 8.13 | `FormModel`, `FormField`, `FormSchema`, `WizardFlow`, `DocumentModel` |
+| 11 | State & Persistence | 8.11 | `StateMachine`, `HierarchicalStateMachine`, `CommandHistory`, `WorkspaceState`, `WorkspacePersistenceManager` |
+| 12 | Primary Controls | 8.5 | `PanelControl`, `LabelControl`, `ButtonControl`, `ToggleControl`, `SliderControl`, `CanvasControl`, `TabControl` |
+| 13 | Extended Controls | 8.5 | `TextInputControl`, `TextAreaControl`, `DropdownControl`, `ListViewControl`, `DataGridControl`, `TreeControl`, `WindowControl`, `WindowPresenter` |
+| 14 | Text & Localization | 8.13 | `TextFormatter`, `TextFlow`, `TextSearcher`, `LocaleRegistry`, `StringTable` |
+| 15 | Data & Collections | 8.14 | `VirtualItemSource`, `SortFilterProxySource`, `AsyncDataProvider`, `ObjectPool`, `ListDiffCalculator` |
+| 16 | Graphics & Rendering | 8.15 | `DrawContext`, `DirtyRegionTracker`, `AssetRegistry`, `SurfaceCompositor`, `ParticleSystem`, `TileMap`, `SceneGraph2D` |
+| 17 | Introspection & Inspection | 8.16 | `PropertyRegistry`, `ui_property`, `PropertyInspectorModel`, `SceneSpatialIndex` |
+| 18 | Advanced Runtime & Bootstrapping | 8.2, 8.9 | `setup_routed_runtime`, `ensure_scene_task_panel`, `add_task_panel_buttons`, `ActiveTabUpdateRouter` |
+| 19 | Infrastructure & Internals | (avoid) | `UiEngine` |
+| 20 | Audio | 8.15 | `SoundCue`, `SoundBankRegistry`, `SoundEventBus` |
+| 21 | Accessibility | 8.7 | `AccessibilityRole`, `AccessibilityNode`, `AccessibilityTree`, `AccessibilityBus` |
+| 22 | Theme Invalidation | 8.12 | `ThemeInvalidationBus` |
+| 23 | Undo Context Routing | 8.11 | `UndoContextManager` |
+| 24 | Async Form Validation | 8.13 | `AsyncFieldValidator`, `AsyncFormValidator` |
+| 25 | Scoped Service Graph | 8.1 | `ServiceKey`, `ServiceScope`, `ScopeStack` |
+| 26 | Cancelable Dataflow Pipeline | 8.14 | `DataflowPipeline`, `PipelineStage`, `CancellationToken`, `PipelineHandle` |
+| 27 | Transactional App State Store | 8.4 | `AppStateStore`, `StateSelector`, `StateTransaction` |
+| 28 | Adaptive Constraint Layout v2 | 8.6 | `ConstraintLayoutEngine`, `ConstraintSet`, `LayoutConstraint`, `AdaptivePolicy` |
+| 29 | Unified Virtualization Core | 8.6 | `VirtualizationCore`, `VirtualizedWindow`, `RecyclePool` |
+| 30 | Interaction State Machine Framework | 8.3 | `InteractionStateMachine`, `InteractionPhase`, `InteractionContext` |
+| 31 | Schema-Driven Form Runtime | 8.13 | `SchemaFormRuntime`, `FieldGraphSchema`, `ValidationPolicy` |
+| 32 | Portable Snapshot & Migration Layer | 8.11 | `SnapshotMigrator`, `MigrationRegistry`, `VersionedSnapshot`, `MigrationStep` |
 
-[Back to Table of Contents](#table-of-contents)
-
-| Tier | System | Representative Key Types |
-|------|--------|--------------------------|
-| 1 | Bootstrap and spec declarations | `HostApplicationConfig`, `bootstrap_host_application`, `FeatureSpec`, `ActionSpec`, `RoutedRuntimeSpec` |
-| 2 | Application and scene runtime | `GuiApplication`, `create_display`, `SceneTransitionManager`, `SceneTransitionStyle` |
-| 3 | Observables and reactive state | `ObservableValue`, `ObservableList`, `ComputedValue`, `reactive_batch`, `CollectionView` |
-| 4 | Events, actions, input, focus | `GuiEvent`, `EventType`, `ActionManager`, `InputMap`, `FocusManager`, `FocusScope` |
-| 5 | Scheduling and animation | `CooperativeScheduler`, `TweenManager`, `AnimationStateMachine`, `Debouncer`, `Sleep` |
-| 6 | Theme, font, and design tokens | `ThemeManager`, `ColorTheme`, `FontRoleRegistry`, `DesignTokens`, `ScopedThemeManager` |
-| 7 | Telemetry | `TelemetryCollector`, `configure_telemetry`, `analyze_telemetry_records`, `render_telemetry_report` |
-| 8 | Layout engines | `FlexLayout`, `GridLayout`, `ConstraintLayout`, `DockWorkspace`, `FlowLayout`, `Viewport` |
-| 9 | Overlays and command surfaces | `OverlayManager`, `DialogManager`, `ToastManager`, `CommandPaletteManager`, `ShortcutHelpOverlay` |
-| 10 | Forms and validation | `FormModel`, `FormSchema`, `ValidationPipeline`, `WizardFlow`, `DocumentModel` |
-| 11 | Persistence and state management | `WorkspacePersistenceManager`, `SettingsRegistry`, `CommandHistory`, `StateMachine` |
-| 12 | Primary controls | `PanelControl`, `LabelControl`, `ButtonControl`, `CanvasControl`, `TabControl` |
-| 13 | Extended controls | `TextInputControl`, `ListViewControl`, `DataGridControl`, `WindowPresenter`, `ErrorBoundary` |
-| 14 | Text and localization | `TextFormatter`, `TextFlow`, `TextSearcher`, `StringTable`, `LocaleRegistry` |
-| 15 | Data and collections | `VirtualItemSource`, `SortFilterProxySource`, `AsyncDataProvider`, `DataCache`, `ListDiffCalculator` |
-| 16 | Graphics and rendering | `DirtyRegionTracker`, `SurfaceCompositor`, `ParticleSystem`, `SceneGraph2D`, `Camera2D` |
-| 17 | Introspection | `SceneSpatialIndex`, `ui_property`, `PropertyRegistry`, `PropertyInspectorModel` |
-| 18 | Advanced runtime helpers | `set_window_visible_state`, `create_feature_presented_window`, `bind_routed_feature_lifecycle`, `ActiveTabUpdateRouter` |
-| 19 | Infrastructure internals | `UiEngine` — framework use only |
-| 20 | Audio | `SoundCue`, `SoundBankRegistry`, `SoundEventBus` |
-| 21 | Accessibility | `AccessibilityTree`, `AccessibilityNode`, `AccessibilityRole`, `AccessibilityBus` |
-| 22 | Theme invalidation | `ThemeInvalidationBus` |
-| 23 | Undo context | `UndoContextManager` |
-| 24 | Async form validation | `AsyncFieldValidator`, `AsyncFormValidator` |
-| 25 | Service scope | `ServiceKey`, `ServiceScope`, `ScopeStack` |
-| 26 | Dataflow pipeline | `DataflowPipeline`, `PipelineStage`, `CancellationToken`, `PipelineHandle` |
-| 27 | Transactional app state | `AppStateStore`, `StateSelector`, `StateTransaction` |
-| 28 | Adaptive constraint layout | `ConstraintLayoutEngine`, `AdaptivePolicy`, `resolve_adaptive_policy`, `ConstraintSet` |
-| 29 | Virtualization | `VirtualizationCore`, `VirtualizedWindow`, `RecyclePool`, `MeasurePolicy` |
-| 30 | Interaction state machine | `InteractionStateMachine`, `InteractionPhase`, `InteractionTransition` |
-| 31 | Schema-driven forms | `SchemaFormRuntime`, `FieldGraphSchema`, `ValidationPolicy`, `FieldSchema` |
-| 32 | Snapshot migration | `SnapshotMigrator`, `MigrationRegistry`, `MigrationStep`, `make_snapshot`, `read_version` |
-
-[Back to Table of Contents](#table-of-contents)
-
----
-
-#### D.2 Public API Selection Heuristics
+### D.2 Selection Heuristics
 
 [Back to Table of Contents](#table-of-contents)
 
-Use these decision rules to choose the right API for a task:
+Use these decision rules to choose the right tier and type when you are unsure where to start.
 
-1. **Start at Tier 1.** If `HostApplicationConfig` + `bootstrap_host_application` + Feature types solve the problem, stop there. Most application-level concerns are covered by Tier 1 spec objects and Tier 3 observables.
-
-2. **Descend one tier at a time when you need finer control.** Moving from `ObservableValue` (Tier 3) to `AppStateStore` (Tier 27) is appropriate when multiple features share state and you need atomic multi-field updates. Moving from `Feature` to `RoutedFeature` (Tier 1) is appropriate when you need declarative runtime wiring. Do not skip tiers.
-
-3. **Use Tier 18 helpers when extending bootstrap behavior.** The Tier 18 helpers (`bind_routed_feature_lifecycle`, `create_feature_presented_window`, `add_standard_scene_menu_strip`, etc.) are the stable extension points for advanced application assembly patterns. They are not internal APIs; they are the intended mechanism for composition beyond the Tier 1 spec declarations.
-
-4. **Never import from `gui_do.*` submodules in application code.** Always use `from gui_do import ...` from the root package. The root `__init__.py` surface is the only surface with stability guarantees. Internal submodule paths (`gui_do.features.feature_lifecycle`, `gui_do.controls.button`, etc.) may change without notice.
-
-5. **Avoid Tier 19 (`UiEngine`) in application code.** `UiEngine` is framework infrastructure. Its interface is not part of the application-level stability guarantee.
+**Primary rules:**
+1. **Start at Tier 1.** If `HostApplicationConfig` + `bootstrap_host_application` + `Feature`
+   types solve the problem, stop there. Do not descend to lower tiers unless you have a
+   specific need that Tier 1 does not cover.
+2. **Descend one tier at a time.** When Tier 1 is insufficient, look at Tier 2 or 3 before
+   skipping to Tier 10. The tiers are ordered by abstraction level; lower-tier types always
+   compose better with other lower-tier types.
+3. **Use Tier 18 helpers when extending bootstrap behavior.** They are stable extension points
+   designed for advanced scene and window wiring that cannot be expressed in Tier 1 specs alone.
+4. **Never import from `gui_do.*` submodules.** Always use `from gui_do import ClassName`.
+   Internal submodule APIs are not stable and may change without notice.
+5. **Avoid Tier 19 (`UiEngine`) in application code.** Tier 19 is framework internals. If you
+   find yourself needing it, open a feature request — the need should be surfaced as a Tier 18
+   or Tier 1 API.
 
 **Decision shortcuts:**
-
-| Goal | First API to reach for |
-|------|------------------------|
-| App setup | `HostApplicationConfig` + `bootstrap_host_application` |
-| Reactive UI | `ObservableValue` + `subscribe` |
-| Cross-feature behavior | Lifecycle specs + `RoutedRuntimeSpec` |
-| Action/hotkey wiring | `ActionSpec` + `ActionHotkeySpec` (or `RoutedRuntimeSpec`) |
-| Heavy dataset UI | `VirtualizationCore` / `SortFilterProxySource` |
-| Maintainable persistence | `WorkspacePersistenceManager` + `SnapshotMigrator` |
-| Discoverable shortcuts | `ShortcutOverlaySpec` in `RoutedRuntimeSpec` |
-| Background work | `CooperativeScheduler` coroutines or `DataflowPipeline` |
-| Audio | `SoundEventBus.publish(SoundCue(...))` |
-| Performance investigation | `configure_telemetry` + `analyze_telemetry_records` |
+- Need to set up an application → `HostApplicationConfig` + `bootstrap_host_application`
+- Need cross-feature behavior → lifecycle specs + `RoutedRuntimeSpec` + routed wiring helpers
+- Need heavy dataset UI (thousands of items) → virtualization/dataflow APIs before custom loops
+- Need maintainable persistence across versions → `WorkspacePersistenceManager` + `SnapshotMigrator`
+- Need discoverable keyboard shortcuts → `ShortcutOverlaySpec` in `RoutedRuntimeSpec`
+- Need flexible form validation → `SchemaFormRuntime` + `ValidationPolicy` + optional `AsyncFormValidator`
+- Need particle effects or custom 2D rendering → `ParticleSystem` / `SceneGraph2D` inside `draw`
+- Need audio cue playback → `SoundEventBus` + `SoundBankRegistry`
 
 [Back to Table of Contents](#table-of-contents)
 
 ---
 
-### Appendix E: Architecture Templates
+## Appendix E: Architecture Templates
 
 [Back to Table of Contents](#table-of-contents)
 
-The following templates describe the structural skeleton of two common application archetypes. Use them as starting points for new projects.
+These four templates provide starting configurations for common application archetypes. Each
+template describes the key architectural decisions and which `gui_do` systems to use.
 
-**Template 1: Small Single-Scene Application**
+### Template 1: Small Single-Scene App
 
-This template covers apps with a single scene, a small number of features (2–4), and no floating windows or task panel.
+Use for: personal tools, utilities, focused single-workflow applications.
 
-- One `SceneSetupSpec` and one `RuntimeSceneSpec` with `bind_escape_to_exit=True`.
-- 2–4 `FeatureSpec` entries, each pointing to a `Feature` subclass.
-- `ObservableValue` state owned by each feature; subscriptions in `bind_runtime`, disposed in `shutdown_runtime`.
-- `ActionSpec` entries for commands (exit, toggle-shortcuts).
-- No `SceneTaskPanelSpec`, no `WindowPresenter`, no task panel buttons.
+- **Scenes:** 1 scene, 2–4 `Feature` instances.
+- **State:** `ObservableValue` instances owned by features; no cross-feature state sharing.
+- **Actions:** `ActionSpec` entries for primary commands; `RuntimeSceneSpec` with
+  `bind_escape_to_exit=True`.
+- **Chrome:** no task panel, no window presenter. A single root `PanelControl` per feature.
+- **Persistence:** optional; if needed, `WorkspacePersistenceManager` with a single settings block.
+- **Testing:** contract tests for public API + at least one behavior test per feature.
 
-This is the pattern shown in the End-to-End Reference Application chapter. The counter feature is a complete, self-contained example.
+### Template 2: Multi-Window Workbench
 
-**Template 2: Multi-Window Workbench**
+Use for: IDEs, editors, design tools, dashboards with multiple independent panels.
 
-This template covers apps with multiple scenes, multiple floating windows per scene, a task panel, scene navigation, and a command palette.
+- **Scenes:** 2+ scenes with `SceneMenuStripSpec` for navigation.
+- **Task panel:** `SceneTaskPanelSpec` with per-window `TaskPanelFocusToggleSpec` for every
+  managed window.
+- **Windows:** `WindowPresenter` subclass per window; `FeatureWindowBundleBindingSpec` for
+  self-contained feature+window+task-panel-button wiring.
+- **Shortcuts:** `RoutedRuntimeSpec` with `ShortcutOverlaySpec` per primary feature.
+- **Persistence:** `WorkspacePersistenceManager` with per-window visibility and position settings.
+- **Testing:** include `test_*_window_contracts.py` validating focus toggle behavior.
 
-- Two or more `SceneBundleBindingSpec` entries (via `HostApplicationBindingSpec`), each generating the scene setup, runtime scene, root, and nav action entries automatically.
-- A `SceneTaskPanelSpec` per scene, or a shared task panel layout via `TaskPanelLinearLayoutSpec`.
-- One `FeatureWindowBundleBindingSpec` per window, which generates the feature spec, window spec, task panel button, focus toggle, and accessibility annotation in one declarative entry.
-- `WindowPresenter` subclass per floating window, with `TabbedPresenterSpec` + `TabBuilderSpec` for tabbed windows.
-- `RoutedRuntimeSpec` with `ShortcutOverlaySpec` for the primary scene's shortcut help overlay.
-- `SceneCommandPaletteSpec` for command-palette access to all registered actions.
-- `add_standard_scene_menu_strip` called in each scene's `bind_runtime` to wire the window-management menu strip.
-- `WorkspacePersistenceManager` with workspace load on startup and save on exit.
-- `SnapshotMigrator` with `MigrationRegistry` for handling schema evolution across releases.
+### Template 3: Data-Heavy Analysis Tool
+
+Use for: log viewers, data explorers, monitoring dashboards.
+
+- **Data layer:** `AsyncDataProvider` → `SortFilterProxySource` → `VirtualizationCore`.
+- **Processing:** `DataflowPipeline` with `CancellationToken` for background transforms.
+- **Rendering:** `DirtyRegionTracker` for incremental rendering of large canvas content.
+- **Updates:** `ListDiffCalculator` for incremental list/grid updates.
+- **Telemetry:** `TelemetryConfig` enabled; telemetry baselines in test suite.
+- **Testing:** include tests for stale-generation cancellation in pipeline stages.
+
+### Template 4: Long-Running Workflow App
+
+Use for: installation wizards, multi-step configuration flows, batch processing tools.
+
+- **Scheduling:** `CooperativeScheduler` coroutines for multi-step background work; yield
+  `WaitForEvent` on user confirmation steps.
+- **Progress:** `ObservableValue[LoadStateKind]` exposed by the background coroutine; UI
+  feature subscribes to drive a `ProgressBarControl`.
+- **User input:** `WizardFlow` with `WizardStep` instances for guided multi-step user input.
+- **Persistence:** `SnapshotMigrator` for versioned session state; `SettingsRegistry` for
+  typed, validated settings that round-trip through workspace save/restore.
+- **Testing:** include tests for coroutine cancellation, stale result suppression, and
+  workspace restore with schema migration.
+
+[Back to Table of Contents](#table-of-contents)
+
+---
+
+## Appendix F: Specifications and Option Reference
+
+[Back to Table of Contents](#table-of-contents)
+
+This appendix provides a concise field-level reference for the major specification types in
+`gui_do`. Each entry lists the spec's purpose, its key fields, and what each field controls.
+Cross-reference links point to the chapter where the spec is introduced and used in context.
+
+---
+
+### F.1 Bootstrap Specs
+
+**`HostApplicationConfig`** — Top-level bootstrap configuration object. The primary argument to
+`bootstrap_host_application`. → See [§8.1 Application Bootstrap](#81-application-bootstrap-and-host-configuration)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `title` | `str` | Window title bar text |
+| `display_size` | `tuple[int, int]` | Initial window pixel dimensions |
+| `target_fps` | `int` | Frame rate cap for the event loop |
+| `scene_bindings` | `list[SceneBundleBindingSpec]` | Declares all scenes and their features |
+| `action_entries` | `list[ActionSpec]` | Global action registry entries |
+| `font_entries` | `list[FontRoleBindingSpec]` | Font role assignments |
+| `cursor_entries` | `list[CursorSpec]` | Cursor shape registrations |
+| `telemetry` | `TelemetryConfig \| None` | Telemetry capture settings |
+| `initial_scene` | `str` | Name of the scene activated on startup |
+
+---
+
+**`HostApplicationBindingSpec`** — Companion spec that links a `Feature` class to a host
+configuration entry. Used internally by `FeatureWindowBundleBindingSpec` and related helpers.
+→ See [§8.1](#81-application-bootstrap-and-host-configuration)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `feature_class` | `type[Feature]` | The feature class to instantiate |
+| `host_requirements` | `list[str]` | Host attributes the feature expects |
+
+---
+
+**`SceneBundleBindingSpec`** — Declares one named scene and the features it contains.
+→ See [§8.1](#81-application-bootstrap-and-host-configuration)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `scene_name` | `str` | Unique identifier for the scene |
+| `feature_bindings` | `list[HostApplicationBindingSpec]` | Ordered feature list for the scene |
+| `menu_strip` | `SceneMenuStripSpec \| None` | Optional chrome menu strip for the scene |
+| `task_panel` | `SceneTaskPanelSpec \| None` | Optional task panel chrome for the scene |
+
+---
+
+**`FeatureWindowBundleBindingSpec`** — Bundles a feature with a window presenter and an optional
+task-panel toggle button, eliminating the need to wire them separately in a `SceneBundleBindingSpec`.
+→ See [§8.9 Scene, Window, and Task-Panel Presentation Models](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `feature_class` | `type[Feature]` | The feature whose lifetime is tied to the window |
+| `window_spec` | `WindowSpec` | Declares the window dimensions and appearance |
+| `task_panel_toggle` | `TaskPanelFocusToggleSpec \| None` | Button spec for task panel, or `None` |
+
+---
+
+**`TelemetryConfig`** — Configures the telemetry subsystem. All fields are optional; omit the
+whole config to disable telemetry entirely. → See [§8.16](#816-telemetry-introspection-and-operational-hooks)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `enabled` | `bool` | Master enable/disable switch |
+| `log_path` | `str \| None` | File path for the log output; `None` = in-memory only |
+| `sample_interval_frames` | `int` | Number of frames between telemetry samples |
+| `max_records` | `int \| None` | Maximum records to retain in memory before rotation |
+
+---
+
+### F.2 Feature and Lifecycle Specs
+
+**`FeatureSpec`** — Compact data bag that configures a `Feature` at construction time without
+subclassing. Used when minor parametric variation is needed across feature instances.
+→ See [§8.2 Feature Lifecycle](#82-feature-lifecycle-and-feature-types)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `feature_id` | `str` | Unique string identifier for the feature within its scene |
+| `config` | `dict` | Arbitrary key/value config passed into the feature |
+
+---
+
+**`RoutedRuntimeSpec`** — Declarative bundle that describes all of a `RoutedFeature`'s cross-system
+wiring: shortcuts, topic subscriptions, and task-panel toggle.
+→ See [§8.2](#82-feature-lifecycle-and-feature-types)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `hotkeys` | `list[ActionHotkeySpec]` | Keyboard shortcuts managed by this spec |
+| `shortcut_overlay` | `ShortcutOverlaySpec \| None` | Shortcut help overlay section spec |
+| `topic_subscriptions` | `list[str]` | Event bus topics this feature subscribes to |
+| `task_panel_toggle` | `TaskPanelFocusToggleSpec \| None` | Task-panel focus toggle integration |
+
+---
+
+**`RoutedFeatureLifecycleSpec`** — Passed to `bind_routed_feature_lifecycle` / `shutdown_routed_feature_lifecycle`.
+Holds the resolved host, the `RoutedRuntimeSpec`, and the feature's runtime state containers.
+→ See [§8.2](#82-feature-lifecycle-and-feature-types)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `host` | host namespace | Live host reference injected by the framework |
+| `spec` | `RoutedRuntimeSpec` | The declarative routing specification |
+| `state` | `dict` | Mutable runtime state for subscriptions and handles |
+
+---
+
+**`RuntimeSceneSpec`** — Groups scene-level configuration into a single spec: scene name, exit
+behavior, and the list of feature bindings. → See [§8.1](#81-application-bootstrap-and-host-configuration)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `scene_name` | `str` | Unique name matched by `initial_scene` |
+| `bind_escape_to_exit` | `bool` | If `True`, Escape key triggers application quit |
+| `feature_bindings` | `list[HostApplicationBindingSpec]` | Feature list for the scene |
+
+---
+
+### F.3 Action and Input Specs
+
+**`ActionSpec`** — Declares one named action in the action registry.
+→ See [§8.3 Events, Actions, Input Mapping, and Routing](#83-events-actions-input-mapping-and-routing)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `action_id` | `str` | Unique identifier string for the action |
+| `label` | `str` | Human-readable label (used in help overlays) |
+| `key` | `int \| None` | pygame key constant for default binding, or `None` |
+| `modifiers` | `int` | Modifier mask (e.g., `pygame.KMOD_CTRL`) |
+| `category` | `str \| None` | Optional grouping category for shortcut overlays |
+| `scope` | `str` | `"scene"` or `"window"` — controls routing scope |
+
+---
+
+**`ActionHotkeySpec`** — Associates an existing action ID with a specific key in a
+`RoutedRuntimeSpec`. Used to override or extend the default binding declared in `ActionSpec`.
+→ See [§8.3](#83-events-actions-input-mapping-and-routing)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `action_id` | `str` | Action to bind |
+| `key` | `int` | pygame key constant |
+| `modifiers` | `int` | Modifier mask |
+
+---
+
+**`ShortcutOverlaySpec`** — Declares the shortcut help overlay section for a `RoutedFeature`.
+→ See [§8.3](#83-events-actions-input-mapping-and-routing) and [§8.8](#88-overlays-dialogs-notifications-and-command-surfaces)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `section_title` | `str` | Heading shown in the shortcut overlay |
+| `entries` | `list[ShortcutEntry]` | Per-shortcut display lines |
+
+---
+
+**`ShortcutSection`** — A grouped section within the shortcut help overlay.
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `title` | `str` | Group heading text |
+| `entries` | `list[ShortcutEntry]` | Lines within this group |
+
+---
+
+**`ShortcutEntry`** — One line in the shortcut overlay display.
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `key_label` | `str` | Key combination label (e.g., `"Ctrl+S"`) |
+| `description` | `str` | Short description of what the action does |
+
+---
+
+**`InputBinding`** — Represents a resolved key-to-action mapping entry in `InputMap`.
+→ See [§8.3](#83-events-actions-input-mapping-and-routing)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `action_id` | `str` | Target action identifier |
+| `key` | `int` | pygame key constant |
+| `modifiers` | `int` | Required modifier mask |
+
+---
+
+### F.4 Window and Presentation Specs
+
+**`WindowSpec`** — Declares a managed floating or docked window surface.
+→ See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `window_id` | `str` | Unique identifier for the window |
+| `title` | `str` | Window title bar text |
+| `initial_rect` | `pygame.Rect` | Starting position and size |
+| `min_size` | `tuple[int, int] \| None` | Minimum resize bounds |
+| `resizable` | `bool` | Whether the user can resize the window |
+| `initially_visible` | `bool` | Visibility state at scene activation |
+
+---
+
+**`AnchoredWindowSpec`** — Extension of `WindowSpec` that anchors the window to a parent
+rect or screen edge rather than using absolute positioning.
+→ See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| (inherits `WindowSpec`) | — | All `WindowSpec` fields |
+| `anchor` | `Alignment` | Which edge/corner to anchor to |
+| `anchor_target` | `pygame.Rect \| None` | Reference rect; `None` = screen edge |
+| `offset` | `tuple[int, int]` | Pixel offset from the anchor point |
+
+---
+
+**`SceneTaskPanelSpec`** — Configures the task panel chrome for a scene.
+→ See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `panel_id` | `str` | Unique identifier for the panel |
+| `position` | `str` | `"left"`, `"right"`, `"top"`, or `"bottom"` |
+| `width` | `int` | Pixel width (for left/right panels) |
+| `button_groups` | `list[TaskPanelWindowToggleGroupSpec]` | Ordered button groups |
+
+---
+
+**`TaskPanelButtonSpec`** — One button entry in the task panel.
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `label` | `str` | Button label text |
+| `action_id` | `str \| None` | Action to fire on click, or `None` |
+| `icon` | `str \| None` | Optional icon name from `AssetRegistry` |
+| `tooltip` | `str \| None` | Hover tooltip text |
+
+---
+
+**`TaskPanelWindowToggleGroupSpec`** — Groups window toggle buttons under a shared heading
+in the task panel. → See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `group_label` | `str \| None` | Optional group heading, or `None` for no heading |
+| `toggles` | `list[TaskPanelFocusToggleSpec]` | Toggle button specs |
+
+---
+
+**`TaskPanelFocusToggleSpec`** — Wires a task-panel toggle button to a window's
+`FocusScopeManager` visibility state. → See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `window_id` | `str` | Window identifier to toggle |
+| `label` | `str` | Button label |
+| `shortcut_action_id` | `str \| None` | Optional action that also toggles the window |
+| `initially_active` | `bool` | Whether the button is pressed at scene start |
+
+---
+
+**`TaskPanelSceneNavButtonSpec`** — A task-panel button that triggers a scene transition.
+→ See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `label` | `str` | Button label |
+| `target_scene` | `str` | Scene name to switch to on click |
+| `icon` | `str \| None` | Optional icon name |
+
+---
+
+**`TabbedPresenterSpec`** — Configures a `TabbedPresenterControl` layout region that renders
+tab switching through the task panel. → See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `presenter_id` | `str` | Unique identifier |
+| `tabs` | `list[TabBuilderSpec]` | Ordered tab entries |
+| `initial_tab` | `str \| None` | ID of tab shown first; `None` = first tab |
+
+---
+
+**`TabBuilderSpec`** — One tab entry in a `TabbedPresenterSpec`.
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `tab_id` | `str` | Unique identifier within the presenter |
+| `label` | `str` | Tab label text |
+| `feature_class` | `type[Feature] \| None` | Feature whose `draw` occupies the tab, if any |
+
+---
+
+**`SceneMenuStripSpec`** — Configures a horizontal menu strip at the top of a scene.
+→ See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `entries` | `list[MenuEntry]` | Top-level menu entries |
+
+---
+
+**`WindowToggleBindingSpec`** — Declaratively binds an action to a window visibility toggle
+without writing handler code. → See [§8.9](#89-scene-window-and-task-panel-presentation-models)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `action_id` | `str` | Action that triggers the toggle |
+| `window_id` | `str` | Window whose visibility is toggled |
+
+---
+
+### F.5 Accessibility Specs
+
+**`StaticAccessibilitySpec`** — Attaches a fixed accessibility label and role to a control.
+→ See [§8.7 Focus and Accessibility](#87-focus-and-accessibility)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `role` | `AccessibilityRole` | Semantic role (e.g., `button`, `listitem`, `group`) |
+| `label` | `str` | Human-readable name for screen readers |
+| `live` | `LivePoliteness \| None` | Live region politeness level, or `None` |
+
+---
+
+**`AccessibilitySequenceSpec`** — Declares the focus-traversal order for a control group.
+→ See [§8.7](#87-focus-and-accessibility)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `sequence` | `list[str]` | Ordered list of control IDs in traversal order |
+| `wrap` | `bool` | If `True`, traversal wraps from last to first |
+
+---
+
+### F.6 Font, Cursor, and Control Specs
+
+**`FontRoleBindingSpec`** — Assigns a font file and size to a named font role.
+→ See [§8.12 Theme, Styling, and Visual Systems](#812-theme-styling-and-visual-systems)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `role_name` | `str` | Logical role name (e.g., `"body"`, `"heading"`, `"mono"`) |
+| `font_path` | `str` | Relative path to the `.ttf` or `.otf` file |
+| `size` | `int` | Font point size |
+| `bold` | `bool` | Whether to synthesize bold |
+| `italic` | `bool` | Whether to synthesize italic |
+
+---
+
+**`CursorSpec`** — Registers a named cursor shape from an image file.
+→ See [§8.8](#88-overlays-dialogs-notifications-and-command-surfaces)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `cursor_id` | `str` | Unique identifier for the cursor |
+| `image_path` | `str` | Path to the cursor image |
+| `hotspot` | `tuple[int, int]` | Pixel offset of the click point within the image |
+
+---
+
+**`CursorBindingSpec`** — Binds a cursor shape to a control's hover region.
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `cursor_id` | `str` | Cursor to display on hover |
+| `control_id` | `str` | Target control |
+
+---
+
+**`ControlDefinition`** — Declarative spec for building a control programmatically in
+data-driven control gallery systems. → See [§8.5 Controls and Control Composition](#85-controls-and-control-composition)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `control_class` | `type` | Control class to instantiate |
+| `rect` | `pygame.Rect` | Initial rect |
+| `kwargs` | `dict` | Constructor arguments |
+
+---
+
+**`NotificationSpec`** — Configures a toast notification before showing it.
+→ See [§8.8](#88-overlays-dialogs-notifications-and-command-surfaces)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `message` | `str` | Notification text |
+| `severity` | `ToastSeverity` | Visual severity level (`info`, `warning`, `error`) |
+| `duration_ms` | `int \| None` | Auto-dismiss delay in milliseconds; `None` = sticky |
+| `on_click` | `Callable \| None` | Callback invoked when the toast is clicked |
+
+---
+
+### F.7 Persistence and Migration Specs
+
+**`SchemaVersion`** — Identifies a snapshot schema version for migration matching.
+→ See [§8.11 Persistence and Workspace/Session State](#811-persistence-and-workspacesession-state)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `major` | `int` | Major version number; incremented on breaking changes |
+| `minor` | `int` | Minor version; incremented on backward-compatible additions |
+
+---
+
+**`VersionedSnapshot`** — Wraps a serializable payload with a `SchemaVersion` for safe migration.
+→ See [§8.11](#811-persistence-and-workspacesession-state)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `version` | `SchemaVersion` | Version at the time the snapshot was created |
+| `payload` | `dict` | Arbitrary serializable state data |
+
+---
+
+**`MigrationStep`** — One node in the migration graph. Registered on `MigrationRegistry`.
+→ See [§8.11](#811-persistence-and-workspacesession-state)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `from_version` | `SchemaVersion` | Source version for this step |
+| `to_version` | `SchemaVersion` | Target version for this step |
+| `migrate` | `Callable[[dict], dict]` | Pure function that transforms the payload |
+
+---
+
+### F.8 Overlay and Dialog Specs
+
+**`FileDialogOptions`** — Configures the file open/save dialog behavior.
+→ See [§8.8](#88-overlays-dialogs-notifications-and-command-surfaces)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `mode` | `str` | `"open"` or `"save"` |
+| `initial_dir` | `str \| None` | Starting directory, or `None` for last-used |
+| `filters` | `list[tuple[str, str]]` | Filter entries, each `(label, pattern)` |
+| `title` | `str \| None` | Dialog title override, or `None` for default |
+| `allow_multiple` | `bool` | Whether multiple files can be selected (`"open"` only) |
+
+---
+
+**`TransitionSpec`** — Configures a scene or layout transition animation.
+→ See [§8.10 Scheduling, Timing, Animation, and Transitions](#810-scheduling-timing-animation-and-transitions)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `style` | `SceneTransitionStyle` | Transition visual style (fade, slide, etc.) |
+| `duration_ms` | `int` | Animation duration in milliseconds |
+| `easing` | `Easing` | Easing function applied to the animation |
+
+---
 
 [Back to Table of Contents](#table-of-contents)
