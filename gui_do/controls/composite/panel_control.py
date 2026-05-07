@@ -218,8 +218,7 @@ class PanelControl(UiNode):
                 and isinstance(local_offset[0], int)
                 and isinstance(local_offset[1], int)
             ):
-                child.rect.left = self.rect.left + local_offset[0]
-                child.rect.top = self.rect.top + local_offset[1]
+                child.set_pos(self.rect.left + local_offset[0], self.rect.top + local_offset[1])
         self._mark_constraints_dirty()
         self._apply_constraints_if_dirty()
 
@@ -227,6 +226,15 @@ class PanelControl(UiNode):
         old_topleft = self.rect.topleft
         super().set_pos(x, y)
         if self.rect.topleft != old_topleft:
+            for child in self.children:
+                local_offset = getattr(child, "_panel_local_offset", None)
+                if (
+                    isinstance(local_offset, tuple)
+                    and len(local_offset) == 2
+                    and isinstance(local_offset[0], int)
+                    and isinstance(local_offset[1], int)
+                ):
+                    child.set_pos(self.rect.left + local_offset[0], self.rect.top + local_offset[1])
             self._mark_constraints_dirty()
             self._apply_constraints_if_dirty()
 

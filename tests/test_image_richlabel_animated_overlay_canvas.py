@@ -9,6 +9,7 @@ from gui_do.controls.display.image_control import ImageControl
 from gui_do.controls.display.rich_label_control import RichLabelControl
 from gui_do.controls.display.animated_image_control import AnimatedImageControl
 from gui_do.controls.display.label_control import LabelControl
+from gui_do.controls.composite.panel_control import PanelControl
 from gui_do.controls.composite.overlay_panel_control import OverlayPanelControl
 from gui_do.controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
 from gui_do.graphics.sprite_sheet import SpriteSheet, FrameAnimation
@@ -258,6 +259,27 @@ class TestOverlayPanelControlInitial(unittest.TestCase):
 
         opc.set_rect(Rect(40, 70, 200, 120))
         self.assertEqual((48, 76), child.rect.topleft)
+
+    def test_add_at_child_tracks_panel_set_pos(self):
+        opc = OverlayPanelControl("opc", Rect(10, 20, 200, 120))
+        child = LabelControl("child", Rect(0, 0, 50, 20), "Item", align="left")
+        opc.add_at(child, rel_x=8, rel_y=6)
+        self.assertEqual((18, 26), child.rect.topleft)
+
+        opc.set_pos(40, 70)
+        self.assertEqual((48, 76), child.rect.topleft)
+
+        def test_nested_add_at_child_tracks_parent_panel_set_rect(self):
+            parent = PanelControl("parent", Rect(0, 0, 400, 300), draw_background=False)
+            overlay = OverlayPanelControl("overlay", Rect(0, 0, 120, 90), draw_background=False)
+            child = LabelControl("child", Rect(0, 0, 50, 20), "Item", align="left")
+            overlay.add_at(child, rel_x=8, rel_y=6)
+            parent.add_at(overlay, rel_x=30, rel_y=40)
+
+            self.assertEqual((38, 46), child.rect.topleft)
+
+            parent.set_rect(Rect(100, 120, 400, 300))
+            self.assertEqual((138, 166), child.rect.topleft)
 
 
 # ===========================================================================

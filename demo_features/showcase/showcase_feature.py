@@ -301,7 +301,7 @@ class ShowcaseFeature(Feature):
     # Column counts per category (controls laid out left-to-right across columns)
     BASICS_COLUMNS = 4
     DATA_COLUMNS = 3
-    ADVANCED_COLUMNS = 3
+    ADVANCED_COLUMNS = 2
     EXTENDED_COLUMNS = 3
 
     def __init__(self, rect: Rect | None = None) -> None:
@@ -375,7 +375,9 @@ class ShowcaseFeature(Feature):
         row_gap = self.ROW_GAP
 
         # Pre-compute column widths per category so control factories get correct dimensions
-        other_col_w = self._col_width(content_rect, self.DATA_COLUMNS)
+        data_col_w = self._col_width(content_rect, self.DATA_COLUMNS)
+        advanced_col_w = self._col_width(content_rect, self.ADVANCED_COLUMNS)
+        extended_col_w = self._col_width(content_rect, self.EXTENDED_COLUMNS)
 
         self._showcase_notification_center = build_notification_center(
             (
@@ -389,9 +391,9 @@ class ShowcaseFeature(Feature):
         self._registry.register(basics_specs)
 
         for defs, num_cols in (
-            (self._data_defs(other_col_w), self.DATA_COLUMNS),
-            (self._advanced_defs(other_col_w, host), self.ADVANCED_COLUMNS),
-            (self._extended_defs(other_col_w, host), self.EXTENDED_COLUMNS),
+            (self._data_defs(data_col_w), self.DATA_COLUMNS),
+            (self._advanced_defs(advanced_col_w, host), self.ADVANCED_COLUMNS),
+            (self._extended_defs(extended_col_w, host), self.EXTENDED_COLUMNS),
         ):
             specs, _ = _build_grid_specs(
                 defs,
@@ -1094,9 +1096,14 @@ class ShowcaseFeature(Feature):
     def _advanced_defs(self, col_w: int, host) -> list[ControlDefinition]:
         import pygame as _pygame
 
-        # Build animated controls eagerly so on_update can reference them
+        label_h = int(self.LABEL_HEIGHT)
+        label_gap = int(self.LABEL_GAP)
+        row_gap = int(self.ROW_GAP)
+
+        # Build animated controls eagerly so on_update can reference them.
         indeterminate_bar = ProgressBarControl(
-            "control_progress_bar_indeterminate", Rect(0, 0, col_w, 20), indeterminate=True)
+            "control_progress_bar_indeterminate", Rect(0, 0, col_w, 20), indeterminate=True
+        )
         self._indeterminate_bar = indeterminate_bar
 
         frame_w, frame_h = 32, 32
@@ -1106,75 +1113,162 @@ class ShowcaseFeature(Feature):
         sheet = SpriteSheet(atlas, frame_w=frame_w, frame_h=frame_h)
         animation = FrameAnimation(sheet, frames=list(range(4)), fps=1, loop=True)
         anim_ctrl = AnimatedImageControl(
-            "control_animated_image", Rect(0, 0, col_w, 48), animation=animation, scale=True)
+            "control_animated_image", Rect(0, 0, col_w, 48), animation=animation, scale=True
+        )
         self._showcase_anim_ctrl = anim_ctrl
 
-        def _make_overlay_panel():
+        def _add_labeled(panel: PanelControl, y: int, *, key: str, label: str, control, control_h: int) -> int:
+            panel.add_at(
+                LabelControl(f"label_{key}_inline", Rect(0, 0, col_w, label_h), label, align="left"),
+                0,
+                y,
+            )
+            y += label_h + label_gap
+            panel.add_at(control, 0, y)
+            return y + int(control_h) + row_gap
+
+        def _make_overlay_panel() -> OverlayPanelControl:
             op = OverlayPanelControl("control_overlay_panel", Rect(0, 0, col_w, 90), draw_background=True)
             for i, txt in enumerate(("Overlay Item A", "Overlay Item B", "Overlay Item C")):
                 op.add_at(
                     LabelControl(f"overlay_child_{i}", Rect(0, 0, col_w - 16, 22), txt, align="left"),
-                    rel_x=8, rel_y=6 + i * 26)
+                    rel_x=8,
+                    rel_y=6 + i * 26,
+                )
             return op
 
-        def _make_dock():
-            ws = DockWorkspace(DockTabs("sc_dock_tabs", panes=[
-                DockPane("editor", "Editor"),
-                DockPane("preview", "Preview"),
-                DockPane("console", "Console"),
-            ]))
+        def _make_dock() -> DockWorkspacePanel:
+            ws = DockWorkspace(
+                DockTabs(
+                    "sc_dock_tabs",
+                    panes=[
+                        DockPane("editor", "Editor"),
+                        DockPane("preview", "Preview"),
+                        DockPane("console", "Console"),
+                    ],
+                )
+            )
             return DockWorkspacePanel("control_dock_workspace_panel", Rect(0, 0, col_w, 40), ws)
 
+        def _make_primary_column_panel() -> PanelControl:
+            panel = PanelControl("control_adv_primary_column", Rect(0, 0, col_w, 290), draw_background=False)
+            y = 0
+            spinner = SpinnerControl(
+                "control_spinner",
+                Rect(0, 0, col_w, 30),
+                value=25,
+                min_value=0,
+                max_value=100,
+                step=1,
+                decimals=0,
+                on_change=lambda v, _r: None,
+            )
+            spinner.set_tab_index(0)
+            y = _add_labeled(panel, y, key="spinner", label="Spinner", control=spinner, control_h=30)
+
+            range_slider = RangeSliderControl(
+                "control_range_slider",
+                Rect(0, 0, col_w, 24),
+                min_value=0,
+                max_value=100,
+                low_value=20,
+                high_value=80,
+                on_change=lambda lo, hi, _r: None,
+            )
+            range_slider.set_tab_index(0)
+            y = _add_labeled(panel, y, key="range_slider", label="Range Slider", control=range_slider, control_h=24)
+
+            numeric = NumericFormatter(decimals=2, thousands_sep=",").create_text_input(
+                "control_numeric_fmt_input", Rect(0, 0, col_w, 30), raw_value="12500", placeholder="0.00"
+            )
+            numeric.set_tab_index(0)
+            y = _add_labeled(panel, y, key="numeric_fmt_input", label="Numeric Format", control=numeric, control_h=30)
+
+            pattern = PatternFormatter("###-###-####").create_text_input(
+                "control_pattern_fmt_input", Rect(0, 0, col_w, 30), raw_value="5551234567", placeholder="###-###-####"
+            )
+            pattern.set_tab_index(0)
+            y = _add_labeled(panel, y, key="pattern_fmt_input", label="Pattern Format", control=pattern, control_h=30)
+
+            fixed_pattern = FixedPatternFormatter("#####-####").create_text_input(
+                "control_fixed_pattern_fmt_input", Rect(0, 0, col_w, 30), raw_value="941010001", placeholder="#####-####"
+            )
+            fixed_pattern.set_tab_index(0)
+            _add_labeled(panel, y, key="fixed_pattern_fmt_input", label="Fixed Pattern Format", control=fixed_pattern, control_h=30)
+            return panel
+
+        def _make_secondary_column_panel() -> PanelControl:
+            panel = PanelControl("control_adv_secondary_column", Rect(0, 0, col_w, 278), draw_background=False)
+            y = 0
+            dock = _make_dock()
+            dock.set_tab_index(0)
+            y = _add_labeled(panel, y, key="dock_workspace_panel", label="Dock Workspace", control=dock, control_h=40)
+
+            overlay = _make_overlay_panel()
+            y = _add_labeled(panel, y, key="overlay_panel", label="Overlay Panel", control=overlay, control_h=90)
+
+            progress = ProgressBarControl("control_progress_bar", Rect(0, 0, col_w, 20), value=0.65)
+            y = _add_labeled(panel, y, key="progress_bar", label="Progress Bar", control=progress, control_h=20)
+
+            _add_labeled(
+                panel,
+                y,
+                key="progress_bar_indeterminate",
+                label="Progress (Marquee)",
+                control=indeterminate_bar,
+                control_h=20,
+            )
+            return panel
+
+        def _make_tertiary_column_panel() -> PanelControl:
+            panel = PanelControl("control_adv_tertiary_column", Rect(0, 0, col_w, 238), draw_background=False)
+            y = 0
+            inspector = PropertyInspectorPanel(
+                "control_property_inspector", Rect(0, 0, col_w, 160), PropertyInspectorModel(ShowcaseInspectable())
+            )
+            y = _add_labeled(
+                panel,
+                y,
+                key="property_inspector",
+                label="Property Inspector",
+                control=inspector,
+                control_h=160,
+            )
+            _add_labeled(
+                panel,
+                y,
+                key="animated_image",
+                label="Animated Image",
+                control=anim_ctrl,
+                control_h=48,
+            )
+            return panel
+
         return [
-            ControlDefinition("spinner", "Spinner", 30, 100,
-                lambda: SpinnerControl("control_spinner", Rect(0, 0, col_w, 30),
-                    value=25, min_value=0, max_value=100, step=1, decimals=0,
-                    on_change=lambda v, _r: None),
-                focusable=True, accessibility_role="spinbutton", accessibility_label="Spinner"),
-            ControlDefinition("range_slider", "Range Slider", 24, 101,
-                lambda: RangeSliderControl("control_range_slider", Rect(0, 0, col_w, 24),
-                    min_value=0, max_value=100, low_value=20, high_value=80,
-                    on_change=lambda lo, hi, _r: None),
-                focusable=True, accessibility_role="slider", accessibility_label="Range slider"),
-            ControlDefinition("color_picker", "Color Picker", 180, 102,
-                lambda: ColorPickerControl("control_color_picker", Rect(0, 0, col_w, 180),
-                    color=(64, 128, 255), on_change=lambda c: None),
-                focusable=True, accessibility_role="group", accessibility_label="Color picker"),
-            ControlDefinition("numeric_fmt_input", "Numeric Format", 30, 103,
-                lambda: NumericFormatter(decimals=2, thousands_sep=",").create_text_input(
-                    "control_numeric_fmt_input", Rect(0, 0, col_w, 30),
-                    raw_value="12500", placeholder="0.00"),
-                focusable=True, accessibility_role="textbox",
-                accessibility_label="Numeric formatted text input"),
-            ControlDefinition("pattern_fmt_input", "Pattern Format", 30, 104,
-                lambda: PatternFormatter("###-###-####").create_text_input(
-                    "control_pattern_fmt_input", Rect(0, 0, col_w, 30),
-                    raw_value="5551234567", placeholder="###-###-####"),
-                focusable=True, accessibility_role="textbox",
-                accessibility_label="Pattern formatted text input"),
-            ControlDefinition("fixed_pattern_fmt_input", "Fixed Pattern Format", 30, 105,
-                lambda: FixedPatternFormatter("#####-####").create_text_input(
-                    "control_fixed_pattern_fmt_input", Rect(0, 0, col_w, 30),
-                    raw_value="941010001", placeholder="#####-####"),
-                focusable=True, accessibility_role="textbox",
-                accessibility_label="Fixed pattern formatted text input"),
-            ControlDefinition("overlay_panel", "Overlay Panel", 90, 106,
-                _make_overlay_panel, focusable=False),
-            ControlDefinition("dock_workspace_panel", "Dock Workspace", 40, 107,
-                _make_dock,
-                focusable=True, accessibility_role="tablist",
-                accessibility_label="Dock workspace panel"),
-            ControlDefinition("property_inspector", "Property Inspector", 160, 108,
-                lambda: PropertyInspectorPanel("control_property_inspector",
-                    Rect(0, 0, col_w, 160), PropertyInspectorModel(ShowcaseInspectable())),
-                focusable=False),
-            ControlDefinition("progress_bar", "Progress Bar", 20, 109,
-                lambda: ProgressBarControl("control_progress_bar", Rect(0, 0, col_w, 20), value=0.65),
-                focusable=False),
-            ControlDefinition("progress_bar_indeterminate", "Progress (Marquee)", 20, 110,
-                lambda: indeterminate_bar, focusable=False),
-            ControlDefinition("animated_image", "Animated Image", 48, 111,
-                lambda: anim_ctrl, focusable=False),
+            ControlDefinition(
+                "advanced_primary_column",
+                "",
+                290,
+                100,
+                _make_primary_column_panel,
+                focusable=False,
+            ),
+            ControlDefinition(
+                "advanced_secondary_column",
+                "",
+                278,
+                101,
+                _make_secondary_column_panel,
+                focusable=False,
+            ),
+            ControlDefinition(
+                "advanced_tertiary_column",
+                "",
+                238,
+                102,
+                _make_tertiary_column_panel,
+                focusable=False,
+            ),
         ]
 
     def _extended_defs(self, col_w: int, host) -> list[ControlDefinition]:
