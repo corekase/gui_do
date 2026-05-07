@@ -92,7 +92,6 @@ from gui_do import (
     draw_controls_prewarm,
     ensure_scene_task_panel,
     make_labeled_slot_height_fn,
-    promote_open_popup_controls,
 )
 from gui_do.features.data_driven_runtime import (
     SceneMenuStripSpec,
@@ -306,8 +305,6 @@ class ShowcaseFeature(Feature):
             self._showcase_anim_ctrl.animation.update(dt)
             self._showcase_anim_ctrl.invalidate()
 
-        self._promote_open_popup_controls(host)
-
         if not self._pending_initial_focus:
             return
         if host.app.active_scene_name != self.scene_name:
@@ -370,11 +367,6 @@ class ShowcaseFeature(Feature):
         if focused is not None and not getattr(focused, "visible", True):
             if self._category_tabs is not None and self._category_tabs.visible and self._category_tabs.enabled:
                 host.app.focus.set_focus(self._category_tabs)
-
-    def _promote_open_popup_controls(self, host) -> None:
-        root = getattr(host, "control_showcase_root", None)
-        reg = self._registry
-        promote_open_popup_controls(root, reg.controls if reg is not None else [])
 
     def _build_scene_task_panel(self, host) -> None:
         self.task_panel = ensure_scene_task_panel(
