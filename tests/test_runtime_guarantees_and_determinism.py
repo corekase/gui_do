@@ -45,16 +45,16 @@ class TestRuntimeGuaranteesAndDeterminism(unittest.TestCase):
     def test_scheduler_dispatch_budget_clamps_to_min_and_max(self):
         app = GuiApplication.__new__(GuiApplication)
 
-        self.assertEqual(0.5, app._compute_scheduler_dispatch_budget_ms(-1.0))
-        self.assertEqual(0.5, app._compute_scheduler_dispatch_budget_ms(0.0))
-        self.assertEqual(4.0, app._compute_scheduler_dispatch_budget_ms(1.0))
+        self.assertEqual(0.35, app._compute_scheduler_dispatch_budget_ms(-1.0))
+        self.assertEqual(0.35, app._compute_scheduler_dispatch_budget_ms(0.0))
+        self.assertEqual(2.5, app._compute_scheduler_dispatch_budget_ms(1.0))
 
     def test_scheduler_dispatch_budget_scales_in_midrange(self):
         app = GuiApplication.__new__(GuiApplication)
 
         budget_ms = app._compute_scheduler_dispatch_budget_ms(0.020)
 
-        self.assertAlmostEqual(2.4, budget_ms, places=7)
+        self.assertAlmostEqual(2.0, budget_ms, places=7)
 
     def test_window_focus_candidate_windows_are_sorted_deterministically(self):
         manager = WindowFocusManager()
