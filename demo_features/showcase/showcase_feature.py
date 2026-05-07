@@ -302,7 +302,7 @@ class ShowcaseFeature(Feature):
     BASICS_COLUMNS = 4
     DATA_COLUMNS = 3
     ADVANCED_COLUMNS = 2
-    EXTENDED_COLUMNS = 3
+    EXTENDED_COLUMNS = 1
 
     def __init__(self, rect: Rect | None = None) -> None:
         super().__init__("controls_showcase", scene_name="control_showcase")
@@ -1272,59 +1272,104 @@ class ShowcaseFeature(Feature):
         ]
 
     def _extended_defs(self, col_w: int, host) -> list[ControlDefinition]:
+        # col_w is the full content width (EXTENDED_COLUMNS=1).
+        # Each row is a PanelControl spanning the full width with 3 internal sub-columns,
+        # ensuring all three controls in a row share the same top alignment.
         app = host.app
-        return [
-            ControlDefinition("toolbar", "Toolbar", 36, 140,
-                lambda: ToolbarControl("control_toolbar", Rect(0, 0, col_w, 36),
-                    items=[ToolbarItem(label="Cut", action_id="cut"),
-                           ToolbarItem(label="Copy", action_id="copy"),
-                           ToolbarItem(separator=True),
-                           ToolbarItem(label="Paste", action_id="paste")]),
-                focusable=True, accessibility_role="toolbar", accessibility_label="Toolbar"),
-            ControlDefinition("status_bar", "Status Bar", 24, 141,
-                lambda: StatusBarControl("control_status_bar", Rect(0, 0, col_w, 24),
-                    slots=[StatusSlot("status", "Ready", width=80),
-                           StatusSlot("line", "Ln 1", width=50, separator_after=True),
-                           StatusSlot("col", "Col 1", width=50)]),
-                focusable=False, accessibility_role="status", accessibility_label="Status bar"),
-            ControlDefinition("expander", "Expander", 80, 142,
-                lambda: ExpanderControl("control_expander", Rect(0, 0, col_w, 80),
-                    title="Details", body_height=50),
-                focusable=True, accessibility_role="group", accessibility_label="Expander"),
-            ControlDefinition("breadcrumb", "Breadcrumb", 28, 143,
-                lambda: BreadcrumbControl("control_breadcrumb", Rect(0, 0, col_w, 28),
-                    items=[BreadcrumbItem(label="Home", value="home"),
-                           BreadcrumbItem(label="Files", value="files"),
-                           BreadcrumbItem(label="Documents", value="documents")]),
-                focusable=True, accessibility_role="navigation",
-                accessibility_label="Breadcrumb navigation"),
-            ControlDefinition("split_button", "Split Button", 32, 144,
-                lambda: SplitButtonControl("control_split_button", Rect(0, 0, col_w, 32),
-                    label="Save",
-                    options=[SplitButtonOption(label="Save As...", on_click=lambda: None),
-                             SplitButtonOption(label="Save All", on_click=lambda: None)]),
-                focusable=True, accessibility_role="button", accessibility_label="Split button"),
-            ControlDefinition("chip_input", "Chip Input", 36, 145,
-                lambda: ChipInputControl("control_chip_input", Rect(0, 0, col_w, 36),
-                    placeholder="Add tag...", values=["Python", "GUI"]),
-                focusable=True, accessibility_role="textbox", accessibility_label="Chip input"),
-            ControlDefinition("time_picker", "Time Picker", 32, 146,
-                lambda: TimePickerControl("control_time_picker", Rect(0, 0, col_w, 32),
-                    hour=9, minute=30),
-                focusable=True, accessibility_role="textbox", accessibility_label="Time picker"),
-            ControlDefinition("date_picker", "Date Picker", 32, 147,
-                lambda: DatePickerControl("control_date_picker", Rect(0, 0, col_w, 32)),
-                focusable=True, accessibility_role="textbox", accessibility_label="Date picker"),
-            ControlDefinition("scene_menu_strip", "Scene Menu Strip", 30, 148,
-                lambda: SceneMenuStripControl("control_scene_menu_strip",
-                    Rect(0, 0, col_w, 30), app,
-                    scenes_shown=False, windows_shown=False,
-                    extra_entries_provider=lambda: [
-                        MenuEntry("Demo", [
-                            ContextMenuItem("Inspect", action=lambda: None),
-                            ContextMenuItem("Refresh", action=lambda: None),
-                        ]),
+        label_h = int(self.LABEL_HEIGHT)
+        label_gap = int(self.LABEL_GAP)
+        row_gap = int(self.ROW_GAP)
+
+        # Compute sub-column rects (relative to 0,0 of the panel)
+        sub_cols = CellCaretLayout.split_columns(
+            Rect(0, 0, col_w, 100), count=3, gap=row_gap, min_width=80
+        )
+        sc0_x, sc0_w = int(sub_cols[0].left), int(sub_cols[0].width)
+        sc1_x, sc1_w = int(sub_cols[1].left), int(sub_cols[1].width)
+        sc2_x, sc2_w = int(sub_cols[2].left), int(sub_cols[2].width)
+
+        def _add_cell(
+            panel: PanelControl,
+            key: str,
+            x: int,
+            w: int,
+            label: str,
+            control,
+            focusable: bool = True,
+        ) -> None:
+            panel.add_at(
+                LabelControl(f"label_{key}_ext", Rect(0, 0, w, label_h), label, align="left"),
+                x, 0,
+            )
+            if focusable:
+                control.set_tab_index(0)
+            panel.add_at(control, x, label_h + label_gap)
+
+        # Row 1: Toolbar | Split Button | Breadcrumb  (tallest = Toolbar 36px)
+        row1_h = label_h + label_gap + 36
+
+        def _make_row1_panel() -> PanelControl:
+            panel = PanelControl("control_ext_row1", Rect(0, 0, col_w, row1_h), draw_background=False)
+            toolbar = ToolbarControl("control_toolbar", Rect(0, 0, sc0_w, 36),
+                items=[ToolbarItem(label="Cut", action_id="cut"),
+                       ToolbarItem(label="Copy", action_id="copy"),
+                       ToolbarItem(separator=True),
+                       ToolbarItem(label="Paste", action_id="paste")])
+            _add_cell(panel, "toolbar", sc0_x, sc0_w, "Toolbar", toolbar)
+            split_btn = SplitButtonControl("control_split_button", Rect(0, 0, sc1_w, 32),
+                label="Save",
+                options=[SplitButtonOption(label="Save As...", on_click=lambda: None),
+                         SplitButtonOption(label="Save All", on_click=lambda: None)])
+            _add_cell(panel, "split_button", sc1_x, sc1_w, "Split Button", split_btn)
+            breadcrumb = BreadcrumbControl("control_breadcrumb", Rect(0, 0, sc2_w, 28),
+                items=[BreadcrumbItem(label="Home", value="home"),
+                       BreadcrumbItem(label="Files", value="files"),
+                       BreadcrumbItem(label="Documents", value="documents")])
+            _add_cell(panel, "breadcrumb", sc2_x, sc2_w, "Breadcrumb", breadcrumb)
+            return panel
+
+        # Row 2: Chip Input | Status Bar | Expander  (tallest = Expander 80px)
+        row2_h = label_h + label_gap + 80
+
+        def _make_row2_panel() -> PanelControl:
+            panel = PanelControl("control_ext_row2", Rect(0, 0, col_w, row2_h), draw_background=False)
+            chip = ChipInputControl("control_chip_input", Rect(0, 0, sc0_w, 36),
+                placeholder="Add tag...", values=["Python", "GUI"])
+            _add_cell(panel, "chip_input", sc0_x, sc0_w, "Chip Input", chip)
+            status_bar = StatusBarControl("control_status_bar", Rect(0, 0, sc1_w, 24),
+                slots=[StatusSlot("status", "Ready", width=80),
+                       StatusSlot("line", "Ln 1", width=50, separator_after=True),
+                       StatusSlot("col", "Col 1", width=50)])
+            _add_cell(panel, "status_bar", sc1_x, sc1_w, "Status Bar", status_bar, focusable=False)
+            expander = ExpanderControl("control_expander", Rect(0, 0, sc2_w, 80),
+                title="Details", body_height=50)
+            _add_cell(panel, "expander", sc2_x, sc2_w, "Expander", expander)
+            return panel
+
+        # Row 3: Scene Menu Strip | Date Picker | Time Picker  (tallest = Date/Time Picker 32px)
+        row3_h = label_h + label_gap + 32
+
+        def _make_row3_panel() -> PanelControl:
+            panel = PanelControl("control_ext_row3", Rect(0, 0, col_w, row3_h), draw_background=False)
+            scene_menu = SceneMenuStripControl("control_scene_menu_strip",
+                Rect(0, 0, sc0_w, 30), app,
+                scenes_shown=False, windows_shown=False,
+                extra_entries_provider=lambda: [
+                    MenuEntry("Demo", [
+                        ContextMenuItem("Inspect", action=lambda: None),
+                        ContextMenuItem("Refresh", action=lambda: None),
                     ]),
-                focusable=False, accessibility_role="menubar",
-                accessibility_label="Scene menu strip"),
+                ])
+            _add_cell(panel, "scene_menu_strip", sc0_x, sc0_w, "Scene Menu Strip", scene_menu, focusable=False)
+            date_picker = DatePickerControl("control_date_picker", Rect(0, 0, sc1_w, 32))
+            _add_cell(panel, "date_picker", sc1_x, sc1_w, "Date Picker", date_picker)
+            time_picker = TimePickerControl("control_time_picker", Rect(0, 0, sc2_w, 32),
+                hour=9, minute=30)
+            _add_cell(panel, "time_picker", sc2_x, sc2_w, "Time Picker", time_picker)
+            return panel
+
+        return [
+            ControlDefinition("ext_row1", "", row1_h, 140, _make_row1_panel, focusable=False, labeled=False),
+            ControlDefinition("ext_row2", "", row2_h, 141, _make_row2_panel, focusable=False, labeled=False),
+            ControlDefinition("ext_row3", "", row3_h, 142, _make_row3_panel, focusable=False, labeled=False),
         ]

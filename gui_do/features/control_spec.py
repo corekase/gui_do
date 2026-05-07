@@ -90,6 +90,7 @@ class ControlDefinition:
     focusable: bool = True
     accessibility_role: str | None = None
     accessibility_label: str | None = None
+    labeled: bool = True
 
 
 def build_specs_from_column_section(
@@ -127,7 +128,10 @@ def build_specs_from_column_section(
     specs: list[ControlPlacementSpec] = []
     bottom_y: int = int(stack.bounds.top)
     for defn in definitions:
-        desired_h = max(1, int(slot_height_for(defn.control_height)))
+        if getattr(defn, "labeled", True):
+            desired_h = max(1, int(slot_height_for(defn.control_height)))
+        else:
+            desired_h = max(1, int(defn.control_height))
         slot_rect = Rect(stack.add_slot_or_overflow(desired_h, overflow_gap=max(0, int(overflow_gap))))
         bottom_y = int(slot_rect.bottom)
         specs.append(
@@ -137,6 +141,7 @@ def build_specs_from_column_section(
                 control=defn.control_factory(),
                 control_rect=slot_rect,
                 focusable=bool(defn.focusable),
+                                labeled=getattr(defn, "labeled", True),
                 accessibility_role=defn.accessibility_role,
                 accessibility_label=defn.accessibility_label,
                 column_index=int(defn.column_index),
