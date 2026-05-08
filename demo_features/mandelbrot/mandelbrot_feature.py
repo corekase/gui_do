@@ -63,8 +63,11 @@ _LOGIC_SPLITS = (
     "mandelbrot_logic_can3",
     "mandelbrot_logic_can4",
 )
-_SPLIT_KEYS = ("can1", "can2", "can3", "can4")
-_ALL_TASK_IDS = ("iter", "recu", "1", "2", "3", "4") + _SPLIT_KEYS
+_SPLIT_KEYS = ("Canvas 1", "Canvas 2", "Canvas 3", "Canvas 4")
+_ALL_TASK_IDS = ("Iterative", "Recursive", "Task 1", "Task 2", "Task 3", "Task 4") + _SPLIT_KEYS
+_TASK_ID_ITERATIVE  = _ALL_TASK_IDS[0]
+_TASK_ID_RECURSIVE  = _ALL_TASK_IDS[1]
+_TASK_IDS_QUADRANTS = _ALL_TASK_IDS[2:6]
 
 # ---------------------------------------------------------------------------
 # Lifecycle and runtime specs (module-level singletons)
@@ -92,11 +95,11 @@ _LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
 )
 
 _LOGIC_BINDINGS = (
-    LogicBindingSpec(alias="primary", provider_name=_LOGIC_PRIMARY),
-    LogicBindingSpec(alias="can1",    provider_name=_LOGIC_SPLITS[0]),
-    LogicBindingSpec(alias="can2",    provider_name=_LOGIC_SPLITS[1]),
-    LogicBindingSpec(alias="can3",    provider_name=_LOGIC_SPLITS[2]),
-    LogicBindingSpec(alias="can4",    provider_name=_LOGIC_SPLITS[3]),
+    LogicBindingSpec(alias="primary",       provider_name=_LOGIC_PRIMARY),
+    LogicBindingSpec(alias=_SPLIT_KEYS[0],  provider_name=_LOGIC_SPLITS[0]),
+    LogicBindingSpec(alias=_SPLIT_KEYS[1],  provider_name=_LOGIC_SPLITS[1]),
+    LogicBindingSpec(alias=_SPLIT_KEYS[2],  provider_name=_LOGIC_SPLITS[2]),
+    LogicBindingSpec(alias=_SPLIT_KEYS[3],  provider_name=_LOGIC_SPLITS[3]),
 )
 
 
@@ -348,7 +351,7 @@ class MandelbrotFeature(RoutedFeature):
         mapped_colors = self._mapped_colors_for_canvas(canvas)
         mapped_count = len(mapped_colors)
 
-        if task_id == "iter":
+        if task_id == _TASK_ID_ITERATIVE:
             # Iterative payloads:
             #   (y_row, [iteration_count, ...])
             #   (y_row, x_start, [iteration_count, ...])
@@ -600,7 +603,7 @@ class MandelbrotFeature(RoutedFeature):
             return
         w, h = self.primary_canvas.canvas.get_size()
         center, scale = self._viewport(w, h)
-        self._queue_task(host, "iter", "primary", "iterative_task",
+        self._queue_task(host, _TASK_ID_ITERATIVE, "primary", "iterative_task",
                          {"size": (w, h), "center": center, "scale": scale})
         self._publish_status(MANDEL_KIND_RUNNING_ITERATIVE)
 
@@ -610,7 +613,7 @@ class MandelbrotFeature(RoutedFeature):
             return
         w, h = self.primary_canvas.canvas.get_size()
         center, scale = self._viewport(w, h)
-        self._queue_task(host, "recu", "primary", "recursive_task",
+        self._queue_task(host, _TASK_ID_RECURSIVE, "primary", "recursive_task",
                          {"size": (w, h), "center": center, "scale": scale, "rect": Rect(0, 0, w, h)})
         self._publish_status(MANDEL_KIND_RUNNING_RECURSIVE)
 
@@ -622,10 +625,10 @@ class MandelbrotFeature(RoutedFeature):
         center, scale = self._viewport(w, h)
         lw, th = w // 2, h // 2
         quadrants = (
-            ("1", Rect(0,   0,  lw,      th)),
-            ("2", Rect(lw,  0,  w - lw,  th)),
-            ("3", Rect(0,   th, lw,      h - th)),
-            ("4", Rect(lw,  th, w - lw,  h - th)),
+            (_TASK_IDS_QUADRANTS[0], Rect(0,   0,  lw,      th)),
+            (_TASK_IDS_QUADRANTS[1], Rect(lw,  0,  w - lw,  th)),
+            (_TASK_IDS_QUADRANTS[2], Rect(0,   th, lw,      h - th)),
+            (_TASK_IDS_QUADRANTS[3], Rect(lw,  th, w - lw,  h - th)),
         )
         tasks = [
             (

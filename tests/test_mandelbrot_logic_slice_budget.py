@@ -2,6 +2,7 @@ import unittest
 
 from pygame import Rect
 
+from demo_features.mandelbrot.mandelbrot_feature import _TASK_ID_ITERATIVE, _TASK_ID_RECURSIVE
 from demo_features.mandelbrot.mandelbrot_logic import MandelbrotLogicFeature
 
 
@@ -22,11 +23,11 @@ class MandelbrotLogicSliceBudgetTests(unittest.TestCase):
 
         logic.run_iterative_task(
             scheduler,
-            "iter",
+            _TASK_ID_ITERATIVE,
             {"size": (24, 1), "center": -0.7 + 0.0j, "scale": 0.01},
         )
 
-        payloads = [payload for task_id, payload in scheduler.messages if task_id == "iter"]
+        payloads = [payload for task_id, payload in scheduler.messages if task_id == _TASK_ID_ITERATIVE]
         self.assertEqual(3, len(payloads))
         self.assertEqual((0, 0), payloads[0][:2])
         self.assertEqual((0, 8), payloads[1][:2])
@@ -39,7 +40,7 @@ class MandelbrotLogicSliceBudgetTests(unittest.TestCase):
 
         logic.run_recursive_task(
             scheduler,
-            "recu",
+            _TASK_ID_RECURSIVE,
             {
                 "size": (8, 8),
                 "center": 3.0 + 3.0j,
