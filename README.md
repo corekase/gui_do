@@ -9,143 +9,90 @@
 
 ---
 
-`gui_do` is a Python GUI framework built on pygame that structures applications around
-declarative specs, a feature lifecycle, and reactive observable state. Instead of writing
-imperative setup sequences, you describe what your application contains — scenes, features,
-actions, and controls — and the bootstrap system wires everything together automatically.
-The framework handles event routing, overlay dispatch, focus management, scene transitions,
-and lifecycle sequencing so that your code focuses on behavior rather than plumbing. It is
-suited for Python developers building desktop tools, game UIs, simulations, and interactive
-applications of any complexity.
-
----
+**gui_do** is a Python GUI framework built on pygame that brings a declarative, feature-lifecycle-oriented programming model to interactive desktop applications. Instead of wiring widgets imperatively, you describe application structure with data specs, and the bootstrap system reads those specs to initialize every system automatically — event routing, overlay dispatch, focus management, scene transitions, and lifecycle sequencing all happen without boilerplate. Reactive state objects (`ObservableValue`, `ObservableList`, `ObservableDict`) propagate changes to the UI instantly when their values change, with no polling required. gui_do is suited to Python developers building desktop tools, game interfaces, interactive simulations, data explorers, and multi-scene workbench applications.
 
 ## Strengths
 
-**Declarative runtime wiring.** Specs describe what your application contains; bootstrap
-reads those specs and builds all connections. Features never need to know about each other's
-internal structure.
-
-**Feature lifecycle isolation.** Each feature owns its `build`, `bind_runtime`, `on_update`,
-`handle_event`, `draw`, and `shutdown_runtime` phases. The framework guarantees all features
-complete `build` before any `bind_runtime` runs — no manual ordering required.
-
-**Reactive state.** `ObservableValue`, `ObservableList`, and `ObservableDict` notify
-subscribers when they change. UI updates happen in callbacks, not polling loops. `ComputedValue`
-derives state from other observables and propagates changes automatically.
-
-**Composable overlays.** Dialogs, toasts, tooltips, the command palette, and context menus all
-share consistent routing and focus semantics. Adding an overlay to a scene requires one spec and
-one call — not a bespoke event chain.
-
-**Tiered API surface.** Thirty-two tiers organize the public API from high-level bootstrap
-helpers (Tier 1) down to the 2D scene graph, audio, and snapshot migration (Tiers 16–32).
-Applications can work entirely at Tier 1–3 or reach deeper tiers as needed.
-
-**Scene management.** Multi-scene applications declare transitions, initial scene, and
-escape behavior in one binding spec. Animated transitions (fade, slide) and scene-scoped
-event routing are built in.
-
-**Persistence and migration.** Workspace state is saved and restored through a versioned
-snapshot system with a BFS migration graph. Restore reports enumerate applied settings,
-skipped keys, and scene switches.
-
-**Accessibility and focus.** A semantic accessibility tree, focus rings, and live-region
-announcements are available at Tier 21. Focus cycling is deterministic and ordered by
-`control_id`.
-
-**Built-in diagnostics.** Telemetry spans wrap high-frequency paths. `EventRecorder` and
-`EventPlayback` support reproducible test scenarios. `PropertyInspectorPanel` exposes live
-runtime values.
-
-**Extensible without framework changes.** New features add behavior by implementing lifecycle
-methods. The framework does not require modification — new capabilities compose in from outside.
-
----
+- **Declarative runtime wiring** — `HostApplicationBindingSpec` and companion spec types describe what your application does; `bootstrap_host_application` builds everything from those descriptions automatically.
+- **Feature lifecycle isolation** — every unit of functionality is a `Feature` subclass that owns its `build`, `bind_runtime`, `on_update`, `draw`, and `shutdown_runtime` phases independently of every other feature.
+- **Reactive state** — `ObservableValue`, `ObservableList`, and `ObservableDict` notify subscribers when their content changes, so labels and controls update themselves without polling loops.
+- **Composable overlays** — dialogs, toasts, tooltips, context menus, and the command palette share a unified routing infrastructure and are composable without framework modification.
+- **Tiered API surface** — 32 tiers of exported names from high-level bootstrap helpers down to 2D scene graph, audio, and constraint layout, so you reach for exactly as much framework as your application needs.
+- **Scene management** — multi-scene apps with animated slide and crossfade transitions, per-scene event routing, and scene-scoped lifecycle sequencing built in.
+- **Persistence and migration** — workspace state is saved and restored across sessions with versioned snapshot migration; missing settings keys are silently skipped without aborting restore.
+- **Accessibility and focus** — a semantic accessibility tree, configurable focus rings, and live region announcements support screen-reader-friendly application structure.
+- **Built-in diagnostics** — telemetry spans in high-frequency paths, an event recorder and playback engine, and a property inspector panel for runtime introspection.
+- **Extensible without framework changes** — new features add behavior by implementing lifecycle methods; the framework never needs to be modified to support new application patterns.
 
 ## Use Cases
 
-**Developer tools and internal utilities.** Dashboards, data inspectors, parameter explorers,
-and pipeline monitors all compose naturally from `Feature`, observable state, and the
-`ListViewControl` and `DataGridControl` components.
+**Developer tools and internal utilities.** gui_do's sortable list views, data grids, property inspectors, and reactive state make it well-suited to dashboards, configuration explorers, and debug front-ends.
 
-**Game interfaces and HUDs.** The `ParticleSystem`, `TileMap`, `SpriteSheet`, and `SceneGraph2D`
-components are first-class citizens. Audio cues via `SoundEventBus` and frame-accurate animation
-via `TweenManager` and `AnimationStateMachine` complete the toolkit.
+**Game interfaces and HUDs.** The 2D scene graph (`SceneGraph2D`, `Node2D`, `Camera2D`), particle system, tile map, sprite sheet animation, and audio cue bus (`SoundEventBus`) give you the rendering primitives that game UIs need.
 
-**Interactive simulations.** Conway's Life, the Mandelbrot explorer, and the bouncing-shapes demo
-in `demo_features/` show how to wire compute-intensive logic into a `LogicFeature`, keep UI
-responsive, and exchange state with visual features through `ObservableValue` and `FeatureMessage`.
+**Interactive simulations.** The cooperative scheduler, tween and animation state machine, dirty-region tracker, and canvas controls support cellular automata, physics visualizations, and parameter explorers that need smooth, frame-accurate updates.
 
-**Data visualization tools.** Sortable and filterable lists via `CollectionView` and
-`SortFilterProxySource`, virtualized grids via `VirtualizationCore`, and dirty-region
-rendering via `DirtyRegionTracker` support efficient displays of large datasets.
+**Data visualization tools.** `CollectionView`, `DataGridControl`, `ListViewControl`, `SortFilterProxySource`, and virtual item sources let you display and filter large data sets without reimplementing windowing logic.
 
-**Multi-window workbench applications.** Task panels, tabbed windows, floating tool windows,
-and docked panes are all first-class presentation models. `DockWorkspace`, `TabControl`, and
-`WindowControl` wire into the scene presentation system with one bundle spec.
+**Multi-window workbench applications.** Tabbed windows, task panels, floating tool windows, dock workspaces, and scene navigation give you the chrome to build IDEs, editors, and workbench-style applications.
 
-**Rapid layout prototyping.** The adaptive constraint layout (`ConstraintLayoutEngine`),
-flex layout (`FlexLayout`), and responsive breakpoint system (`ResponsiveLayout`) make it
-straightforward to iterate on complex spatial arrangements.
-
----
+**Rapid prototyping.** The constraint layout engine (`ConstraintLayout`, `ConstraintLayoutEngine`), flex layout, flow layout, and responsive layout let you compose layouts declaratively, reducing the distance between design and working UI.
 
 ## Quick Look
 
+The listing below shows the complete pattern: a `Feature` with reactive state, a button wired to an observable, and the three-line bootstrap sequence that starts the app.
+
 ```python
-import pygame
 from pygame import Rect
 from gui_do import (
-    Feature, PanelControl, LabelControl, ButtonControl, ObservableValue,
-    FeatureSpec, SceneBundleBindingSpec, HostApplicationBindingSpec,
+    Feature, ObservableValue, LabelControl, ButtonControl, PanelControl,
+    SceneBundleBindingSpec, HostApplicationBindingSpec,
     build_host_application_config, bootstrap_host_application,
 )
 
 class CounterFeature(Feature):
     def __init__(self):
         super().__init__("counter", scene_name="main")
+        self._count = ObservableValue(0)
+        self._label = self._sub = None
 
     def build(self, host):
-        host.counter_value = ObservableValue(0)
-        self._count = host.counter_value
-        r = host.screen_rect
-        root = host.app.add(PanelControl("root", Rect(0, 0, r.width, r.height),
-                                         draw_background=False), scene_name="main")
-        self._label = root.add(LabelControl("lbl", Rect(20, 20, 200, 36), "Count: 0"))
-        root.add(ButtonControl("btn", Rect(20, 70, 100, 36), "+1",
-                               on_click=lambda: setattr(self._count, "value",
-                                                        self._count.value + 1)))
+        panel = host.app.add(
+            PanelControl("root", host.screen_rect, draw_background=False),
+            scene_name="main",
+        )
+        self._label = panel.add(LabelControl("lbl", Rect(20, 20, 300, 40), "Count: 0"))
+        panel.add(ButtonControl("btn", Rect(20, 70, 140, 36), "Increment",
+                                on_click=self._inc))
+
+    def _inc(self):
+        self._count.value += 1
 
     def bind_runtime(self, host):
         self._sub = self._count.subscribe(
-            lambda v: setattr(self._label, "text", f"Count: {v}"))
+            lambda v: setattr(self._label, "text", f"Count: {v}")
+        )
 
     def shutdown_runtime(self, host):
         if self._sub:
-            self._sub(); self._sub = None
+            self._sub()
+            self._sub = None
 
 config = build_host_application_config(HostApplicationBindingSpec(
     display_size=(800, 600), window_title="Counter",
-    fonts={"default": {"size": 14}}, initial_scene_name="main",
-    feature_entries=[FeatureSpec(attr_name="counter", factory=CounterFeature)],
-    scene_bundle_entries=[SceneBundleBindingSpec(scene_name="main", make_initial=True)],
+    fonts={"default": {"file": "assets/font.ttf", "size": 14}},
+    initial_scene_name="main",
+    scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", pretty_name="Main"),),
+    feature_entries=(("_counter", CounterFeature),),
 ))
 
-class App:
+class MyApp:
     def __init__(self): bootstrap_host_application(self, config)
 
-App().app.run_entrypoint(target_fps=60)
+MyApp().app.run_entrypoint(target_fps=60)
 ```
 
-The pattern: declare features in specs → bootstrap builds the host → the frame loop runs.
-Features are isolated; `ObservableValue` subscriptions connect state to UI without coupling
-features directly to each other.
-
-Read [TUTORIAL.md](TUTORIAL.md) to build a complete project from this foundation.
-Read [MANUAL.md](MANUAL.md) for the full API and system reference.
-
----
+For a complete step-by-step explanation of every line above, see [TUTORIAL.md](TUTORIAL.md). For API details, see [MANUAL.md](MANUAL.md).
 
 ## Documentation
 
@@ -154,53 +101,47 @@ Read [MANUAL.md](MANUAL.md) for the full API and system reference.
 | [TUTORIAL.md](TUTORIAL.md) | Step-by-step project tutorial — start here if you are new to gui_do |
 | [MANUAL.md](MANUAL.md) | Complete developer reference for all systems and APIs |
 
-**TUTORIAL.md** teaches the framework by building a complete multi-feature application from
-scratch, explaining both how and why at every step. A reader who finishes the tutorial will
-understand the gui_do programming model well enough to build their own feature-complete
-application.
+TUTORIAL.md teaches the framework by building a complete two-feature application from scratch, explaining both how and why at every step. By the end, you will understand the full gui_do programming model — reactive state, feature lifecycle, declarative bootstrap, actions, and cross-feature communication.
 
-**MANUAL.md** is the comprehensive reference organized by system, with API tables, usage
-patterns, full code examples, integration recipes, and appendices including a full glossary,
-lifecycle sequence diagram, system dependency map, and API quick index.
-
----
+MANUAL.md is the comprehensive reference organized by system, covering all 32 API tiers with detailed tables, usage patterns, integration recipes, and appendices. It is the document to consult when you need exact API signatures, behavioral guarantees, or advanced composition patterns.
 
 ## Installation
 
-Install from the repository root (local editable install, no binary compilation step):
+Install from the repository root as a local editable package (no binary dependency compilation required):
 
-```
+```bash
 python -m pip install -e . --no-deps
 ```
 
-Requires `pygame` and `numpy`. `numpy` is used internally for pixel buffer operations via
-`PixelArray`. Both are listed in `requirements-ci.txt`.
+gui_do requires `pygame` and `numpy`. Install both before or after the above command:
 
----
+```bash
+python -m pip install pygame numpy
+```
+
+Verify the install:
+
+```bash
+python -c "import gui_do; print(gui_do.__version__)"
+```
 
 ## Project Structure
 
 ```
-gui_do/          — The library. Public API surface is gui_do/__init__.py (32 tiers).
-demo_features/   — Runnable reference patterns. Each subfolder is one feature package.
-tests/           — Contract and behavioral tests covering all major systems.
-docs/            — Architecture boundary and runtime operating contracts.
-TUTORIAL.md      — Step-by-step tutorial for new developers.
-MANUAL.md        — Complete developer reference manual.
+gui_do/           Library source — 32 API tiers exported from gui_do/__init__.py
+demo_features/    Runnable reference patterns — one folder per feature or scene cluster
+tests/            Contract and behavioral test suite
+docs/             Architecture boundary and runtime operating contracts
+TUTORIAL.md       Step-by-step tutorial — start here
+MANUAL.md         Complete system reference
 ```
 
-`demo_features/` follows the established folder-per-feature convention: each subfolder is a
-Python package whose `__init__.py` is the sole public surface. The framework's bootstrap reads
-feature specs — it never imports from internal submodules. Internal reorganization has zero
-effect on how features are registered.
-
----
+Each folder under `demo_features/` is a self-contained feature package. Its `__init__.py` is the sole public surface used by the bootstrap; file organization inside the folder is free to change without affecting any external code. This is the established layout pattern for gui_do applications.
 
 ## See Also
 
-- [TUTORIAL.md](TUTORIAL.md) — Learn gui_do by building a complete project from scratch
-- [MANUAL.md](MANUAL.md) — Full system reference, API tables, and integration recipes
-- [`demo_features/`](demo_features/) — Living reference patterns: Game of Life, Mandelbrot,
-  bouncing shapes, control showcase, and systems demonstration
-- [`docs/`](docs/) — Architecture boundary specifications and runtime operating contracts
-- [`gui_do/__init__.py`](gui_do/__init__.py) — Authoritative public API source (32 tiers)
+- [TUTORIAL.md](TUTORIAL.md) — primary learning resource; builds a complete application from zero
+- [MANUAL.md](MANUAL.md) — comprehensive system and API reference
+- [demo_features/](demo_features/) — living reference patterns showing features, scenes, scheduling, graphics, accessibility, and more
+- [docs/](docs/) — architecture boundary contracts, runtime operating contracts, and public API stability policy
+- [gui_do/\_\_init\_\_.py](gui_do/__init__.py) — authoritative public API surface (all 32 tiers)
