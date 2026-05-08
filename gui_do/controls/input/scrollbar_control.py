@@ -327,7 +327,7 @@ class ScrollbarControl(_AxisDragControlBase):
         track_size = (self.rect.width, self.rect.height)
         handle_size = (handle.width, handle.height)
         if self._track_visuals is None or self._track_visuals_size != track_size:
-            self._track_visuals = factory.build_frame_visuals(track)
+            self._track_visuals = factory.build_frame_visuals(self.rect)
             self._track_visuals_size = track_size
         if self._handle_visuals is None or self._handle_visuals_size != handle_size:
             self._handle_visuals = factory.build_frame_visuals(handle)
