@@ -1,4 +1,5 @@
 """Tests for ErrorBoundary and DrawContext/DrawPhase."""
+import logging
 import unittest
 
 import pygame
@@ -107,6 +108,15 @@ class TestErrorBoundaryRecover(unittest.TestCase):
 
 
 class TestErrorBoundaryUpdateError(unittest.TestCase):
+    def setUp(self):
+        """Suppress error logging for tests that intentionally trigger exceptions."""
+        self._log_level = logging.getLogger("gui_do.errors").level
+        logging.getLogger("gui_do.errors").setLevel(logging.CRITICAL)
+
+    def tearDown(self):
+        """Restore error logging after test."""
+        logging.getLogger("gui_do.errors").setLevel(self._log_level)
+
     def test_update_catches_exception(self):
         child = _BrokenNode()
         eb = ErrorBoundary(child)
