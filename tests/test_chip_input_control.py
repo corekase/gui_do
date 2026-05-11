@@ -67,6 +67,33 @@ class TestChipInputControlKeyboard(unittest.TestCase):
         self.assertEqual(["alpha"], control.values)
         self.assertEqual("", control.edit_text)
 
+    def test_focus_manager_space_keydown_consumed_and_textinput_inserts_space(self):
+        scene = Scene()
+        control = ChipInputControl("chips", Rect(0, 0, 300, 36))
+        scene.add(control)
+
+        app = _StubApp(scene=scene)
+        focus = FocusManager()
+        app.focus = focus
+        focus.set_focus(control)
+
+        key_event = GuiEvent(
+            kind=EventType.KEY_DOWN,
+            type=pygame.KEYDOWN,
+            key=pygame.K_SPACE,
+            mod=0,
+        )
+        text_event = GuiEvent(
+            kind=EventType.TEXT_INPUT,
+            type=pygame.TEXTINPUT,
+            text=" ",
+        )
+
+        self.assertTrue(focus.route_key_event(key_event, app))
+        self.assertEqual("", control.edit_text)
+        self.assertTrue(control.handle_event(text_event, app))
+        self.assertEqual(" ", control.edit_text)
+
     def test_main_enter_commits_edit_text(self):
         control = self._focused_chip_input()
         app = _StubApp()

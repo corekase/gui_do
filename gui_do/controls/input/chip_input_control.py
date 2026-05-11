@@ -166,6 +166,11 @@ class ChipInputControl(UiNode):
                     self._edit_text = ""
                     self.invalidate()
                 return True
+            # Consume space on key-down so it does not propagate to global or
+            # scene-level key handlers; actual character insertion occurs via
+            # the corresponding TEXT_INPUT event.
+            if key == pygame.K_SPACE:
+                return True
             if key == pygame.K_BACKSPACE:
                 if self._edit_text:
                     self._edit_text = self._edit_text[:-1]
