@@ -120,6 +120,15 @@ class DatePickerControl(UiNode):
             if changed:
                 self.invalidate()
 
+    def on_focus_changed(self, is_focused: bool) -> None:
+        if is_focused:
+            return
+        changed = self._open or self._cal_hovered_day is not None
+        self._open = False
+        self._cal_hovered_day = None
+        if changed:
+            self.invalidate()
+
     def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
         self._btn_hovered = False
         self._field_hovered = False
