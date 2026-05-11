@@ -280,14 +280,30 @@ class Scene:
         return (top_window is not None, best)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
+        # Draw all non-focused nodes first, then draw focused node last to ensure it's on top.
+        focused_node = None
+        if app is not None:
+            focused_node = app.focus.focused_node if hasattr(app, 'focus') else None
+
         for node in self.nodes:
             if not node.visible:
+                continue
+
+            # Skip the focused node for now; we'll draw it last
+            if node is focused_node:
                 continue
 
             node.draw_screen_phase(surface, theme, app=app)
             if app is not None:
                 app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)
             node.draw_window_phase(surface, theme, app=app)
+
+        # Draw focused node last so it appears on top
+        if focused_node is not None and focused_node.visible:
+            focused_node.draw_screen_phase(surface, theme, app=app)
+            if app is not None:
+                app.focus_visualizer.draw_hint_for_scene_root(surface, theme, focused_node)
+            focused_node.draw_window_phase(surface, theme, app=app)
 
         # Window focus hint (Ctrl+Tab cycling) is drawn after all windows so
         # it sits on top of window content and chrome.

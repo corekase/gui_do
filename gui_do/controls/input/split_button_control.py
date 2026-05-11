@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from ...app.gui_application import GuiApplication
     from ...theme.color_theme import ColorTheme
 
+
+_OVERLAY_ID_PREFIX = "__split_button_overlay__"
+
 # Ratios relative to the default font size.
 _FONT_SCALE: float = 1.0           # button label text size ratio
 _ARROW_BTN_RATIO: float = 1.125   # arrow button width as fraction of font size
@@ -68,7 +71,7 @@ class SplitButtonControl(UiNode):
         self._arrow_hovered = False
         self._main_pressed = False
         self._dropdown_open = False
-        self._dropdown_hovered_idx = -1
+        self._last_app = None
         self.tab_index = 0
 
     # ------------------------------------------------------------------
@@ -89,10 +92,27 @@ class SplitButtonControl(UiNode):
         self._dropdown_open = False
         self.invalidate()
 
-    def close_dropdown(self) -> None:
-        if self._dropdown_open:
-            self._dropdown_open = False
-            self.invalidate()
+    def open_dropdown(self, app: "GuiApplication") -> None:
+        if self._dropdown_open or not self._options:
+            return
+        self._last_app = app
+        self._dropdown_open = True
+        self._show_overlay(app)
+        self.invalidate()
+
+    def close_dropdown(self, app: "GuiApplication" = None) -> None:
+        if app is not None:
+            self._last_app = app
+        app_ref = app if app is not None else self._last_app
+        if not self._dropdown_open:
+            if app_ref is not None:
+                app_ref.overlay.hide(self._overlay_id())
+            return
+        self._dropdown_open = False
+        if app_ref is not None:
+            overlay_id = self._overlay_id()
+            app_ref.overlay.hide(overlay_id)
+        self.invalidate()
 
     # ------------------------------------------------------------------
     # UiNode overrides
@@ -109,45 +129,47 @@ class SplitButtonControl(UiNode):
             if changed:
                 self.invalidate()
 
+    def on_focus_changed(self, is_focused: bool) -> None:
+        if is_focused:
+            return
+        self._main_pressed = False
+        self._main_hovered = False
+        self._arrow_hovered = False
+        self.close_dropdown()
+
     def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
         self._main_hovered = False
         self._arrow_hovered = False
         self._main_pressed = False
-        self._dropdown_open = False
+        self.close_dropdown()
         super()._on_enabled_changed(old_enabled, new_enabled)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         self._main_hovered = False
         self._arrow_hovered = False
         self._main_pressed = False
-        self._dropdown_open = False
+        self.close_dropdown()
         super()._on_visibility_changed(old_visible, new_visible)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        self._last_app = app
         if not self.visible or not self.enabled:
             self._main_hovered = False
             self._arrow_hovered = False
             self._main_pressed = False
-            self._dropdown_open = False
             return False
 
         fonts = theme.fonts if (theme is not None and hasattr(theme, "fonts")) else None
         arrow_w = self._arrow_btn_w(fonts)
         main_rect, arrow_rect = self._split_rects(arrow_w)
-        dropdown_rect = self._dropdown_rect(arrow_w, fonts)
         pos = event.pos
 
         if event.is_mouse_motion() and pos is not None:
             prev_main = self._main_hovered
             prev_arrow = self._arrow_hovered
-            prev_dd = self._dropdown_hovered_idx
             self._main_hovered = main_rect.collidepoint(pos)
             self._arrow_hovered = arrow_rect.collidepoint(pos)
-            if self._dropdown_open and dropdown_rect is not None:
-                self._dropdown_hovered_idx = self._dropdown_index_at(pos, dropdown_rect, fonts)
-            else:
-                self._dropdown_hovered_idx = -1
-            if (prev_main, prev_arrow, prev_dd) != (self._main_hovered, self._arrow_hovered, self._dropdown_hovered_idx):
+            if (prev_main, prev_arrow) != (self._main_hovered, self._arrow_hovered):
                 self.invalidate()
             return False
 
@@ -157,21 +179,13 @@ class SplitButtonControl(UiNode):
                 self.invalidate()
                 return True
             if arrow_rect.collidepoint(pos):
-                self._dropdown_open = not self._dropdown_open
+                if self._dropdown_open:
+                    self.close_dropdown(app)
+                else:
+                    self.open_dropdown(app)
                 self.invalidate()
                 return True
-            if self._dropdown_open and dropdown_rect and dropdown_rect.collidepoint(pos):
-                idx = self._dropdown_index_at(pos, dropdown_rect, fonts)
-                if idx >= 0:
-                    opt = self._options[idx]
-                    if opt.enabled and opt.on_click:
-                        opt.on_click()
-                    self._dropdown_open = False
-                    self.invalidate()
-                    return True
-            if self._dropdown_open:
-                self._dropdown_open = False
-                self.invalidate()
+            # Any click outside the button returns False to allow default overlay handling
             return False
 
         if event.is_mouse_up(1) and pos is not None:
@@ -191,8 +205,6 @@ class SplitButtonControl(UiNode):
         fonts = theme.fonts
         font_size = fonts.scaled_size(_FONT_SCALE)
         arrow_w = self._arrow_btn_w(fonts)
-        row_h = max(20, fonts.scaled_size(_DROPDOWN_ROW_H_RATIO))
-        pad_x = max(4, fonts.scaled_size(_DROPDOWN_PAD_X_RATIO))
         main_rect, arrow_rect = self._split_rects(arrow_w)
 
         # Main button
@@ -233,30 +245,6 @@ class SplitButtonControl(UiNode):
         pts = [(cx - chev, cy - chev // 2), (cx + chev, cy - chev // 2), (cx, cy + chev)]
         pygame.draw.polygon(surface, chev_color, pts)
 
-        # Focus ring
-        if self._focused:
-            full_rect = Rect(self.rect.left, self.rect.top, self.rect.width, self.rect.height)
-            pygame.draw.rect(surface, theme.highlight, full_rect, 2)
-
-        # Dropdown panel
-        if self._dropdown_open and self._options:
-            dr = self._dropdown_rect(arrow_w, fonts)
-            if dr:
-                pygame.draw.rect(surface, theme.background, dr)
-                pygame.draw.rect(surface, theme.dark, dr, 1)
-                for idx, opt in enumerate(self._options):
-                    row = Rect(dr.left, dr.top + idx * row_h, dr.width, row_h)
-                    if idx == self._dropdown_hovered_idx and opt.enabled:
-                        pygame.draw.rect(surface, theme.highlight, row)
-                    opt_color = theme.dark if not opt.enabled else theme.text
-                    opt_surf = theme.render_text(
-                        opt.label, role=self._font_role, shadow=False,
-                        size=font_size, color=opt_color,
-                    )
-                    surface.blit(opt_surf, (row.left + pad_x, row.top + (row.height - opt_surf.get_height()) // 2))
-                    if idx < len(self._options) - 1:
-                        pygame.draw.line(surface, theme.medium, (row.left + 4, row.bottom), (row.right - 4, row.bottom))
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -273,20 +261,62 @@ class SplitButtonControl(UiNode):
         arrow = Rect(r.left + main_w, r.top, arrow_w, r.height)
         return main, arrow
 
-    def _dropdown_rect(self, arrow_w: int, fonts) -> Optional[Rect]:
-        if not self._options or fonts is None:
-            return None
-        row_h = max(20, fonts.scaled_size(_DROPDOWN_ROW_H_RATIO))
-        r = self.rect
-        dd_h = len(self._options) * row_h
-        return Rect(r.left, r.bottom, r.width, dd_h)
+    def _overlay_id(self) -> str:
+        return f"{_OVERLAY_ID_PREFIX}{self.control_id}"
 
-    def _dropdown_index_at(self, pos: tuple, dropdown_rect: Rect, fonts) -> int:
-        if not dropdown_rect.collidepoint(pos) or fonts is None:
-            return -1
-        row_h = max(20, fonts.scaled_size(_DROPDOWN_ROW_H_RATIO))
-        rel_y = pos[1] - dropdown_rect.top
-        idx = rel_y // row_h
+    def _show_overlay(self, app: "GuiApplication") -> None:
+        from ..composite.overlay_panel_control import OverlayPanelControl
+        from ..data.list_view_control import ListViewControl, ListItem
+
+        row_height = 28
+        n_options = len(self._options)
+        panel_height = n_options * row_height
+        panel_width = self.rect.width
+
+        pos = app.overlay.anchor_position(
+            (panel_width, panel_height),
+            self.rect,
+            side="below",
+            align="left",
+        )
+        panel_rect = Rect(pos[0], pos[1], panel_width, panel_height)
+        panel = OverlayPanelControl(self._overlay_id() + "_panel", panel_rect, draw_background=False)
+
+        list_items = [
+            ListItem(label=opt.label, value=opt.label, enabled=opt.enabled, data=opt)
+            for opt in self._options
+        ]
+        list_ctrl = ListViewControl(
+            self._overlay_id() + "_list",
+            Rect(panel_rect.left, panel_rect.top, panel_width, panel_height),
+            list_items,
+            row_height=row_height,
+            selected_index=-1,
+            on_select=lambda idx, item: self._on_list_select(idx, app),
+        )
+        # Clear selection for dropdown usage (no pre-selected items, despite invariant auto-selecting)
+        list_ctrl._selected_indices = []
+        list_ctrl._selected_set = set()
+        panel.children.append(list_ctrl)
+        list_ctrl.parent = panel
+
+        app.overlay.show(
+            self._overlay_id(),
+            panel,
+            dismiss_on_outside_click=True,
+            dismiss_on_escape=True,
+            dismiss_on_focus_lost=True,
+            focus_owner_id=self.control_id,
+            on_dismiss=lambda: self._on_overlay_dismiss(),
+        )
+
+    def _on_list_select(self, idx: int, app: "GuiApplication") -> None:
         if 0 <= idx < len(self._options):
-            return idx
-        return -1
+            opt = self._options[idx]
+            if opt.enabled and opt.on_click:
+                opt.on_click()
+        self.close_dropdown(app)
+
+    def _on_overlay_dismiss(self) -> None:
+        self._dropdown_open = False
+        self.invalidate()

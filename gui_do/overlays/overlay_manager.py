@@ -21,6 +21,8 @@ class OverlayRecord:
     control: "OverlayPanelControl"
     dismiss_on_outside_click: bool = True
     dismiss_on_escape: bool = True
+    dismiss_on_focus_lost: bool = False
+    focus_owner_id: Optional[str] = None
     consume_unhandled_keys: bool = False
     on_dismiss: Optional[Callable[[], None]] = None
 
@@ -52,6 +54,8 @@ class OverlayManager:
         *,
         dismiss_on_outside_click: bool = True,
         dismiss_on_escape: bool = True,
+        dismiss_on_focus_lost: bool = False,
+        focus_owner_id: Optional[str] = None,
         consume_unhandled_keys: bool = False,
         on_dismiss: Optional[Callable[[], None]] = None,
     ) -> OverlayHandle:
@@ -62,6 +66,8 @@ class OverlayManager:
             control=control,
             dismiss_on_outside_click=dismiss_on_outside_click,
             dismiss_on_escape=dismiss_on_escape,
+            dismiss_on_focus_lost=dismiss_on_focus_lost,
+            focus_owner_id=focus_owner_id,
             consume_unhandled_keys=consume_unhandled_keys,
             on_dismiss=on_dismiss,
         )
@@ -104,6 +110,22 @@ class OverlayManager:
 
     def overlay_count(self) -> int:
         return len(self._records)
+
+    def dismiss_for_focus(self, focused_control_id: Optional[str]) -> int:
+        """Dismiss overlays that opt into blur behavior when focus moves away."""
+        owner_ids: list[str] = []
+        for rec in self._records:
+            if not rec.dismiss_on_focus_lost:
+                continue
+            if not rec.focus_owner_id:
+                continue
+            if rec.focus_owner_id != focused_control_id:
+                owner_ids.append(rec.owner_id)
+        dismissed = 0
+        for owner_id in owner_ids:
+            if self.hide(owner_id):
+                dismissed += 1
+        return dismissed
 
     def point_in_any_overlay(self, pos: tuple) -> bool:
         """Return True if pos is inside any registered overlay control's rect."""

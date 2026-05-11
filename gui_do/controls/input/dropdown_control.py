@@ -172,6 +172,8 @@ class DropdownControl(UiNode):
             panel,
             dismiss_on_outside_click=True,
             dismiss_on_escape=True,
+            dismiss_on_focus_lost=True,
+            focus_owner_id=self.control_id,
             on_dismiss=lambda: self._on_overlay_dismiss(),
         )
 

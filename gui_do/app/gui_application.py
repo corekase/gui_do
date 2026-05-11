@@ -104,6 +104,7 @@ class GuiApplication:
         self.keyboard = KeyboardManager()
         self.focus_visualizer = FocusVisualizer(self)
         self.focus = FocusManager()
+        self.focus.add_focus_change_listener(self._on_focus_changed)
         self.window_focus = WindowFocusManager()
         self.task_panel_focus = TaskPanelFocusManager()
         self._last_active_window = None
@@ -162,6 +163,12 @@ class GuiApplication:
         # per-control invalidate() calls register dirty rects immediately.
         self.invalidation.set_screen_size(self.surface.get_size())
         self.scene.set_invalidation_tracker(self.invalidation)
+
+    def _on_focus_changed(self, _previous, current) -> None:
+        focused_id = current.control_id if current is not None else None
+        dismissed = self.overlay.dismiss_for_focus(focused_id)
+        if dismissed:
+            self.invalidation.invalidate_all()
 
     @property
     def dialogs(self) -> "DialogManager":

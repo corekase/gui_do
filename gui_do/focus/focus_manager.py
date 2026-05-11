@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import pygame
 
@@ -31,6 +31,18 @@ class FocusManager:
         self._scope_focus_memory = {"__screen__": None}
         # Stack of root nodes that constrain Tab traversal (focus scopes).
         self._scope_stack: List = []
+        self._focus_change_listeners: List[Callable[[Optional[UiNode], Optional[UiNode]], None]] = []
+
+    def add_focus_change_listener(self, listener: Callable[[Optional[UiNode], Optional[UiNode]], None]) -> None:
+        if listener in self._focus_change_listeners:
+            return
+        self._focus_change_listeners.append(listener)
+
+    def remove_focus_change_listener(self, listener: Callable[[Optional[UiNode], Optional[UiNode]], None]) -> None:
+        try:
+            self._focus_change_listeners.remove(listener)
+        except ValueError:
+            return
 
     @property
     def focused_node(self):
@@ -65,6 +77,12 @@ class FocusManager:
             node._set_focused(True)
             scope_key = self._scope_key_for_window(self._find_ancestor_window(node))
             self._scope_focus_memory[scope_key] = node
+        if self._focus_change_listeners:
+            for listener in tuple(self._focus_change_listeners):
+                try:
+                    listener(previous, node)
+                except Exception:
+                    pass
 
     def show_keyboard_hint_for_current_focus(self) -> None:
         """Expose hint for existing focus due to keyboard interaction."""

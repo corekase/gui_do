@@ -59,6 +59,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         self._font_role: str = font_role
         self._selected_indices: List[int] = []
         self._selected_set: set = set()
+        self._hovered_index: int = -1
         self.tab_index = 0
         self._draw_font_role: str = "list_view.row"
 
@@ -335,15 +336,48 @@ class ListViewControl(_VirtualizedScrollListBase):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled and self.tab_index >= 0
 
+    def reconcile_hover(self, wants_hover: bool) -> None:
+        """Clear hover state when hovering ends."""
+        if not wants_hover and self._hovered_index >= 0:
+            self._hovered_index = -1
+            self.invalidate()
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             if self._scrollbar_dragging:
                 end_thumb_drag(app, self.control_id)
             self._scrollbar_dragging = False
+            self._hovered_index = -1
+            self.invalidate()
             return False
 
         event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+
+        # Update hover state based on current pointer position (do this on every event)
+        # But only clear hover if pointer is definitively outside the rect
+        if isinstance(pointer, tuple) and len(pointer) == 2:
+            if self.rect.collidepoint(pointer):
+                content_rect = self._content_rect()
+                if content_rect is not None and content_rect.collidepoint(pointer):
+                    rel_y = pointer[1] - self.rect.y
+                    idx = self._row_at_y(rel_y)
+                    # Bounds-check the index: only valid if it's within the items list
+                    if not (0 <= idx < len(self._items)):
+                        idx = -1
+                    if idx != self._hovered_index:
+                        self._hovered_index = idx
+                        self.invalidate()
+                else:
+                    # Pointer is in rect but not in content (e.g., over scrollbar)
+                    if self._hovered_index >= 0:
+                        self._hovered_index = -1
+                        self.invalidate()
+            else:
+                # Pointer is definitely outside the rect
+                if self._hovered_index >= 0:
+                    self._hovered_index = -1
+                    self.invalidate()
 
         if event.kind == EventType.MOUSE_MOTION and self._scrollbar_dragging:
             pointer_pos = captured_pointer_pos(app, self.control_id, "y")
@@ -495,7 +529,11 @@ class ListViewControl(_VirtualizedScrollListBase):
             row_y = r.y + i * self._row_height - self._scroll_offset
             row_rect = Rect(content_rect.x, row_y, content_rect.width, self._row_height)
 
-            if i in self._selected_set:
+            # Draw hover highlight if this row is hovered (only one row at a time)
+            if i == self._hovered_index:
+                pygame.draw.rect(surface, theme.highlight, row_rect)
+            # Draw selection highlight (but not if hovered)
+            elif i in self._selected_set:
                 pygame.draw.rect(surface, theme.highlight, row_rect)
 
             text_color = theme.text
