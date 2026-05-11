@@ -5,6 +5,7 @@ import pygame
 from pygame import Rect
 
 from gui_do.controls.input.text_area_control import TextAreaControl
+from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.graphics.debug_overlay import DebugOverlay
 from gui_do.graphics.shape_renderer import ShapeRenderer
 
@@ -111,6 +112,35 @@ class TestTextAreaControlSelectAll(unittest.TestCase):
         start, end = ta.selection_range
         self.assertEqual(0, start)
         self.assertEqual(5, end)
+
+
+class TestTextAreaControlFocusedKeyConsumption(unittest.TestCase):
+    @staticmethod
+    def _key_event(key: int, mod: int = 0) -> GuiEvent:
+        return GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=key, mod=mod)
+
+    def test_non_traversal_key_consumed_when_focused(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="abc")
+        ta._focused = True
+
+        consumed = ta.handle_event(self._key_event(pygame.K_SPACE), app=None)
+
+        self.assertTrue(consumed)
+
+    def test_tab_traversal_keys_not_consumed_when_focused(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="abc")
+        ta._focused = True
+
+        traversal_mods = (
+            0,
+            pygame.KMOD_SHIFT,
+            pygame.KMOD_CTRL,
+            pygame.KMOD_CTRL | pygame.KMOD_SHIFT,
+        )
+        for mod in traversal_mods:
+            with self.subTest(mod=mod):
+                consumed = ta.handle_event(self._key_event(pygame.K_TAB, mod=mod), app=None)
+                self.assertFalse(consumed)
 
 
 # ===========================================================================

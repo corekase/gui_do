@@ -236,7 +236,10 @@ class TextAreaControl(AbstractTextInputControl):
         if event.kind == EventType.KEY_DOWN:
             if not self._focused:
                 return False
-            return self._handle_key(event.key, event.mod, app)
+            if self._is_focus_traversal_key(event.key, event.mod):
+                return False
+            handled = self._handle_key(event.key, event.mod, app)
+            return handled or True
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             if not self.rect.collidepoint(event.pos):
@@ -279,6 +282,14 @@ class TextAreaControl(AbstractTextInputControl):
             return True
 
         return False
+
+    @staticmethod
+    def _is_focus_traversal_key(key: int, mod: int) -> bool:
+        if key != pygame.K_TAB:
+            return False
+        if bool(mod & pygame.KMOD_ALT) or bool(mod & pygame.KMOD_META):
+            return False
+        return True
 
     # ------------------------------------------------------------------
     # Key handling

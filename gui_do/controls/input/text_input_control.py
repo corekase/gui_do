@@ -252,9 +252,12 @@ class TextInputControl(AbstractTextInputControl):
                 return False
             key = event.key
             mod = event.mod
+            if self._is_focus_traversal_key(key, mod):
+                return False
             ctrl = bool(mod & pygame.KMOD_CTRL)
             shift = bool(mod & pygame.KMOD_SHIFT)
-            return self._handle_key(key, ctrl, shift, app, theme=theme)
+            handled = self._handle_key(key, ctrl, shift, app, theme=theme)
+            return handled or True
 
         # Mouse events
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
@@ -290,6 +293,14 @@ class TextInputControl(AbstractTextInputControl):
                 return True
 
         return False
+
+    @staticmethod
+    def _is_focus_traversal_key(key: int, mod: int) -> bool:
+        if key != pygame.K_TAB:
+            return False
+        if bool(mod & pygame.KMOD_ALT) or bool(mod & pygame.KMOD_META):
+            return False
+        return True
 
     def _handle_key(self, key: int, ctrl: bool, shift: bool, app: "GuiApplication", theme=None) -> bool:
         if ctrl:

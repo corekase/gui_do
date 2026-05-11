@@ -8,6 +8,7 @@ from gui_do.controls.data.data_grid_control import (
     DataGridControl, GridColumn, GridRow
 )
 from gui_do.controls.input.text_input_control import TextInputControl
+from gui_do.events.gui_event import EventType, GuiEvent
 
 pygame.init()
 
@@ -282,6 +283,35 @@ class TestTextInputControlSelectAll(unittest.TestCase):
         ti.select_all()
         self.assertEqual(0, ti._sel_anchor)
         self.assertEqual(3, ti._sel_active)
+
+
+class TestTextInputControlFocusedKeyConsumption(unittest.TestCase):
+    @staticmethod
+    def _key_event(key: int, mod: int = 0) -> GuiEvent:
+        return GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=key, mod=mod)
+
+    def test_non_traversal_key_consumed_when_focused(self):
+        ti = TextInputControl("ti", Rect(0, 0, 300, 30), value="abc")
+        ti._focused = True
+
+        consumed = ti.handle_event(self._key_event(pygame.K_SPACE), app=None)
+
+        self.assertTrue(consumed)
+
+    def test_tab_traversal_keys_not_consumed_when_focused(self):
+        ti = TextInputControl("ti", Rect(0, 0, 300, 30), value="abc")
+        ti._focused = True
+
+        traversal_mods = (
+            0,
+            pygame.KMOD_SHIFT,
+            pygame.KMOD_CTRL,
+            pygame.KMOD_CTRL | pygame.KMOD_SHIFT,
+        )
+        for mod in traversal_mods:
+            with self.subTest(mod=mod):
+                consumed = ti.handle_event(self._key_event(pygame.K_TAB, mod=mod), app=None)
+                self.assertFalse(consumed)
 
 
 if __name__ == "__main__":
