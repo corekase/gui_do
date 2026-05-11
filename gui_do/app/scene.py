@@ -284,7 +284,7 @@ class Scene:
             if not node.visible:
                 continue
 
-            node.draw_screen_phase(surface, theme)
+            node.draw_screen_phase(surface, theme, app=app)
             if app is not None:
                 app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)
             node.draw_window_phase(surface, theme, app=app)

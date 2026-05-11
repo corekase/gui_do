@@ -108,7 +108,7 @@ class _CommandPalettePanel(OverlayPanelControl):
 
         return result
 
-    def draw_screen_phase(self, surface: "pygame.Surface", theme) -> None:
+    def draw_screen_phase(self, surface: "pygame.Surface", theme, app=None) -> None:
         pygame.draw.rect(surface, theme.medium, self.rect)
         for child in self.children:
             if child.visible:

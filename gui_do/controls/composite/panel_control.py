@@ -409,8 +409,12 @@ class PanelControl(UiNode):
         self.draw_screen_phase(surface, theme)
         self.draw_window_phase(surface, theme)
 
-    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        """Draw panel background and non-window children (screen lifecycle layer)."""
+    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
+        """Draw panel background and non-window children (screen lifecycle layer).
+
+        The focused control is drawn last so that any content it draws outside its
+        assigned rect stays on top of other controls.
+        """
         if self.draw_background:
             factory = theme.graphics_factory
             visual_size = (self.rect.width, self.rect.height)
@@ -425,19 +429,56 @@ class PanelControl(UiNode):
                 hovered=False,
             )
             surface.blit(selected, self.rect)
+
+        # Identify the focused child (if any) to draw it last
+        focused_child = None
+        if app is not None and hasattr(app, 'focus') and app.focus is not None:
+            focused_node = app.focus.focused_node
+            if focused_node is not None and focused_node in self.children and not self._is_window_like(focused_node):
+                focused_child = focused_node
+
+        # Draw non-focused, non-window children
         for child in self.children:
             if self._is_window_like(child):
+                continue
+            if child is focused_child:
+                # Skip focused child for now; draw it last
                 continue
             if child.visible:
                 child.draw(surface, theme)
 
+        # Draw the focused child last so its extra rendering stays on top
+        if focused_child is not None and focused_child.visible:
+            focused_child.draw(surface, theme)
+
     def draw_window_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
-        """Draw window children (window lifecycle layer), optionally with per-window hints."""
+        """Draw window children (window lifecycle layer), optionally with per-window hints.
+
+        The focused window control is drawn last so that any content it draws outside its
+        assigned rect stays on top of other windows.
+        """
+        # Identify the focused window child (if any) to draw it last
+        focused_window = None
+        if app is not None and hasattr(app, 'focus') and app.focus is not None:
+            focused_node = app.focus.focused_node
+            if focused_node is not None and focused_node in self.children and self._is_window_like(focused_node):
+                focused_window = focused_node
+
+        # Draw non-focused window children
         for child in self.children:
             if not self._is_window_like(child):
+                continue
+            if child is focused_window:
+                # Skip focused window for now; draw it last
                 continue
             if not child.visible:
                 continue
             child.draw(surface, theme)
             if app is not None:
                 app.focus_visualizer.draw_hint_for_window(surface, theme, child)
+
+        # Draw the focused window last so its extra rendering stays on top
+        if focused_window is not None and focused_window.visible:
+            focused_window.draw(surface, theme)
+            if app is not None:
+                app.focus_visualizer.draw_hint_for_window(surface, theme, focused_window)

@@ -270,11 +270,32 @@ class UiNode:
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool, theme=None) -> bool:
         children = self.children
+
+        # Get the focused node to prioritize event handling for focused controls
+        # that may draw outside their rect. The focused control is handled first so
+        # it gets first chance at events in its overdrawn area.
+        focused_child = None
+        if hasattr(app, 'focus') and app.focus is not None:
+            focused_node = app.focus.focused_node
+            if focused_node is not None and focused_node in children:
+                focused_child = focused_node
+
+        # If there's a focused child, handle it first for event priority
+        if focused_child is not None and focused_child.visible and focused_child.enabled:
+            if self._dispatch_child_event(focused_child, event, app, theme=theme):
+                return True
+            if event.propagation_stopped:
+                return True
+
+        # Then dispatch to remaining children in normal order
         # Reverse dispatch iterates children in reverse without copying:
         # reversed() on a list returns a list_reverseiterator with no allocation.
         # Forward dispatch iterates the live list (capture-phase handlers rarely mutate children).
         iterable = reversed(children) if reverse else children
         for child in iterable:
+            # Skip the focused child since we already handled it
+            if child is focused_child:
+                continue
             if not (child.visible and child.enabled):
                 continue
             if self._dispatch_child_event(child, event, app, theme=theme):
@@ -405,7 +426,7 @@ class UiNode:
         """No-op base. Returns False. Activatable controls override this."""
         return False
 
-    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
         """Screen-phase draw. Default calls draw(). PanelControl overrides for split-phase rendering."""
         self.draw(surface, theme)
 

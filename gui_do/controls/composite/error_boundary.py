@@ -148,13 +148,13 @@ class ErrorBoundary(UiNode):
             self._handle_error(exc, operation="draw")
             self._draw_placeholder(surface)
 
-    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app=None) -> None:
         self.rect = Rect(self._child.rect)
         if self._error is not None:
             self._draw_placeholder(surface)
             return
         try:
-            self._child.draw_screen_phase(surface, theme)
+            self._child.draw_screen_phase(surface, theme, app=app)
         except Exception as exc:
             self._handle_error(exc, operation="draw_screen_phase")
             self._draw_placeholder(surface)
