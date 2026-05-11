@@ -392,6 +392,9 @@ class FocusManager:
         focused = self._focused_node
         if focused is None:
             return
+        if not self._is_node_in_scene(focused, scene):
+            self.clear_focus()
+            return
         if not self._is_focus_window_context_valid(focused):
             self.clear_focus()
             return

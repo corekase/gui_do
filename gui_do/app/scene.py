@@ -284,6 +284,8 @@ class Scene:
         focused_node = None
         if app is not None:
             focused_node = app.focus.focused_node if hasattr(app, 'focus') else None
+            if focused_node is not None and not self.contains(focused_node):
+                focused_node = None
 
         for node in self.nodes:
             if not node.visible:

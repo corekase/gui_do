@@ -1,14 +1,24 @@
 import unittest
+from types import MethodType
 
 import pygame
 from pygame import Rect
 
 from gui_do.app.gui_application import GuiApplication
+from gui_do.controls.base.ui_node import UiNode
 from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.input.button_control import ButtonControl
 
 
 pygame.init()
+
+
+class _FocusableProbeNode(UiNode):
+    def accepts_focus(self) -> bool:
+        return True
+
+    def draw(self, _surface, _theme) -> None:
+        return None
 
 
 class TestTaskPanelSceneSwitchHoverReconcile(unittest.TestCase):
@@ -49,6 +59,32 @@ class TestTaskPanelSceneSwitchHoverReconcile(unittest.TestCase):
 
         self.assertTrue(panel_b._hovered)
         self.assertTrue(button_b.hovered)
+
+    def test_switch_scene_does_not_draw_focused_control_from_outgoing_scene(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        scene_a = app.create_scene("scene_a")
+        scene_b = app.create_scene("scene_b")
+        button_a = scene_a.add(_FocusableProbeNode("button_a", Rect(8, 8, 80, 24)))
+        scene_b.add(_FocusableProbeNode("button_b", Rect(8, 8, 80, 24)))
+
+        app.switch_scene("scene_a")
+        app.focus.set_focus(button_a)
+
+        draw_calls = []
+        original_draw_screen_phase = button_a.draw_screen_phase
+
+        def _record_draw(self, surface, theme, app=None):
+            draw_calls.append(1)
+            return original_draw_screen_phase(surface, theme, app=app)
+
+        button_a.draw_screen_phase = MethodType(_record_draw, button_a)
+
+        app.switch_scene("scene_b")
+        app.update(1.0 / 60.0)
+        app.draw()
+
+        self.assertIsNone(app.focus.focused_node)
+        self.assertEqual([], draw_calls)
 
 
 if __name__ == "__main__":

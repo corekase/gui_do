@@ -14,13 +14,14 @@ if TYPE_CHECKING:
     from ...theme.color_theme import ColorTheme
 
 # Ratios relative to the default font size.
-_FONT_SCALE: float = 1.0            # chip label and input text size ratio
+_FONT_SCALE: float = 1.0            # chip label size ratio
 _CHIP_PAD_X_RATIO: float = 0.375   # horizontal padding inside each chip
 _CHIP_PAD_Y_RATIO: float = 0.1875  # vertical padding inside each chip (tight)
 _CHIP_GAP: int = 4                   # gap between chips (px, not scaled)
 _CHIP_CLOSE_RATIO: float = 0.875    # close-button width ratio (relative to font size)
 _CHIP_CORNER: int = 4               # border-radius for chip rect (px, not scaled)
 _INPUT_MIN_W_RATIO: float = 3.75   # minimum input field width ratio
+_INPUT_FONT_SCALE: float = _FONT_SCALE  # keep typed text size aligned with chip labels
 
 
 class ChipInputControl(UiNode):
@@ -59,6 +60,9 @@ class ChipInputControl(UiNode):
         self._on_change = on_change
         self._font_role = font_role
         self._edit_text: str = ""
+        # Route Enter keys through handle_event instead of generic focus
+        # activation so both main Enter and keypad Enter commit chips.
+        self.key_activatable = False
         self._cursor_visible = True
         self._cursor_timer = 0.0
         # Track per-chip close-button rects (rebuilt on draw)
@@ -172,31 +176,36 @@ class ChipInputControl(UiNode):
                         self._on_change(list(self._values))
                 self.invalidate()
                 return True
-            # Fallback printable key path for platforms/configurations where
-            # pygame TEXT_INPUT is not emitted for regular character keys.
-            if not (event.mod & (pygame.KMOD_CTRL | pygame.KMOD_ALT | pygame.KMOD_META)):
-                source = getattr(event, "source_event", None)
-                uni = str(getattr(source, "unicode", "") or "")
-                if len(uni) == 1 and uni >= " " and uni != ",":
-                    self._edit_text += uni
-                    self.invalidate()
-                    return True
 
         if event.kind == EventType.TEXT_INPUT and self._focused:
             char = event.text or ""
-            for sep_key in self._separator_keys:
-                if sep_key == pygame.K_COMMA and char == ",":
-                    char = ""
+            if not char:
+                return False
+            is_comma_separator = (char == "," and pygame.K_COMMA in self._separator_keys)
+            is_enter_separator = (
+                char in ("\r", "\n")
+                and (
+                    pygame.K_RETURN in self._separator_keys
+                    or pygame.K_KP_ENTER in self._separator_keys
+                )
+            )
+            if is_comma_separator or is_enter_separator:
+                if self._edit_text.strip():
+                    self.add_value(self._edit_text)
+                    self._edit_text = ""
+                    self.invalidate()
+                return True
             self._edit_text += char
             self.invalidate()
-            return bool(char)
+            return True
 
         return False
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         r = self.rect
         fonts = theme.fonts
-        font_size = fonts.scaled_size(_FONT_SCALE)
+        chip_font_size = fonts.scaled_size(_FONT_SCALE)
+        input_font_size = fonts.scaled_size(_INPUT_FONT_SCALE)
         pad_x = max(3, fonts.scaled_size(_CHIP_PAD_X_RATIO))
         pad_y = max(2, fonts.scaled_size(_CHIP_PAD_Y_RATIO))
         close_w = max(10, fonts.scaled_size(_CHIP_CLOSE_RATIO))
@@ -221,7 +230,7 @@ class ChipInputControl(UiNode):
         text_color = theme.dark if not self.enabled else theme.text
 
         for val in self._values:
-            chip_surf = theme.render_text(val, role=self._font_role, shadow=False, size=font_size, color=theme.background)
+            chip_surf = theme.render_text(val, role=self._font_role, shadow=False, size=chip_font_size, color=theme.background)
             cw = chip_surf.get_width() + pad_x * 2 + close_w
             ch = chip_h
             chip_rect = Rect(x, y, cw, ch)
@@ -246,18 +255,22 @@ class ChipInputControl(UiNode):
 
         # Input field area
         if self._edit_text:
-            input_surf = theme.render_text(self._edit_text, role=self._font_role, shadow=False, size=font_size, color=text_color)
-            surface.blit(input_surf, (x, y))
+            input_surf = theme.render_text(self._edit_text, role=self._font_role, shadow=False, size=input_font_size, color=text_color)
+            input_y = r.top + (r.height - input_surf.get_height()) // 2
+            surface.blit(input_surf, (x, input_y))
             cursor_x = x + input_surf.get_width()
         else:
             if not self._focused:
                 ph_color = theme.dark
-                ph_surf = theme.render_text(self._placeholder, role=self._font_role, shadow=False, size=font_size, color=ph_color)
-                surface.blit(ph_surf, (x, y))
+                ph_surf = theme.render_text(self._placeholder, role=self._font_role, shadow=False, size=input_font_size, color=ph_color)
+                ph_y = r.top + (r.height - ph_surf.get_height()) // 2
+                surface.blit(ph_surf, (x, ph_y))
             cursor_x = x
 
         if self._focused and self._cursor_visible and self.enabled:
-            pygame.draw.line(surface, text_color, (cursor_x, y + 1), (cursor_x, y + chip_h - 2), 1)
+            cursor_top = max(r.top + 2, r.top + (r.height - input_font_size) // 2)
+            cursor_bottom = min(r.bottom - 3, cursor_top + input_font_size)
+            pygame.draw.line(surface, text_color, (cursor_x, cursor_top), (cursor_x, cursor_bottom), 1)
 
     def _chip_h(self, fonts) -> int:
         """Compute chip height from font metrics."""
