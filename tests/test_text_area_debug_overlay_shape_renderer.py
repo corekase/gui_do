@@ -142,6 +142,66 @@ class TestTextAreaControlFocusedKeyConsumption(unittest.TestCase):
                 consumed = ta.handle_event(self._key_event(pygame.K_TAB, mod=mod), app=None)
                 self.assertFalse(consumed)
 
+    def test_home_moves_to_start_of_wrapped_visual_line(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="abcd")
+        ta._focused = True
+        ta._wrapped_lines = ["ab", "cd"]
+        ta._line_cache_key = ("wrapped",)
+        ta._cursor_pos = 3
+
+        consumed = ta.handle_event(self._key_event(pygame.K_HOME), app=None)
+
+        self.assertTrue(consumed)
+        self.assertEqual(2, ta.cursor_pos)
+
+    def test_end_keeps_insertions_on_wrapped_visual_line_end(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="abcde")
+        ta._focused = True
+        ta._wrapped_lines = ["ab", "cde"]
+        ta._line_cache_key = ("wrapped",)
+        ta._cursor_pos = 1
+
+        consumed = ta.handle_event(self._key_event(pygame.K_END), app=None)
+        ta._insert_text("X")
+
+        self.assertTrue(consumed)
+        self.assertEqual("abXcde", ta.value)
+        self.assertEqual(3, ta.cursor_pos)
+
+    def test_wrap_preserves_space_at_visual_break(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="ab cd")
+        ta._text_width = lambda theme, text: len(text)
+
+        wrapped = ta._wrap(theme=None, max_width=3)
+
+        self.assertEqual(["ab ", "cd"], wrapped)
+
+    def test_wrap_does_not_break_after_space_when_line_still_fits(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="ab cd")
+        ta._text_width = lambda theme, text: len(text)
+
+        wrapped = ta._wrap(theme=None, max_width=5)
+
+        self.assertEqual(["ab cd"], wrapped)
+
+    def test_space_input_at_line_end_keeps_visual_spans_aligned(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 15, 200), value="abcd")
+        ta._focused = True
+        ta._cursor_pos = 2
+        ta._text_width = lambda theme, text: len(text)
+
+        consumed = ta.handle_event(
+            GuiEvent(kind=EventType.TEXT_INPUT, type=pygame.TEXTINPUT, text=" "),
+            app=None,
+        )
+        wrapped = ta._get_wrapped_lines(theme=None)
+
+        self.assertTrue(consumed)
+        self.assertEqual("ab cd", ta.value)
+        self.assertEqual(["ab ", "cd"], wrapped)
+        self.assertEqual([(0, 3, "ab "), (3, 5, "cd")], ta._get_visual_line_spans(wrapped))
+        self.assertEqual((0, 3), ta._get_visual_line_bounds())
+
 
 # ===========================================================================
 # DebugOverlay

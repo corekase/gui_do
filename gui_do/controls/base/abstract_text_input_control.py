@@ -51,6 +51,17 @@ class AbstractTextInputControl(_TextEditFocusBase):
         self._sel_active = None
         self.invalidate()
 
+    def _get_line_bounds(self, position: Optional[int] = None) -> Tuple[int, int]:
+        value_len = len(self._value)
+        if position is None:
+            position = self._cursor_pos
+        pos = max(0, min(int(position), value_len))
+        line_start = self._value.rfind("\n", 0, pos)
+        line_end = self._value.find("\n", pos)
+        start = 0 if line_start == -1 else line_start + 1
+        end = value_len if line_end == -1 else line_end
+        return (start, end)
+
     # --- Event handling (keyboard/mouse) ---
     def handle_event(self, event: GuiEvent, app, theme=None) -> bool:
         # Subclasses should call this and extend as needed

@@ -386,7 +386,7 @@ class TextInputControl(AbstractTextInputControl):
             return True
 
         if key == pygame.K_HOME:
-            new_pos = 0
+            new_pos, _ = self._get_line_bounds()
             if shift:
                 if self._sel_anchor is None:
                     self._sel_anchor = self._cursor_pos
@@ -400,7 +400,7 @@ class TextInputControl(AbstractTextInputControl):
             return True
 
         if key == pygame.K_END:
-            new_pos = len(self._value)
+            _, new_pos = self._get_line_bounds()
             if shift:
                 if self._sel_anchor is None:
                     self._sel_anchor = self._cursor_pos

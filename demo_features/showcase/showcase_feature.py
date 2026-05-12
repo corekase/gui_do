@@ -541,7 +541,7 @@ class ShowcaseFeature(Feature):
             panel = PanelControl("control_text_area_cell", Rect(0, 0, w, h), draw_background=False)
             ta_h, ti_h, gap = 96, 32, 8
             panel.add_at(TextAreaControl("control_text_area", Rect(0, 0, w, ta_h),
-                value="Heading: Notes\n- First line\n- Second line"), 0, 0)
+                value="Release Notes\nWrap keeps spaces with the text they separate.\nEdit this sample to check caret placement."), 0, 0)
             panel.add_at(LabelControl("label_control_text_input_inline", Rect(0, 0, w, label_h),
                 "Text Input", align="left"), 0, ta_h + gap)
             panel.add_at(TextInputControl("control_text_input", Rect(0, 0, w, ti_h),

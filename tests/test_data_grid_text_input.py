@@ -313,6 +313,26 @@ class TestTextInputControlFocusedKeyConsumption(unittest.TestCase):
                 consumed = ti.handle_event(self._key_event(pygame.K_TAB, mod=mod), app=None)
                 self.assertFalse(consumed)
 
+    def test_home_moves_to_start_of_current_logical_line(self):
+        ti = TextInputControl("ti", Rect(0, 0, 300, 30), value="ab\ncd")
+        ti._focused = True
+        ti._cursor_pos = 4
+
+        consumed = ti.handle_event(self._key_event(pygame.K_HOME), app=None)
+
+        self.assertTrue(consumed)
+        self.assertEqual(3, ti._cursor_pos)
+
+    def test_end_moves_to_end_of_current_logical_line(self):
+        ti = TextInputControl("ti", Rect(0, 0, 300, 30), value="ab\ncd")
+        ti._focused = True
+        ti._cursor_pos = 1
+
+        consumed = ti.handle_event(self._key_event(pygame.K_END), app=None)
+
+        self.assertTrue(consumed)
+        self.assertEqual(2, ti._cursor_pos)
+
 
 if __name__ == "__main__":
     unittest.main()

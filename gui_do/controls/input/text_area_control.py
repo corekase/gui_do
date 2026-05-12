@@ -40,26 +40,11 @@ class TextAreaControl(AbstractTextInputControl):
             return self._cursor_pos
         y_val = y if y is not None else self.rect.top
         rel_y = y_val - self.rect.top - _V_PAD + self._scroll_top
-        lines = self._get_wrapped_lines_cached()
-        if not lines:
+        line_spans = self._get_visual_line_spans()
+        if not line_spans:
             return 0
-        line_idx = max(0, rel_y // line_h)
-        line_idx = min(line_idx, len(lines) - 1)
-        # Map wrapped lines to the correct character index in the underlying value
-        abs_offset = 0
-        value = self._value
-        wrapped_lines = lines
-        value_idx = 0
-        for i in range(line_idx):
-            line = wrapped_lines[i]
-            # Advance value_idx to the start of the next wrapped line
-            # Skip over the characters in this line
-            value_idx += len(line)
-            # If the next character in value is a newline, skip it
-            if value_idx < len(value) and value[value_idx:value_idx+1] == "\n":
-                value_idx += 1
-        abs_offset = value_idx
-        line_text = lines[line_idx]
+        line_idx = max(0, min(rel_y // line_h, len(line_spans) - 1))
+        abs_offset, _, line_text = line_spans[line_idx]
         rel_x = x - self.rect.left - _H_PAD
         if rel_x <= 0:
             return abs_offset
@@ -86,17 +71,16 @@ class TextAreaControl(AbstractTextInputControl):
 
     def get_pixel_for_char_index(self, index: int, theme=None) -> Tuple[int, int]:
         font = self._get_font(theme)
-        lines = self._get_wrapped_lines_cached()
-        abs_offset = 0
-        for line_idx, line_text in enumerate(lines):
-            if index <= abs_offset + len(line_text):
-                px, _ = font.text_size(line_text[:index - abs_offset])
+        line_spans = self._get_visual_line_spans()
+        for line_idx, (line_start, line_end, line_text) in enumerate(line_spans):
+            if index <= line_end:
+                px, _ = font.text_size(line_text[:index - line_start])
                 y = self.rect.top + _V_PAD + line_idx * font.line_height
                 return (self.rect.left + _H_PAD + px, y)
-            abs_offset += len(line_text) + 1
         # Fallback: end of last line
-        px, _ = font.text_size(lines[-1])
-        y = self.rect.top + _V_PAD + (len(lines) - 1) * font.line_height
+        _, _, last_line = line_spans[-1]
+        px, _ = font.text_size(last_line)
+        y = self.rect.top + _V_PAD + (len(line_spans) - 1) * font.line_height
         return (self.rect.left + _H_PAD + px, y)
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
@@ -366,15 +350,12 @@ class TextAreaControl(AbstractTextInputControl):
             return True
 
         if key == pygame.K_HOME:
-            # Move to start of line
-            line_start = self._value.rfind("\n", 0, self._cursor_pos)
-            new_pos = 0 if line_start == -1 else line_start + 1
+            new_pos = self._get_visual_line_bounds()[0]
             self._move_cursor(new_pos, shift)
             return True
 
         if key == pygame.K_END:
-            line_end = self._value.find("\n", self._cursor_pos)
-            new_pos = len(self._value) if line_end == -1 else line_end
+            new_pos = self._get_visual_line_bounds()[1]
             self._move_cursor(new_pos, shift)
             return True
 
@@ -419,20 +400,18 @@ class TextAreaControl(AbstractTextInputControl):
         surface.set_clip(clip_rect.clip(old_clip) if old_clip else clip_rect)
 
         sel_lo, sel_hi = self.selection_range
-        abs_offset = 0
         y = r.top + _V_PAD - self._scroll_top
         cursor_y: Optional[int] = None
         cursor_x: Optional[int] = None
 
-        for line_text in lines:
+        for line_start_abs, line_end_abs, line_text in self._get_visual_line_spans(lines):
             line_len = len(line_text)
-            line_end_abs = abs_offset + line_len
 
             if y + line_h >= r.top and y < r.bottom:
                 # Selection highlight
                 if sel_lo != sel_hi:
-                    s_start = max(0, sel_lo - abs_offset)
-                    s_end = min(line_len, sel_hi - abs_offset)
+                    s_start = max(0, sel_lo - line_start_abs)
+                    s_end = min(line_len, sel_hi - line_start_abs)
                     if s_start < s_end:
                         px_start = self._text_width(theme, line_text[:s_start])
                         px_end = self._text_width(theme, line_text[:s_end])
@@ -450,12 +429,11 @@ class TextAreaControl(AbstractTextInputControl):
                 surface.blit(text_surf, (r.left + _H_PAD, y))
 
             # Cursor position
-            if self._cursor_pos >= abs_offset and self._cursor_pos <= line_end_abs:
-                offset_in_line = self._cursor_pos - abs_offset
+            if self._cursor_pos >= line_start_abs and self._cursor_pos <= line_end_abs:
+                offset_in_line = self._cursor_pos - line_start_abs
                 cursor_x = r.left + _H_PAD + self._text_width(theme, line_text[:offset_in_line])
                 cursor_y = y
 
-            abs_offset = line_end_abs + 1  # +1 for the newline that was stripped
             y += line_h
 
         # Draw cursor
@@ -515,28 +493,25 @@ class TextAreaControl(AbstractTextInputControl):
             return self._cursor_pos
         if line_h <= 0:
             return self._cursor_pos
-        lines = self._get_wrapped_lines_cached()
-        # Find which line the cursor is on
-        abs_offset = 0
+        line_spans = self._get_visual_line_spans()
+        if not line_spans:
+            return self._cursor_pos
         cursor_line = 0
         cursor_col = 0
-        for i, line_text in enumerate(lines):
-            line_len = len(line_text)
-            if self._cursor_pos <= abs_offset + line_len:
+        for i, (line_start, line_end, _) in enumerate(line_spans):
+            if self._cursor_pos <= line_end:
                 cursor_line = i
-                cursor_col = self._cursor_pos - abs_offset
+                cursor_col = self._cursor_pos - line_start
                 break
-            abs_offset += line_len + 1
-        target_line = max(0, min(len(lines) - 1, cursor_line + direction))
+        target_line = max(0, min(len(line_spans) - 1, cursor_line + direction))
         if target_line == cursor_line:
             if direction < 0:
                 return 0
             return len(self._value)
-        # Recalculate abs offset for target line
-        new_offset = sum(len(lines[i]) + 1 for i in range(target_line))
-        target_len = len(lines[target_line])
+        target_start, target_end, _ = line_spans[target_line]
+        target_len = target_end - target_start
         new_col = min(cursor_col, target_len)
-        return new_offset + new_col
+        return target_start + new_col
 
     def _pos_to_char(self, pos: Tuple[int, int], app: "GuiApplication") -> int:
         """Convert a pixel position to an absolute character offset."""
@@ -552,8 +527,7 @@ class TextAreaControl(AbstractTextInputControl):
         if not lines:
             return 0
         line_idx = min(line_idx, len(lines) - 1)
-        abs_offset = sum(len(lines[i]) + 1 for i in range(line_idx))
-        line_text = lines[line_idx]
+        abs_offset, _, line_text = self._get_visual_line_spans(lines)[line_idx]
         rel_x = pos[0] - self.rect.left - _H_PAD
         if rel_x <= 0:
             return abs_offset
@@ -613,6 +587,31 @@ class TextAreaControl(AbstractTextInputControl):
 
             return _measure
 
+    def _get_visual_line_spans(self, lines: Optional[List[str]] = None) -> List[Tuple[int, int, str]]:
+        if lines is None:
+            lines = self._get_wrapped_lines_cached()
+        if not lines:
+            return [(0, 0, "")]
+        spans: List[Tuple[int, int, str]] = []
+        raw_index = 0
+        value = self._value
+        value_len = len(value)
+        for line_text in lines:
+            line_start = raw_index
+            line_end = min(value_len, line_start + len(line_text))
+            spans.append((line_start, line_end, line_text))
+            raw_index = line_end
+            if raw_index < value_len and value[raw_index:raw_index + 1] == "\n":
+                raw_index += 1
+        return spans
+
+    def _get_visual_line_bounds(self) -> Tuple[int, int]:
+        for line_start, line_end, _ in self._get_visual_line_spans():
+            if self._cursor_pos <= line_end:
+                return (line_start, line_end)
+        value_len = len(self._value)
+        return (value_len, value_len)
+
     def _text_width(self, theme: "ColorTheme", text: str) -> int:
         try:
             w, _ = theme.fonts.font_instance(self._font_role, size=self._resolve_fs(theme)).text_size(text)
@@ -653,18 +652,29 @@ class TextAreaControl(AbstractTextInputControl):
             return self._value.split("\n")
         result: List[str] = []
         for para in self._value.split("\n"):
-            words = para.split(" ")
-            current = ""
-            for word in words:
-                test = (current + " " + word).strip() if current else word
-                w = self._text_width(theme, test)
-                if w <= max_width:
-                    current = test
-                else:
-                    if current:
-                        result.append(current)
-                    current = word
-            result.append(current)
+            if not para:
+                result.append("")
+                continue
+            start = 0
+            para_len = len(para)
+            while start < para_len:
+                best_end = start
+                last_space_end = -1
+                overflowed = False
+                for end in range(start + 1, para_len + 1):
+                    candidate = para[start:end]
+                    if self._text_width(theme, candidate) <= max_width:
+                        best_end = end
+                        if candidate.endswith(" "):
+                            last_space_end = end
+                        continue
+                    overflowed = True
+                    break
+                if best_end == start:
+                    best_end = start + 1
+                wrap_end = last_space_end if overflowed and last_space_end > start else best_end
+                result.append(para[start:wrap_end])
+                start = wrap_end
         return result
 
     def _fire_change(self) -> None:
