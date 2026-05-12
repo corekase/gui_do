@@ -619,7 +619,7 @@ class ShowcaseFeature(Feature):
                 make_button_group("control_button_group_c_cell", "c", [
                     ("control_button_group_c1", "C1"), ("control_button_group_c2", "C2"), ("control_button_group_c3", "C3"),
                 ]), natural_width=100),
-            RowCellSpec("toggle_group", "Toggle", 80, 12,
+            RowCellSpec("toggle_group", "Toggles", 80, 12,
                 make_toggle_group("control_toggle_group_cell", [
                     ("control_toggle_a", "A"), ("control_toggle_b", "B"), ("control_toggle_c", "C"),
                 ]),
