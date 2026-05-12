@@ -4,36 +4,35 @@
 
 ---
 
-<a href="https://www.youtube.com/watch?v=OVj54_BhDO4"><img src="https://img.youtube.com/vi/OVj54_BhDO4/0.jpg" alt="Demo Video"></img></a>
+<a href="https://www.youtube.com/watch?v=LYfCgm7G95E"><img src="https://img.youtube.com/vi/LYfCgm7G95E/0.jpg" alt="Demo Video"></img></a>
 
 ---
 
-gui_do is a Python GUI framework built on pygame for building structured desktop applications with a predictable runtime model. It combines declarative application specs with feature lifecycle classes so you describe structure once and let bootstrap handle wiring. It also gives you reactive state primitives so UI updates happen from data changes rather than manual polling loops. The runtime automates high-friction plumbing such as event routing, overlay dispatch, focus management, scene transitions, and lifecycle sequencing. It is designed for Python developers building internal tools, game UI layers, simulations, and interactive application workflows.
+## Project Header
+
+gui_do is a Python GUI framework built on pygame for data-driven, desktop-style applications. You describe scenes, features, actions, and runtime behavior declaratively with specs, then let bootstrap assemble and wire the runtime. The framework centers on feature lifecycle methods and reactive state so UI updates flow from state changes instead of polling loops. It automates event routing, overlay dispatch, focus management, scene transitions, and lifecycle sequencing so application features can stay focused on domain behavior. gui_do is a strong fit for Python developers building internal tools, game UIs, simulations, and other interactive desktop applications.
 
 ## Strengths
 
-- Declarative runtime wiring: specs declare what the app should contain, and bootstrap wires how systems are connected.
-- Feature lifecycle isolation: each feature owns build, bind, update, draw, and teardown boundaries to keep code cohesive.
-- Reactive state: `ObservableValue`, `ObservableList`, and `ObservableDict` propagate changes without polling.
-- Composable overlays: dialogs, toasts, tooltips, command surfaces, and context menus share consistent routing and focus behavior.
-- Tiered API surface: a single root API spans 32 tiers from high-level bootstrap to lower-level graphics, state, and runtime systems.
-- Scene management: multi-scene applications support transitions and scene-scoped routing with deterministic behavior.
-- Persistence and migration: workspace capture/restore flows support snapshot migration and structured restore reporting.
-- Accessibility and focus: semantic accessibility trees, focus rings, and live announcement channels are first-class runtime features.
-- Built-in diagnostics: telemetry spans, introspection utilities, and runtime diagnostics improve confidence during development.
-- Extensible by lifecycle composition: new behavior is added by implementing feature lifecycle methods and specs, not by editing framework internals.
-
-For guided onboarding, continue in [TUTORIAL.md](TUTORIAL.md). For full reference depth, use [MANUAL.md](MANUAL.md).
+- Declarative runtime wiring: specs describe what your app contains, and bootstrap builds and wires the runtime consistently.
+- Feature lifecycle isolation: each feature owns build, bind, update, draw, and shutdown responsibilities with clear boundaries.
+- Reactive state: `ObservableValue`, `ObservableList`, and `ObservableDict` let UI react to data changes without polling.
+- Composable overlays: dialogs, toasts, tooltips, command palette, and context menus share consistent routing behavior.
+- Tiered API surface: 32 public tiers let teams start high-level and drop lower only when they need more control.
+- Scene management: multi-scene applications can switch with transitions and keep scene-scoped routing deterministic.
+- Persistence and migration: workspace state can be saved, restored, and evolved through versioned snapshot migration.
+- Accessibility and focus: semantic accessibility metadata, focus rings, and live-region patterns are built into runtime flow.
+- Built-in diagnostics: telemetry spans, event recording/playback, and runtime inspection hooks support operational debugging.
+- Extensible architecture: new features compose behavior by implementing lifecycle methods rather than changing framework internals.
 
 ## Use Cases
 
-gui_do is suited for a wide range of Python GUI workloads. It works well for developer tools and internal utilities such as inspectors, dashboards, and data explorers where structured state and action routing matter. It also fits game interfaces and HUD workflows that benefit from scene transitions, overlays, 2D rendering support, and audio cues. For interactive simulations and parameter exploration tools, reactive state and lifecycle partitioning keep updates predictable. Data-oriented tools can combine list/grid controls with dirty-region rendering patterns for responsive interfaces. Multi-window workbench layouts, tabbed panels, and rapid layout prototyping are supported through window, scene, and layout systems.
-
-The fastest way to learn these patterns end-to-end is [TUTORIAL.md](TUTORIAL.md), then [MANUAL.md](MANUAL.md) for system-level detail.
+gui_do works well for developer tools and internal utilities such as inspectors, dashboards, and data explorers. It also supports game-facing interfaces and HUD workflows with scene graph, tile map, particle, and audio facilities. For interactive simulations, reactive state and deterministic updates make parameter explorers and visual experiments straightforward to structure. Data-heavy tools benefit from collection controls, filtering/sorting pipelines, and dirty-region-aware rendering. Multi-window workbench apps can combine scene navigation with panel and window presentation systems, and rapid layout iteration is supported by constraint and flex/grid layout options.
 
 ## Quick Look
 
 ```python
+import pygame
 from pygame import Rect
 
 from gui_do import (
@@ -42,45 +41,38 @@ from gui_do import (
     HostApplicationBindingSpec,
     LabelControl,
     ObservableValue,
+    PanelControl,
     SceneBundleBindingSpec,
-    build_host_application_config,
     bootstrap_host_application,
+    build_host_application_config,
 )
 
-
-class HelloFeature(Feature):
+class CounterFeature(Feature):
     def __init__(self) -> None:
-        super().__init__("hello_feature", scene_name="main")
-        self.counter = ObservableValue(0)
+        super().__init__("counter", scene_name="main")
+        self.count = ObservableValue(0)
 
     def build(self, host) -> None:
-        self.label = host.app.add(LabelControl("hello_label", Rect(24, 24, 320, 40), "Count: 0"), scene_name="main")
+        host.root = host.app.add(PanelControl("root", host.screen_rect.copy(), draw_background=False), scene_name="main")
+        self.label = host.root.add(LabelControl("count_label", Rect(24, 24, 280, 40), "Count: 0"))
 
     def bind_runtime(self, host) -> None:
-        self._sub = self.counter.subscribe(lambda v: setattr(self.label, "text", f"Count: {v}"))
+        self.unsubscribe = self.count.subscribe(lambda value: setattr(self.label, "text", f"Count: {value}"))
 
-
-class QuickStartApp:
+class AppHost:
     def __init__(self) -> None:
-        config = build_host_application_config(
-            HostApplicationBindingSpec(
-                display_size=(800, 480),
-                window_title="gui_do Quick Look",
-                fonts={"default": "arial"},
-                initial_scene_name="main",
-                scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
-                feature_entries=(FeatureSpec("hello_feature", HelloFeature),),
-            )
-        )
+        config = build_host_application_config(HostApplicationBindingSpec(
+            display_size=(960, 540),
+            window_title="Quick Look",
+            fonts={"default": {"file": None, "size": 16}},
+            initial_scene_name="main",
+            scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
+            feature_entries=(FeatureSpec("counter_feature", CounterFeature),),
+        ))
         bootstrap_host_application(self, config)
 
-
-if __name__ == "__main__":
-    host = QuickStartApp()
-    host.app.run_entrypoint(target_fps=60)
+AppHost().app.run_entrypoint(target_fps=60)
 ```
-
-Build the complete project tutorial next in [TUTORIAL.md](TUTORIAL.md), then use [MANUAL.md](MANUAL.md) as your detailed systems reference.
 
 ## Documentation
 
@@ -89,26 +81,26 @@ Build the complete project tutorial next in [TUTORIAL.md](TUTORIAL.md), then use
 | [TUTORIAL.md](TUTORIAL.md) | Step-by-step project tutorial - start here if you are new to gui_do |
 | [MANUAL.md](MANUAL.md) | Complete developer reference for all systems and APIs |
 
-[TUTORIAL.md](TUTORIAL.md) teaches gui_do by building a complete project from scratch, explaining both how and why in each stage. [MANUAL.md](MANUAL.md) is the comprehensive reference organized by system with API tables, usage patterns, integration recipes, and appendices.
+[TUTORIAL.md](TUTORIAL.md) teaches gui_do by building a full project from scratch, with continuous explanation of both how and why each step works. [MANUAL.md](MANUAL.md) is the deep reference organized by system, with API tables, patterns, examples, integration recipes, and appendices for long-term maintenance.
 
 ## Installation
 
-From the repository root:
+Install from the repository root:
 
 ```bash
 python -m pip install -e . --no-deps
 ```
 
-Dependencies: `pygame` and `numpy`.
+Dependencies: pygame and numpy.
 
 ## Project Structure
 
-- `gui_do/`: framework library code and authoritative root API exports.
-- `demo_features/`: runnable feature packages that model the folder-per-feature and package-root-public-surface pattern.
-- `tests/`: contract and behavioral tests for runtime, API, and documentation alignment.
-- `docs/`: architecture boundaries, runtime contracts, and supporting specification docs.
-- `TUTORIAL.md`: full project tutorial.
-- `MANUAL.md`: full system reference.
+- `gui_do/`: framework library code and the authoritative public root API.
+- `demo_features/`: runnable reference patterns using the folder-per-feature package model with each feature package `__init__.py` as its public import surface.
+- `tests/`: behavioral, contract, and integration tests.
+- `docs/`: architecture boundaries and runtime operating contracts.
+- `TUTORIAL.md`: full learning path that builds a complete application.
+- `MANUAL.md`: comprehensive system and API reference.
 
 ## See Also
 
