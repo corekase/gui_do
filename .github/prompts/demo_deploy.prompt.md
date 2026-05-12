@@ -17,7 +17,7 @@ Ensure controls are demonstrated in the controls showcase and systems are integr
 2. Integrate new systems in the appropriate demo scenes/features as needed.
 3. Prefer realistic usage patterns for each integrated item.
 4. If a control/system does not have a clear in-repo use-case, add a clean placeholder example with sensible names, structure, and sample data.
-5. Update `demo_projects/controls_demo_feature.py` with any missing example controls.
+5. Update `demo_features/showcase/showcase_feature.py` with any missing example controls.
 6. Follow the existing layout/composition patterns already used in that feature file.
 
 ## Quality Expectations

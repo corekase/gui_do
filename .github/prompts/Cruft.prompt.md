@@ -12,7 +12,7 @@ You are performing a cruft-removal pass on this package. Your job is to find and
 **Unused code.** Find and remove:
 - Module-level variables and constants that are never read outside the file they are defined in.
 - Private methods and functions that are never called from anywhere in the package or the tests.
-- Public methods and classes that are not referenced by any internal code, test, or the demo, and are not part of the declared public API (`gui.__all__`).
+- Public methods and classes that are not referenced by any internal code, test, or the demo, and are not part of the declared public API (`gui_do.__all__`).
 - Entire source files that are unreachable (not imported by any other module, not a test file, not a demo entrypoint).
 - Unused function/method parameters, including parameters that are accepted but silently ignored throughout the entire call chain.
 
@@ -28,10 +28,10 @@ You are performing a cruft-removal pass on this package. Your job is to find and
 ## What NOT to Remove
 
 - Any structure that exists for a documented performance reason (caches, pools, deferred removal buffers, memoization dictionaries). If unsure, check for a comment or a note in memory before removing.
-- Symbols listed in `gui.__all__` — those are public API and must not be removed without an explicit API-change decision.
+- Symbols listed in `gui_do.__all__` — those are public API and must not be removed without an explicit API-change decision.
 - Lifecycle hook methods (`on_added_to_gui`, `on_enabled_changed`, `_on_window_visibility_changed`, etc.) that appear unread but are called indirectly through parent dispatch or callback chains. Confirm with a cross-file reference search before deleting any hook.
 - `__init__.py` re-exports that are part of the declared package surface.
 
 ## Process
 
-Work subsystem by subsystem (`gui/app`, `gui/controls`, `gui/events`, `gui/scheduling`, `gui/graphics`, `gui/focus`, `gui/overlays`, `gui/persistence`, `gui/state`, `gui/theme`, `gui/text`, `gui/telemetry`, `gui/introspection`, `gui/layout`, `gui/forms`, `gui/actions`, `demo_features/`, `tests/`). For each subsystem, complete all four removal categories, then run the test suite before moving to the next subsystem. Record a summary of what was removed (file, symbol, reason) as you go so the session has a clear audit trail.
+Work subsystem by subsystem (`gui_do/app`, `gui_do/events`, `gui_do/data`, `gui_do/scheduling`, `gui_do/graphics`, `gui_do/layout`, `gui_do/theme`, `gui_do/focus`, `gui_do/actions`, `gui_do/controls/base`, `gui_do/controls/input`, `gui_do/controls/display`, `gui_do/controls/chrome`, `gui_do/controls/composite`, `gui_do/controls/data`, `gui_do/controls/canvas`, `gui_do/overlays`, `gui_do/features`, `gui_do/persistence`, `gui_do/accessibility`, `gui_do/audio`, `gui_do/state`, `gui_do/text`, `gui_do/forms`, `gui_do/telemetry`, `gui_do/introspection`, `demo_features/`, `tests/`). For each subsystem, complete all four removal categories, then run the test suite before moving to the next subsystem. Record a summary of what was removed (file, symbol, reason) as you go so the session has a clear audit trail.
