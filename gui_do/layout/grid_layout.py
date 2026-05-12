@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Optional, Sequence, TYPE_CHECKING
 
 from pygame import Rect
 

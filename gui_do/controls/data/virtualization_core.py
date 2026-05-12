@@ -10,7 +10,7 @@ Provides the building blocks for virtualised UI controls:
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import Callable, Generic, List, Optional, Set, Tuple, TypeVar
+from typing import Callable, Generic, Set, TypeVar
 
 __all__ = [
     "MeasurePolicy",

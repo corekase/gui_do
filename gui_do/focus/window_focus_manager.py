@@ -18,7 +18,7 @@ Usage
 """
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
@@ -73,7 +73,14 @@ class WindowFocusManager:
     # Cycling
     # ------------------------------------------------------------------
 
-    def cycle(self, scene: "Scene", *, forward: bool = True, app: "Optional[GuiApplication]" = None) -> bool:
+    def cycle(
+        self,
+        scene: "Scene",
+        *,
+        forward: bool = True,
+        app: "Optional[GuiApplication]" = None,
+        cached_walk_nodes=None,
+    ) -> bool:
         """Cycle window focus forward or backward through visible scene windows.
 
         Returns ``True`` when the event was handled (even if the candidate
@@ -84,7 +91,7 @@ class WindowFocusManager:
         just reveals the hint; subsequent invocations within the timeout
         window advance focus to the next/previous window.
         """
-        candidates = self._candidate_windows(scene)
+        candidates = self._candidate_windows(scene, cached_walk_nodes=cached_walk_nodes)
         if not candidates:
             self._focused_window = None
             self._hint_visible = False

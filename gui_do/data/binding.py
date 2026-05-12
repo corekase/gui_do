@@ -46,7 +46,7 @@ model and control representations, e.g. ``to_control=int, to_source=float``.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 
 BindingMode = str  # "one_way" | "one_way_to_source" | "two_way"

@@ -197,6 +197,7 @@ class PropertyRegistry:
             return list(self._cache.get(cls, []))
         self._scanned.add(cls)
         descs: List[PropertyDescriptor] = list(self._cache.get(cls, []))
+        seen_names: Set[str] = {d.name for d in descs}
 
         # Walk the MRO (skip `object`)
         for klass in cls.__mro__:
@@ -215,7 +216,7 @@ class PropertyRegistry:
                 if meta is None:
                     continue
                 # Check for duplicates (same name already found)
-                if any(d.name == attr_name for d in descs):
+                if attr_name in seen_names:
                     continue
                 read_only = isinstance(attr_val, property) and attr_val.fset is None
                 descs.append(PropertyDescriptor(
@@ -228,6 +229,7 @@ class PropertyRegistry:
                     read_only=meta.get("read_only", read_only),
                     owner_class=klass,
                 ))
+                seen_names.add(attr_name)
 
         self._cache[cls] = descs
         return list(descs)

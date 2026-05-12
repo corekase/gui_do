@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set
 
 __all__ = [
     "FieldSchema",
@@ -153,6 +153,11 @@ class SchemaFormRuntime:
         self._fields: Dict[str, FieldState] = {
             fs.name: FieldState(fs) for fs in schema.fields
         }
+        self._dependents: Dict[str, Set[str]] = {}
+        for fs in schema.fields:
+            self._dependents.setdefault(fs.name, set())
+            for dep in fs.depends_on:
+                self._dependents.setdefault(dep, set()).add(fs.name)
         self._change_callbacks: List[Callable[[str, Any], None]] = []
         # Evaluate initial visibility
         self._update_visibility()
@@ -182,7 +187,7 @@ class SchemaFormRuntime:
         state = self._fields[name]
         state.value = value
         state.dirty = True
-        self._update_visibility()
+        self._update_visibility(changed_name=name)
         for cb in list(self._change_callbacks):
             cb(name, value)
         if self._policy == ValidationPolicy.ON_CHANGE:
@@ -229,9 +234,26 @@ class SchemaFormRuntime:
     # Visibility
     # ------------------------------------------------------------------
 
-    def _update_visibility(self) -> None:
+    def _dependent_closure(self, start: str) -> Set[str]:
+        """Return fields affected by a change to *start* (including *start*)."""
+        seen: Set[str] = set()
+        stack: List[str] = [start]
+        while stack:
+            field_name = stack.pop()
+            if field_name in seen:
+                continue
+            seen.add(field_name)
+            stack.extend(self._dependents.get(field_name, ()))
+        return seen
+
+    def _update_visibility(self, changed_name: Optional[str] = None) -> None:
         values = {n: s.value for n, s in self._fields.items()}
-        for state in self._fields.values():
+        affected: Optional[Set[str]] = None
+        if changed_name is not None:
+            affected = self._dependent_closure(changed_name)
+        for name, state in self._fields.items():
+            if affected is not None and name not in affected:
+                continue
             if state.schema.visible_when is not None:
                 state.visible = state.schema.visible_when(values)
             else:

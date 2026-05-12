@@ -9,7 +9,7 @@ import inspect
 from queue import Empty, Queue
 from threading import Condition, RLock
 from time import perf_counter
-from typing import Any, Callable, Deque, Dict, Hashable, List, Optional, Set
+from typing import Any, Callable, Hashable, Optional
 
 from ..telemetry.telemetry import telemetry_collector
 
@@ -356,6 +356,10 @@ class TaskScheduler:
 
     def get_failed_events(self) -> List[TaskEvent]:
         return list(self._failed_events.values())
+
+    def pop_failed_event(self, task_id: Hashable) -> Optional[TaskEvent]:
+        """Remove and return the failed event for *task_id*, if present."""
+        return self._failed_events.pop(task_id, None)
 
     def get_failed_tasks(self) -> List[tuple[Hashable, str]]:
         return [(event.task_id, event.error or "") for event in self._failed_events.values() if event.operation == "failed"]

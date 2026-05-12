@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -160,6 +160,13 @@ class RichLabelControl(UiNode):
         if max_width < 1:
             return []
 
+        resolved_size = self._resolve_fs(theme)
+        style_roles = self._style_roles(theme)
+        style_fonts = {
+            style: theme.fonts.font_instance(role, size=resolved_size)
+            for style, role in style_roles.items()
+        }
+
         result: List[pygame.Surface] = []
         paragraphs = self._text.split("\n")
         for para in paragraphs:
@@ -169,7 +176,7 @@ class RichLabelControl(UiNode):
                     theme.render_text(
                         " ",
                         role=self._font_role,
-                        size=self._resolve_fs(theme),
+                        size=resolved_size,
                         color=color,
                     )
                 )
@@ -181,9 +188,25 @@ class RichLabelControl(UiNode):
                 for token in re.findall(r"\s+|\S+", segment_text):
                     if not line_tokens and token.isspace():
                         continue
-                    token_width = self._measure_text(theme, token, segment_style)
+                    token_width = self._measure_text(
+                        theme,
+                        token,
+                        segment_style,
+                        resolved_size=resolved_size,
+                        style_roles=style_roles,
+                        style_fonts=style_fonts,
+                    )
                     if line_tokens and (line_width + token_width) > max_width:
-                        result.append(self._render_line(theme, line_tokens, color))
+                        result.append(
+                            self._render_line(
+                                theme,
+                                line_tokens,
+                                color,
+                                resolved_size=resolved_size,
+                                style_roles=style_roles,
+                                style_fonts=style_fonts,
+                            )
+                        )
                         line_tokens = []
                         line_width = 0
                         if token.isspace():
@@ -192,7 +215,16 @@ class RichLabelControl(UiNode):
                     line_width += token_width
 
             if line_tokens:
-                result.append(self._render_line(theme, line_tokens, color))
+                result.append(
+                    self._render_line(
+                        theme,
+                        line_tokens,
+                        color,
+                        resolved_size=resolved_size,
+                        style_roles=style_roles,
+                        style_fonts=style_fonts,
+                    )
+                )
         return result
 
     def _parse_inline_segments(self, text: str) -> List[tuple[str, str]]:
@@ -280,18 +312,67 @@ class RichLabelControl(UiNode):
         roles = self._style_roles(theme)
         return roles.get(style, self._font_role)
 
-    def _measure_text(self, theme: "ColorTheme", text: str, style: str) -> int:
-        role = self._role_for_style(theme, style)
-        width, _ = theme.fonts.font_instance(role, size=self._resolve_fs(theme)).text_size(text)
+    def _measure_text(
+        self,
+        theme: "ColorTheme",
+        text: str,
+        style: str,
+        *,
+        resolved_size: Optional[int] = None,
+        style_roles: Optional[dict[str, str]] = None,
+        style_fonts: Optional[dict[str, object]] = None,
+    ) -> int:
+        if style_fonts is not None:
+            font_inst = style_fonts.get(style) or style_fonts.get("base")
+            if font_inst is not None:
+                width, _ = font_inst.text_size(text)
+                return int(width)
+        if style_roles is None:
+            style_roles = self._style_roles(theme)
+        role = style_roles.get(style, self._font_role)
+        size = self._resolve_fs(theme) if resolved_size is None else int(resolved_size)
+        width, _ = theme.fonts.font_instance(role, size=size).text_size(text)
         return int(width)
 
-    def _render_piece(self, theme: "ColorTheme", text: str, style: str, base_color: tuple) -> pygame.Surface:
-        role = self._role_for_style(theme, style)
+    def _render_piece(
+        self,
+        theme: "ColorTheme",
+        text: str,
+        style: str,
+        base_color: tuple,
+        *,
+        resolved_size: Optional[int] = None,
+        style_roles: Optional[dict[str, str]] = None,
+    ) -> pygame.Surface:
+        if style_roles is None:
+            style_roles = self._style_roles(theme)
+        role = style_roles.get(style, self._font_role)
         color = theme.highlight if style == "code" else base_color
-        return theme.render_text(text, role=role, size=self._resolve_fs(theme), color=color, shadow=False)
+        size = self._resolve_fs(theme) if resolved_size is None else int(resolved_size)
+        return theme.render_text(text, role=role, size=size, color=color, shadow=False)
 
-    def _render_line(self, theme: "ColorTheme", tokens: List[tuple[str, str]], color: tuple) -> pygame.Surface:
-        pieces = [self._render_piece(theme, token, style, color) for token, style in tokens]
+    def _render_line(
+        self,
+        theme: "ColorTheme",
+        tokens: List[tuple[str, str]],
+        color: tuple,
+        *,
+        resolved_size: Optional[int] = None,
+        style_roles: Optional[dict[str, str]] = None,
+        style_fonts: Optional[dict[str, object]] = None,
+    ) -> pygame.Surface:
+        _ = style_fonts
+        pieces = [
+            self._render_piece(
+                theme,
+                token,
+                style,
+                color,
+                resolved_size=resolved_size,
+                style_roles=style_roles,
+            )
+            for token, style in tokens
+        ]
         width = sum(piece.get_width() for piece in pieces)
         height = max((piece.get_height() for piece in pieces), default=1)
         line_surface = pygame.Surface((max(1, width), max(1, height)), pygame.SRCALPHA)

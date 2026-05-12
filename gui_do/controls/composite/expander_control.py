@@ -1,7 +1,7 @@
 """ExpanderControl — collapsible section with animated height transition."""
 from __future__ import annotations
 
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Rect

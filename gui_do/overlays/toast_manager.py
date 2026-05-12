@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Deque, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

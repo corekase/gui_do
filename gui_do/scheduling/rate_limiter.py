@@ -37,7 +37,7 @@ Both classes are safe to reuse across frames and safe to cancel at any time.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Hashable, Optional, Tuple
+from typing import Any, Callable, Hashable, Optional
 
 
 # ---------------------------------------------------------------------------

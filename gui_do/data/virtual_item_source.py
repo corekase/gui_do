@@ -44,7 +44,7 @@ Custom source::
 """
 from __future__ import annotations
 
-from typing import Generic, List, Optional, Protocol, TypeVar, runtime_checkable
+from typing import Generic, Optional, Protocol, TypeVar, runtime_checkable
 
 
 T = TypeVar("T")

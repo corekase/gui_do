@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, List, Optional
+from typing import Callable
 
 import pygame
 
@@ -32,6 +32,7 @@ class FocusManager:
         # Stack of root nodes that constrain Tab traversal (focus scopes).
         self._scope_stack: List = []
         self._focus_change_listeners: List[Callable[[Optional[UiNode], Optional[UiNode]], None]] = []
+        self._last_hover_probe: Optional[tuple[int, int, int, int]] = None
 
     def add_focus_change_listener(self, listener: Callable[[Optional[UiNode], Optional[UiNode]], None]) -> None:
         if listener in self._focus_change_listeners:
@@ -78,11 +79,18 @@ class FocusManager:
             scope_key = self._scope_key_for_window(self._find_ancestor_window(node))
             self._scope_focus_memory[scope_key] = node
         if self._focus_change_listeners:
-            for listener in tuple(self._focus_change_listeners):
+            listeners = self._focus_change_listeners
+            i = 0
+            while i < len(listeners):
+                listener = listeners[i]
                 try:
                     listener(previous, node)
                 except Exception:
                     pass
+                # If the current listener remained at position i, advance.
+                # If it was removed during callback, process the element that shifted into i.
+                if i < len(listeners) and listeners[i] is listener:
+                    i += 1
 
     def show_keyboard_hint_for_current_focus(self) -> None:
         """Expose hint for existing focus due to keyboard interaction."""
@@ -331,14 +339,21 @@ class FocusManager:
         ordered.sort(key=lambda item: (item[1].tab_index, item[0]))
         return [node for _, node in ordered]
 
-    def cycle_focus(self, scene, *, forward: bool = True, window=None, pointer_pos=None) -> bool:
+    def cycle_focus(self, scene, *, forward: bool = True, window=None, pointer_pos=None, cached_walk_nodes=None) -> bool:
         focused = self._focused_node
         if focused is not None and not self._is_focus_window_context_valid(focused):
             self.clear_focus()
 
-        self._reconcile_hover_state(scene, pointer_pos=pointer_pos, window=window)
+        if cached_walk_nodes is None:
+            cached_walk_nodes = scene._get_cached_bfs_walk()
+        self._reconcile_hover_state(
+            scene,
+            pointer_pos=pointer_pos,
+            window=window,
+            cached_walk_nodes=cached_walk_nodes,
+        )
 
-        candidates = self._focusable_nodes(scene, window=window)
+        candidates = self._focusable_nodes(scene, window=window, cached_walk_nodes=cached_walk_nodes)
         if not candidates:
             self.clear_focus()
             return False
@@ -365,15 +380,21 @@ class FocusManager:
         self.set_focus(next_node, via_keyboard=True)
         return True
 
-    def _reconcile_hover_state(self, scene, *, pointer_pos, window=None) -> None:
+    def _reconcile_hover_state(self, scene, *, pointer_pos, window=None, cached_walk_nodes=None) -> None:
         """Normalize hover flags against the latest pointer position during traversal."""
         if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            self._last_hover_probe = None
             return
         x = int(pointer_pos[0])
         y = int(pointer_pos[1])
         probe = (x, y)
+        walk_nodes = cached_walk_nodes if cached_walk_nodes is not None else scene._get_cached_bfs_walk()
+        probe_key = (x, y, id(window), id(walk_nodes))
+        if self._last_hover_probe == probe_key:
+            return
+        self._last_hover_probe = probe_key
 
-        for node in scene._walk_nodes():
+        for node in walk_nodes:
             if window is not None and not self._is_descendant(node, window):
                 continue
             wants_hover = bool(node.visible and node.enabled and node.rect.collidepoint(probe))

@@ -45,7 +45,7 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 from .state_machine import StateMachine
 
@@ -66,10 +66,6 @@ class HierarchicalStateMachine(StateMachine):
         super().__init__(initial_state)
         # state_name -> sub-machine
         self._composites: Dict[str, StateMachine] = {}
-        # state_name -> initial sub-state name (for non-history composites)
-        self._composite_initial: Dict[str, str] = {}
-        # state_name -> True if this composite uses history semantics
-        self._history_flags: Set[str] = set()
         # state_name -> last active sub-state (for history composites)
         self._history_state: Dict[str, str] = {}
         # state_name -> parallel region list
@@ -95,14 +91,10 @@ class HierarchicalStateMachine(StateMachine):
         initial = str(initial).strip()
         self._states.add(state_name)
         self._composites[state_name] = sub_machine
-        self._composite_initial[state_name] = initial
 
         # Wire entry/exit hooks
         def _on_enter():
             sub_machine.current.value = initial
-
-        def _on_exit():
-            pass  # sub-machine state discarded on exit (non-history)
 
         self._on_enter.setdefault(state_name, []).insert(0, _on_enter)
 
@@ -120,8 +112,6 @@ class HierarchicalStateMachine(StateMachine):
         initial = str(initial).strip()
         self._states.add(state_name)
         self._composites[state_name] = sub_machine
-        self._composite_initial[state_name] = initial
-        self._history_flags.add(state_name)
 
         def _on_enter():
             resume = self._history_state.get(state_name, initial)

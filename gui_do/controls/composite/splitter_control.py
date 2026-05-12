@@ -1,7 +1,7 @@
 """SplitterControl — resizable two-pane divider control."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

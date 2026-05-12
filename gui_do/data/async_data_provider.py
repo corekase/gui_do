@@ -250,13 +250,13 @@ class AsyncDataProvider(Generic[T]):
             self._set_state(LoadState(kind=LoadStateKind.LOADED, data=result))
             return
 
-        # No result — check the failed-events list.
-        for event in self._scheduler.get_failed_events():
-            if event.task_id == self._task_id:
-                error_msg = event.error or "Unknown error"
-                self._task_id = None
-                self._set_state(LoadState(kind=LoadStateKind.FAILED, error=error_msg))
-                return
+        # No result — check for direct failed-event match.
+        event = self._scheduler.pop_failed_event(self._task_id)
+        if event is not None:
+            error_msg = event.error or "Unknown error"
+            self._task_id = None
+            self._set_state(LoadState(kind=LoadStateKind.FAILED, error=error_msg))
+            return
 
         # Task was removed without a result (external cancel) — go back to IDLE.
         self._task_id = None

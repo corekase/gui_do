@@ -25,6 +25,7 @@ class PanelControl(UiNode):
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
+        self._active_window: Optional[UiNode] = None
         self._pending_capture_release_owner_id = None
         self._visual_size = None
 
@@ -42,6 +43,10 @@ class PanelControl(UiNode):
 
     def _set_window_active_state(self, window: UiNode, is_active: bool) -> None:
         window.set_active(bool(is_active))
+        if is_active:
+            self._active_window = window
+        elif self._active_window is window:
+            self._active_window = None
 
     def _top_window_at(self, pos) -> Optional[UiNode]:
         for child in reversed(self.children):
@@ -62,8 +67,12 @@ class PanelControl(UiNode):
                 self._set_window_active_state(candidate, candidate is target)
 
     def _clear_active_windows(self) -> None:
+        active_window = self._active_window
+        if active_window is not None and active_window in self.children and self._is_window_like(active_window):
+            self._set_window_active_state(active_window, False)
+            return
         for candidate in self.children:
-            if self._is_window_like(candidate):
+            if self._is_window_like(candidate) and candidate.active:
                 self._set_window_active_state(candidate, False)
 
     def _next_top_visible_window(self, excluding: Optional[UiNode] = None) -> Optional[UiNode]:
@@ -131,11 +140,12 @@ class PanelControl(UiNode):
             else:
                 self._set_active_window(next_window)
             return
-        active_window = None
-        for child in reversed(self.children):
-            if child.visible and child.enabled and self._is_window_like(child) and child.active:
-                active_window = child
-                break
+        active_window = self._active_window
+        if active_window is not None:
+            if active_window not in self.children:
+                active_window = None
+            elif not (active_window.visible and active_window.enabled and self._is_window_like(active_window)):
+                active_window = None
         if active_window is None:
             self._set_active_window(window)
 

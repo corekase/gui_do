@@ -1,7 +1,7 @@
 """Single-line text input control with cursor, selection, masking, and IME support."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

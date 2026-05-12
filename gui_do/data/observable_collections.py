@@ -23,11 +23,9 @@ from enum import Enum
 from typing import (
     Any,
     Callable,
-    Dict,
     Generic,
     Iterable,
     Iterator,
-    List,
     Optional,
     TypeVar,
 )

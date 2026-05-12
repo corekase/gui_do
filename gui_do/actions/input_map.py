@@ -34,7 +34,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .action_manager import ActionManager
@@ -180,14 +180,15 @@ class InputMap:
 
         Returns the number of bindings applied.
         """
+        from .action_manager import KeyBinding
+
         count = 0
         for binding in self._bindings.values():
             if actions.has_action(binding.action):
-                # Remove existing bindings for this action first
-                for old in list(actions.bindings_for_action(binding.action)):
-                    actions.unbind_key(old.key, binding.action, scene=old.scene)
-                actions.bind_key(binding.key, binding.action, scene=scene)
-                count += 1
+                count += actions.replace_bindings_for_action(
+                    binding.action,
+                    (KeyBinding(binding.key, scene=scene, window_only=False),),
+                )
         return count
 
     # ------------------------------------------------------------------

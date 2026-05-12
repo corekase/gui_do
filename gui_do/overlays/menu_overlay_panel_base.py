@@ -1,7 +1,7 @@
 """Internal menu-style overlay panel base with shared input and drawing behavior."""
 from __future__ import annotations
 
-from typing import Callable, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Rect

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 __all__ = [
     "InteractionPhase",

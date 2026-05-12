@@ -42,7 +42,7 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 
 _Callback = Callable[[], None]

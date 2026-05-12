@@ -50,7 +50,7 @@ the main event loop.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Sequence, Tuple
+
 
 from ..events.gui_event import EventType
 

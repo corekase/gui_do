@@ -1,7 +1,7 @@
 """ResizeManager — listens for window resize events and reflows constrained layouts."""
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Rect

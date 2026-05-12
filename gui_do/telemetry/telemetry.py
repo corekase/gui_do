@@ -143,10 +143,6 @@ class TelemetryCollector:
         with self._lock:
             return self._file_logging_enabled
 
-    def set_auto_report_on_shutdown(self, enabled: bool) -> None:
-        with self._lock:
-            self._auto_report_on_shutdown = bool(enabled)
-
     def set_min_duration_ms(self, minimum: float) -> None:
         value = float(minimum)
         if value < 0.0:

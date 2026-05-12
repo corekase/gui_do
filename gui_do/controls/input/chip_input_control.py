@@ -1,7 +1,7 @@
 """ChipInputControl — multi-value tag input with add/remove chip affordances."""
 from __future__ import annotations
 
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

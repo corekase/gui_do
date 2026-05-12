@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -118,6 +118,8 @@ class MenuBarControl(UiNode):
         self._last_app: Optional["GuiApplication"] = None
         self.tab_index = 0
         self._draw_font_role: str = "menu_bar.entry"
+        self._entry_rects_cache_key: Optional[tuple] = None
+        self._entry_rects_cache: List[Rect] = []
 
     _FONT_SCALE: float = 1.0625   # 17/16 — slightly larger than body for menu legibility
 
@@ -130,6 +132,8 @@ class MenuBarControl(UiNode):
         self._entries = list(entries)
         self._open_index = -1
         self._hovered_index = -1
+        self._entry_rects_cache_key = None
+        self._entry_rects_cache = []
         self.invalidate()
 
     def accepts_focus(self) -> bool:
@@ -155,11 +159,25 @@ class MenuBarControl(UiNode):
     def _entry_rects(self, theme) -> List[Rect]:
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
             raise RuntimeError("MenuBarControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
+        scaled_size = theme.fonts.scaled_size(self._FONT_SCALE)
+        labels = tuple(entry.label for entry in self._entries)
+        font_revision = getattr(theme.fonts, "revision", 0)
+        cache_key = (
+            self.rect.x,
+            self.rect.y,
+            self.rect.height,
+            labels,
+            font_revision,
+            scaled_size,
+        )
+        if self._entry_rects_cache_key == cache_key:
+            return self._entry_rects_cache
+
         rects: List[Rect] = []
         x = self.rect.x
         y = self.rect.y
         h = self.rect.height
-        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
+        font = theme.fonts.font_instance(self._draw_font_role, size=scaled_size)
         for entry in self._entries:
             if font:
                 if hasattr(font, "text_size"):
@@ -171,6 +189,8 @@ class MenuBarControl(UiNode):
             w = tw + _ENTRY_PADDING_X * 2
             rects.append(Rect(x, y, w, h))
             x += w
+        self._entry_rects_cache_key = cache_key
+        self._entry_rects_cache = rects
         return rects
 
     def _hover_index_from_pointer(self, pointer_pos, er: List[Rect]) -> int:

@@ -1,7 +1,7 @@
 """SpinnerControl — numeric input with increment/decrement buttons."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Union, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

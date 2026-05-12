@@ -35,7 +35,7 @@ import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Callable, Generic, Optional, Tuple, TypeVar
+from typing import Callable, Generic, Optional, TypeVar
 
 from ..events.signal import Signal
 

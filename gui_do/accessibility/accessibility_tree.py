@@ -56,7 +56,7 @@ Usage::
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import (
     Callable,
@@ -64,7 +64,6 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Tuple,
 )
 
 
@@ -441,11 +440,16 @@ class AccessibilityBus:
             politeness=politeness,
         )
         self._queue.append(announcement)
-        for sub in tuple(self._subscribers):
+        subs = self._subscribers
+        i = 0
+        while i < len(subs):
+            sub = subs[i]
             try:
                 sub(announcement)
             except Exception:
                 pass
+            if i < len(subs) and subs[i] is sub:
+                i += 1
 
     def consume_announcements(self) -> List[AccessibilityAnnouncement]:
         """Return and clear all pending announcements (FIFO order)."""

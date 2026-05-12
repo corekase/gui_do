@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Dict, Iterable, List, Optional
+from typing import Iterable, Optional
 
 from pygame import Rect
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, Iterable
 
 import pygame
 
@@ -149,6 +149,53 @@ class ActionManager:
     def bindings_for_action(self, action_name: str) -> List[KeyBinding]:
         """Return all key bindings that route to *action_name*."""
         return list(self._bindings_by_action.get(str(action_name), ()))
+
+    def replace_bindings_for_action(
+        self,
+        action_name: str,
+        bindings: "Iterable[KeyBinding]",
+    ) -> int:
+        """Replace all key bindings for *action_name* with *bindings*.
+
+        Returns the number of bindings added.
+        """
+        normalized = str(action_name)
+        # Clear old bindings in one pass through the previous binding list.
+        for binding in self._bindings_by_action.pop(normalized, ()):
+            names = self._keymap.get(binding)
+            if not names:
+                continue
+            try:
+                names.remove(normalized)
+            except ValueError:
+                continue
+            if not names:
+                del self._keymap[binding]
+
+        added = 0
+        new_bindings: list[KeyBinding] = []
+        seen: set[KeyBinding] = set()
+        for binding in bindings:
+            if binding in seen:
+                continue
+            seen.add(binding)
+            if int(binding.key) in _RESERVED_ACCESSIBILITY_KEYS:
+                raise logical_error(
+                    f"Key {pygame.key.name(int(binding.key))!r} is reserved for accessibility focus traversal "
+                    f"(Tab/Shift+Tab, Ctrl+Tab/Ctrl+Shift+Tab) and cannot be bound to user actions.",
+                    subsystem="gui_do.actions",
+                    operation="ActionManager.replace_bindings_for_action",
+                    source_skip_frames=1,
+                )
+            new_bindings.append(binding)
+            names = self._keymap[binding]
+            if normalized not in names:
+                names.append(normalized)
+            added += 1
+
+        if new_bindings:
+            self._bindings_by_action[normalized] = new_bindings
+        return added
 
     def clear_bindings(self) -> None:
         self._keymap.clear()

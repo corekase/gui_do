@@ -41,7 +41,7 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from typing import Sequence
 
 
 class FocusRing:
@@ -69,9 +69,18 @@ class FocusRing:
         parent: Optional["FocusRing"] = None,
     ) -> None:
         self._ids: List[str] = list(node_ids)
+        self._index_by_id: dict[str, int] = {}
+        self._rebuild_index()
         self.trap: bool = trap
         self.wrap: bool = wrap
         self.parent: Optional["FocusRing"] = parent
+
+    def _rebuild_index(self) -> None:
+        index: dict[str, int] = {}
+        for i, node_id in enumerate(self._ids):
+            # Match prior list.index behavior: first occurrence wins.
+            index.setdefault(node_id, i)
+        self._index_by_id = index
 
     # ------------------------------------------------------------------
     # Membership
@@ -79,7 +88,7 @@ class FocusRing:
 
     def contains(self, node_id: str) -> bool:
         """Return True if *node_id* is in this ring."""
-        return str(node_id) in self._ids
+        return str(node_id) in self._index_by_id
 
     @property
     def node_ids(self) -> List[str]:
@@ -119,12 +128,15 @@ class FocusRing:
         if not self._ids:
             return None
 
-        if current_id is None or current_id not in self._ids:
+        if current_id is None:
             return self._ids[0] if forward else self._ids[-1]
 
-        idx = self._ids.index(current_id)
+        current_idx = self._index_by_id.get(str(current_id))
+        if current_idx is None:
+            return self._ids[0] if forward else self._ids[-1]
+
         n = len(self._ids)
-        next_idx = idx + (1 if forward else -1)
+        next_idx = current_idx + (1 if forward else -1)
 
         # At boundary
         if next_idx < 0 or next_idx >= n:
@@ -150,8 +162,11 @@ class FocusRing:
 
     def append(self, node_id: str) -> None:
         """Append *node_id* to the end of the ring."""
-        if str(node_id) not in self._ids:
-            self._ids.append(str(node_id))
+        normalized = str(node_id)
+        if normalized in self._index_by_id:
+            return
+        self._ids.append(normalized)
+        self._index_by_id[normalized] = len(self._ids) - 1
 
     def insert(self, node_id: str, *, after: Optional[str] = None, before: Optional[str] = None) -> None:
         """Insert *node_id* relative to an existing id.
@@ -159,29 +174,36 @@ class FocusRing:
         If neither *after* nor *before* is given, appends to end.
         """
         node_id = str(node_id)
-        if node_id in self._ids:
+        if node_id in self._index_by_id:
             return
-        if after is not None and after in self._ids:
-            idx = self._ids.index(after)
+        after_key = None if after is None else str(after)
+        before_key = None if before is None else str(before)
+        if after_key is not None and after_key in self._index_by_id:
+            idx = self._index_by_id[after_key]
             self._ids.insert(idx + 1, node_id)
-        elif before is not None and before in self._ids:
-            idx = self._ids.index(before)
+        elif before_key is not None and before_key in self._index_by_id:
+            idx = self._index_by_id[before_key]
             self._ids.insert(idx, node_id)
         else:
             self._ids.append(node_id)
+        self._rebuild_index()
 
     def remove(self, node_id: str) -> bool:
         """Remove *node_id* from the ring.  Returns True if it was present."""
-        try:
-            self._ids.remove(str(node_id))
-            return True
-        except ValueError:
+        normalized = str(node_id)
+        idx = self._index_by_id.get(normalized)
+        if idx is None:
             return False
+        self._ids.pop(idx)
+        self._rebuild_index()
+        return True
 
     def clear(self) -> None:
         """Remove all node ids from the ring."""
         self._ids.clear()
+        self._index_by_id.clear()
 
     def replace(self, node_ids: Sequence[str]) -> None:
         """Replace the entire ring contents with *node_ids*."""
         self._ids = list(node_ids)
+        self._rebuild_index()

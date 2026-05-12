@@ -1,7 +1,7 @@
 """TextAreaControl — multi-line editable text field with word wrap and scrolling."""
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

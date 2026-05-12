@@ -83,11 +83,21 @@ class KeyboardManager:
 
             # Accessibility keys are reserved for focus traversal behavior and
             # must not bubble to actions/window/screen handlers.
+            cached_walk_nodes_getter = getattr(scene, "_get_cached_bfs_walk", None)
+            cached_walk_nodes = cached_walk_nodes_getter() if callable(cached_walk_nodes_getter) else None
             if bool(event.mod & pygame.KMOD_CTRL):
                 shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
                 window_focus = getattr(app, "window_focus", None)
                 if window_focus is not None:
-                    window_focus.cycle(scene, forward=not shift_pressed, app=app)
+                    try:
+                        window_focus.cycle(
+                            scene,
+                            forward=not shift_pressed,
+                            app=app,
+                            cached_walk_nodes=cached_walk_nodes,
+                        )
+                    except TypeError:
+                        window_focus.cycle(scene, forward=not shift_pressed, app=app)
             else:
                 shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
                 focus_scope = scene.active_window()
@@ -95,7 +105,21 @@ class KeyboardManager:
                     pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
                 except pygame.error:
                     pointer_pos = (0, 0)
-                app.focus.cycle_focus(scene, forward=not shift_pressed, window=focus_scope, pointer_pos=pointer_pos)
+                try:
+                    app.focus.cycle_focus(
+                        scene,
+                        forward=not shift_pressed,
+                        window=focus_scope,
+                        pointer_pos=pointer_pos,
+                        cached_walk_nodes=cached_walk_nodes,
+                    )
+                except TypeError:
+                    app.focus.cycle_focus(
+                        scene,
+                        forward=not shift_pressed,
+                        window=focus_scope,
+                        pointer_pos=pointer_pos,
+                    )
             event.prevent_default()
             event.stop_propagation()
             return True

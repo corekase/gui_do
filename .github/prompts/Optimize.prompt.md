@@ -45,6 +45,8 @@ If an opportunity is classified `structural`, do not inline it into the main pas
 
 - Every optimization must leave the test suite fully passing. Run the full suite after each `local` batch and after every `structural` subplan.
 - Do not change public API signatures unless the change is genuinely necessary and the impact on callers is addressed in the same pass.
+- Do not add compatibility constructs for old behavior during optimization (no adapters, aliases, wrapper layers, fallback code paths, feature flags, or dual-API branches kept only for backward behavior).
+- When an optimization requires behavior or API cleanup, update the internal `gui_do` implementation and any affected demo code in the same pass so the codebase stays on one clean API.
 - Do not add OS-specific code, platform guards, or non-portable native extensions.
 - If a structure appears unoptimized but exists for a documented reason (e.g., a deque used as a bounded history buffer, not as a set), note it in the plan as a deliberate design choice and skip it.
 - Apply best patterns and practices for the relevant domain (Python data structures, pygame surface management, event routing, scheduler design) throughout. If you encounter a structure that violates domain best practices independently of performance, correct it as part of the same pass.

@@ -25,7 +25,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 
 # ---------------------------------------------------------------------------

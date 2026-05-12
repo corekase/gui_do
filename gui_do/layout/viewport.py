@@ -34,7 +34,7 @@ Usage::
 from __future__ import annotations
 
 import math
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from pygame import Rect
 
@@ -243,5 +243,10 @@ class Viewport:
         return _unsub
 
     def _notify(self) -> None:
-        for cb in list(self._subscribers):
+        subscribers = self._subscribers
+        i = 0
+        while i < len(subscribers):
+            cb = subscribers[i]
             cb()
+            if i < len(subscribers) and subscribers[i] is cb:
+                i += 1
