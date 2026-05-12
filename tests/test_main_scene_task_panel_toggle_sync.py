@@ -41,18 +41,18 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         demo.window_presentation = FeatureWindowPresentationModel(demo, tile_windows=demo.app.tile_windows)
         demo.window_presentation.register_feature_window(
             "life",
-            feature_attr="_life_feature",
-            toggle_attr="life_toggle_window",
+            feature_attribute_name="_life_feature",
+            toggle_attribute_name="life_toggle_window",
         )
         demo.window_presentation.register_feature_window(
             "mandel",
-            feature_attr="_mandel_feature",
-            toggle_attr="mandel_toggle_window",
+            feature_attribute_name="_mandel_feature",
+            toggle_attribute_name="mandel_toggle_window",
         )
         demo.window_presentation.register_feature_window(
             "systems",
-            feature_attr="_systems_feature",
-            toggle_attr="systems_toggle_window",
+            feature_attribute_name="_systems_feature",
+            toggle_attribute_name="systems_toggle_window",
         )
         return demo
 

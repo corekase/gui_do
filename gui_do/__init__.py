@@ -139,9 +139,8 @@ from .data.selection_model import SelectionModel, SelectionMode
 # Core event and input infrastructure for feature logic.
 
 from .events.gui_event import EventPhase, EventType, GuiEvent
-from .events.value_change_callback import ValueChangeCallback
-from .events.value_change_reason import ValueChangeReason
-from .events.event_manager import EventManager
+from .events.value_change import ValueChangeCallback, ValueChangeReason
+from .events.input_processing import EventManager
 from .events.event_bus import EventBus
 from .events.gesture_recognizer import GestureRecognizer
 from .events.event_recorder import EventRecorder, EventPlayback, RecordedEvent

@@ -1,6 +1,15 @@
+from enum import Enum
 from typing import Callable, Optional, TypeVar
 
-from .value_change_reason import ValueChangeReason
+
+class ValueChangeReason(str, Enum):
+    """Canonical source tags for value/offset change notifications."""
+
+    KEYBOARD = "keyboard"
+    PROGRAMMATIC = "programmatic"
+    MOUSE_DRAG = "mouse_drag"
+    WHEEL = "wheel"
+
 
 TValue = TypeVar("TValue")
 ValueChangeCallback = Callable[[TValue, ValueChangeReason], None]

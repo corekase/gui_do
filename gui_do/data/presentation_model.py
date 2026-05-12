@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, Generic, List, Optional, TypeVar
 
 # Imported lazily inside methods to avoid circular import during module init.
-import gui_do.data.reactive_batch as _batch_mod
+from . import reactive_batch as _batch_mod
 
 
 T = TypeVar("T")

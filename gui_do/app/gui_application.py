@@ -1,14 +1,13 @@
 import pygame
 from pathlib import Path
-from dataclasses import dataclass, replace
+from dataclasses import replace
 import os
 from time import perf_counter
 from typing import Callable, Optional
 from pygame import Rect
 
-from ..events.event_manager import EventManager
 from ..events.gui_event import EventType
-from ..events.input_state import InputState
+from ..events.input_processing import EventManager, InputState
 from ..events.pointer_capture import PointerCapture
 from ..events.keyboard_manager import KeyboardManager
 from ..focus.focus_manager import FocusManager
@@ -32,61 +31,14 @@ from ..layout.window_tiling_manager import WindowTilingManager
 from ..theme.color_theme import ColorTheme
 from ..features.feature_lifecycle import FeatureManager
 from .error_handling import logical_error, report_nonfatal_error
+from .input_event_kinds import LOGICALIZE_KINDS, POINTER_EVENT_KINDS
+from .runtime_entries import _FallthroughEntry, _SceneRuntime, _ScreenLifecycleEntry
 from ..scheduling.tween_manager import TweenManager
 from ..overlays.overlay_manager import OverlayManager
 from ..overlays.toast_manager import ToastManager
 from ..overlays.dialog_manager import DialogManager
 from ..overlays.drag_drop_manager import DragDropManager
 from ..persistence.workspace_persistence import WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
-
-# Frozenset for O(1) pointer-event kind membership tests in the hot event path.
-_POINTER_EVENT_KINDS: frozenset = frozenset((
-    EventType.MOUSE_BUTTON_DOWN,
-    EventType.MOUSE_BUTTON_UP,
-    EventType.MOUSE_MOTION,
-    EventType.MOUSE_WHEEL,
-))
-# Frozenset for the three event kinds that require pointer logicalization.
-_LOGICALIZE_KINDS: frozenset = frozenset((
-    EventType.MOUSE_MOTION,
-    EventType.MOUSE_BUTTON_DOWN,
-    EventType.MOUSE_BUTTON_UP,
-))
-
-
-@dataclass
-class _SceneRuntime:
-    scene: "Scene"
-    scheduler: "TaskScheduler"
-    timers: "Timers"
-    theme: "ColorTheme"
-    graphics_factory: "BuiltInGraphicsFactory"
-    window_tiling: "WindowTilingManager"
-    tweens: "TweenManager"
-    overlay: "OverlayManager"
-    drag_drop: "DragDropManager"
-    screen_pristine: "Optional[pygame.Surface]"
-    screen_pristine_scaled: "Optional[pygame.Surface]"
-    screen_pristine_scaled_size: tuple
-    scene_auto_suspended: set
-
-
-@dataclass
-class _ScreenLifecycleEntry:
-    preamble: "Optional[Callable[[], None]]" = None
-    event_handler: "Optional[Callable[[object], bool]]" = None
-    postamble: "Optional[Callable[[], None]]" = None
-    scene_name: "Optional[str]" = None
-    entry_id: int = 0
-
-
-@dataclass
-class _FallthroughEntry:
-    """Handler invoked only when the full event pipeline returns unconsumed."""
-    event_handler: "Callable[[object], bool]"
-    scene_name: "Optional[str]" = None
-    entry_id: int = 0
-
 
 class GuiApplication:
     """Application runtime coordinator for scene, input, capture, and rendering."""
@@ -592,7 +544,7 @@ class GuiApplication:
             self.input_state.pointer_pos = self._logical_pointer_pos
 
         logical_event = self._logicalize_pointer_event(gui_event)
-        is_pointer_event = logical_event.kind in _POINTER_EVENT_KINDS
+        is_pointer_event = logical_event.kind in POINTER_EVENT_KINDS
 
         # Toasts render above overlays/scene. Pointer hits on toast bounds are
         # consumed so pointer state does not fall through to underlying controls.
@@ -927,7 +879,7 @@ class GuiApplication:
             )
 
     def _logicalize_pointer_event(self, event):
-        if event.kind not in _LOGICALIZE_KINDS:
+        if event.kind not in LOGICALIZE_KINDS:
             return event
         raw_pos = event.pos
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):

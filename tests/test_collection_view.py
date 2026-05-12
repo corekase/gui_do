@@ -2,11 +2,11 @@
 import unittest
 
 from gui_do.data.collection_view import CollectionView, CollectionViewQuery
-from gui_do.events.value_change_callback import (
-    validate_value_change_callback,
+from gui_do.events.value_change import (
+    ValueChangeReason,
     dispatch_value_change,
+    validate_value_change_callback,
 )
-from gui_do.events.value_change_reason import ValueChangeReason
 
 
 # ===========================================================================

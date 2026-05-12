@@ -1138,11 +1138,11 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
 
         existing = WindowSpec(
             key="existing",
-            feature_attr="_x",
-            toggle_attr="toggle_x",
+            feature_attribute_name="_x",
+            toggle_attribute_name="toggle_x",
             action_name="win_x",
             action_label="Show X Window",
-            task_panel_button_id="show_x",
+            task_panel_toggle_button_id="show_x",
             task_panel_label="X",
             task_panel_style="round",
             task_panel_slot_index=9,
@@ -1152,8 +1152,8 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
             (
                 WindowToggleBindingSpec(
                     key="life",
-                    feature_attr="_life",
-                    slot_index=2,
+                    feature_attribute_name="_life",
+                    task_panel_slot_index=2,
                     task_panel_label="Life",
                     task_panel_style="angle",
                 ),
@@ -1162,7 +1162,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         )
         self.assertEqual(len(built), 2)
         self.assertEqual(built[0].key, "life")
-        self.assertEqual(built[0].feature_attr, "_life")
+        self.assertEqual(built[0].feature_attribute_name, "_life")
         self.assertEqual(built[0].task_panel_slot_index, 2)
         self.assertEqual(built[0].task_panel_style, "angle")
         self.assertIs(built[1], existing)
@@ -1374,13 +1374,13 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                     pretty_name="Main",
                     transition_style=SceneTransitionStyle.SLIDE_RIGHT,
                     transition_duration=0.5,
-                    include_nav_action=True,
+                    emit_nav_action_spec=True,
                     nav_action_id="nav_main",
                     nav_label="Go to Main",
                     pristine_asset="main.png",
                     bind_escape_to_exit=True,
                     prewarm=True,
-                    include_scene_root=True,
+                    emit_scene_root_spec=True,
                     scene_root_id="main_root",
                 ),
                 passthrough_scene,
@@ -1421,10 +1421,10 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
             (
                 SceneBundleBindingSpec(
                     scene_name="tools",
-                    include_scene_setup=False,
-                    include_runtime_scene=False,
-                    include_scene_root=False,
-                    include_nav_action=False,
+                    emit_scene_setup_spec=False,
+                    emit_runtime_scene_spec=False,
+                    emit_scene_root_spec=False,
+                    emit_nav_action_spec=False,
                 ),
             )
         )
@@ -1457,7 +1457,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                 scene_entries=(("main", "Main"),),
                 feature_entries=(("_main_feature", factory),),
                 window_entries=(
-                    WindowToggleBindingSpec("main", "_main_feature", slot_index=1),
+                    WindowToggleBindingSpec("main", "_main_feature", task_panel_slot_index=1),
                 ),
                 runtime_scene_entries=(
                     RuntimeSceneBindingSpec("main", "asset.png", True, False),
@@ -1521,17 +1521,17 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                     SceneBundleBindingSpec(
                         scene_name="main",
                         pretty_name="Main",
-                        include_nav_action=True,
+                        emit_nav_action_spec=True,
                         pristine_asset="main.png",
                         bind_escape_to_exit=True,
                         prewarm=True,
-                        include_scene_root=True,
+                        emit_scene_root_spec=True,
                         scene_root_id="main_root",
                     ),
                 ),
                 feature_entries=(("_main_feature", factory),),
                 window_entries=(
-                    WindowToggleBindingSpec("main", "_main_feature", slot_index=1),
+                    WindowToggleBindingSpec("main", "_main_feature", task_panel_slot_index=1),
                 ),
                 runtime_scene_entries=(),
                 action_entries=(
@@ -1592,7 +1592,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                     "_life_feature",
                     factory_a,
                     "life",
-                    slot_index=3,
+                    task_panel_slot_index=3,
                     task_panel_label="Life",
                     task_panel_style="round",
                 ),
@@ -1600,7 +1600,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                     "_mandel_feature",
                     factory_b,
                     "mandel",
-                    slot_index=4,
+                    task_panel_slot_index=4,
                     task_panel_label="Mandelbrot",
                     task_panel_style="round",
                 ),
@@ -1614,7 +1614,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
 
         self.assertEqual(len(window_specs), 2)
         self.assertEqual(window_specs[0].key, "life")
-        self.assertEqual(window_specs[0].feature_attr, "_life_feature")
+        self.assertEqual(window_specs[0].feature_attribute_name, "_life_feature")
         self.assertEqual(window_specs[0].task_panel_slot_index, 3)
         self.assertEqual(window_specs[0].task_panel_label, "Life")
         self.assertEqual(window_specs[0].task_panel_style, "round")
@@ -1633,11 +1633,11 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         bare_feature = FeatureSpec(attr_name="_extra", factory=factory_b)
         bare_window = WindowSpec(
             key="extra",
-            feature_attr="_extra",
-            toggle_attr="toggle_extra",
+            feature_attribute_name="_extra",
+            toggle_attribute_name="toggle_extra",
             action_name="win_extra",
             action_label="Show Extra Window",
-            task_panel_button_id="show_extra",
+            task_panel_toggle_button_id="show_extra",
             task_panel_label="Extra",
             task_panel_style="angle",
             task_panel_slot_index=9,
@@ -1645,7 +1645,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         )
         feature_specs, window_specs = build_feature_window_bundle_specs(
             (
-                FeatureWindowBundleBindingSpec("_life", factory_a, "life", slot_index=2),
+                FeatureWindowBundleBindingSpec("_life", factory_a, "life", task_panel_slot_index=2),
                 bare_feature,
                 bare_window,
             )
@@ -1661,15 +1661,15 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         factory = MagicMock()
         _, window_specs = build_feature_window_bundle_specs(
             (
-                FeatureWindowBundleBindingSpec("_sys", factory, "systems", slot_index=1),
+                FeatureWindowBundleBindingSpec("_sys", factory, "systems", task_panel_slot_index=1),
             )
         )
         w = window_specs[0]
         self.assertEqual(w.key, "systems")
-        self.assertEqual(w.feature_attr, "_sys")
-        self.assertEqual(w.toggle_attr, "systems_toggle_window")
+        self.assertEqual(w.feature_attribute_name, "_sys")
+        self.assertEqual(w.toggle_attribute_name, "systems_toggle_window")
         self.assertEqual(w.action_name, "win_systems")
-        self.assertEqual(w.task_panel_button_id, "show_systems")
+        self.assertEqual(w.task_panel_toggle_button_id, "show_systems")
         self.assertIn("Systems", w.task_panel_label)
         self.assertEqual(w.task_panel_style, "round")
 
@@ -1698,14 +1698,14 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
                         "_life_feature",
                         factory_a,
                         "life",
-                        slot_index=3,
+                        task_panel_slot_index=3,
                         task_panel_label="Life",
                     ),
                     FeatureWindowBundleBindingSpec(
                         "_mandel_feature",
                         factory_b,
                         "mandel",
-                        slot_index=4,
+                        task_panel_slot_index=4,
                         task_panel_label="Mandelbrot",
                         task_panel_style="angle",
                     ),

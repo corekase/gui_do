@@ -8,7 +8,7 @@ pygame.init()
 from gui_do.graphics.dirty_region import DirtyRegionTracker
 from gui_do.data.invalidation import InvalidationTracker
 from gui_do.layout.snap_grid import SnapGrid
-from gui_do.events.value_change_reason import ValueChangeReason
+from gui_do.events.value_change import ValueChangeReason
 from gui_do.layout.layout_axis import LayoutAxis
 
 

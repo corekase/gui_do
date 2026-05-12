@@ -26,6 +26,83 @@ from .feature_lifecycle import (
     resolve_scene_selection_callback,
     setup_standard_font_roles,
 )
+from .runtime_helpers import (
+    apply_accessibility_sequence as _apply_accessibility_sequence,
+    apply_accessibility_sequence_from_attrs as _apply_accessibility_sequence_from_attrs,
+    initialize_locale_registry as _initialize_locale_registry,
+    bind_input_map_actions as _bind_input_map_actions,
+    register_descriptors as _register_descriptors,
+    resolve_canvas_local_point as _resolve_canvas_local_point,
+    apply_runtime_scene_pristine_assets as _apply_runtime_scene_pristine_assets,
+    bind_runtime_scene_exit_keys as _bind_runtime_scene_exit_keys,
+    prewarm_runtime_scenes as _prewarm_runtime_scenes,
+)
+from .runtime_models import (
+    ActiveTabUpdateRouter,
+    HostApplicationConfig,
+    NotificationSpec,
+    TabbedPresenterSpec,
+    TelemetryConfig,
+    build_notification_center,
+)
+from .runtime_registration_helpers import (
+    instantiate_features_from_specs as _instantiate_features_from_specs,
+    register_features_from_specs as _register_features_from_specs,
+    register_window_presentation_specs as _register_window_presentation_specs,
+    register_window_tab_builders as _register_window_tab_builders,
+)
+from .runtime_routed_helpers import (
+    bind_feature_logic_aliases as _bind_feature_logic_aliases,
+    setup_routed_feature_runtime as _setup_routed_feature_runtime,
+)
+from .runtime_window_toggle_helpers import (
+    add_task_panel_window_toggle_group as _add_task_panel_window_toggle_group,
+    add_window_toggle_task_panel_controls as _add_window_toggle_task_panel_controls,
+    apply_window_toggle_accessibility as _apply_window_toggle_accessibility,
+    collect_window_toggle_controls as _collect_window_toggle_controls,
+    register_window_toggle_tooltips as _register_window_toggle_tooltips,
+    sorted_window_bindings as _sorted_window_bindings,
+)
+from .runtime_task_panel_helpers import (
+    add_right_anchored_task_panel_button as _add_right_anchored_task_panel_button,
+    add_task_panel_button as _add_task_panel_button,
+    add_task_panel_buttons as _add_task_panel_buttons,
+)
+from .runtime_tab_helpers import (
+    compute_tabbed_window_layout as _compute_tabbed_window_layout,
+    create_feature_presented_window as _create_feature_presented_window,
+    create_presented_anchored_window as _create_presented_anchored_window,
+    create_presented_window_from_spec as _create_presented_window_from_spec,
+    create_tab_control_from_specs as _create_tab_control_from_specs,
+    register_tab_update_handlers as _register_tab_update_handlers,
+    register_window_tab_builder_specs as _register_window_tab_builder_specs,
+    setup_feature_presenter_tabs as _setup_feature_presenter_tabs,
+    setup_feature_presenter_tabs_from_window_content as _setup_feature_presenter_tabs_from_window_content,
+)
+from .runtime_spec_factories import (
+    make_exit_action as _make_exit_action,
+    make_palette_open_action as _make_palette_open_action,
+    make_scene_nav_action as _make_scene_nav_action,
+    make_static_accessibility_spec as _make_static_accessibility_spec,
+    make_window_toggle_spec as _make_window_toggle_spec,
+)
+from .runtime_spec_builders import (
+    build_action_specs as _build_action_specs,
+    build_feature_specs as _build_feature_specs,
+    build_feature_window_bundle_specs as _build_feature_window_bundle_specs,
+    build_scene_nav_actions as _build_scene_nav_actions,
+    build_static_accessibility_specs as _build_static_accessibility_specs,
+    build_window_toggle_specs as _build_window_toggle_specs,
+)
+from .runtime_config_builders import (
+    build_cursor_specs as _build_cursor_specs,
+    build_font_role_specs as _build_font_role_specs,
+    build_host_application_config as _build_host_application_config,
+    build_runtime_scene_specs as _build_runtime_scene_specs,
+    build_scene_bundle_specs as _build_scene_bundle_specs,
+    build_scene_root_specs as _build_scene_root_specs,
+    build_scene_setup_specs as _build_scene_setup_specs,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -43,11 +120,11 @@ class FeatureSpec:
 class WindowSpec:
     """Declarative descriptor for a feature window presentation binding."""
     key: str
-    feature_attr: str
-    toggle_attr: str
+    feature_attribute_name: str
+    toggle_attribute_name: str
     action_name: str
     action_label: str
-    task_panel_button_id: str
+    task_panel_toggle_button_id: str
     task_panel_label: str
     task_panel_style: str
     task_panel_slot_index: int | None
@@ -397,16 +474,16 @@ class FeatureWindowBundleBindingSpec:
     can be declared as a single self-contained entry.
     """
 
-    feature_attr: str
+    feature_attribute_name: str
     factory: object  # Callable[[], object]
     window_key: str
-    slot_index: int | None = None
+    task_panel_slot_index: int | None = None
     task_panel_label: str | None = None
     task_panel_style: str = "round"
     action_label: str | None = None
     action_name: str | None = None
-    task_panel_button_id: str | None = None
-    toggle_attr: str | None = None
+    task_panel_toggle_button_id: str | None = None
+    toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
 
 
@@ -415,14 +492,14 @@ class WindowToggleBindingSpec:
     """Input descriptor for building a WindowSpec with conventional defaults."""
 
     key: str
-    feature_attr: str
-    slot_index: int | None = None
+    feature_attribute_name: str
+    task_panel_slot_index: int | None = None
     task_panel_label: str | None = None
     task_panel_style: str = "round"
     action_label: str | None = None
     action_name: str | None = None
-    task_panel_button_id: str | None = None
-    toggle_attr: str | None = None
+    task_panel_toggle_button_id: str | None = None
+    toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
 
 
@@ -513,19 +590,19 @@ class SceneBundleBindingSpec:
     tiling_avoid_task_panel: bool | None = True
     tiling_center_on_failure: bool | None = True
     tiling_relayout: bool = False
-    include_scene_setup: bool = True
+    emit_scene_setup_spec: bool = True
 
     pristine_asset: str | None = None
     bind_escape_to_exit: bool = False
     prewarm: bool = False
-    include_runtime_scene: bool = True
+    emit_runtime_scene_spec: bool = True
 
-    include_nav_action: bool = False
+    emit_nav_action_spec: bool = False
     nav_action_id: str | None = None
     nav_label: str | None = None
     nav_category: str | None = "Scenes"
 
-    include_scene_root: bool = False
+    emit_scene_root_spec: bool = False
     scene_root_id: str | None = None
     scene_root_draw_background: bool = False
 
@@ -632,133 +709,6 @@ class PresenterButtonSpec:
     advance: int | None = None
     x_offset: int = 0
     style: str | None = None
-
-
-@dataclass(frozen=True)
-class NotificationSpec:
-    """Declarative descriptor for a pre-seeded :class:`~gui_do.NotificationRecord`.
-
-    Pass a sequence of these to :func:`build_notification_center` to create a
-    fully populated :class:`~gui_do.NotificationCenter` without writing
-    imperative ``.add()`` calls.
-
-    Attributes:
-        message: The notification body text.
-        title: Optional short heading.
-        severity: Visual classification; defaults to ``ToastSeverity.INFO``.
-    """
-
-    message: str
-    title: str = ""
-    severity: object = None  # ToastSeverity.INFO — resolved at call time to avoid import cycle
-
-
-@dataclass(frozen=True)
-class TabbedPresenterSpec:
-    """Declarative descriptor for presenter-hosted tab layout and setup."""
-
-    control_id: str
-    selected_key: str
-    tab_height: int = 36
-    tab_rows: int = 2
-    padding: int = 0
-    min_content_height: int = 60
-
-
-def build_notification_center(
-    specs: Sequence["NotificationSpec"],
-    *,
-    max_records: int = 6,
-) -> "object":
-    """Return a pre-populated :class:`~gui_do.NotificationCenter`.
-
-    Creates the center with *max_records* capacity, then adds one
-    :class:`~gui_do.NotificationRecord` per entry in *specs*.
-
-    Args:
-        specs: Ordered sequence of :class:`NotificationSpec` objects.
-        max_records: Maximum number of records the center will retain.
-
-    Returns:
-        A ready-to-use :class:`~gui_do.NotificationCenter` instance.
-
-    Example::
-
-        from gui_do import NotificationSpec, build_notification_center
-        from gui_do import ToastSeverity
-
-        nc = build_notification_center(
-            (
-                NotificationSpec("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS),
-                NotificationSpec("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING),
-            ),
-            max_records=6,
-        )
-    """
-    from ..overlays.notification_center import NotificationCenter, NotificationRecord
-    from ..overlays.toast_manager import ToastSeverity as _Sev
-
-    center = NotificationCenter(None, max_records=max(1, int(max_records)))
-    for spec in specs:
-        severity = spec.severity if spec.severity is not None else _Sev.INFO
-        center.add(NotificationRecord(spec.message, title=str(spec.title), severity=severity))
-    return center
-
-
-class ActiveTabUpdateRouter:
-    """Route per-frame update callbacks by active tab key."""
-
-    def __init__(self) -> None:
-        self._handlers: dict[str, Callable[..., object]] = {}
-
-    def register(self, tab_key: str, handler: Callable[..., object]) -> None:
-        self._handlers[str(tab_key)] = handler
-
-    def unregister(self, tab_key: str) -> bool:
-        key = str(tab_key)
-        if key in self._handlers:
-            del self._handlers[key]
-            return True
-        return False
-
-    def run(self, active_tab_key: str, *args, **kwargs) -> bool:
-        handler = self._handlers.get(str(active_tab_key))
-        if handler is None:
-            return False
-        handler(*args, **kwargs)
-        return True
-
-    def keys(self) -> tuple[str, ...]:
-        return tuple(self._handlers.keys())
-
-
-@dataclass
-class TelemetryConfig:
-    """Telemetry settings for the application."""
-    enabled: bool = False
-    live_analysis_enabled: bool = True
-    file_logging_enabled: bool = False
-
-
-@dataclass
-class HostApplicationConfig:
-    """Complete declarative configuration for bootstrapping a host application."""
-    display_size: tuple[int, int]
-    window_title: str
-    fonts: dict
-    font_role_specs: tuple[dict, ...]
-    cursors: tuple[CursorSpec, ...]
-    scene_specs: tuple
-    feature_specs: tuple[FeatureSpec, ...]
-    window_specs: tuple[WindowSpec, ...]
-    runtime_scene_specs: tuple[RuntimeSceneSpec, ...]
-    action_specs: tuple[ActionSpec, ...]
-    static_accessibility_specs: tuple[StaticAccessibilitySpec, ...]
-    initial_scene_name: str
-    scene_roots: tuple[SceneRootSpec, ...] = field(default_factory=tuple)
-    telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
-    target_fps: int = 120
-    palette_spec: PaletteBindingSpec | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1045,23 +995,12 @@ def add_scene_menu_strip_from_spec(container, host, spec: SceneMenuStripSpec):
 
 def apply_accessibility_sequence(items, tab_index_start: int) -> int:
     """Apply sequential tab order and accessibility metadata to controls."""
-    next_index = int(tab_index_start)
-    for control, role, label in items:
-        if control is None:
-            continue
-        control.set_tab_index(next_index)
-        control.set_accessibility(role=str(role), label=str(label))
-        next_index += 1
-    return next_index
+    return _apply_accessibility_sequence(items, tab_index_start)
 
 
 def apply_accessibility_sequence_from_attrs(target, specs: Sequence[AccessibilitySequenceSpec], tab_index_start: int) -> int:
     """Apply sequential accessibility/tab-order metadata using target attribute names."""
-    items = [
-        (getattr(target, spec.control_attr, None), spec.role, spec.label)
-        for spec in specs
-    ]
-    return apply_accessibility_sequence(items, tab_index_start)
+    return _apply_accessibility_sequence_from_attrs(target, specs, tab_index_start)
 
 
 def register_companion_logic_features(feature_manager, host, providers) -> None:
@@ -1081,33 +1020,17 @@ def ensure_scene_scheduler(feature, host, *, scene_name: str = "main", attr_name
 
 def sorted_window_bindings(bindings):
     """Return feature-window bindings ordered by explicit slot then declaration order."""
-    ordered = list(tuple(bindings))
-    with_slots = [b for b in ordered if getattr(b, "task_panel_slot_index", None) is not None]
-    without_slots = [b for b in ordered if getattr(b, "task_panel_slot_index", None) is None]
-    with_slots.sort(key=lambda b: (int(b.task_panel_slot_index), str(getattr(b, "key", ""))))
-    return tuple([*with_slots, *without_slots])
+    return _sorted_window_bindings(bindings)
 
 
 def collect_window_toggle_controls(host, window_presentation):
     """Return sorted (binding, control) pairs for all available window toggles on host."""
-    controls = []
-    for binding in sorted_window_bindings(window_presentation.bindings()):
-        toggle_attr = getattr(binding, "toggle_attr", None)
-        if toggle_attr is None:
-            continue
-        control = getattr(host, str(toggle_attr), None)
-        if control is not None:
-            controls.append((binding, control))
-    return controls
+    return _collect_window_toggle_controls(host, window_presentation)
 
 
 def apply_window_toggle_accessibility(host, window_presentation, *, role: str = "toggle") -> None:
     """Apply accessibility metadata for all window toggle controls declared by bindings."""
-    for binding, control in collect_window_toggle_controls(host, window_presentation):
-        control.set_accessibility(
-            role=str(role),
-            label=binding.accessibility_label or binding.action_label or binding.key,
-        )
+    _apply_window_toggle_accessibility(host, window_presentation, role=role)
 
 
 def add_window_toggle_task_panel_controls(
@@ -1126,57 +1049,21 @@ def add_window_toggle_task_panel_controls(
     Optional slot bounds allow callers to create controls in phases so focus order
     can match visual slot order when mixed with non-toggle controls.
     """
-    target = host if attr_owner is None else attr_owner
-    toggle_controls = []
-    max_seen_slot_index = 0
-    slot_map = {} if slot_overrides is None else {str(k): int(v) for k, v in slot_overrides.items()}
-    next_auto_slot = int(min_slot_index) if min_slot_index is not None else 0
-    used_slots: set[int] = set(slot_map.values())
-    for binding in sorted_window_bindings(window_presentation.bindings()):
-        if str(binding.key) in slot_map:
-            slot_index = int(slot_map[str(binding.key)])
-        elif binding.task_panel_slot_index is not None:
-            slot_index = int(binding.task_panel_slot_index)
-        else:
-            while next_auto_slot in used_slots:
-                next_auto_slot += 1
-            slot_index = int(next_auto_slot)
-            used_slots.add(slot_index)
-            next_auto_slot += 1
-        if min_slot_index is not None and slot_index < int(min_slot_index):
-            continue
-        if max_slot_index is not None and slot_index > int(max_slot_index):
-            continue
-        used_slots.add(slot_index)
-        next_auto_slot = max(next_auto_slot, slot_index + 1)
-        max_seen_slot_index = max(max_seen_slot_index, slot_index)
-        toggle = task_panel.add(
-            ToggleControl(
-                binding.task_panel_button_id or f"show_{binding.key}",
-                app_layout.linear(slot_index),
-                binding.task_panel_label or binding.key.title(),
-                binding.task_panel_label or binding.key.title(),
-                pushed=False,
-                on_toggle=lambda pushed, _key=binding.key: window_presentation.set_visible(
-                    _key,
-                    bool(pushed),
-                    from_toggle=True,
-                ),
-                style=binding.task_panel_style,
-            )
-        )
-        toggle.set_tab_index(int(slot_index))
-        if binding.toggle_attr:
-            setattr(target, binding.toggle_attr, toggle)
-        toggle_controls.append((binding, toggle))
-    return toggle_controls, max_seen_slot_index
+    return _add_window_toggle_task_panel_controls(
+        host,
+        task_panel,
+        app_layout,
+        window_presentation,
+        min_slot_index=min_slot_index,
+        max_slot_index=max_slot_index,
+        attr_owner=attr_owner,
+        slot_overrides=slot_overrides,
+    )
 
 
 def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
     """Register standardized window toggle tooltip labels."""
-    for binding, toggle in toggle_controls:
-        label = binding.task_panel_label or binding.action_label or binding.key.title()
-        tooltip_manager.register(toggle, f"Toggle the {label} window")
+    _register_window_toggle_tooltips(tooltip_manager, toggle_controls)
 
 
 def add_task_panel_window_toggle_group(
@@ -1200,16 +1087,15 @@ def add_task_panel_window_toggle_group(
     ``add_window_toggle_task_panel_controls`` so callers can pass the result to
     ``register_window_toggle_tooltips`` or accessibility helpers.
     """
-    toggle_controls, _ = add_window_toggle_task_panel_controls(
+    return _add_task_panel_window_toggle_group(
         host,
         task_panel,
         app_layout,
         window_presentation,
-        min_slot_index=int(spec.start_index),
+        spec,
         attr_owner=attr_owner,
         slot_overrides=slot_overrides,
     )
-    return toggle_controls
 
 
 def setup_scene_command_palette_key(app, palette_manager, spec: "SceneCommandPaletteSpec") -> None:
@@ -1233,58 +1119,37 @@ def setup_scene_command_palette_key(app, palette_manager, spec: "SceneCommandPal
 
 def initialize_locale_registry(tables, *, initial_locale: str) -> LocaleRegistry:
     """Create a LocaleRegistry, register all tables, and select the initial locale."""
-    locale_registry = LocaleRegistry()
-    for table in tables:
-        locale_registry.register(table)
-    locale_registry.set_locale(str(initial_locale))
-    return locale_registry
+    return _initialize_locale_registry(tables, initial_locale=initial_locale)
 
 
 def bind_input_map_actions(input_map, bindings, *, mod: int = 0) -> None:
     """Bind multiple (key, action) pairs on an InputMap using a shared modifier."""
-    for key, action in bindings:
-        input_map.bind(str(action), key=key, mod=int(mod))
+    _bind_input_map_actions(input_map, bindings, mod=mod)
 
 
 def register_descriptors(registry, owner_class, descriptors) -> None:
     """Register a sequence of property descriptors for a given owner class."""
-    for descriptor in descriptors:
-        registry.register(owner_class, descriptor)
+    _register_descriptors(registry, owner_class, descriptors)
 
 
 def resolve_canvas_local_point(packet, canvas_rect: Rect):
     """Resolve packet coordinates to canvas-local space, if available."""
-    local_pos = getattr(packet, "local_pos", None)
-    if local_pos is not None:
-        return (float(local_pos[0]), float(local_pos[1]))
-    pos = getattr(packet, "pos", None)
-    if pos is None:
-        return None
-    return (float(pos[0] - canvas_rect.left), float(pos[1] - canvas_rect.top))
+    return _resolve_canvas_local_point(packet, canvas_rect)
 
 
 def apply_runtime_scene_pristine_assets(app, runtime_scene_specs) -> None:
     """Apply configured pristine assets to runtime scenes from declarative specs."""
-    for spec in runtime_scene_specs:
-        if not spec.pristine_asset:
-            continue
-        app.set_pristine(spec.pristine_asset, scene_name=spec.scene_name)
+    _apply_runtime_scene_pristine_assets(app, runtime_scene_specs)
 
 
 def bind_runtime_scene_exit_keys(actions, runtime_scene_specs, *, key, action_name: str = "exit") -> None:
     """Bind a shared exit action key for all runtime scenes that opt in."""
-    for spec in runtime_scene_specs:
-        if not spec.bind_escape_to_exit:
-            continue
-        actions.bind_key(key, str(action_name), scene=spec.scene_name)
+    _bind_runtime_scene_exit_keys(actions, runtime_scene_specs, key=key, action_name=action_name)
 
 
 def prewarm_runtime_scenes(app, runtime_scene_specs) -> None:
     """Prewarm runtime scenes that opt in via declarative scene specs."""
-    for spec in runtime_scene_specs:
-        if not spec.prewarm:
-            continue
-        app.prewarm_scene(spec.scene_name)
+    _prewarm_runtime_scenes(app, runtime_scene_specs)
 
 
 def add_task_panel_button(
@@ -1299,79 +1164,32 @@ def add_task_panel_button(
     assign_tab_index: bool = True,
 ):
     """Create and add a standard task-panel button positioned by linear slot index."""
-    button = task_panel.add(
-        ButtonControl(
-            str(control_id),
-            app_layout.linear(int(slot_index)),
-            str(label),
-            on_click,
-            style=str(style),
-        )
+    return _add_task_panel_button(
+        task_panel,
+        app_layout,
+        control_id=control_id,
+        slot_index=slot_index,
+        label=label,
+        on_click=on_click,
+        style=style,
+        assign_tab_index=assign_tab_index,
     )
-    if bool(assign_tab_index):
-        button.set_tab_index(int(slot_index))
-    return button
 
 
 def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPanelButtonSpec]):
     """Create and assign host-owned task-panel buttons from declarative specs."""
-    next_slot = 0
-    used_slots: set[int] = set()
-    for spec in specs:
-        if spec.slot_index is None:
-            while next_slot in used_slots:
-                next_slot += 1
-            slot_index = next_slot
-            used_slots.add(slot_index)
-            next_slot += 1
-        else:
-            slot_index = int(spec.slot_index)
-            used_slots.add(slot_index)
-            next_slot = max(next_slot, slot_index + 1)
-        button = add_task_panel_button(
-            task_panel,
-            app_layout,
-            control_id=spec.control_id,
-            slot_index=slot_index,
-            label=spec.label,
-            on_click=spec.on_click,
-            style=spec.style,
-        )
-        setattr(host, spec.attr_name, button)
+    _add_task_panel_buttons(
+        host,
+        task_panel,
+        app_layout,
+        specs,
+        add_task_panel_button_fn=add_task_panel_button,
+    )
 
 
 def add_right_anchored_task_panel_button(host, task_panel, spec: RightAnchoredTaskPanelButtonSpec):
     """Create one task-panel button anchored to the panel's right edge."""
-    rect = Rect(
-        int(task_panel.rect.right) - int(spec.right_padding) - int(spec.width),
-        int(task_panel.rect.top) + int(spec.top_offset),
-        int(spec.width),
-        int(spec.height),
-    )
-    button = task_panel.add(
-        ButtonControl(
-            str(spec.control_id),
-            rect,
-            str(spec.label),
-            spec.on_click,
-            style=str(spec.style),
-        )
-    )
-    if not bool(spec.include_in_task_panel_focus_cycle):
-        button.set_tab_index(-1)
-        setattr(button, "task_panel_focus_excluded", True)
-    else:
-        peers = getattr(task_panel, "children", None)
-        if not isinstance(peers, list):
-            peers = getattr(task_panel, "added_controls", [])
-        prior_indices = [
-            int(getattr(node, "tab_index", -1))
-            for node in peers
-            if node is not button and int(getattr(node, "tab_index", -1)) >= 0
-        ]
-        button.set_tab_index(0 if not prior_indices else (max(prior_indices) + 1))
-    setattr(host, spec.attr_name, button)
-    return button
+    return _add_right_anchored_task_panel_button(host, task_panel, spec)
 
 
 def register_tooltip_specs(tooltip_manager, specs) -> None:
@@ -2154,31 +1972,30 @@ class TabLayoutContext:
 
 def make_window_toggle_spec(
     key: str,
-    feature_attr: str,
+    feature_attribute_name: str,
     *,
-    slot_index: int | None = None,
+    task_panel_slot_index: int | None = None,
     task_panel_label: str | None = None,
     task_panel_style: str = "round",
     action_label: str | None = None,
     action_name: str | None = None,
-    task_panel_button_id: str | None = None,
-    toggle_attr: str | None = None,
+    task_panel_toggle_button_id: str | None = None,
+    toggle_attribute_name: str | None = None,
     accessibility_label: str | None = None,
 ) -> WindowSpec:
     """Build a WindowSpec with conventional defaults for demo/host window toggles."""
-    normalized_key = str(key)
-    normalized_label = task_panel_label or normalized_key.replace("_", " ").title()
-    return WindowSpec(
-        key=normalized_key,
-        feature_attr=str(feature_attr),
-        toggle_attr=toggle_attr or f"{normalized_key}_toggle_window",
-        action_name=action_name or f"win_{normalized_key}",
-        action_label=action_label or f"Show {normalized_label} Window",
-        task_panel_button_id=task_panel_button_id or f"show_{normalized_key}",
-        task_panel_label=normalized_label,
-        task_panel_style=str(task_panel_style),
-        task_panel_slot_index=(None if slot_index is None else int(slot_index)),
-        accessibility_label=accessibility_label or f"Show {normalized_label} window",
+    return _make_window_toggle_spec(
+        window_spec_cls=WindowSpec,
+        key=key,
+        feature_attribute_name=feature_attribute_name,
+        task_panel_slot_index=task_panel_slot_index,
+        task_panel_label=task_panel_label,
+        task_panel_style=task_panel_style,
+        action_label=action_label,
+        action_name=action_name,
+        task_panel_toggle_button_id=task_panel_toggle_button_id,
+        toggle_attribute_name=toggle_attribute_name,
+        accessibility_label=accessibility_label,
     )
 
 
@@ -2190,12 +2007,12 @@ def make_scene_nav_action(
     category: str = "Scenes",
 ) -> ActionSpec:
     """Build a scene-navigation ActionSpec with consistent defaults."""
-    return ActionSpec(
-        action_id=str(action_id),
-        label=str(label),
-        kind="scene_nav",
-        target=str(target_scene),
-        category=str(category),
+    return _make_scene_nav_action(
+        action_spec_cls=ActionSpec,
+        action_id=action_id,
+        label=label,
+        target_scene=target_scene,
+        category=category,
     )
 
 
@@ -2206,12 +2023,11 @@ def make_exit_action(
     category: str = "File",
 ) -> ActionSpec:
     """Build a standard exit ActionSpec."""
-    return ActionSpec(
-        action_id=str(action_id),
-        label=str(label),
-        kind="exit",
-        target=None,
-        category=str(category),
+    return _make_exit_action(
+        action_spec_cls=ActionSpec,
+        action_id=action_id,
+        label=label,
+        category=category,
     )
 
 
@@ -2222,12 +2038,10 @@ def make_palette_open_action(
     key: int | None = None,
 ) -> ActionSpec:
     """Build a standard command-palette open ActionSpec."""
-    return ActionSpec(
-        action_id=str(action_id),
-        label=str(label),
-        kind="palette_open",
-        target=None,
-        category=None,
+    return _make_palette_open_action(
+        action_spec_cls=ActionSpec,
+        action_id=action_id,
+        label=label,
         key=key,
     )
 
@@ -2239,10 +2053,11 @@ def make_static_accessibility_spec(
     role: str = "button",
 ) -> StaticAccessibilitySpec:
     """Build a StaticAccessibilitySpec with a role default suitable for buttons."""
-    return StaticAccessibilitySpec(
-        control_attr=str(control_attr),
-        role=str(role),
-        label=str(label),
+    return _make_static_accessibility_spec(
+        static_accessibility_spec_cls=StaticAccessibilitySpec,
+        control_attr=control_attr,
+        label=label,
+        role=role,
     )
 
 
@@ -2253,14 +2068,7 @@ def build_feature_specs(entries: Sequence[tuple[str, Callable[[], object]] | Fea
     - ``FeatureSpec(attr_name=..., factory=...)``
     - ``(attr_name, factory)``
     """
-    specs: list[FeatureSpec] = []
-    for entry in entries:
-        if isinstance(entry, FeatureSpec):
-            specs.append(entry)
-            continue
-        attr_name, factory = entry
-        specs.append(FeatureSpec(attr_name=str(attr_name), factory=factory))
-    return tuple(specs)
+    return _build_feature_specs(entries, feature_spec_cls=FeatureSpec)
 
 
 def build_feature_window_bundle_specs(
@@ -2274,31 +2082,12 @@ def build_feature_window_bundle_specs(
     producing a window entry, and a bare ``WindowSpec`` passes through without producing
     a feature entry.
     """
-    feature_specs: list[FeatureSpec] = []
-    window_specs: list[WindowSpec] = []
-    for entry in entries:
-        if isinstance(entry, FeatureSpec):
-            feature_specs.append(entry)
-            continue
-        if isinstance(entry, WindowSpec):
-            window_specs.append(entry)
-            continue
-        feature_specs.append(FeatureSpec(attr_name=str(entry.feature_attr), factory=entry.factory))
-        window_specs.append(
-            make_window_toggle_spec(
-                entry.window_key,
-                entry.feature_attr,
-                slot_index=entry.slot_index,
-                task_panel_label=entry.task_panel_label,
-                task_panel_style=entry.task_panel_style,
-                action_label=entry.action_label,
-                action_name=entry.action_name,
-                task_panel_button_id=entry.task_panel_button_id,
-                toggle_attr=entry.toggle_attr,
-                accessibility_label=entry.accessibility_label,
-            )
-        )
-    return tuple(feature_specs), tuple(window_specs)
+    return _build_feature_window_bundle_specs(
+        entries,
+        feature_spec_cls=FeatureSpec,
+        window_spec_cls=WindowSpec,
+        make_window_toggle_spec_fn=make_window_toggle_spec,
+    )
 
 
 def build_window_toggle_specs(bindings: Sequence[WindowToggleBindingSpec | WindowSpec]) -> tuple[WindowSpec, ...]:
@@ -2306,26 +2095,11 @@ def build_window_toggle_specs(bindings: Sequence[WindowToggleBindingSpec | Windo
 
     Entries may also include pre-built WindowSpec instances for mixed workflows.
     """
-    specs: list[WindowSpec] = []
-    for binding in bindings:
-        if isinstance(binding, WindowSpec):
-            specs.append(binding)
-            continue
-        specs.append(
-            make_window_toggle_spec(
-                binding.key,
-                binding.feature_attr,
-                slot_index=binding.slot_index,
-                task_panel_label=binding.task_panel_label,
-                task_panel_style=binding.task_panel_style,
-                action_label=binding.action_label,
-                action_name=binding.action_name,
-                task_panel_button_id=binding.task_panel_button_id,
-                toggle_attr=binding.toggle_attr,
-                accessibility_label=binding.accessibility_label,
-            )
-        )
-    return tuple(specs)
+    return _build_window_toggle_specs(
+        bindings,
+        window_spec_cls=WindowSpec,
+        make_window_toggle_spec_fn=make_window_toggle_spec,
+    )
 
 
 def build_scene_nav_actions(
@@ -2338,21 +2112,12 @@ def build_scene_nav_actions(
     Each tuple entry is ``(action_id, label, target_scene)``.
     Pre-built ActionSpec entries are passed through unchanged.
     """
-    specs: list[ActionSpec] = []
-    for entry in nav_entries:
-        if isinstance(entry, ActionSpec):
-            specs.append(entry)
-            continue
-        action_id, label, target_scene = entry
-        specs.append(
-            make_scene_nav_action(
-                str(action_id),
-                label=str(label),
-                target_scene=str(target_scene),
-                category=str(category),
-            )
-        )
-    return tuple(specs)
+    return _build_scene_nav_actions(
+        nav_entries,
+        action_spec_cls=ActionSpec,
+        make_scene_nav_action_fn=make_scene_nav_action,
+        category=category,
+    )
 
 
 def build_action_specs(entries: Sequence[ActionBindingSpec | ActionSpec]) -> tuple[ActionSpec, ...]:
@@ -2365,44 +2130,13 @@ def build_action_specs(entries: Sequence[ActionBindingSpec | ActionSpec]) -> tup
 
     Pre-built ActionSpec entries are passed through unchanged.
     """
-    specs: list[ActionSpec] = []
-    for entry in entries:
-        if isinstance(entry, ActionSpec):
-            specs.append(entry)
-            continue
-        kind = str(entry.kind)
-        if kind == "exit":
-            specs.append(
-                make_exit_action(
-                    action_id=str(entry.action_id),
-                    label=str(entry.label),
-                    category="File" if entry.category is None else str(entry.category),
-                )
-            )
-            continue
-        if kind == "scene_nav":
-            if entry.target is None:
-                raise ValueError("scene_nav action bindings require target")
-            specs.append(
-                make_scene_nav_action(
-                    str(entry.action_id),
-                    label=str(entry.label),
-                    target_scene=str(entry.target),
-                    category="Scenes" if entry.category is None else str(entry.category),
-                )
-            )
-            continue
-        if kind == "palette_open":
-            specs.append(
-                make_palette_open_action(
-                    action_id=str(entry.action_id),
-                    label=str(entry.label),
-                    key=entry.key,
-                )
-            )
-            continue
-        raise ValueError(f"Unsupported action binding kind: {kind!r}")
-    return tuple(specs)
+    return _build_action_specs(
+        entries,
+        action_spec_cls=ActionSpec,
+        make_exit_action_fn=make_exit_action,
+        make_scene_nav_action_fn=make_scene_nav_action,
+        make_palette_open_action_fn=make_palette_open_action,
+    )
 
 
 def build_static_accessibility_specs(
@@ -2415,20 +2149,12 @@ def build_static_accessibility_specs(
     Each tuple entry is ``(control_attr, label)`` and uses the shared *role*.
     Pre-built StaticAccessibilitySpec entries are passed through unchanged.
     """
-    specs: list[StaticAccessibilitySpec] = []
-    for entry in entries:
-        if isinstance(entry, StaticAccessibilitySpec):
-            specs.append(entry)
-            continue
-        control_attr, label = entry
-        specs.append(
-            make_static_accessibility_spec(
-                str(control_attr),
-                label=str(label),
-                role=str(role),
-            )
-        )
-    return tuple(specs)
+    return _build_static_accessibility_specs(
+        entries,
+        static_accessibility_spec_cls=StaticAccessibilitySpec,
+        make_static_accessibility_spec_fn=make_static_accessibility_spec,
+        role=role,
+    )
 
 
 def build_scene_setup_specs(
@@ -2445,70 +2171,14 @@ def build_scene_setup_specs(
     - ``(name, pretty_name, transition_style)``
     - ``(name, pretty_name, transition_style, transition_duration)``
     """
-    specs: list[SceneSetupSpec] = []
-    for entry in entries:
-        if isinstance(entry, SceneSetupSpec):
-            make_initial = bool(entry.make_initial or (initial_scene_name is not None and str(entry.name) == str(initial_scene_name)))
-            specs.append(
-                SceneSetupSpec(
-                    name=str(entry.name),
-                    pretty_name=entry.pretty_name,
-                    transition_style=entry.transition_style,
-                    transition_duration=entry.transition_duration,
-                    tiling_enabled=bool(entry.tiling_enabled),
-                    tiling_gap=entry.tiling_gap,
-                    tiling_padding=entry.tiling_padding,
-                    tiling_avoid_task_panel=entry.tiling_avoid_task_panel,
-                    tiling_center_on_failure=entry.tiling_center_on_failure,
-                    tiling_relayout=bool(entry.tiling_relayout),
-                    make_initial=make_initial,
-                )
-            )
-            continue
-
-        if isinstance(entry, SceneSetupBindingSpec):
-            transition_style = entry.transition_style if entry.transition_style is not None else default_transition_style
-            transition_duration = entry.transition_duration if entry.transition_duration is not None else default_transition_duration
-            make_initial = bool(entry.make_initial or (initial_scene_name is not None and str(entry.name) == str(initial_scene_name)))
-            specs.append(
-                SceneSetupSpec(
-                    name=str(entry.name),
-                    pretty_name=entry.pretty_name,
-                    transition_style=transition_style,
-                    transition_duration=transition_duration,
-                    tiling_enabled=bool(entry.tiling_enabled),
-                    tiling_gap=entry.tiling_gap,
-                    tiling_padding=entry.tiling_padding,
-                    tiling_avoid_task_panel=entry.tiling_avoid_task_panel,
-                    tiling_center_on_failure=entry.tiling_center_on_failure,
-                    tiling_relayout=bool(entry.tiling_relayout),
-                    make_initial=make_initial,
-                )
-            )
-            continue
-
-        if len(entry) == 2:
-            name, pretty_name = entry
-            transition_style = default_transition_style
-            transition_duration = default_transition_duration
-        elif len(entry) == 3:
-            name, pretty_name, transition_style = entry
-            transition_duration = default_transition_duration
-        elif len(entry) == 4:
-            name, pretty_name, transition_style, transition_duration = entry
-        else:
-            raise ValueError("Scene setup tuple entries must contain 2-4 values")
-
-        specs.append(
-            SceneSetupSpec(
-                name=str(name),
-                pretty_name=None if pretty_name is None else str(pretty_name),
-                transition_style=transition_style,
-                transition_duration=transition_duration,
-                make_initial=bool(initial_scene_name is not None and str(name) == str(initial_scene_name)),
-            )
-        )
-    return tuple(specs)
+    return _build_scene_setup_specs(
+        entries,
+        scene_setup_binding_spec_cls=SceneSetupBindingSpec,
+        scene_setup_spec_cls=SceneSetupSpec,
+        default_transition_style=default_transition_style,
+        default_transition_duration=default_transition_duration,
+        initial_scene_name=initial_scene_name,
+    )
 
 
 def build_runtime_scene_specs(
@@ -2525,86 +2195,23 @@ def build_runtime_scene_specs(
     - ``(scene_name, pristine_asset, bind_escape_to_exit)``
     - ``(scene_name, pristine_asset, bind_escape_to_exit, prewarm)``
     """
-    specs: list[RuntimeSceneSpec] = []
-    for entry in entries:
-        if isinstance(entry, RuntimeSceneSpec):
-            specs.append(entry)
-            continue
-        if isinstance(entry, RuntimeSceneBindingSpec):
-            specs.append(
-                RuntimeSceneSpec(
-                    scene_name=str(entry.scene_name),
-                    pristine_asset=entry.pristine_asset,
-                    bind_escape_to_exit=bool(entry.bind_escape_to_exit),
-                    prewarm=bool(entry.prewarm),
-                )
-            )
-            continue
-        if isinstance(entry, str):
-            specs.append(
-                RuntimeSceneSpec(
-                    scene_name=str(entry),
-                    pristine_asset=pristine_asset,
-                    bind_escape_to_exit=bool(bind_escape_to_exit),
-                    prewarm=bool(prewarm),
-                )
-            )
-            continue
-
-        if len(entry) == 2:
-            scene_name, scene_asset = entry
-            scene_bind_escape = bind_escape_to_exit
-            scene_prewarm = prewarm
-        elif len(entry) == 3:
-            scene_name, scene_asset, scene_bind_escape = entry
-            scene_prewarm = prewarm
-        elif len(entry) == 4:
-            scene_name, scene_asset, scene_bind_escape, scene_prewarm = entry
-        else:
-            raise ValueError("Runtime scene tuple entries must contain 2-4 values")
-
-        specs.append(
-            RuntimeSceneSpec(
-                scene_name=str(scene_name),
-                pristine_asset=None if scene_asset is None else str(scene_asset),
-                bind_escape_to_exit=bool(scene_bind_escape),
-                prewarm=bool(scene_prewarm),
-            )
-        )
-    return tuple(specs)
+    return _build_runtime_scene_specs(
+        entries,
+        runtime_scene_binding_spec_cls=RuntimeSceneBindingSpec,
+        runtime_scene_spec_cls=RuntimeSceneSpec,
+        pristine_asset=pristine_asset,
+        bind_escape_to_exit=bind_escape_to_exit,
+        prewarm=prewarm,
+    )
 
 
 def build_scene_root_specs(entries: Sequence[SceneRootBindingSpec | SceneRootSpec | tuple[str, str] | tuple[str, str, bool]]) -> tuple[SceneRootSpec, ...]:
     """Build SceneRootSpec values from shorthand tuples or binding specs."""
-    specs: list[SceneRootSpec] = []
-    for entry in entries:
-        if isinstance(entry, SceneRootSpec):
-            specs.append(entry)
-            continue
-        if isinstance(entry, SceneRootBindingSpec):
-            specs.append(
-                SceneRootSpec(
-                    scene_name=str(entry.scene_name),
-                    control_id=str(entry.control_id),
-                    draw_background=bool(entry.draw_background),
-                )
-            )
-            continue
-        if len(entry) == 2:
-            scene_name, control_id = entry
-            draw_background = False
-        elif len(entry) == 3:
-            scene_name, control_id, draw_background = entry
-        else:
-            raise ValueError("Scene root tuple entries must contain 2-3 values")
-        specs.append(
-            SceneRootSpec(
-                scene_name=str(scene_name),
-                control_id=str(control_id),
-                draw_background=bool(draw_background),
-            )
-        )
-    return tuple(specs)
+    return _build_scene_root_specs(
+        entries,
+        scene_root_binding_spec_cls=SceneRootBindingSpec,
+        scene_root_spec_cls=SceneRootSpec,
+    )
 
 
 def build_cursor_specs(
@@ -2613,35 +2220,12 @@ def build_cursor_specs(
     default_hotspot: tuple[int, int] = (0, 0),
 ) -> tuple[CursorSpec, ...]:
     """Build CursorSpec values from shorthand tuples or CursorBindingSpec entries."""
-    specs: list[CursorSpec] = []
-    for entry in entries:
-        if isinstance(entry, CursorSpec):
-            specs.append(entry)
-            continue
-        if isinstance(entry, CursorBindingSpec):
-            specs.append(
-                CursorSpec(
-                    name=str(entry.name),
-                    path=str(entry.path),
-                    hotspot=(int(entry.hotspot[0]), int(entry.hotspot[1])),
-                )
-            )
-            continue
-        if len(entry) == 2:
-            name, path = entry
-            hotspot = default_hotspot
-        elif len(entry) == 3:
-            name, path, hotspot = entry
-        else:
-            raise ValueError("Cursor tuple entries must contain 2-3 values")
-        specs.append(
-            CursorSpec(
-                name=str(name),
-                path=str(path),
-                hotspot=(int(hotspot[0]), int(hotspot[1])),
-            )
-        )
-    return tuple(specs)
+    return _build_cursor_specs(
+        entries,
+        cursor_binding_spec_cls=CursorBindingSpec,
+        cursor_spec_cls=CursorSpec,
+        default_hotspot=default_hotspot,
+    )
 
 
 def build_font_role_specs(
@@ -2652,42 +2236,11 @@ def build_font_role_specs(
     The return shape matches what ``setup_standard_font_roles(..., *role_specs)``
     expects: a tuple of role-mapping dict blocks.
     """
-    role_map: dict[str, dict[str, object]] = {}
-    passthrough_blocks: list[dict] = []
-
-    for entry in entries:
-        if isinstance(entry, Mapping):
-            passthrough_blocks.append({str(k): dict(v) for k, v in entry.items()})
-            continue
-        if isinstance(entry, FontRoleBindingSpec):
-            role = str(entry.role)
-            role_map[role] = {
-                "size": int(entry.size),
-                "font": str(entry.font),
-                "bold": bool(entry.bold),
-                "italic": bool(entry.italic),
-            }
-            continue
-        if len(entry) == 3:
-            role, size, font = entry
-            bold = False
-            italic = False
-        elif len(entry) == 5:
-            role, size, font, bold, italic = entry
-        else:
-            raise ValueError("Font role tuple entries must contain 3 or 5 values")
-        role_map[str(role)] = {
-            "size": int(size),
-            "font": str(font),
-            "bold": bool(bold),
-            "italic": bool(italic),
-        }
-
-    blocks: list[dict] = []
-    if role_map:
-        blocks.append(role_map)
-    blocks.extend(passthrough_blocks)
-    return tuple(blocks)
+    return _build_font_role_specs(
+        entries,
+        font_role_binding_spec_cls=FontRoleBindingSpec,
+        mapping_cls=Mapping,
+    )
 
 
 def build_scene_bundle_specs(
@@ -2709,79 +2262,16 @@ def build_scene_bundle_specs(
     Supports mixed input entries so callers can combine bundle shorthand with
     passthrough prebuilt spec instances.
     """
-    scene_specs: list[SceneSetupSpec] = []
-    runtime_specs: list[RuntimeSceneSpec] = []
-    root_specs: list[SceneRootSpec] = []
-    action_specs: list[ActionSpec] = []
-
-    for entry in entries:
-        if isinstance(entry, SceneSetupSpec):
-            scene_specs.append(entry)
-            continue
-        if isinstance(entry, RuntimeSceneSpec):
-            runtime_specs.append(entry)
-            continue
-        if isinstance(entry, SceneRootSpec):
-            root_specs.append(entry)
-            continue
-        if isinstance(entry, ActionSpec):
-            action_specs.append(entry)
-            continue
-
-        scene_name = str(entry.scene_name)
-        if entry.include_scene_setup:
-            scene_specs.append(
-                SceneSetupSpec(
-                    name=scene_name,
-                    pretty_name=entry.pretty_name,
-                    transition_style=entry.transition_style if entry.transition_style is not None else default_transition_style,
-                    transition_duration=entry.transition_duration if entry.transition_duration is not None else default_transition_duration,
-                    tiling_enabled=bool(entry.tiling_enabled),
-                    tiling_gap=entry.tiling_gap,
-                    tiling_padding=entry.tiling_padding,
-                    tiling_avoid_task_panel=entry.tiling_avoid_task_panel,
-                    tiling_center_on_failure=entry.tiling_center_on_failure,
-                    tiling_relayout=bool(entry.tiling_relayout),
-                    make_initial=bool(entry.make_initial or (initial_scene_name is not None and scene_name == str(initial_scene_name))),
-                )
-            )
-
-        if entry.include_runtime_scene:
-            runtime_specs.append(
-                RuntimeSceneSpec(
-                    scene_name=scene_name,
-                    pristine_asset=entry.pristine_asset,
-                    bind_escape_to_exit=bool(entry.bind_escape_to_exit),
-                    prewarm=bool(entry.prewarm),
-                )
-            )
-
-        if entry.include_scene_root:
-            root_id = entry.scene_root_id or f"{scene_name}_root"
-            root_specs.append(
-                SceneRootSpec(
-                    scene_name=scene_name,
-                    control_id=str(root_id),
-                    draw_background=bool(entry.scene_root_draw_background),
-                )
-            )
-
-        if entry.include_nav_action:
-            action_specs.append(
-                ActionSpec(
-                    action_id=str(entry.nav_action_id or f"nav_{scene_name}"),
-                    label=str(entry.nav_label or f"Go to {entry.pretty_name or scene_name.replace('_', ' ').title()}"),
-                    kind="scene_nav",
-                    target=scene_name,
-                    category=None if entry.nav_category is None else str(entry.nav_category or default_nav_category),
-                )
-            )
-
-    return (
-        tuple(scene_specs),
-        tuple(runtime_specs),
-        tuple(root_specs),
-        tuple(action_specs),
+    return _build_scene_bundle_specs(
+        entries,
+        scene_setup_spec_cls=SceneSetupSpec,
+        runtime_scene_spec_cls=RuntimeSceneSpec,
+        scene_root_spec_cls=SceneRootSpec,
+        action_spec_cls=ActionSpec,
+        default_transition_style=default_transition_style,
+        default_transition_duration=default_transition_duration,
+        default_nav_category=default_nav_category,
+        initial_scene_name=initial_scene_name,
     )
 
 
@@ -2793,104 +2283,43 @@ def build_host_application_config(
     Accepts an already built HostApplicationConfig as passthrough for
     advanced workflows that still want a unified call site.
     """
-    if isinstance(config, HostApplicationConfig):
-        return config
-
-    telemetry = config.telemetry if config.telemetry is not None else TelemetryConfig()
-
-    bundle_scene_specs, bundle_runtime_specs, bundle_root_specs, bundle_action_specs = build_scene_bundle_specs(
-        config.scene_bundle_entries,
-        default_transition_style=config.scene_default_transition_style,
-        default_transition_duration=config.scene_default_transition_duration,
-        initial_scene_name=str(config.initial_scene_name),
-    )
-
-    explicit_scene_specs = build_scene_setup_specs(
-        config.scene_entries,
-        default_transition_style=config.scene_default_transition_style,
-        default_transition_duration=config.scene_default_transition_duration,
-        initial_scene_name=str(config.initial_scene_name),
-    )
-    explicit_runtime_specs = build_runtime_scene_specs(
-        config.runtime_scene_entries,
-        pristine_asset=config.runtime_default_pristine_asset,
-        bind_escape_to_exit=bool(config.runtime_default_bind_escape_to_exit),
-        prewarm=bool(config.runtime_default_prewarm),
-    )
-    explicit_action_specs = build_action_specs(config.action_entries)
-    explicit_root_specs = build_scene_root_specs(config.scene_root_entries)
-
-    bundle_feature_specs, bundle_window_specs = build_feature_window_bundle_specs(
-        config.feature_window_bundle_entries
-    )
-
-    scene_specs = tuple((*bundle_scene_specs, *explicit_scene_specs))
-    runtime_scene_specs = tuple((*bundle_runtime_specs, *explicit_runtime_specs))
-    action_specs = tuple((*bundle_action_specs, *explicit_action_specs))
-    scene_roots = tuple((*bundle_root_specs, *explicit_root_specs))
-    feature_specs = tuple((*build_feature_specs(config.feature_entries), *bundle_feature_specs))
-    window_specs = tuple((*bundle_window_specs, *build_window_toggle_specs(config.window_entries)))
-
-    return HostApplicationConfig(
-        display_size=(int(config.display_size[0]), int(config.display_size[1])),
-        window_title=str(config.window_title),
-        fonts=dict(config.fonts),
-        font_role_specs=build_font_role_specs(config.font_role_entries),
-        cursors=build_cursor_specs(config.cursor_entries),
-        scene_specs=scene_specs,
-        feature_specs=feature_specs,
-        window_specs=window_specs,
-        runtime_scene_specs=runtime_scene_specs,
-        action_specs=action_specs,
-        static_accessibility_specs=build_static_accessibility_specs(
-            config.static_accessibility_entries,
-            role=str(config.static_accessibility_role),
-        ),
-        initial_scene_name=str(config.initial_scene_name),
-        scene_roots=scene_roots,
-        telemetry=telemetry,
-        target_fps=int(config.target_fps),
-        palette_spec=config.palette_spec,
+    return _build_host_application_config(
+        config,
+        host_application_binding_spec_cls=HostApplicationBindingSpec,
+        host_application_config_cls=HostApplicationConfig,
+        telemetry_config_cls=TelemetryConfig,
+        build_scene_bundle_specs_fn=build_scene_bundle_specs,
+        build_scene_setup_specs_fn=build_scene_setup_specs,
+        build_runtime_scene_specs_fn=build_runtime_scene_specs,
+        build_action_specs_fn=build_action_specs,
+        build_scene_root_specs_fn=build_scene_root_specs,
+        build_feature_window_bundle_specs_fn=build_feature_window_bundle_specs,
+        build_feature_specs_fn=build_feature_specs,
+        build_window_toggle_specs_fn=build_window_toggle_specs,
+        build_font_role_specs_fn=build_font_role_specs,
+        build_cursor_specs_fn=build_cursor_specs,
+        build_static_accessibility_specs_fn=build_static_accessibility_specs,
     )
 
 
 def instantiate_features_from_specs(host, feature_specs) -> None:
     """Instantiate feature objects from specs and attach them to host attributes."""
-    for spec in feature_specs:
-        setattr(host, spec.attr_name, spec.factory())
+    _instantiate_features_from_specs(host, feature_specs)
 
 
 def register_features_from_specs(app, host, feature_specs) -> None:
     """Register instantiated host feature attributes to the application."""
-    for spec in feature_specs:
-        feature = getattr(host, spec.attr_name)
-        app.register_feature(feature, host=host)
+    _register_features_from_specs(app, host, feature_specs)
 
 
 def register_window_presentation_specs(window_presentation, window_specs) -> None:
     """Register feature-window presentation bindings from declarative window specs."""
-    for spec in window_specs:
-        window_presentation.register_feature_window(
-            spec.key,
-            feature_attr=spec.feature_attr,
-            toggle_attr=spec.toggle_attr,
-            action_name=spec.action_name,
-            action_label=spec.action_label,
-            task_panel_button_id=spec.task_panel_button_id,
-            task_panel_label=spec.task_panel_label,
-            task_panel_style=spec.task_panel_style,
-            task_panel_slot_index=spec.task_panel_slot_index,
-            accessibility_label=spec.accessibility_label,
-        )
+    _register_window_presentation_specs(window_presentation, window_specs)
 
 
 def register_window_tab_builders(tab_manager, feature, host, rect, tab_specs) -> None:
     """Register tab content builders from declarative (tab_key, builder_attr) specs."""
-    for tab_key, builder_attr in tab_specs:
-        builder = getattr(feature, str(builder_attr), None)
-        if not callable(builder):
-            raise AttributeError(f"Missing tab builder '{builder_attr}' for tab '{tab_key}'")
-        tab_manager.register(str(tab_key), builder(host, Rect(rect)))
+    _register_window_tab_builders(tab_manager, feature, host, rect, tab_specs)
 
 
 def build_tab_builder_specs(
@@ -2919,11 +2348,11 @@ def create_tab_control_from_specs(
     on_change,
 ) -> TabControl:
     """Create a TabControl from declarative tab specs."""
-    return TabControl(
-        str(control_id),
-        Rect(rect),
-        items=[TabItem(spec.key, spec.label) for spec in tab_specs],
-        selected_key=str(selected_key),
+    return _create_tab_control_from_specs(
+        control_id,
+        rect,
+        tab_specs,
+        selected_key=selected_key,
         on_change=on_change,
     )
 
@@ -2937,31 +2366,18 @@ def compute_tabbed_window_layout(
     min_content_height: int = 60,
 ) -> tuple[Rect, Rect]:
     """Return (tab_rect, tab_content_rect) for a tabbed window content surface."""
-    pad = int(padding)
-    body_top = content_rect.top + pad
-    body_bottom = content_rect.bottom - pad
-    body_h = body_bottom - body_top
-    body_content_top = body_top + (int(tab_height) * int(tab_rows))
-    body_content_h = max(int(min_content_height), body_bottom - body_content_top)
-    body_rect = Rect(content_rect.left + pad, body_top, content_rect.width - pad * 2, body_h)
-    body_content_rect = Rect(
-        content_rect.left + pad,
-        body_content_top,
-        content_rect.width - pad * 2,
-        body_content_h,
+    return _compute_tabbed_window_layout(
+        content_rect,
+        tab_height=tab_height,
+        tab_rows=tab_rows,
+        padding=padding,
+        min_content_height=min_content_height,
     )
-    return body_rect, body_content_rect
 
 
 def register_window_tab_builder_specs(tab_manager, feature, host, rect, tab_specs: Sequence[TabBuilderSpec]) -> None:
     """Register tab content builders from TabBuilderSpec definitions."""
-    register_window_tab_builders(
-        tab_manager,
-        feature,
-        host,
-        rect,
-        [(spec.key, spec.builder_attr) for spec in tab_specs],
-    )
+    _register_window_tab_builder_specs(tab_manager, feature, host, rect, tab_specs)
 
 
 def setup_feature_presenter_tabs(
@@ -2978,22 +2394,18 @@ def setup_feature_presenter_tabs(
     tab_content_rect,
 ):
     """Create, attach, and register feature tab controls/builders in one call."""
-    tab_control = create_tab_control_from_specs(
-        control_id,
-        tab_rect,
-        tab_specs,
+    return _setup_feature_presenter_tabs(
+        presenter,
+        control_id=control_id,
+        tab_rect=tab_rect,
+        tab_specs=tab_specs,
         selected_key=selected_key,
         on_change=on_change,
+        tab_manager=tab_manager,
+        feature=feature,
+        host=host,
+        tab_content_rect=tab_content_rect,
     )
-    presenter.add_control(tab_control)
-    register_window_tab_builder_specs(
-        tab_manager,
-        feature,
-        host,
-        tab_content_rect,
-        tab_specs,
-    )
-    return tab_control
 
 
 def setup_feature_presenter_tabs_from_window_content(
@@ -3014,28 +2426,19 @@ def setup_feature_presenter_tabs_from_window_content(
     so presenter ``on_create`` implementations can stay declarative and avoid
     repeated geometry and callback boilerplate.
     """
-    tab_rect, tab_content_rect = compute_tabbed_window_layout(
-        window.content_rect(),
-        tab_height=int(spec.tab_height),
-        tab_rows=int(spec.tab_rows),
-        padding=int(spec.padding),
-        min_content_height=int(spec.min_content_height),
-    )
-    tab_control = setup_feature_presenter_tabs(
+    return _setup_feature_presenter_tabs_from_window_content(
         presenter,
-        control_id=str(spec.control_id),
-        tab_rect=tab_rect,
+        window=window,
+        spec=spec,
         tab_specs=tab_specs,
-        selected_key=str(spec.selected_key),
         on_change=on_change,
         tab_manager=tab_manager,
         feature=feature,
         host=host,
-        tab_content_rect=tab_content_rect,
+        on_activate_callbacks=on_activate_callbacks,
+        compute_tabbed_window_layout_fn=compute_tabbed_window_layout,
+        setup_feature_presenter_tabs_fn=setup_feature_presenter_tabs,
     )
-    for tab_key, callback in on_activate_callbacks:
-        tab_manager.on_activate(str(tab_key), callback)
-    return tab_control
 
 
 def register_tab_update_handlers(
@@ -3043,8 +2446,7 @@ def register_tab_update_handlers(
     handlers: Sequence[tuple[str, Callable[..., object]]],
 ) -> None:
     """Register multiple active-tab update handlers on a router."""
-    for tab_key, handler in handlers:
-        router.register(tab_key, handler)
+    _register_tab_update_handlers(router, handlers)
 
 
 def create_presented_anchored_window(
@@ -3060,18 +2462,18 @@ def create_presented_anchored_window(
     use_frame_backdrop: bool = True,
 ):
     """Create an anchored window and attach a presenter in one call."""
-    window = create_anchored_feature_window(
+    return _create_presented_anchored_window(
         host,
-        window_control_cls=window_control_cls,
         control_id=control_id,
         title=title,
         size=size,
         anchor=anchor,
         margin=margin,
-        use_frame_backdrop=bool(use_frame_backdrop),
+        presenter=presenter,
+        window_control_cls=window_control_cls,
+        use_frame_backdrop=use_frame_backdrop,
+        create_anchored_feature_window_fn=create_anchored_feature_window,
     )
-    window.set_presenter(presenter)
-    return window
 
 
 def create_presented_window_from_spec(
@@ -3082,16 +2484,12 @@ def create_presented_window_from_spec(
     window_control_cls=WindowControl,
 ):
     """Create and attach a presenter-backed anchored window from a typed spec."""
-    return create_presented_anchored_window(
+    return _create_presented_window_from_spec(
         host,
-        control_id=spec.control_id,
-        title=spec.title,
-        size=spec.size,
-        anchor=spec.anchor,
-        margin=spec.margin,
         presenter=presenter,
+        spec=spec,
         window_control_cls=window_control_cls,
-        use_frame_backdrop=spec.use_frame_backdrop,
+        create_presented_anchored_window_fn=create_presented_anchored_window,
     )
 
 
@@ -3104,20 +2502,19 @@ def create_feature_presented_window(
     window_control_cls=WindowControl,
 ):
     """Instantiate presenter from (feature, host) and create an anchored window from spec."""
-    presenter = presenter_cls(feature, host)
-    return create_presented_window_from_spec(
+    return _create_feature_presented_window(
         host,
-        presenter=presenter,
+        feature=feature,
+        presenter_cls=presenter_cls,
         spec=spec,
         window_control_cls=window_control_cls,
+        create_presented_window_from_spec_fn=create_presented_window_from_spec,
     )
 
 
 def bind_feature_logic_aliases(feature, logic_bindings: Sequence[LogicBindingSpec]) -> None:
     """Bind routed-feature logic aliases idempotently from declarative bindings."""
-    for binding in logic_bindings:
-        if feature.bound_logic_name(alias=binding.alias) is None:
-            feature.bind_logic(binding.provider_name, alias=binding.alias)
+    _bind_feature_logic_aliases(feature, logic_bindings)
 
 
 def setup_routed_feature_runtime(
@@ -3130,14 +2527,12 @@ def setup_routed_feature_runtime(
     logic_bindings: Sequence[LogicBindingSpec] = (),
 ):
     """Initialize standard routed-feature runtime dependencies and optional logic bindings."""
-    scheduler = ensure_scene_scheduler(
+    return _setup_routed_feature_runtime(
         feature,
         host,
+        ensure_scene_scheduler_fn=ensure_scene_scheduler,
         scene_name=scene_name,
-        attr_name=scheduler_attr_name,
+        scheduler_attr_name=scheduler_attr_name,
+        scheduler_dispatch_limit=scheduler_dispatch_limit,
+        logic_bindings=logic_bindings,
     )
-    if scheduler_dispatch_limit is not None:
-        scheduler.set_message_dispatch_limit(int(scheduler_dispatch_limit))
-    if logic_bindings:
-        bind_feature_logic_aliases(feature, logic_bindings)
-    return scheduler

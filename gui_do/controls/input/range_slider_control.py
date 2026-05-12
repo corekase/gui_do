@@ -8,7 +8,7 @@ from pygame import Rect
 
 from ...events.gui_event import EventType, GuiEvent
 from ..base._focus_activatable_control_base import _FocusActivatableControlBase
-from ...events.value_change_reason import ValueChangeReason
+from ...events.value_change import ValueChangeReason
 
 if TYPE_CHECKING:
     from ...app.gui_application import GuiApplication

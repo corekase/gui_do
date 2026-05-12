@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pygame
 
 from gui_do.events.input_snapshot import InputSnapshot
-from gui_do.events.input_state import InputState
+from gui_do.events.input_processing import InputState
 from gui_do.events.gui_event import EventType
 from gui_do.text.text_flow import TextSpan
 

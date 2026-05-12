@@ -22,9 +22,9 @@ class _StubControl:
 
 
 class _StubBinding:
-    def __init__(self, *, key, toggle_attr, accessibility_label, action_label, task_panel_slot_index):
+    def __init__(self, *, key, toggle_attribute_name, accessibility_label, action_label, task_panel_slot_index):
         self.key = key
-        self.toggle_attr = toggle_attr
+        self.toggle_attribute_name = toggle_attribute_name
         self.accessibility_label = accessibility_label
         self.action_label = action_label
         self.task_panel_slot_index = task_panel_slot_index
@@ -46,11 +46,11 @@ class _StubHost:
         self.life_toggle_window = _StubControl("life")
         self.mandel_toggle_window = _StubControl("mandel")
         self.window_presentation = _StubWindowPresentation([
-            _StubBinding(key="systems", toggle_attr="systems_toggle_window", accessibility_label="Show Systems window",
+            _StubBinding(key="systems", toggle_attribute_name="systems_toggle_window", accessibility_label="Show Systems window",
                          action_label="Show Systems Window", task_panel_slot_index=1),
-            _StubBinding(key="life", toggle_attr="life_toggle_window", accessibility_label="Show Life window",
+            _StubBinding(key="life", toggle_attribute_name="life_toggle_window", accessibility_label="Show Life window",
                          action_label="Show Life Window", task_panel_slot_index=3),
-            _StubBinding(key="mandel", toggle_attr="mandel_toggle_window", accessibility_label="Show Mandelbrot window",
+            _StubBinding(key="mandel", toggle_attribute_name="mandel_toggle_window", accessibility_label="Show Mandelbrot window",
                          action_label="Show Mandelbrot Window", task_panel_slot_index=4),
         ])
 

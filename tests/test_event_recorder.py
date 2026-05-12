@@ -2,7 +2,7 @@
 import unittest
 
 from gui_do.events.event_recorder import EventRecorder, RecordedEvent
-from gui_do.events.input_state import InputState
+from gui_do.events.input_processing import InputState
 
 
 # ===========================================================================

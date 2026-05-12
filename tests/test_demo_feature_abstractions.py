@@ -158,20 +158,20 @@ class _StubToggleBinding:
         self,
         *,
         key: str,
-        toggle_attr: str | None,
+        toggle_attribute_name: str | None,
         task_panel_slot_index: int | None,
         accessibility_label: str | None,
         action_label: str | None,
-        task_panel_button_id: str | None = None,
+        task_panel_toggle_button_id: str | None = None,
         task_panel_label: str | None = None,
         task_panel_style: str = "toggle",
     ):
         self.key = str(key)
-        self.toggle_attr = toggle_attr
+        self.toggle_attribute_name = toggle_attribute_name
         self.task_panel_slot_index = task_panel_slot_index
         self.accessibility_label = accessibility_label
         self.action_label = action_label
-        self.task_panel_button_id = task_panel_button_id
+        self.task_panel_toggle_button_id = task_panel_toggle_button_id
         self.task_panel_label = task_panel_label
         self.task_panel_style = task_panel_style
 
@@ -322,22 +322,22 @@ class _StubWindowSpec:
         self,
         *,
         key: str,
-        feature_attr: str,
-        toggle_attr: str,
+        feature_attribute_name: str,
+        toggle_attribute_name: str,
         action_name: str,
         action_label: str,
-        task_panel_button_id: str,
+        task_panel_toggle_button_id: str,
         task_panel_label: str,
         task_panel_style: str,
         task_panel_slot_index: int,
         accessibility_label: str,
     ):
         self.key = key
-        self.feature_attr = feature_attr
-        self.toggle_attr = toggle_attr
+        self.feature_attribute_name = feature_attribute_name
+        self.toggle_attribute_name = toggle_attribute_name
         self.action_name = action_name
         self.action_label = action_label
-        self.task_panel_button_id = task_panel_button_id
+        self.task_panel_toggle_button_id = task_panel_toggle_button_id
         self.task_panel_label = task_panel_label
         self.task_panel_style = task_panel_style
         self.task_panel_slot_index = task_panel_slot_index
@@ -538,21 +538,21 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="second",
-                    toggle_attr="second_toggle",
+                    toggle_attribute_name="second_toggle",
                     task_panel_slot_index=2,
                     accessibility_label="Second",
                     action_label="Second Action",
                 ),
                 _StubToggleBinding(
                     key="missing",
-                    toggle_attr="missing_toggle",
+                    toggle_attribute_name="missing_toggle",
                     task_panel_slot_index=3,
                     accessibility_label="Missing",
                     action_label="Missing Action",
                 ),
                 _StubToggleBinding(
                     key="first",
-                    toggle_attr="first_toggle",
+                    toggle_attribute_name="first_toggle",
                     task_panel_slot_index=1,
                     accessibility_label="First",
                     action_label="First Action",
@@ -572,14 +572,14 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="first",
-                    toggle_attr="first_toggle",
+                    toggle_attribute_name="first_toggle",
                     task_panel_slot_index=1,
                     accessibility_label="First Toggle",
                     action_label="First Action",
                 ),
                 _StubToggleBinding(
                     key="second",
-                    toggle_attr="second_toggle",
+                    toggle_attribute_name="second_toggle",
                     task_panel_slot_index=2,
                     accessibility_label=None,
                     action_label="Second Action",
@@ -600,14 +600,14 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="later",
-                    toggle_attr="later_toggle",
+                    toggle_attribute_name="later_toggle",
                     task_panel_slot_index=3,
                     accessibility_label="Later",
                     action_label="Later Action",
                 ),
                 _StubToggleBinding(
                     key="first",
-                    toggle_attr="first_toggle",
+                    toggle_attribute_name="first_toggle",
                     task_panel_slot_index=1,
                     accessibility_label="First",
                     action_label="First Action",
@@ -650,7 +650,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="first",
-                    toggle_attr="first_toggle",
+                    toggle_attribute_name="first_toggle",
                     task_panel_slot_index=1,
                     accessibility_label=None,
                     action_label="First Action",
@@ -660,7 +660,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="second",
-                    toggle_attr="second_toggle",
+                    toggle_attribute_name="second_toggle",
                     task_panel_slot_index=2,
                     accessibility_label=None,
                     action_label=None,
@@ -685,14 +685,14 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="alpha",
-                    toggle_attr="alpha_toggle",
+                    toggle_attribute_name="alpha_toggle",
                     task_panel_slot_index=1,
                     accessibility_label="Alpha",
                     action_label="Alpha Action",
                 ),
                 _StubToggleBinding(
                     key="beta",
-                    toggle_attr="beta_toggle",
+                    toggle_attribute_name="beta_toggle",
                     task_panel_slot_index=2,
                     accessibility_label="Beta",
                     action_label="Beta Action",
@@ -978,14 +978,14 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="first",
-                    toggle_attr="first_toggle",
+                    toggle_attribute_name="first_toggle",
                     task_panel_slot_index=9,
                     accessibility_label="First Toggle",
                     action_label="First Action",
                 ),
                 _StubToggleBinding(
                     key="second",
-                    toggle_attr="second_toggle",
+                    toggle_attribute_name="second_toggle",
                     task_panel_slot_index=10,
                     accessibility_label="Second Toggle",
                     action_label="Second Action",
@@ -1039,14 +1039,14 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             (
                 _StubToggleBinding(
                     key="first",
-                    toggle_attr="first_toggle",
+                    toggle_attribute_name="first_toggle",
                     task_panel_slot_index=None,
                     accessibility_label="First Toggle",
                     action_label="First Action",
                 ),
                 _StubToggleBinding(
                     key="second",
-                    toggle_attr="second_toggle",
+                    toggle_attribute_name="second_toggle",
                     task_panel_slot_index=None,
                     accessibility_label="Second Toggle",
                     action_label="Second Action",
@@ -1186,12 +1186,12 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual(2, len(window.added))
 
     def test_make_spec_builders_provide_compact_defaults(self):
-        window = make_window_toggle_spec("logs", "_logs_feature", slot_index=6)
+        window = make_window_toggle_spec("logs", "_logs_feature", task_panel_slot_index=6)
         self.assertEqual("logs", window.key)
-        self.assertEqual("_logs_feature", window.feature_attr)
-        self.assertEqual("logs_toggle_window", window.toggle_attr)
+        self.assertEqual("_logs_feature", window.feature_attribute_name)
+        self.assertEqual("logs_toggle_window", window.toggle_attribute_name)
         self.assertEqual("win_logs", window.action_name)
-        self.assertEqual("show_logs", window.task_panel_button_id)
+        self.assertEqual("show_logs", window.task_panel_toggle_button_id)
         self.assertEqual("Logs", window.task_panel_label)
         self.assertEqual(6, window.task_panel_slot_index)
 
@@ -1405,11 +1405,11 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         specs = [
             _StubWindowSpec(
                 key="systems",
-                feature_attr="systems_demo",
-                toggle_attr="systems_toggle",
+                feature_attribute_name="systems_demo",
+                toggle_attribute_name="systems_toggle",
                 action_name="toggle_systems",
                 action_label="Toggle Systems",
-                task_panel_button_id="systems_btn",
+                task_panel_toggle_button_id="systems_btn",
                 task_panel_label="Systems",
                 task_panel_style="toggle",
                 task_panel_slot_index=1,
@@ -1422,11 +1422,11 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual(1, len(presentation.calls))
         key, kwargs = presentation.calls[0]
         self.assertEqual("systems", key)
-        self.assertEqual("systems_demo", kwargs["feature_attr"])
-        self.assertEqual("systems_toggle", kwargs["toggle_attr"])
+        self.assertEqual("systems_demo", kwargs["feature_attribute_name"])
+        self.assertEqual("systems_toggle", kwargs["toggle_attribute_name"])
         self.assertEqual("toggle_systems", kwargs["action_name"])
         self.assertEqual("Toggle Systems", kwargs["action_label"])
-        self.assertEqual("systems_btn", kwargs["task_panel_button_id"])
+        self.assertEqual("systems_btn", kwargs["task_panel_toggle_button_id"])
         self.assertEqual("Systems", kwargs["task_panel_label"])
         self.assertEqual("toggle", kwargs["task_panel_style"])
         self.assertEqual(1, kwargs["task_panel_slot_index"])

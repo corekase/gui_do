@@ -4,191 +4,20 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 from typing import TYPE_CHECKING
 from collections.abc import Mapping
+from .font_role_setup import setup_standard_font_roles
+from .lifecycle_models import FrameTimer, PlacedControl
+from .lifecycle_layout_helpers import calculate_grid_layout as _calculate_grid_layout
 
 if TYPE_CHECKING:
-    from gui_do.app.gui_application import GuiApplication
+    from ..app.gui_application import GuiApplication
     from collections.abc import Callable, Iterable, Deque
     from typing import Any, Optional, Dict, List
-
-def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
-    """
-    Register a set of font roles for any feature or demo.
-        fonts: dict mapping font keys (e.g. 'body', 'title') to either:
-                - a font file path string, or
-                - a dict with optional keys: file/file_path/path, system/system_name,
-                    size, bold, italic.
-            The named font "default" is special: when present with a size, it is
-            registered as a "default" role and used as fallback for missing roles.
-        The named font "window" seeds the standard "title" role at size 18.
-    *role_specs: one or more dicts mapping role names to config dicts:
-        {
-            "role_name": {"size": int, "font": str, "bold": bool, ...}
-        }
-    Example usage:
-        setup_standard_font_roles(font_roles, fonts,
-            {
-                "body": {"size": 14, "font": "body"},
-                "controls.label": {"size": 12, "font": "body", "bold": True},
-                ...
-            },
-            {
-                "life.window_title": {"size": 20, "font": "title", "bold": True},
-                ...
-            }
-        )
-    """
-    if font_roles is None or not fonts:
-        return
-
-    normalized_fonts: dict[str, dict[str, object]] = {}
-    for key, raw_spec in fonts.items():
-        if isinstance(raw_spec, str):
-            normalized_fonts[str(key)] = {"file_path": raw_spec}
-            continue
-        if isinstance(raw_spec, Mapping):
-            file_path = raw_spec.get("file_path", raw_spec.get("file", raw_spec.get("path")))
-            system_name = raw_spec.get("system_name", raw_spec.get("system"))
-            size = raw_spec.get("size")
-            normalized_fonts[str(key)] = {
-                "file_path": file_path,
-                "system_name": system_name,
-                "size": size,
-                "bold": bool(raw_spec.get("bold", False)),
-                "italic": bool(raw_spec.get("italic", False)),
-            }
-
-    default_font_spec = normalized_fonts.get("default")
-    body_font_spec = normalized_fonts.get("body")
-    window_font_spec = normalized_fonts.get("window")
-
-    # Seed an explicit "default" role when enough data exists so unknown roles
-    # can safely pass through the fallback gate in FontManager._resolve_role().
-    if default_font_spec is not None:
-        default_size = default_font_spec.get("size")
-        if default_size is not None:
-            font_roles.define(
-                "default",
-                size=default_size,
-                file_path=default_font_spec.get("file_path"),
-                system_name=default_font_spec.get("system_name"),
-                bold=bool(default_font_spec.get("bold", False)),
-                italic=bool(default_font_spec.get("italic", False)),
-            )
-
-    def _resolve_font_spec_for_cfg(cfg: Mapping[str, object]) -> tuple[dict[str, object] | None, object | None]:
-        font_key = cfg.get("font")
-        if font_key is None:
-            if default_font_spec is not None:
-                font_key = "default"
-            else:
-                font_key = "body"
-        selected_font = normalized_fonts.get(str(font_key))
-        if selected_font is None:
-            selected_font = default_font_spec if default_font_spec is not None else body_font_spec
-        if selected_font is None:
-            return None, None
-        resolved_size = cfg.get("size", selected_font.get("size"))
-        return selected_font, resolved_size
-
-    explicit_title_cfg: Mapping[str, object] | None = None
-    explicit_window_title_cfg: Mapping[str, object] | None = None
-    for spec in role_specs:
-        for role, cfg in spec.items():
-            if not isinstance(cfg, Mapping):
-                continue
-            if role == "title":
-                explicit_title_cfg = cfg
-            elif role == "window_title":
-                explicit_window_title_cfg = cfg
-
-    # Seed a conventional window title role so WindowControl defaults are usable
-    # without per-feature or per-window font-role wiring.
-    # Precedence:
-    # 1) explicit "title" role from role_specs
-    # 2) explicit "window_title" role from role_specs
-    # 3) fallback alias to fonts["window"] with size 18
-    title_role_resolved = False
-    if explicit_title_cfg is not None:
-        selected_font, resolved_size = _resolve_font_spec_for_cfg(explicit_title_cfg)
-        if selected_font is not None and resolved_size is not None:
-            font_roles.define(
-                "title",
-                size=resolved_size,
-                file_path=selected_font.get("file_path"),
-                system_name=selected_font.get("system_name"),
-                bold=bool(explicit_title_cfg.get("bold", selected_font.get("bold", False))),
-                italic=bool(explicit_title_cfg.get("italic", selected_font.get("italic", False))),
-            )
-            title_role_resolved = True
-    elif explicit_window_title_cfg is not None:
-        selected_font, resolved_size = _resolve_font_spec_for_cfg(explicit_window_title_cfg)
-        if selected_font is not None and resolved_size is not None:
-            font_roles.define(
-                "title",
-                size=resolved_size,
-                file_path=selected_font.get("file_path"),
-                system_name=selected_font.get("system_name"),
-                bold=bool(explicit_window_title_cfg.get("bold", selected_font.get("bold", False))),
-                italic=bool(explicit_window_title_cfg.get("italic", selected_font.get("italic", False))),
-            )
-            title_role_resolved = True
-    elif window_font_spec is not None:
-        font_roles.define(
-            "title",
-            size=18,
-            file_path=window_font_spec.get("file_path"),
-            system_name=window_font_spec.get("system_name"),
-            bold=bool(window_font_spec.get("bold", False)),
-            italic=bool(window_font_spec.get("italic", False)),
-        )
-        title_role_resolved = True
-
-    if not title_role_resolved:
-        raise logical_error(
-            "unable to resolve standard window title font role",
-            subsystem="gui.fonts",
-            operation="setup_standard_font_roles",
-            details={
-                "required_role": "title",
-                "resolution_steps": (
-                    "explicit title",
-                    "explicit window_title",
-                    "window alias size 18",
-                ),
-                "has_window_font": window_font_spec is not None,
-            },
-            source_skip_frames=1,
-        )
-
-    for spec in role_specs:
-        for role, cfg in spec.items():
-            selected_font, resolved_size = _resolve_font_spec_for_cfg(cfg)
-            if selected_font is None:
-                continue
-            if resolved_size is None:
-                continue
-
-            font_roles.define(
-                role,
-                size=resolved_size,
-                file_path=selected_font.get("file_path"),
-                system_name=selected_font.get("system_name"),
-                bold=bool(cfg.get("bold", selected_font.get("bold", False))),
-                italic=bool(cfg.get("italic", selected_font.get("italic", False))),
-            )
 
 def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):
     """
     Return a list of (x, y, w, h) tuples for a grid layout anchored at (x, y).
     """
-    x0, y0, cell_w, cell_h = anchor
-    layout = []
-    for row in range(rows):
-        for col in range(cols):
-            x = x0 + col * (cell_w + gap)
-            y = y0 + row * (cell_h + label_height + label_gap + gap)
-            layout.append((x, y, cell_w, cell_h))
-    return layout
+    return _calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap)
 
 from ..controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem
 from ..app.error_handling import logical_error, report_nonfatal_error
@@ -197,48 +26,7 @@ from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 import inspect
 from ..telemetry.telemetry import telemetry_collector
 from collections import deque, OrderedDict
-# ---------------------------------------------------------------------------
-# FrameTimer
-# ---------------------------------------------------------------------------
-
-class FrameTimer:
-    """Tracks per-frame delta time for use inside ``on_update``.
-
-    Usage::
-
-        class MyFeature(Feature):
-            def __init__(self) -> None:
-                self._timer = FrameTimer()
-
-    The first call to :meth:`tick` always returns ``0.0`` so that the initial
-    frame does not produce a spurious large delta.
-    """
-
-    def __init__(self) -> None:
-        self._last: float = 0.0
-
-    def tick(self) -> float:
-        """Return seconds elapsed since the previous call, or ``0.0`` on first call."""
-        now = perf_counter()
-        if self._last == 0.0:
-            self._last = now
-            return 0.0
-        dt = now - self._last
-        self._last = now
-        return dt
-
-    def reset(self) -> None:
-        """Reset internal clock so the next :meth:`tick` returns ``0.0``."""
-        self._last = 0.0
 from dataclasses import dataclass
-# Generic placed control record for tracking placements
-@dataclass(slots=True)
-class PlacedControl:
-    control: object
-    label: object | None
-    name: str
-    column_index: int
-    row_index: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -824,11 +612,11 @@ class FeatureWindowBinding:
     """Declarative presentation metadata for a feature-owned demo window."""
 
     key: str
-    feature_attr: str
-    toggle_attr: str | None = None
+    feature_attribute_name: str
+    toggle_attribute_name: str | None = None
     action_name: str | None = None
     action_label: str | None = None
-    task_panel_button_id: str | None = None
+    task_panel_toggle_button_id: str | None = None
     task_panel_label: str | None = None
     task_panel_style: str = "round"
     task_panel_slot_index: int | None = None
@@ -850,11 +638,11 @@ class FeatureWindowPresentationModel:
         self,
         key: str,
         *,
-        feature_attr: str,
-        toggle_attr: str | None = None,
+        feature_attribute_name: str,
+        toggle_attribute_name: str | None = None,
         action_name: str | None = None,
         action_label: str | None = None,
-        task_panel_button_id: str | None = None,
+        task_panel_toggle_button_id: str | None = None,
         task_panel_label: str | None = None,
         task_panel_style: str = "round",
         task_panel_slot_index: int | None = None,
@@ -862,11 +650,11 @@ class FeatureWindowPresentationModel:
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
             key=str(key),
-            feature_attr=str(feature_attr),
-            toggle_attr=None if toggle_attr is None else str(toggle_attr),
+            feature_attribute_name=str(feature_attribute_name),
+            toggle_attribute_name=None if toggle_attribute_name is None else str(toggle_attribute_name),
             action_name=None if action_name is None else str(action_name),
             action_label=None if action_label is None else str(action_label),
-            task_panel_button_id=None if task_panel_button_id is None else str(task_panel_button_id),
+            task_panel_toggle_button_id=None if task_panel_toggle_button_id is None else str(task_panel_toggle_button_id),
             task_panel_label=None if task_panel_label is None else str(task_panel_label),
             task_panel_style=str(task_panel_style),
             task_panel_slot_index=None if task_panel_slot_index is None else int(task_panel_slot_index),
@@ -883,7 +671,7 @@ class FeatureWindowPresentationModel:
 
     def get_window(self, key: str):
         binding = self.get_binding(key)
-        feature = getattr(self.host, binding.feature_attr, None)
+        feature = getattr(self.host, binding.feature_attribute_name, None)
         if feature is None:
             return None
         window = getattr(feature, "window", None)
@@ -901,9 +689,9 @@ class FeatureWindowPresentationModel:
 
     def get_toggle(self, key: str):
         binding = self.get_binding(key)
-        if binding.toggle_attr is None:
+        if binding.toggle_attribute_name is None:
             return None
-        return getattr(self.host, binding.toggle_attr, None)
+        return getattr(self.host, binding.toggle_attribute_name, None)
 
     def set_visible(self, key: str, visible: bool, *, from_toggle: bool = False) -> None:
         set_window_visible_state(

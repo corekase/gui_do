@@ -4,10 +4,10 @@ from typing import Optional, TYPE_CHECKING
 from pygame import Rect
 
 from ...events.gui_event import EventType, GuiEvent
-from ...events.value_change_callback import ValueChangeCallback
-from ...events.value_change_callback import dispatch_value_change
-from ...events.value_change_callback import validate_value_change_callback
-from ...events.value_change_reason import ValueChangeReason
+from ...events.value_change import ValueChangeCallback
+from ...events.value_change import ValueChangeReason
+from ...events.value_change import dispatch_value_change
+from ...events.value_change import validate_value_change_callback
 from ..base._axis_drag_control_base import _AxisDragControlBase
 from ...layout.layout_axis import LayoutAxis
 

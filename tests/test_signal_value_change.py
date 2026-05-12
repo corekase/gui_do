@@ -2,10 +2,10 @@
 import unittest
 
 from gui_do.events.signal import Signal, SignalConnection, _SignalInstance
-from gui_do.events.value_change_reason import ValueChangeReason
-from gui_do.events.value_change_callback import (
-    validate_value_change_callback,
+from gui_do.events.value_change import (
+    ValueChangeReason,
     dispatch_value_change,
+    validate_value_change_callback,
 )
 
 
