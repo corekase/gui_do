@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from gui_do import bootstrap_host_application
 
 from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
