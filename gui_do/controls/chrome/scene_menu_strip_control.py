@@ -338,12 +338,6 @@ class SceneMenuStripControl(_BaseMenuBarControl):
     # Actions
     # ------------------------------------------------------------------
 
-    def _exit(self) -> None:
-        if self._on_exit is not None:
-            self._on_exit()
-            return
-        self._app.running = False
-
     def _select_scene(self, scene_name: str) -> None:
         active_scene = str(getattr(self._app, "active_scene_name", ""))
         if str(scene_name) == active_scene:

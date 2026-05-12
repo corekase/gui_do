@@ -59,6 +59,7 @@ delivered on the frame thread (the pygame main thread).
 from __future__ import annotations
 
 import time
+from collections import deque
 from typing import Any, Callable, Generic, Iterable, Optional, Tuple, TypeVar
 
 
@@ -237,14 +238,14 @@ class ObservableStream(Generic[T]):
         n = len(all_streams)
 
         def _subscribe(cb: Callable[[Tuple], None]) -> Callable[[], None]:
-            buffers: list = [[] for _ in range(n)]
+            buffers: list = [deque() for _ in range(n)]
             unsubs: list = []
 
             def _make_handler(idx: int) -> Callable:
                 def _on_value(v: Any) -> None:
                     buffers[idx].append(v)
                     if all(len(b) > 0 for b in buffers):
-                        args = tuple(b.pop(0) for b in buffers)
+                        args = tuple(b.popleft() for b in buffers)
                         cb(args)
 
                 return _on_value

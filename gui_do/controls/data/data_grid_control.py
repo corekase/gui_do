@@ -257,17 +257,6 @@ class DataGridControl(_VirtualizedScrollListBase):
             self._col_offsets_dirty = False
         return self._col_offsets_cache
 
-    def _col_at_x(self, x: int) -> int:
-        """Return column index at pixel x relative to content_rect.x."""
-        cr = self._content_rect()
-        rx = x - cr.x
-        cumulative = 0
-        for i, col in enumerate(self._columns):
-            cumulative += col.width
-            if rx < cumulative:
-                return i
-        return len(self._columns) - 1
-
     def _row_at_y(self, y: int) -> int:
         """Return row index at pixel y relative to content area top."""
         return (y + self._scroll_offset) // self._row_height

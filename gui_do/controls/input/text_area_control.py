@@ -513,50 +513,6 @@ class TextAreaControl(AbstractTextInputControl):
         new_col = min(cursor_col, target_len)
         return target_start + new_col
 
-    def _pos_to_char(self, pos: Tuple[int, int], app: "GuiApplication") -> int:
-        """Convert a pixel position to an absolute character offset."""
-        try:
-            line_h = self._line_height(app)
-        except Exception:
-            return self._cursor_pos
-        if line_h <= 0:
-            return self._cursor_pos
-        rel_y = pos[1] - self.rect.top - _V_PAD + self._scroll_top
-        line_idx = max(0, rel_y // line_h)
-        lines = self._get_wrapped_lines_cached()
-        if not lines:
-            return 0
-        line_idx = min(line_idx, len(lines) - 1)
-        abs_offset, _, line_text = self._get_visual_line_spans(lines)[line_idx]
-        rel_x = pos[0] - self.rect.left - _H_PAD
-        if rel_x <= 0:
-            return abs_offset
-        if not line_text:
-            return abs_offset
-
-        measure = self._measure_prefix_width(app, line_text)
-
-        lo = 0
-        hi = len(line_text)
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if measure(mid) < rel_x:
-                lo = mid + 1
-            else:
-                hi = mid
-
-        idx = lo
-        if idx <= 0:
-            return abs_offset
-        if idx >= len(line_text):
-            return abs_offset + len(line_text)
-
-        left_w = measure(idx - 1)
-        right_w = measure(idx)
-        if abs(rel_x - left_w) <= abs(rel_x - right_w):
-            idx -= 1
-        return abs_offset + idx
-
     def _measure_prefix_width(self, app: "GuiApplication", line_text: str):
         """Return a callable that measures width of line_text[:n] with cached font usage."""
         try:

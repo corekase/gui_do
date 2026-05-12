@@ -45,6 +45,7 @@ Usage::
 """
 from __future__ import annotations
 
+from collections import deque
 from typing import Callable, Iterator, List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -359,11 +360,12 @@ class SceneGraph2D:
 
     def _all_nodes(self) -> Iterator[Node2D]:
         """DFS iteration over all nodes in the graph."""
-        stack = list(self._roots)
+        stack = deque(self._roots)
         while stack:
-            node = stack.pop(0)
+            node = stack.popleft()
             yield node
-            stack = list(node._children) + stack
+            if node._children:
+                stack.extendleft(reversed(node._children))
 
     def find_all(self, *, visible_only: bool = False) -> List[Node2D]:
         """Return all nodes in the graph.

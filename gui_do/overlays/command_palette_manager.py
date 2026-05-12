@@ -604,15 +604,6 @@ class CommandPaletteManager:
             else:
                 app.actions.bind_key(key, action_id, scene=s)
 
-    def _bind_builtin_toggle_key(self, app: "GuiApplication") -> None:
-        """Install default global F5 toggle binding for the command palette."""
-        self.bind_toggle_key(
-            app,
-            pygame.K_F5,
-            scene=None,
-            action_id=self._BUILTIN_TOGGLE_ACTION_ID,
-        )
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

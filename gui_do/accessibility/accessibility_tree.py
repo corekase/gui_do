@@ -55,6 +55,7 @@ Usage::
 """
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
@@ -359,11 +360,12 @@ class AccessibilityTree:
         self, root: AccessibilityNode
     ) -> Iterator[AccessibilityNode]:
         """Depth-first iteration of all descendants of *root* (root excluded)."""
-        stack = list(root._children)
+        stack = deque(root._children)
         while stack:
-            node = stack.pop(0)
+            node = stack.popleft()
             yield node
-            stack = list(node._children) + stack
+            if node._children:
+                stack.extendleft(reversed(node._children))
 
     # ------------------------------------------------------------------
     # Snapshot
@@ -447,8 +449,8 @@ class AccessibilityBus:
 
     def consume_announcements(self) -> List[AccessibilityAnnouncement]:
         """Return and clear all pending announcements (FIFO order)."""
-        result = list(self._queue)
-        self._queue.clear()
+        result = self._queue
+        self._queue = []
         return result
 
     def subscribe(

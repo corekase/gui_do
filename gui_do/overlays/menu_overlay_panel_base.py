@@ -64,8 +64,9 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
             if not pygame.font.get_init():
                 pygame.font.init()
             font = pygame.font.SysFont(None, int(font_size))
+            item_text_padding = int(text_padding) * 2
             widths = [
-                font.size(str(getattr(item, "label", "")))[0] + int(text_padding) * 2 + 16
+                font.size(str(getattr(item, "label", "")))[0] + item_text_padding + 16
                 for item in items
                 if not bool(getattr(item, "separator", False))
             ]

@@ -139,13 +139,6 @@ class ScrollbarControl(_AxisDragControlBase):
         base = int(round(track_span * ratio))
         return max(1, min(track_span, max(12, base)))
 
-    def _offset_to_pixel(self) -> int:
-        max_offset = self._max_offset()
-        handle_len = self._handle_length()
-        travel_span = max(1, (self.rect.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (self.rect.height - handle_len))
-        ratio = 0.0 if max_offset <= 0 else self.offset / float(max_offset)
-        return int(round(ratio * travel_span))
-
     def _offset_to_pixel_with_len(self, handle_len: int) -> int:
         max_offset = self._max_offset()
         travel_span = max(1, (self.rect.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (self.rect.height - handle_len))

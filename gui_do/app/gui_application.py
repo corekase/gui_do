@@ -806,9 +806,12 @@ class GuiApplication:
         self.lock_area = Rect(lock_rect)
 
     def convert_to_window(self, point, window):
+        point_x = int(point[0])
+        point_y = int(point[1])
         if window is None:
-            return (int(point[0]), int(point[1]))
-        return (int(point[0]) - int(window.rect.left), int(point[1]) - int(window.rect.top))
+            return (point_x, point_y)
+        rect = window.rect
+        return (point_x - int(rect.left), point_y - int(rect.top))
 
     def get_lock_point_motion_delta(self, event):
         if not self.mouse_point_locked or self.lock_point_pos is None:

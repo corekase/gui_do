@@ -200,10 +200,15 @@ class Scene:
                 # separate BFS traversals (_point_in_task_panel + _point_in_window).
                 hit_interactive = False
                 windows, task_panels = self._window_query_nodes()
-                for node in (*task_panels, *windows):
+                for node in task_panels:
                     if node.visible and node.enabled and node.rect.collidepoint(pos):
                         hit_interactive = True
                         break
+                if not hit_interactive:
+                    for node in windows:
+                        if node.visible and node.enabled and node.rect.collidepoint(pos):
+                            hit_interactive = True
+                            break
                 if not hit_interactive:
                     self._clear_active_windows()
         capture_event = event.with_phase(EventPhase.CAPTURE)
@@ -255,7 +260,10 @@ class Scene:
                 break
         best: UiNode | None = None
         walk_nodes = self._get_cached_bfs_walk()  # Use cached walk instead of generator
-        for node in walk_nodes:
+        # The previous forward scan kept the last matching node as `best`.
+        # Reversed iteration with first-match break is equivalent and avoids
+        # evaluating the remainder once the top-most focus target is found.
+        for node in reversed(walk_nodes):
             if not (node.visible and node.enabled):
                 continue
             if (
@@ -265,6 +273,7 @@ class Scene:
                 and (top_window is None or self._is_descendant_of(node, top_window))
             ):
                 best = node
+                break
         return top_window, best
 
     def pointer_context_at(self, pos, windows: List[UiNode] | None = None) -> tuple[bool, UiNode | None]:

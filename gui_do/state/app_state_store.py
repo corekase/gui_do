@@ -54,6 +54,8 @@ class StateSelector(Generic[T]):
         self._extractor = extractor
         self._cached: T = extractor(initial_state)
         self._listeners: List[Callable[[T], None]] = []
+        self._listeners_snapshot: tuple[Callable[[T], None], ...] = ()
+        self._listeners_dirty: bool = False
         self._depends_on: set[str] | None = depends_on
 
     @property
@@ -67,14 +69,22 @@ class StateSelector(Generic[T]):
         Returns an unsubscribe callable.
         """
         self._listeners.append(callback)
+        self._listeners_dirty = True
 
         def _unsub() -> None:
             try:
                 self._listeners.remove(callback)
+                self._listeners_dirty = True
             except ValueError:
                 pass
 
         return _unsub
+
+    def _iter_listeners(self) -> tuple[Callable[[T], None], ...]:
+        if self._listeners_dirty:
+            self._listeners_snapshot = tuple(self._listeners)
+            self._listeners_dirty = False
+        return self._listeners_snapshot
 
     # ------------------------------------------------------------------
     # Internal — called by the store
@@ -95,7 +105,7 @@ class StateSelector(Generic[T]):
             new_val = self._extractor(new_state)
             if new_val != self._cached:
                 self._cached = new_val
-                for cb in list(self._listeners):
+                for cb in self._iter_listeners():
                     cb(new_val)
             return
 
@@ -105,14 +115,14 @@ class StateSelector(Generic[T]):
             new_val = self._extractor(new_state)
             if new_val != self._cached:
                 self._cached = new_val
-                for cb in list(self._listeners):
+                for cb in self._iter_listeners():
                     cb(new_val)
         elif any(key in self._depends_on for key in changed_keys):
             # At least one dependency changed: update
             new_val = self._extractor(new_state)
             if new_val != self._cached:
                 self._cached = new_val
-                for cb in list(self._listeners):
+                for cb in self._iter_listeners():
                     cb(new_val)
 
 

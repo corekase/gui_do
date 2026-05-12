@@ -21,7 +21,6 @@ import math
 from typing import Optional, Tuple
 
 import pygame
-import pygame.gfxdraw
 from pygame import Rect, Surface
 
 

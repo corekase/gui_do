@@ -43,18 +43,6 @@ if TYPE_CHECKING:
     from ..controls.input.text_input_control import TextInputControl
 
 
-def _cursor_from_digit_count(text: str, digit_count: int) -> int:
-    if digit_count <= 0:
-        return 0
-    seen = 0
-    for idx, ch in enumerate(text):
-        if ch.isdigit():
-            seen += 1
-            if seen >= digit_count:
-                return idx + 1
-    return len(text)
-
-
 # ---------------------------------------------------------------------------
 # TextFormatter protocol
 # ---------------------------------------------------------------------------

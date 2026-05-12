@@ -137,14 +137,6 @@ class PropertyInspectorPanel(UiNode):
             for prop in props:
                 self._rows.append(_InspectorRow(is_header=False, prop=prop))
 
-    def _row_y_for_index(self, index: int) -> int:
-        y = self.rect.y
-        for i, row in enumerate(self._rows):
-            if i == index:
-                return y - self._scroll_offset
-            y += self._header_height if row.is_header else self._row_height
-        return y - self._scroll_offset
-
     def _total_height(self) -> int:
         return sum(
             self._header_height if row.is_header else self._row_height

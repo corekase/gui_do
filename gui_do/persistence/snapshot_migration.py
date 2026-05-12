@@ -11,6 +11,7 @@ Provides:
 from __future__ import annotations
 
 import copy
+from collections import deque
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypedDict
 
@@ -152,13 +153,11 @@ class MigrationRegistry:
             adj.setdefault(step.from_version, []).append(step)
 
         # BFS
-        queue: List[Tuple[SchemaVersion, List[MigrationStep]]] = [
-            (from_version, [])
-        ]
+        queue = deque([(from_version, [])])
         visited: set[SchemaVersion] = {from_version}
 
         while queue:
-            current, path = queue.pop(0)
+            current, path = queue.popleft()
             for step in adj.get(current, []):
                 new_path = path + [step]
                 if step.to_version == to_version:
