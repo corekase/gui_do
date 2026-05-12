@@ -65,6 +65,12 @@ This convention must be reflected accurately in documentation:
 
 **Folder-per-feature/scene**: Each subfolder under `demo_features/` is exactly one feature package (or a tightly related cluster).
 
+**Best-practice package layout**: Treat `demo_features/` as the canonical organizational model for user projects:
+- One folder per feature.
+- One package `__init__.py` per feature folder as the only public import surface.
+- Feature internals split into focused files inside that same folder (for example `*_feature.py`, `*_presenter.py`, `*_specs.py`, `*_logic_feature.py`).
+- Avoid cross-feature imports of internal submodules; import only feature package roots.
+
 **`__init__.py` is the sole public surface**: All cross-package imports target the package root only. Internal reorganizations have zero effect on bootstrap. The data (specs and config) drives wiring; code location is irrelevant to bootstrap.
 
 **File-per-concern within a folder**: Each file inside a feature folder owns exactly one concern (`*_feature.py`, `*_presenter.py`, `*_specs.py`, `*_logic_feature.py`).
@@ -181,9 +187,11 @@ If README.md exists, read it before generating and extract its header elements (
 - **Latest Demonstration block**: the `### Latest Demonstration` section with its surrounding `---` dividers and the `<a href=...><img ...></a>` video thumbnail block. Read `gui_do/_version.py` `__demo__` and use that value as `URLPART`. If README.md existed and the URL already matched, preserve it unchanged; otherwise construct it from the Media Block spec below.
 - **Unittest badge**: `[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg?branch=main)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)` — copy this line verbatim; do not alter the URL or badge text.
 
+No whitespace rule: there must be no blank line between the unittest badge line and the `# gui_do` project heading.
+
 The ordering of these three elements must remain:
 1. Unittest badge line (line 1 of the file)
-2. `# gui_do` (line 2)
+2. `# gui_do` (line 2, immediately adjacent to line 1 with no intervening blank line)
 3. `### Latest Demonstration` block (with `---` dividers)
 
 ### Media Block Spec
@@ -393,7 +401,7 @@ This listing must run as-is. All imports must be from `gui_do` root. All API nam
 
 After generating both files, run a compliance pass:
 
-1. **README.md header check.** Confirm the file opens with the unittest badge line on line 1, then `# gui_do` on line 2, then the `### Latest Demonstration` block (with `---` dividers). If the badge appears anywhere else, move it to line 1. Confirm the video URL uses the `__demo__` value from `gui_do/_version.py`. Confirm the badge URL is the exact verbatim string from the existing README.
+1. **README.md header check.** Confirm the file opens with the unittest badge line on line 1, then `# gui_do` on line 2, then the `### Latest Demonstration` block (with `---` dividers). Confirm there is no blank line between line 1 and line 2. If the badge appears anywhere else, move it to line 1. Confirm the video URL uses the `__demo__` value from `gui_do/_version.py`. Confirm the badge URL is the exact verbatim string from the existing README.
 2. **README.md structure check.** Confirm the eight required sections are present in order after the header.
 3. **TUTORIAL.md structure check.** Confirm all 11 required sections are present in order. Confirm the install command is `python -m pip install -e . --no-deps`. Confirm no private/internal symbol appears in any code example.
 4. **TUTORIAL.md enrichment pass (required after main generation).** Re-read TUTORIAL.md from top to bottom and enrich any section that is thin on explanation or examples.
@@ -401,10 +409,12 @@ After generating both files, run a compliance pass:
   - Add or expand runnable code snippets wherever a required concept lacks a concrete example.
   - If a step says to show a full updated listing, ensure that listing is present and complete for that step.
   - Keep the existing 11-section order unchanged; enrich content in place rather than adding new top-level sections.
+  - Normalize markdown rendering for double-underscore names so they are never misparsed as emphasis. For names like `__init__.py`, `__version__`, and `__demo__`, use inline code formatting consistently.
   - Re-verify every added API name against `gui_do/__init__.py`.
-5. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
-6. **Cross-reference check.** Confirm TUTORIAL.md links to MANUAL.md in Sections 1, 9, and 11. Confirm README.md links to both TUTORIAL.md and MANUAL.md in the Documentation section.
-7. **Run a text search** (e.g. `rg "MANUAL_PLACEHOLDER\|from gui_do\." README.md TUTORIAL.md`) to catch any internal submodule imports or stale placeholder text. Fix violations before completing.
-8. **pygame-ce cleanup.** Search both README.md and TUTORIAL.md for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
+5. **README/TUTORIAL identifier formatting check.** Re-read both files and normalize any raw double-underscore identifiers that could be misparsed by markdown emphasis. Ensure names like `__init__.py`, `__version__`, and `__demo__` are rendered with inline code formatting.
+6. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
+7. **Cross-reference check.** Confirm TUTORIAL.md links to MANUAL.md in Sections 1, 9, and 11. Confirm README.md links to both TUTORIAL.md and MANUAL.md in the Documentation section.
+8. **Run a text search** (e.g. `rg "MANUAL_PLACEHOLDER\|from gui_do\." README.md TUTORIAL.md`) to catch any internal submodule imports or stale placeholder text. Fix violations before completing.
+9. **pygame-ce cleanup.** Search both README.md and TUTORIAL.md for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 
 Report: what was checked, what was fixed, and confirm both files are complete and compliant.

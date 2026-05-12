@@ -75,6 +75,9 @@ After all assigned steps are done:
   relevant example blocks added during step 9.
 - Confirm specification-heavy sections link to the specifications/options appendix added in
   step 9.
+- Confirm markdown rendering for double-underscore identifiers is normalized so names like
+  `__init__.py`, `__version__`, and `__demo__` are displayed with inline code formatting and
+  are not misparsed as emphasis.
 - **pygame-ce cleanup.** Search `MANUAL.md` for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 - Report: steps executed, line count of final MANUAL.md, any sections that were skipped and why.
 
@@ -91,6 +94,17 @@ All sub-prompts inherit these shared rules. Sub-prompt files do not need to repe
 3. Contract/spec docs under `docs/`.
 4. Demo feature usage patterns under `demo_features/`.
 5. Existing README/TUTORIAL prose.
+
+## Demo Features Organization Convention (Required)
+
+Document the project and examples using `demo_features/` as the canonical feature organization pattern:
+
+- One folder per feature package under `demo_features/`.
+- Each feature folder has one package root `__init__.py` as the only supported public import surface.
+- Internal implementation is split into focused files in that same folder (for example `*_feature.py`, `*_presenter.py`, `*_specs.py`, `*_logic_feature.py`).
+- Cross-feature imports should target package roots, not internal submodules.
+
+When describing best practices for user projects, present this pattern as the recommended default.
 
 ## Verbosity Standard
 

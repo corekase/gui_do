@@ -14,6 +14,7 @@ This step must:
 2. Add and maintain an appendix section named:
    - `### Appendix F: Specifications and Option Reference`
 3. Add links from specification-heavy sections to Appendix F entries.
+4. Normalize markdown display for double-underscore identifiers so names like `__init__.py`, `__version__`, and `__demo__` are not misparsed as emphasis.
 
 Do not rewrite the whole manual. Use targeted updates only.
 
@@ -39,6 +40,10 @@ When adding examples:
 - Do not duplicate near-identical examples in multiple sections.
 - If one example serves several sections, keep one canonical block and add links.
 - Use Python fenced blocks.
+
+When enriching prose and references:
+- Wrap double-underscore identifiers (for example `__init__.py`, `__version__`, `__demo__`) in inline code formatting.
+- Do not leave raw double-underscore names in plain text where markdown can interpret underscores as emphasis.
 
 Target areas include any chapter that currently explains concepts with no example,
 including but not limited to conceptual foundations, architecture/workflow, and system chapters.
@@ -75,6 +80,7 @@ Before finishing, verify:
 3. Appendix F exists and contains concrete options for each listed spec family.
 4. Specification-heavy sections contain links to Appendix F.
 5. No unrelated section rewrites were introduced.
+6. Double-underscore identifiers display correctly and are not misparsed by markdown.
 
 ## Output Report
 
