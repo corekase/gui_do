@@ -123,6 +123,20 @@ class ChipInputControl(UiNode):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled
 
+    def on_focus_changed(self, is_focused: bool) -> None:
+        """Enable text input when focused, disable when unfocused."""
+        if is_focused:
+            try:
+                pygame.key.start_text_input()
+                pygame.key.set_text_input_rect(self.rect)
+            except Exception:
+                pass
+        else:
+            try:
+                pygame.key.stop_text_input()
+            except Exception:
+                pass
+
     def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
         super()._on_enabled_changed(old_enabled, new_enabled)
 
