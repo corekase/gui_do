@@ -70,6 +70,10 @@ class ColorPickerControl(UiNode):
         self._sv_surface: Optional[pygame.Surface] = None
         self._sv_surface_hue: float = -1.0
         self._sv_surface_size: Optional[Tuple[int, int]] = None
+        self._sv_value_mask: Optional[pygame.Surface] = None
+        self._sv_value_mask_size: Optional[Tuple[int, int]] = None
+        self._hue_surface: Optional[pygame.Surface] = None
+        self._hue_surface_size: Optional[Tuple[int, int]] = None
         self._draw_font_role: str = "color_picker.hex"
 
     _FONT_SCALE: float = 1.0   # 16/16 — body-size hex entry
@@ -249,35 +253,62 @@ class ColorPickerControl(UiNode):
             or self._sv_surface_hue != self._hue
             or self._sv_surface_size != size
         ):
-            self._sv_surface = self._build_sv_surface(w, h, self._hue)
+            value_mask = self._build_sv_value_mask(w, h)
+            self._sv_surface = self._build_sv_surface(w, h, self._hue, value_mask)
             self._sv_surface_hue = self._hue
             self._sv_surface_size = size
         surface.blit(self._sv_surface, (sv_rect.x, sv_rect.y))
 
-    @staticmethod
-    def _build_sv_surface(w: int, h: int, hue: float) -> "pygame.Surface":
-        surf = pygame.Surface((max(1, w), max(1, h)))
-        for sx in range(max(1, w)):
-            s = sx / max(1, w - 1)
-            for sy in range(max(1, h)):
-                v = 1.0 - sy / max(1, h - 1)
-                r, g, b = colorsys.hsv_to_rgb(hue, s, v)
-                surf.set_at((sx, sy), (int(r * 255), int(g * 255), int(b * 255)))
-        return surf
+    def _build_sv_value_mask(self, w: int, h: int) -> "pygame.Surface":
+        width = max(1, w)
+        height = max(1, h)
+        size = (width, height)
+        if self._sv_value_mask is not None and self._sv_value_mask_size == size:
+            return self._sv_value_mask
+
+        value_column = pygame.Surface((1, height))
+        for sy in range(height):
+            value = int(round((1.0 - (sy / max(1, height - 1))) * 255.0))
+            value_column.set_at((0, sy), (value, value, value))
+
+        self._sv_value_mask = pygame.transform.scale(value_column, size)
+        self._sv_value_mask_size = size
+        return self._sv_value_mask
 
     @staticmethod
-    def _draw_hue_strip(surface: "pygame.Surface", hue_rect: Rect) -> None:
-        h = max(1, hue_rect.height)
-        for sy in range(h):
-            hue = sy / max(1, h - 1)
+    def _build_sv_surface(w: int, h: int, hue: float, value_mask: "pygame.Surface") -> "pygame.Surface":
+        width = max(1, w)
+        height = max(1, h)
+
+        sat_row = pygame.Surface((width, 1))
+        for sx in range(width):
+            sat = sx / max(1, width - 1)
+            r, g, b = colorsys.hsv_to_rgb(hue, sat, 1.0)
+            sat_row.set_at((sx, 0), (int(r * 255), int(g * 255), int(b * 255)))
+
+        surf = pygame.transform.scale(sat_row, (width, height))
+        surf.blit(value_mask, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+        return surf
+
+    def _draw_hue_strip(self, surface: "pygame.Surface", hue_rect: Rect) -> None:
+        width = max(1, hue_rect.width)
+        height = max(1, hue_rect.height)
+        size = (width, height)
+        if self._hue_surface is None or self._hue_surface_size != size:
+            self._hue_surface = self._build_hue_surface(width, height)
+            self._hue_surface_size = size
+        surface.blit(self._hue_surface, (hue_rect.x, hue_rect.y))
+
+    @staticmethod
+    def _build_hue_surface(w: int, h: int) -> "pygame.Surface":
+        width = max(1, w)
+        height = max(1, h)
+        hue_column = pygame.Surface((1, height))
+        for sy in range(height):
+            hue = sy / max(1, height - 1)
             r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
-            color = (int(r * 255), int(g * 255), int(b * 255))
-            pygame.draw.line(
-                surface,
-                color,
-                (hue_rect.x, hue_rect.y + sy),
-                (hue_rect.right - 1, hue_rect.y + sy),
-            )
+            hue_column.set_at((0, sy), (int(r * 255), int(g * 255), int(b * 255)))
+        return pygame.transform.scale(hue_column, (width, height))
 
     # ------------------------------------------------------------------
     # Interaction helpers
@@ -286,8 +317,12 @@ class ColorPickerControl(UiNode):
     def _update_sv_from_pos(self, pos: Tuple[int, int], sv_rect: Rect) -> None:
         s = (pos[0] - sv_rect.x) / max(1, sv_rect.width - 1)
         v = 1.0 - (pos[1] - sv_rect.y) / max(1, sv_rect.height - 1)
-        self._sat = max(0.0, min(1.0, s))
-        self._val = max(0.0, min(1.0, v))
+        next_sat = max(0.0, min(1.0, s))
+        next_val = max(0.0, min(1.0, v))
+        if abs(next_sat - self._sat) < 1e-9 and abs(next_val - self._val) < 1e-9:
+            return
+        self._sat = next_sat
+        self._val = next_val
         self._hex_text = self._rgb_to_hex(*self._hsv_to_rgb())
         self._hex_error = False
         self.invalidate()
@@ -295,7 +330,10 @@ class ColorPickerControl(UiNode):
 
     def _update_hue_from_pos(self, pos: Tuple[int, int], hue_rect: Rect) -> None:
         h = (pos[1] - hue_rect.y) / max(1, hue_rect.height - 1)
-        self._hue = max(0.0, min(1.0, h))
+        next_hue = max(0.0, min(1.0, h))
+        if abs(next_hue - self._hue) < 1e-9:
+            return
+        self._hue = next_hue
         self._sv_surface = None  # invalidate gradient cache
         self._hex_text = self._rgb_to_hex(*self._hsv_to_rgb())
         self._hex_error = False

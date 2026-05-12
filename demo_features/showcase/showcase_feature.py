@@ -499,6 +499,32 @@ class ShowcaseFeature(Feature):
                 return panel
             return _factory
 
+        def make_toggle_group(group_id: str, items: list[tuple[str, str]]):
+            def _factory(w: int, h: int) -> PanelControl:
+                panel = PanelControl(group_id, Rect(0, 0, w, h), draw_background=False)
+                btn_w = min(100, w)
+                col_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                    anchor=Rect(0, 0, btn_w, h), content_bottom=h,
+                    preferred_width=btn_w, item_gap_y=inner_gap,
+                )
+                btn_h = max(20, (h - inner_gap * 2) // 3)
+                for ctrl_id, suffix in items:
+                    slot = Rect(col_st.add_slot_or_overflow(btn_h, overflow_gap=0))
+                    panel.add_at(
+                        ToggleControl(
+                            ctrl_id,
+                            Rect(0, 0, slot.width, slot.height),
+                            text_on=f"Pressed {suffix}",
+                            text_off=f"Raised {suffix}",
+                            pushed=False,
+                        ),
+                        slot.left,
+                        slot.top,
+                    )
+                return panel
+
+            return _factory
+
         def make_horiz_pair(w: int, h: int):
             panel = PanelControl("control_horizontal_pair_cell", Rect(0, 0, w, h), draw_background=False)
             col_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
@@ -593,6 +619,13 @@ class ShowcaseFeature(Feature):
                 make_button_group("control_button_group_c_cell", "c", [
                     ("control_button_group_c1", "C1"), ("control_button_group_c2", "C2"), ("control_button_group_c3", "C3"),
                 ]), natural_width=100),
+            RowCellSpec("toggle_group", "Toggle", 80, 12,
+                make_toggle_group("control_toggle_group_cell", [
+                    ("control_toggle_a", "A"), ("control_toggle_b", "B"), ("control_toggle_c", "C"),
+                ]),
+                natural_width=100,
+                accessibility_role="group",
+                accessibility_label="Toggle group"),
         ], col_gap=6, **kw)
 
         row2 = build_horizontal_row_specs([
@@ -947,8 +980,18 @@ class ShowcaseFeature(Feature):
             _add_cell(panel, "time_picker", sc2_x, sc2_w, "Time Picker", time_picker)
             return panel
 
+        # Row 4: Color Picker  (tallest = Color Picker 160px)
+        row4_h = label_h + label_gap + 160
+
+        def _make_row4_panel() -> PanelControl:
+            panel = PanelControl("control_ext_row4", Rect(0, 0, col_w, row4_h), draw_background=False)
+            color_picker = ColorPickerControl("control_color_picker", Rect(0, 0, sc0_w, 160))
+            _add_cell(panel, "color_picker", sc0_x, sc0_w, "Color Picker", color_picker)
+            return panel
+
         return [
             ControlDefinition("ext_row1", "", row1_h, 140, _make_row1_panel, labeled=False),
             ControlDefinition("ext_row2", "", row2_h, 141, _make_row2_panel, labeled=False),
             ControlDefinition("ext_row3", "", row3_h, 142, _make_row3_panel, labeled=False),
+            ControlDefinition("ext_row4", "", row4_h, 143, _make_row4_panel, labeled=False),
         ]
