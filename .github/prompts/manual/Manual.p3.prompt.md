@@ -161,6 +161,7 @@ Explicitly include the newer routed runtime facilities:
 - service publication/consumption specs
 - reactive effect specs
 - operation/failure-policy specs and operation bus behavior
+- dependency/workflow/recompute/QoS/health/replay/hot-swap faculties and when to use each
 
 ---
 

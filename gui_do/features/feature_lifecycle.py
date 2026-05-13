@@ -1454,6 +1454,9 @@ class RoutedFeature(Feature):
         handler(host, message)
 
     def on_update(self, host) -> None:
+        runtime_update = getattr(self, "_routed_runtime_on_update", None)
+        if callable(runtime_update):
+            runtime_update(host)
         self._drain_messages(
             host,
             should_dispatch=lambda message: message.topic is not None,

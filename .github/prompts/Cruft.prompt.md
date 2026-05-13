@@ -38,6 +38,13 @@ You are performing a cruft-removal pass on this package. Your job is to find and
 	- `StoreSubscriptionSpec`, `StoreSelectorSpec`
 	- `ObservableEffectSpec`, `SignalEffectSpec`
 	- `FeatureOperationSpec`, `FailurePolicySpec`
+	- `FeatureDependencySpec`
+	- `WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`
+	- `RecomputeNodeSpec`, `RecomputeOrchestrator`
+	- `QoSPolicySpec`, `QoSPolicyRuntime`
+	- `HealthProbeSpec`, `FeatureHealthRuntime`
+	- `ReplaySpec`, `RuntimeReplayHarness`
+	- `ReplacePolicySpec`, `FeatureHotSwapManager`
 
 ## New Runtime Facilities Cleanup Rules
 
@@ -45,6 +52,7 @@ When auditing for dead code and shims, treat runtime-facility wiring as first-cl
 
 - Preserve lifecycle ownership semantics: `bind_runtime` setup must pair with `shutdown_runtime` disposal.
 - Do not collapse or remove `runtime_scope_attr_name` / `operation_bus_attr_name` paths as "unused" if they are part of `RoutedRuntimeSpec` composition.
+- Do not collapse or remove `feature_dependencies`, `workflow_specs`, `recompute_nodes`, `qos_policies`, `health_probes`, `replay_spec`, `replace_policy`, or their `*_attr_name` mappings as "unused" if they are part of routed runtime composition.
 - Do not remove operation failure publication paths solely because they are scene-scoped or callback-driven; verify no tests or demo features consume those topics first.
 - If removing a feature subscription/helper, verify equivalent cleanup still occurs through runtime scope disposal.
 

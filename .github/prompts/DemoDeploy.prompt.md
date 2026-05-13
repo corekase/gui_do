@@ -70,6 +70,14 @@ All additions must also follow the Demo Feature Layout Standard in `docs/demo_fe
    - Use `ServiceBindingSpec` and `ServiceConsumerSpec` for scene-local service publication/consumption.
    - Use `StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, and `SignalEffectSpec` for reactive update wiring.
    - Use `FeatureOperationSpec` and `FailurePolicySpec` for feature-level operations that need timeout/retry/failure reporting.
+    - For advanced integrations, use higher-level runtime faculties where they improve clarity and lifecycle safety:
+       - `FeatureDependencySpec` for explicit dependencies.
+       - `WorkflowStepSpec` / `WorkflowSpec` for multi-step behavior.
+       - `RecomputeNodeSpec` for derived-state recompute ordering.
+       - `QoSPolicySpec` for per-update workload budgets.
+       - `HealthProbeSpec` for feature health reporting.
+       - `ReplaySpec` for bounded runtime diagnostics capture.
+       - `ReplacePolicySpec` only when a demo explicitly showcases safe runtime replacement.
    - Ensure `shutdown_runtime` invokes routed teardown so runtime scopes and operation buses are disposed.
 
 ## Quality Expectations

@@ -45,6 +45,11 @@ Based on current architecture analysis, these areas are candidates for meaningfu
 	- Avoid unnecessary allocations in runtime-scope cleanup and effect-binding loops.
 	- Validate timer-id and subscription bookkeeping stays O(1) under high operation volume.
 	- Preserve deterministic cleanup behavior while optimizing.
+	- Include `features/runtime_systems.py` in profiling/optimization passes:
+	  - workflow pump throughput (`WorkflowCoordinator`)
+	  - recompute graph pump ordering/overhead (`RecomputeOrchestrator`)
+	  - policy checks (`QoSPolicyRuntime`) and health probe cadence (`FeatureHealthRuntime`)
+	  - replay capture overhead (`RuntimeReplayHarness`) under enabled mode
 
 ## Structural Changes
 
@@ -72,3 +77,4 @@ Do not optimize away lifecycle or safety semantics in routed runtime facilities.
 - Keep teardown guarantees for runtime scopes, effect subscriptions, and operation timers.
 - Preserve failure-policy behavior (retry/timeout/publication) while optimizing internal mechanics.
 - Avoid introducing speculative concurrency into feature operation handling; keep behavior scene-portable and deterministic.
+- Preserve semantics of dependency validation, workflow progression, recompute ordering, QoS budget enforcement, health state transitions, replay bounded buffers, and hot-swap safety checks.

@@ -46,7 +46,9 @@ While restructuring, preserve and properly place the new routed runtime faciliti
   - service bindings/consumers
   - store/observable/signal effects
   - operation bus and failure policy registration
+  - dependency/workflow/recompute/QoS/health/replay/hot-swap spec families
 - Preserve teardown guarantees: any reorganization must keep `shutdown_runtime` disposal paths intact for runtime scope and operation bus resources.
+- Preserve routed update-hook semantics for runtime systems (`_routed_runtime_on_update`) and manager attachment/cleanup attribute paths.
 - If renaming or moving facility symbols, update root exports and all prompt/document references in the same pass.
 
 ### Out of Scope

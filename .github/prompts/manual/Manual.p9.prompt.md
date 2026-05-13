@@ -23,6 +23,13 @@ Appendix F must include dedicated entries for the newer routed runtime families:
 - `ObservableEffectSpec` / `SignalEffectSpec`
 - `FeatureOperationSpec` / `FailurePolicySpec`
 - `FeatureRuntimeScope` and `FeatureOperationBus` as runtime counterparts
+- `FeatureDependencySpec`
+- `WorkflowStepSpec` / `WorkflowSpec` / `WorkflowCoordinator`
+- `RecomputeNodeSpec` / `RecomputeOrchestrator`
+- `QoSPolicySpec` / `QoSPolicyRuntime`
+- `HealthProbeSpec` / `FeatureHealthRuntime`
+- `ReplaySpec` / `RuntimeReplayHarness`
+- `ReplacePolicySpec` / `FeatureHotSwapManager`
 6. Appendix F links from specification-heavy sections include the routed runtime facilities above.
 Do not rewrite the whole manual. Use targeted updates only.
 

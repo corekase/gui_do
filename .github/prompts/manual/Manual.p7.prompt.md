@@ -183,7 +183,7 @@ instead of ad hoc callbacks, and how failure policies surface operational errors
 **What/why:** gui_do supports high-fidelity custom rendering for features that go beyond
 the control tree (particles, tile maps, 2D scene graphs) and portable audio cue playback.
 
-**Mental model:** Custom rendering lives in `draw(host, screen)` or inside `CanvasControl`.
+**Mental model:** Custom rendering lives in `draw(host, surface, theme)` or inside `CanvasControl`.
 Graphics helpers build on pygame surfaces. Audio cues are event-driven via `SoundEventBus`.
 The scene graph (`SceneGraph2D`) provides a hierarchical 2D transform tree for camera-relative
 rendering.

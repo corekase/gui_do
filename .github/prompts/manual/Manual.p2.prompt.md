@@ -25,9 +25,9 @@ complete, verbose chapter. This chapter is the theoretical backbone of the manua
 Use only names found in the actual files. Do not copy names from prior MANUAL.md content
 without verifying they still exist in `gui_do/__init__.py`.
 
-## Three Required Subsections
+## Four Required Subsections
 
-Write these three subsections in order, each with its own `[Back to Table of Contents]` link.
+Write these four subsections in order, each with its own `[Back to Table of Contents]` link.
 
 ---
 
@@ -145,12 +145,14 @@ Write comprehensive prose covering all of these points:
     tree, build static structure. Controls created here exist for the scene's lifetime.
   - `bind_runtime(host)`: Called after all features in the scene have completed `build`. Subscribe
     to observables, bind controls to data, register callbacks, wire cross-feature interactions.
-  - `handle_event(host, event)`: Called for every routed `GuiEvent`. Return `True` to consume;
+  - `handle_event(host, event)`: Called for routed `GuiEvent` values. Return `True` to consume;
     return `False`/`None` to pass on.
-  - `on_update(host, dt_seconds)`: Called every frame. Use for animations, timers, per-frame
-    updates. Keep fast; avoid expensive computation.
-  - `draw(host, screen)`: Called every frame after `on_update`. Use for custom drawing that
-    bypasses the control tree.
+  - `on_update(host)`: Called every frame. Use for animations, scheduler interactions, and
+    per-frame updates. Keep fast; avoid expensive computation.
+  - `draw(host, surface, theme)`: Called every frame after `on_update`. Use for custom drawing
+    that bypasses the control tree.
+  - `shutdown_runtime(host)`: Called during runtime teardown. Unsubscribe and dispose all
+    runtime-owned resources.
 
 - **`HOST_REQUIREMENTS` protocol**: Declares what host attributes each lifecycle method requires.
   The framework validates these at startup and provides clear error messages for missing bindings.
@@ -188,6 +190,29 @@ Within Subsection 3, include explicit coverage of routed runtime facilities as p
 - Declarative setup of services, reactive effects, and operations during `bind_runtime`
 - Runtime-scope ownership and teardown during `shutdown_runtime`
 - Why this model prevents subscription leaks and partial cleanup failures
+
+---
+
+### Subsection 4: Higher-Level Runtime Faculties and Composition
+
+**Core idea:** Routed runtime now includes higher-level faculties that compose with the existing
+service/effect/operation model through sibling declarative specs and lifecycle-owned runtime systems.
+
+Write comprehensive prose covering all of these points:
+
+- **Dependency planning and validation:** `FeatureDependencySpec` as startup/runtime guardrails.
+- **Workflow orchestration:** `WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator` for
+  multi-step runtime behavior while preserving feature boundaries.
+- **Derived-state recompute orchestration:** `RecomputeNodeSpec`, `RecomputeOrchestrator` for
+  deterministic recompute ordering.
+- **Runtime quality-of-service and backpressure:** `QoSPolicySpec`, `QoSPolicyRuntime` and why
+  per-update budgets matter.
+- **Health and degradation monitoring:** `HealthProbeSpec`, `FeatureHealthRuntime` and how
+  aggregate health state informs behavior.
+- **Replay diagnostics:** `ReplaySpec`, `RuntimeReplayHarness` for bounded runtime capture and replay.
+- **Hot-swap policy:** `ReplacePolicySpec`, `FeatureHotSwapManager` for controlled feature replacement.
+- **Lifecycle placement and cleanup discipline:** setup in `bind_runtime`, per-frame work in
+  `on_update`, teardown in `shutdown_runtime`, and scope-owned cleanup guarantees.
 
 ## Replace Target
 

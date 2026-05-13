@@ -20,6 +20,8 @@ This prompt generates two files only:
 
 MANUAL.md is produced by a separate prompt pipeline (`Manual.prompt.md`). Do not regenerate or modify MANUAL.md from this prompt.
 
+Manual-first execution policy: treat `MANUAL.md` as already refreshed by the preceding Manual prompt run. For this prompt, consider `MANUAL.md` the current reference surface and link to it frequently for deeper system and specification details.
+
 ### File Presence Modes (Required)
 
 Apply this two-mode behavior for `README.md` and `TUTORIAL.md`:
@@ -68,8 +70,17 @@ When generating or updating README.md and TUTORIAL.md, include current guidance 
   - `ServiceBindingSpec` / `ServiceConsumerSpec`
   - One reactive effect spec (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, or `SignalEffectSpec`)
   - `FeatureOperationSpec` with `FailurePolicySpec` for operation-level retry/timeout behavior
+- Include guidance for higher-level runtime faculties and where they fit:
+  - dependency validation (`FeatureDependencySpec`)
+  - workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`)
+  - recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`)
+  - QoS/backpressure (`QoSPolicySpec`, `QoSPolicyRuntime`)
+  - health/degradation probes (`HealthProbeSpec`, `FeatureHealthRuntime`)
+  - replay capture (`ReplaySpec`, `RuntimeReplayHarness`)
+  - hot-swap policy (`ReplacePolicySpec`, `FeatureHotSwapManager`)
 - Ensure wording distinguishes declarative wiring (specs) from imperative feature behavior.
 - Keep examples on public root imports only and verify names against `gui_do/__init__.py`.
+- Prefer linking to relevant MANUAL.md chapter/appendix targets instead of duplicating long explanation blocks.
 
 ## Demo Features Organizational Convention
 
@@ -296,7 +307,7 @@ Introduce the three core ideas before any code:
 
 **Reactive state.** Explain `ObservableValue` — a value that notifies subscribers when it changes. Contrast with polling. Show the subscribe/unsubscribe pattern. Mention `ObservableList` and `ObservableDict` for collections. Briefly mention `ComputedValue` for derived state.
 
-**Feature lifecycle.** Explain the five phases (`build`, `bind_runtime`, `on_update`, `handle_event`, `draw`, `shutdown_runtime`) and the intent of each. Explain that all features in a scene complete `build` before any `bind_runtime` runs — this is a framework guarantee, not a coincidence. Explain that subscriptions are set up in `bind_runtime` and torn down in `shutdown_runtime`.
+**Feature lifecycle.** Explain the runtime phases (`build`, `bind_runtime`, `handle_event`, `on_update`, `draw`, `shutdown_runtime`) and the intent of each. Reflect current signatures in prose/examples (`on_update(host)`, `draw(host, surface, theme)`). Explain that all features in a scene complete `build` before any `bind_runtime` runs — this is a framework guarantee, not a coincidence. Explain that subscriptions are set up in `bind_runtime` and torn down in `shutdown_runtime`.
 
 #### 3. Installation and Setup
 
@@ -334,6 +345,7 @@ Explain when to use each type. Use the project as context:
 
 - **`Feature`** — standard choice; all five lifecycle methods; use when building a visual feature with state and interaction.
 - **`DirectFeature`** — full control; no default method stubs; use when you need to override the exact set of lifecycle methods with no defaults. Rarely needed.
+- **`DirectFeature`** — feature subtype with direct-event/update/draw hooks for high-control rendering paths; use when bypassing standard control rendering/event paths is intentional.
 - **`LogicFeature`** — no draw or control tree; use for background computation, cross-feature coordination, or data pipeline management.
 - **`RoutedFeature`** — extends `Feature` with topic-based message dispatch; use when declaring hotkeys, shortcut overlays, and event subscriptions via `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec`.
 
@@ -363,10 +375,13 @@ Explain when to use each type. Use the project as context:
 A concise reference section (not a tutorial — link to MANUAL.md for full detail). Include one short paragraph + minimal snippet for each:
 
 - **`FeatureSpec`** — declares a feature class and its scene membership
+- **`FeatureSpec`** — declares a feature attribute slot and factory used during bootstrap
 - **`SceneBundleBindingSpec`** — declares a named scene with transition style and escape behavior
 - **`ActionSpec` + `ActionHotkeySpec`** — declares a named action with optional keyboard binding
 - **`ShortcutOverlaySpec`** — configures the shortcut discovery overlay
 - **`RoutedRuntimeSpec` + `RoutedFeatureLifecycleSpec`** — declarative bundle of runtime wiring for a `RoutedFeature`
+- **`RoutedRuntimeSpec` + `RoutedFeatureLifecycleSpec`** — declarative bundle of runtime wiring for a `RoutedFeature`, including higher-level runtime faculties
+- **Higher-level runtime faculties** — concise references for dependency/workflow/recompute/QoS/health/replay/hot-swap specs and managers
 - **`ToastManager`** — brief note on how to show a toast notification from a feature (via `host.toasts.show(...)`)
 - Link each to the corresponding section in MANUAL.md
 

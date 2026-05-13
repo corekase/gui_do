@@ -60,6 +60,14 @@ When writing placeholders and TOC structure, ensure downstream chapters have cle
 - `FeatureRuntimeScope` lifecycle ownership
 - Declarative service/effect specs in routed runtime
 - Operation orchestration with failure policies
+- Higher-level runtime faculties in routed runtime composition:
+   - dependency validation (`FeatureDependencySpec`)
+   - workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`)
+   - recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`)
+   - QoS/backpressure (`QoSPolicySpec`, `QoSPolicyRuntime`)
+   - health/degradation (`HealthProbeSpec`, `FeatureHealthRuntime`)
+   - replay capture (`ReplaySpec`, `RuntimeReplayHarness`)
+   - hot-swap policy (`ReplacePolicySpec`, `FeatureHotSwapManager`)
 
 Do not add placeholder chapter names for these; integrate them into existing architecture/system chapters.
 

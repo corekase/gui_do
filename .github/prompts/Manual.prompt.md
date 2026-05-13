@@ -89,6 +89,14 @@ Across the full manual pipeline, ensure explicit coverage of routed runtime faci
 - Declarative service wiring (`ServiceBindingSpec`, `ServiceConsumerSpec`).
 - Declarative reactive wiring (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`).
 - Operation orchestration and resilience (`FeatureOperationSpec`, `FailurePolicySpec`, `FeatureOperationBus`).
+- Higher-level routed runtime faculties implemented as sibling declarative specs and runtime managers:
+  - Dependency validation (`FeatureDependencySpec`).
+  - Workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`).
+  - Derived-state recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`).
+  - Runtime QoS/backpressure policy (`QoSPolicySpec`, `QoSPolicyRuntime`).
+  - Feature health/degradation monitoring (`HealthProbeSpec`, `FeatureHealthRuntime`).
+  - Replay and diagnostics capture (`ReplaySpec`, `RuntimeReplayHarness`).
+  - Hot-swap/rebind policy (`ReplacePolicySpec`, `FeatureHotSwapManager`).
 - Clear anti-pattern notes for leaks and partial teardown when `shutdown_runtime` does not unwind routed runtime resources.
 
 ---
@@ -359,6 +367,8 @@ Use these top-level sections in this order:
 
 This chapter is the most important in the manual. It must be written first and treated as the theoretical backbone that every subsequent chapter references back to. It must be very long — many paragraphs per concept, not bullet lists. Each subsection should read as a complete, standalone explanation that a developer could read in isolation and come away with a genuine mental model.
 
+In addition to core data-driven/reactive/lifecycle theory, treat the newly implemented higher-level runtime faculties as a significant conceptual aspect in Theory, not merely an appendix detail. Explain when to use each faculty, how they compose through `RoutedRuntimeSpec` sibling specs, and how lifecycle-safe ownership/cleanup is enforced.
+
 ### Data-Driven Design
 
 This subsection must be comprehensive — a minimum of five to eight substantial paragraphs covering all of the following points in depth:
@@ -410,9 +420,10 @@ This subsection must be comprehensive — a minimum of six to eight substantial 
 - **Lifecycle phases in depth**: Describe every lifecycle phase with precision and detail:
   - `build(host)`: Called once when the scene is being constructed. Use this phase to create controls, add them to the scene tree, build window specs, and set up any static structure that does not depend on runtime state. `host` provides all resources declared in `HOST_REQUIREMENTS`. Controls created here exist for the lifetime of the scene.
   - `bind_runtime(host)`: Called after all features in the scene have completed `build`. By this point, all controls exist and all sibling features are built. Use this phase to subscribe to observable values, bind controls to data, register callbacks, initialize state from runtime sources (screen size, settings, etc.), and wire up cross-feature interactions.
-  - `handle_event(host, event)`: Called for every pygame event that reaches the feature. The routing layer filters events by scene, focus, and overlay state before calling this method. Return `True` to consume the event and stop further propagation; return `False` or `None` to pass it on.
-  - `on_update(host, dt_seconds)`: Called on every frame. Use for animations, timers, polling background results, and any per-frame state updates. Keep this method fast; avoid expensive computation here.
-  - `draw(host, screen)`: Called on every frame after `on_update`. Use for custom drawing operations that bypass the control tree (particles, canvas effects, overlays). Most features do not need this hook.
+  - `handle_event(host, event)`: Called for routed `GuiEvent` objects that reach the feature. The routing layer filters by scene, focus, and overlay state before calling this method. Return `True` to consume the event and stop propagation; return `False` or `None` to pass it on.
+  - `on_update(host)`: Called every frame. Use for per-frame logic, scheduler interaction, and lightweight state transitions. Keep this method fast; avoid expensive computation here.
+  - `draw(host, surface, theme)`: Called every frame after update. Use for custom drawing paths that bypass normal control rendering when needed.
+  - `shutdown_runtime(host)`: Called during teardown for runtime bindings. Unsubscribe/disconnect/cancel all runtime resources and unwind routed runtime scope ownership.
 
 - **HOST_REQUIREMENTS protocol**: Explain the `HOST_REQUIREMENTS` dictionary in detail. It declares what attributes the host must provide for each lifecycle method. The framework validates these at startup and provides clear error messages for missing bindings. This protocol is how features express their dependencies declaratively — a feature says "I need `app`, `screen_rect`, and `scene_presentation` in `build`" and the framework ensures those are available before calling the method. This replaces constructor injection and makes dependency relationships explicit and machine-verifiable.
 

@@ -1,6 +1,6 @@
 ---
 name: Oracle
-description: Analyze and prioritize the next generalized systems/features to implement
+description: Analyze and prioritize the next generalized systems/features to implement beyond the current routed runtime baseline
 ---
 
 <!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
@@ -24,6 +24,16 @@ Produce a prioritized roadmap of the best next generalized systems to implement,
 	- `FeatureRuntimeScope`
 	- Declarative service/effect specs (`ServiceBindingSpec`, `ServiceConsumerSpec`, `StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`)
 	- Operation and failure-policy specs (`FeatureOperationSpec`, `FailurePolicySpec`) backed by `FeatureOperationBus`
+	- Higher-level runtime faculties:
+	  - `FeatureDependencySpec`
+	  - `WorkflowStepSpec` / `WorkflowSpec` / `WorkflowCoordinator`
+	  - `RecomputeNodeSpec` / `RecomputeOrchestrator`
+	  - `QoSPolicySpec` / `QoSPolicyRuntime`
+	  - `HealthProbeSpec` / `FeatureHealthRuntime`
+	  - `ReplaySpec` / `RuntimeReplayHarness`
+	  - `ReplacePolicySpec` / `FeatureHotSwapManager`
+
+Do not include proposals that are simple wrappers or duplicates of the implemented baseline above unless you are explicitly proposing an extension gap and explaining why the existing implementation is insufficient.
 
 ## Hard Constraint
 

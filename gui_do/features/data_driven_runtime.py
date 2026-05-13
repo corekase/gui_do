@@ -47,6 +47,23 @@ from .runtime_models import (
     build_notification_center,
 )
 from .runtime_facilities import FeatureOperationBus, FeatureRuntimeScope
+from .runtime_systems import (
+    FeatureDependencySpec,
+    WorkflowStepSpec,
+    WorkflowSpec,
+    RecomputeNodeSpec,
+    QoSPolicySpec,
+    HealthProbeSpec,
+    ReplaySpec,
+    ReplacePolicySpec,
+    WorkflowCoordinator,
+    RecomputeOrchestrator,
+    QoSPolicyRuntime,
+    FeatureHealthRuntime,
+    RuntimeReplayHarness,
+    FeatureHotSwapManager,
+    build_routed_runtime_systems,
+)
 from .runtime_registration_helpers import (
     instantiate_features_from_specs as _instantiate_features_from_specs,
     register_features_from_specs as _register_features_from_specs,
@@ -546,6 +563,19 @@ class RoutedRuntimeSpec:
     event_subscriptions: Sequence[EventSubscriptionSpec] = field(default_factory=tuple)
     shortcut_overlays: Sequence[ShortcutOverlaySpec] = field(default_factory=tuple)
     task_panel_focus_toggles: Sequence[TaskPanelFocusToggleSpec] = field(default_factory=tuple)
+    feature_dependencies: Sequence[FeatureDependencySpec] = field(default_factory=tuple)
+    workflow_specs: Sequence[WorkflowSpec] = field(default_factory=tuple)
+    workflow_attr_name: str | None = None
+    recompute_nodes: Sequence[RecomputeNodeSpec] = field(default_factory=tuple)
+    recompute_attr_name: str | None = None
+    qos_policies: Sequence[QoSPolicySpec] = field(default_factory=tuple)
+    qos_attr_name: str | None = None
+    health_probes: Sequence[HealthProbeSpec] = field(default_factory=tuple)
+    health_attr_name: str | None = None
+    replay_spec: ReplaySpec | None = None
+    replay_attr_name: str | None = None
+    replace_policy: ReplacePolicySpec | None = None
+    hot_swap_attr_name: str | None = None
     command_palette: "SceneCommandPaletteSpec | None" = None
 
 
@@ -1932,6 +1962,38 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
     if spec.signal_effects:
         bind_signal_effects(feature, host, runtime_scope, tuple(spec.signal_effects))
 
+    runtime_systems = build_routed_runtime_systems(
+        feature,
+        host,
+        operation_bus=operation_bus,
+        dependency_specs=tuple(spec.feature_dependencies),
+        workflow_specs=tuple(spec.workflow_specs),
+        recompute_nodes=tuple(spec.recompute_nodes),
+        qos_policies=tuple(spec.qos_policies),
+        health_probes=tuple(spec.health_probes),
+        replay_spec=spec.replay_spec,
+    )
+    if runtime_systems is not None:
+        runtime_scope.own_disposable(runtime_systems)
+        setattr(feature, "_routed_runtime_on_update", runtime_systems.on_update)
+        runtime_scope.add_cleanup(lambda: setattr(feature, "_routed_runtime_on_update", None))
+        if spec.workflow_attr_name:
+            setattr(feature, str(spec.workflow_attr_name), runtime_systems.workflow_coordinator)
+        if spec.recompute_attr_name:
+            setattr(feature, str(spec.recompute_attr_name), runtime_systems.recompute)
+        if spec.qos_attr_name:
+            setattr(feature, str(spec.qos_attr_name), runtime_systems.qos)
+        if spec.health_attr_name:
+            setattr(feature, str(spec.health_attr_name), runtime_systems.health)
+        if spec.replay_attr_name:
+            setattr(feature, str(spec.replay_attr_name), runtime_systems.replay)
+
+    if spec.hot_swap_attr_name:
+        manager = getattr(feature, "_feature_manager", None)
+        if manager is not None:
+            setattr(feature, str(spec.hot_swap_attr_name), FeatureHotSwapManager(manager, host))
+            runtime_scope.add_cleanup(lambda: setattr(feature, str(spec.hot_swap_attr_name), None))
+
     app = getattr(host, "app", None)
     app_actions = getattr(app, "actions", None)
     app_events = getattr(app, "events", None)
@@ -2010,6 +2072,19 @@ def shutdown_routed_runtime(feature, host, spec: RoutedRuntimeSpec) -> None:
         setattr(feature, attr_name, None)
     if spec.operation_bus_attr_name:
         setattr(feature, str(spec.operation_bus_attr_name), None)
+    if spec.workflow_attr_name:
+        setattr(feature, str(spec.workflow_attr_name), None)
+    if spec.recompute_attr_name:
+        setattr(feature, str(spec.recompute_attr_name), None)
+    if spec.qos_attr_name:
+        setattr(feature, str(spec.qos_attr_name), None)
+    if spec.health_attr_name:
+        setattr(feature, str(spec.health_attr_name), None)
+    if spec.replay_attr_name:
+        setattr(feature, str(spec.replay_attr_name), None)
+    if spec.hot_swap_attr_name:
+        setattr(feature, str(spec.hot_swap_attr_name), None)
+    setattr(feature, "_routed_runtime_on_update", None)
 
 
 def _resolve_routed_feature_runtime_spec(feature, host, lifecycle_spec: RoutedFeatureLifecycleSpec) -> RoutedRuntimeSpec:
