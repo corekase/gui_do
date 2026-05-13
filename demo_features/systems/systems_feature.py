@@ -889,6 +889,37 @@ class SystemsFeature(Feature):
         for label in labels:
             panel.add_at(label, label.rect.left, label.rect.top)
 
+    def _place_compact_labeled_row(
+        self,
+        panel: PanelControl,
+        *,
+        left: int = 0,
+        top: int,
+        label: LabelControl,
+        field: object,
+        label_width: int = 120,
+        gap: int = 10,
+    ) -> None:
+        """Place a fixed-width label and field in a compact single row."""
+        row_height = max(1, max(int(label.rect.height), int(field.rect.height)))
+        left_width = max(1, int(label_width))
+        col_gap = max(0, int(gap))
+        field_width = max(1, int(field.rect.width))
+        row_bounds = Rect(int(left), int(top), left_width + col_gap + field_width, row_height)
+        layout = GridLayout(
+            row_tracks=[row_height],
+            col_tracks=[left_width, field_width],
+            gap=col_gap,
+            padding=0,
+        )
+        label.rect = Rect(0, 0, left_width, row_height)
+        field.rect = Rect(0, 0, field_width, row_height)
+        layout.place(label, GridPlacement(row=0, col=0))
+        layout.place(field, GridPlacement(row=0, col=1))
+        layout.apply(row_bounds)
+        panel.add_at(label, label.rect.left, label.rect.top)
+        panel.add_at(field, field.rect.left, field.rect.top)
+
     def _inset_left_side_children(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
         shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
         if shift_x <= 0:
@@ -1013,7 +1044,12 @@ class SystemsFeature(Feature):
         action_button_gap = 8
         action_button_right_pad = 12
 
-        panel.add_at(LabelControl("systems_data_filter_label", Rect(0, 0, 72, 28), "Status", align="left"), 0, 0)
+        filter_label = LabelControl(
+            "systems_data_filter_label",
+            Rect(0, 0, 72, 28),
+            "Status",
+            align="left",
+        )
         self.data_filter_dropdown = DropdownControl(
             "systems_data_filter",
             Rect(0, 0, 180, 32),
@@ -1026,7 +1062,14 @@ class SystemsFeature(Feature):
             selected_index=0,
             on_change=lambda value, _index: self._on_backlog_filter_changed(value),
         )
-        panel.add_at(self.data_filter_dropdown, 80, 0)
+        self._place_compact_labeled_row(
+            panel,
+            top=0,
+            label=filter_label,
+            field=self.data_filter_dropdown,
+            label_width=72,
+            gap=8,
+        )
 
         add_button = ButtonControl(
             "systems_add_review_item",
@@ -1124,6 +1167,10 @@ class SystemsFeature(Feature):
                 (self.validation_environment_dropdown, 32, 0),
             ],
         )
+        self.validation_name_input.rect.width = min(320, max(180, rect.width - 16))
+        self.validation_name_input.rect.left = panel.rect.left
+        self.validation_environment_dropdown.rect.width = 220
+        self.validation_environment_dropdown.rect.left = panel.rect.left
 
         run_checks = ButtonControl(
             "systems_validation_run_checks",
@@ -1319,7 +1366,12 @@ class SystemsFeature(Feature):
 
     def build_state_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_state_panel", Rect(rect), draw_background=False)
-        panel.add_at(LabelControl("systems_state_context_title", Rect(0, 0, 120, 28), "Undo Context", align="left"), 0, 0)
+        context_title = LabelControl(
+            "systems_state_context_title",
+            Rect(0, 0, 120, 28),
+            "Undo Context",
+            align="left",
+        )
         self.state_context_dropdown = DropdownControl(
             "systems_state_context",
             Rect(0, 0, 180, 32),
@@ -1330,7 +1382,14 @@ class SystemsFeature(Feature):
             selected_index=0,
             on_change=lambda value, _index: self._on_state_context_changed(value),
         )
-        panel.add_at(self.state_context_dropdown, 130, 0)
+        self._place_compact_labeled_row(
+            panel,
+            top=0,
+            label=context_title,
+            field=self.state_context_dropdown,
+            label_width=120,
+            gap=10,
+        )
 
         cycle_route_button = ButtonControl(
             "systems_state_route_cycle",
@@ -1647,16 +1706,17 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        label_padding_top = 8
-        line_gap = 8
-        first_label_top = labels_top + label_padding_top
-        second_label_top = first_label_top + 28 + line_gap
-        third_label_top = second_label_top + 28 + line_gap
-        fourth_label_top = third_label_top + 28 + line_gap
-        panel.add_at(self.scheduling_task_label, 0, first_label_top)
-        panel.add_at(self.scheduling_rollout_label, 0, second_label_top)
-        panel.add_at(self.scheduling_timer_label, 0, third_label_top)
-        panel.add_at(self.scheduling_rate_limiter_label, 0, fourth_label_top)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, labels_top + 8, max(1, rect.width), 136),
+            [
+                self.scheduling_task_label,
+                self.scheduling_rollout_label,
+                self.scheduling_timer_label,
+                self.scheduling_rate_limiter_label,
+            ],
+            gap=8,
+        )
         self._refresh_scheduling_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -1748,9 +1808,16 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        panel.add_at(self.scheduling_timeline_label, 0, motion_labels_top)
-        panel.add_at(self.scheduling_tween_label, 0, motion_labels_top + 36)
-        panel.add_at(self.scheduling_sequence_label, 0, motion_labels_top + 72)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, motion_labels_top, max(1, rect.width), 100),
+            [
+                self.scheduling_timeline_label,
+                self.scheduling_tween_label,
+                self.scheduling_sequence_label,
+            ],
+            gap=8,
+        )
         self._refresh_motion_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -2040,7 +2107,12 @@ class SystemsFeature(Feature):
 
     def build_text_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_text_panel", Rect(rect), draw_background=False)
-        panel.add_at(LabelControl("systems_text_locale_label", Rect(0, 0, 96, 28), "Locale", align="left"), 0, 0)
+        locale_label = LabelControl(
+            "systems_text_locale_label",
+            Rect(0, 0, 96, 28),
+            "Locale",
+            align="left",
+        )
 
         locale_options = [DropdownOption(code.upper(), code) for code in self._locale_registry.registered_locales]
         selected_locale = self._locale_registry.active_locale
@@ -2055,9 +2127,22 @@ class SystemsFeature(Feature):
             selected_index=selected_index,
             on_change=lambda value, _index: self._on_text_locale_changed(value),
         )
-        panel.add_at(self.text_locale_dropdown, 98, 0)
+        self._place_compact_labeled_row(
+            panel,
+            left=0,
+            top=0,
+            label=locale_label,
+            field=self.text_locale_dropdown,
+            label_width=96,
+            gap=2,
+        )
 
-        panel.add_at(LabelControl("systems_text_query_label", Rect(0, 0, 72, 28), "Search", align="left"), 278, 0)
+        query_label = LabelControl(
+            "systems_text_query_label",
+            Rect(0, 0, 72, 28),
+            "Search",
+            align="left",
+        )
         self.text_query_input = TextInputControl(
             "systems_text_query",
             Rect(0, 0, max(180, rect.width - 386), 32),
@@ -2065,7 +2150,15 @@ class SystemsFeature(Feature):
             placeholder="release",
             on_change=self._on_text_query_changed,
         )
-        panel.add_at(self.text_query_input, 350, 0)
+        self._place_compact_labeled_row(
+            panel,
+            left=278,
+            top=0,
+            label=query_label,
+            field=self.text_query_input,
+            label_width=72,
+            gap=0,
+        )
 
         labels_top = self._add_button_rows(
             panel,
