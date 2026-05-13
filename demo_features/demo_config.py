@@ -1,9 +1,9 @@
-from demo_features.moving_shapes import MovingShapesBackdropFeature
-from demo_features.showcase import ShowcaseFeature
-from demo_features.systems import SystemsFeature
-from demo_features.life import LifeFeature
-from demo_features.main import MainFeature
-from demo_features.mandelbrot import MandelbrotFeature
+from demo_features.life.life_feature import LifeFeature
+from demo_features.main.main_feature import MainFeature
+from demo_features.mandelbrot.mandelbrot_feature import MandelbrotFeature
+from demo_features.moving_shapes.moving_shapes_backdrop_feature import MovingShapesBackdropFeature
+from demo_features.showcase.showcase_feature import ShowcaseFeature
+from demo_features.systems.systems_feature import SystemsFeature
 
 from gui_do import (
     ActionBindingSpec,

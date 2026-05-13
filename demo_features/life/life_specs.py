@@ -103,3 +103,22 @@ _LIFE_LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
     runtime_spec_attr_name="_runtime_spec",
     scheduler_attr_name="scheduler",
 )
+
+LIFE_LOGIC_TOPIC = "life_logic"
+LIFE_EVENT_STATE = "state"
+LIFE_KEY_TOPIC = "topic"
+LIFE_KEY_EVENT = "event"
+LIFE_KEY_COMMAND = "command"
+LIFE_KEY_CELLS = "life_cells"
+
+
+__all__ = [
+    "LIFE_EVENT_STATE",
+    "LIFE_KEY_CELLS",
+    "LIFE_KEY_COMMAND",
+    "LIFE_KEY_EVENT",
+    "LIFE_KEY_TOPIC",
+    "LIFE_LOGIC_TOPIC",
+    "_LIFE_LIFECYCLE_SPEC",
+    "_LIFE_WINDOW_SPEC",
+]

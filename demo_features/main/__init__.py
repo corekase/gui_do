@@ -4,8 +4,6 @@ This package is the canonical container for the demo's main-scene feature.
 Feature-specific classes, specs, and future helpers should live here as a best-practice layout.
 """
 
-from .main_feature import MainFeature
-
 FEATURE_PACKAGE_INFO = {
     "feature_name": "main",
     "scene_scope": "main",
@@ -14,5 +12,4 @@ FEATURE_PACKAGE_INFO = {
 
 __all__ = [
     "FEATURE_PACKAGE_INFO",
-    "MainFeature",
 ]

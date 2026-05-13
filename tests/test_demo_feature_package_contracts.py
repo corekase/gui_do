@@ -63,10 +63,26 @@ class TestDemoFeaturePackageContracts(unittest.TestCase):
                     msg=f"demo_features.{package_name} missing exported attribute {exported_name!r}",
                 )
 
+            self.assertIn(
+                "FEATURE_PACKAGE_INFO",
+                exports,
+                msg=f"demo_features.{package_name} should export FEATURE_PACKAGE_INFO metadata",
+            )
+
             feature_exports = [name for name in exports if str(name).endswith("Feature")]
-            self.assertTrue(
+            self.assertFalse(
                 feature_exports,
-                msg=f"demo_features.{package_name} should export at least one *Feature symbol",
+                msg=(
+                    f"demo_features.{package_name} should not re-export *Feature symbols "
+                    "from package __init__.py; import concrete modules directly"
+                ),
+            )
+
+            file_names = _package_python_file_names(package_name)
+            feature_modules = [name for name in file_names if name.endswith("_feature.py")]
+            self.assertTrue(
+                feature_modules,
+                msg=f"demo_features.{package_name} should define feature classes in *_feature.py modules",
             )
 
     def test_feature_scene_packages_require_kind_files_by_default(self):

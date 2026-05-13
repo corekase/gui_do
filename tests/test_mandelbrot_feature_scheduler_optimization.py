@@ -2,11 +2,8 @@ import unittest
 
 import pygame
 
-from demo_features.mandelbrot.mandelbrot_feature import (
-    MandelbrotFeature,
-    _TASK_ID_ITERATIVE,
-    _TASK_IDS_QUADRANTS,
-)
+from demo_features.mandelbrot.mandelbrot_feature import MandelbrotFeature
+from demo_features.mandelbrot.mandelbrot_specs import MANDEL_TASK_ID_ITERATIVE, MANDEL_TASK_IDS_QUADRANTS
 
 
 class _StubScheduler:
@@ -58,7 +55,7 @@ class MandelbrotFeatureSchedulerOptimizationTests(unittest.TestCase):
         feature.split_canvases = {}
         feature._color_table = ((10, 0, 0), (20, 0, 0), (30, 0, 0), (0, 0, 0))
 
-        feature._apply_result(_TASK_ID_ITERATIVE, (0, [0, 1, 2]))
+        feature._apply_result(MANDEL_TASK_ID_ITERATIVE, (0, [0, 1, 2]))
 
         surface = feature.primary_canvas.canvas
         self.assertEqual((10, 0, 0), surface.get_at((0, 0))[:3])
@@ -71,7 +68,7 @@ class MandelbrotFeatureSchedulerOptimizationTests(unittest.TestCase):
         feature.split_canvases = {}
         feature._color_table = ((10, 0, 0), (20, 0, 0), (30, 0, 0), (40, 0, 0), (0, 0, 0))
 
-        feature._apply_result(_TASK_ID_ITERATIVE, (0, 2, [1, 2]))
+        feature._apply_result(MANDEL_TASK_ID_ITERATIVE, (0, 2, [1, 2]))
 
         surface = feature.primary_canvas.canvas
         self.assertEqual((0, 0, 0), surface.get_at((0, 0))[:3])
@@ -88,17 +85,17 @@ class MandelbrotFeatureSchedulerOptimizationTests(unittest.TestCase):
 
         feature._queue_task = _queue_task
         tasks = [
-            (_TASK_IDS_QUADRANTS[0], "primary", "recursive_task", {"k": 1}),
-            (_TASK_IDS_QUADRANTS[1], "primary", "recursive_task", {"k": 2}),
-            (_TASK_IDS_QUADRANTS[2], "primary", "recursive_task", {"k": 3}),
+            (MANDEL_TASK_IDS_QUADRANTS[0], "primary", "recursive_task", {"k": 1}),
+            (MANDEL_TASK_IDS_QUADRANTS[1], "primary", "recursive_task", {"k": 2}),
+            (MANDEL_TASK_IDS_QUADRANTS[2], "primary", "recursive_task", {"k": 3}),
         ]
 
         feature._queue_staged_tasks(object(), tasks)
 
-        self.assertEqual([(_TASK_IDS_QUADRANTS[0], "primary", "recursive_task", {"k": 1})], queued)
+        self.assertEqual([(MANDEL_TASK_IDS_QUADRANTS[0], "primary", "recursive_task", {"k": 1})], queued)
         self.assertEqual([
-            (_TASK_IDS_QUADRANTS[1], "primary", "recursive_task", {"k": 2}),
-            (_TASK_IDS_QUADRANTS[2], "primary", "recursive_task", {"k": 3}),
+            (MANDEL_TASK_IDS_QUADRANTS[1], "primary", "recursive_task", {"k": 2}),
+            (MANDEL_TASK_IDS_QUADRANTS[2], "primary", "recursive_task", {"k": 3}),
         ], feature._pending_launches)
 
 

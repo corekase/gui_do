@@ -5,14 +5,15 @@ from __future__ import annotations
 from typing import Set, Tuple
 
 from gui_do import FeatureMessage, LogicFeature
-
-
-_KEY_TOPIC = "topic"
-_KEY_EVENT = "event"
-_KEY_LIFE_CELLS = "life_cells"
-_LIFE_LOGIC_TOPIC = "life_logic"
-_LIFE_EVENT_STATE = "state"
-
+from .life_logic_helpers import (
+	build_command_handlers as build_command_handlers_helper,
+	handle_next_command as handle_next_command_helper,
+	handle_reset_command as handle_reset_command_helper,
+	handle_snapshot_command as handle_snapshot_command_helper,
+	handle_toggle_cell_command as handle_toggle_cell_command_helper,
+	on_logic_command as on_logic_command_helper,
+	publish_state as publish_state_helper,
+)
 
 class LifeLogicFeature(LogicFeature):
 	"""Domain logic service for Conway life cycles."""
@@ -33,12 +34,7 @@ class LifeLogicFeature(LogicFeature):
 	def __init__(self) -> None:
 		super().__init__("life_simulation_logic", scene_name="main")
 		self.life_cells: Set[Tuple[int, int]] = set(self.DEFAULT_SEED)
-		self._command_handlers = {
-			"reset": self._handle_reset_command,
-			"next": self._handle_next_command,
-			"toggle_cell": self._handle_toggle_cell_command,
-			"snapshot": self._handle_snapshot_command,
-		}
+		self._command_handlers = build_command_handlers_helper(self)
 
 	@classmethod
 	def next_life_cycle(cls, cells: Set[Tuple[int, int]]) -> Set[Tuple[int, int]]:
@@ -62,42 +58,22 @@ class LifeLogicFeature(LogicFeature):
 		return count
 
 	def on_logic_command(self, _host, message: FeatureMessage) -> None:
-		command = str(message.command)
-		handler = self._command_handlers.get(command)
-		if handler is None:
-			return
-		handler(str(message.sender), message)
+		on_logic_command_helper(self, message)
 
 	def _handle_reset_command(self, sender_name: str, _message: FeatureMessage) -> None:
-		self.life_cells = set(self.DEFAULT_SEED)
-		self._publish_state(sender_name)
+		handle_reset_command_helper(self, sender_name)
 
 	def _handle_next_command(self, sender_name: str, _message: FeatureMessage) -> None:
-		self.life_cells = self.next_life_cycle(self.life_cells)
-		self._publish_state(sender_name)
+		handle_next_command_helper(self, sender_name)
 
 	def _handle_toggle_cell_command(self, sender_name: str, message: FeatureMessage) -> None:
-		cell = message.get("cell")
-		if isinstance(cell, tuple) and len(cell) == 2:
-			normalized_cell = (int(cell[0]), int(cell[1]))
-			if normalized_cell in self.life_cells:
-				self.life_cells.remove(normalized_cell)
-			else:
-				self.life_cells.add(normalized_cell)
-			self._publish_state(sender_name)
+		handle_toggle_cell_command_helper(self, sender_name, message)
 
 	def _handle_snapshot_command(self, sender_name: str, _message: FeatureMessage) -> None:
-		self._publish_state(sender_name)
+		handle_snapshot_command_helper(self, sender_name)
 
 	def _publish_state(self, target_feature_name: str) -> None:
-		self.send_message(
-			target_feature_name,
-			{
-				_KEY_TOPIC: _LIFE_LOGIC_TOPIC,
-				_KEY_EVENT: _LIFE_EVENT_STATE,
-				_KEY_LIFE_CELLS: set(self.life_cells),
-			},
-		)
+		publish_state_helper(self, target_feature_name)
 
 
 __all__ = ["LifeLogicFeature"]

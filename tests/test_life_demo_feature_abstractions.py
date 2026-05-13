@@ -2,7 +2,7 @@ import unittest
 
 from pygame import Rect
 
-from demo_features.life import LifeFeature
+from demo_features.life.life_feature import LifeFeature
 
 
 class _StubPacket:

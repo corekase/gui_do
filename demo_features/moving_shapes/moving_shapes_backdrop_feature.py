@@ -10,19 +10,16 @@ import pygame
 
 from gui_do import DirectFeature
 
-from .moving_shapes_specs import DEMO_BORDER_BASE_COLOUR, DEMO_SHAPE_COLOURS
+from .moving_shapes_specs import (
+    DEMO_BORDER_BASE_COLOUR,
+    DEMO_SHAPE_COLOURS,
+    MOVING_SHAPES_ALPHA_RANGE,
+    MOVING_SHAPES_DEFINITIONS,
+    MOVING_SHAPES_RADIUS_RANGE,
+    MOVING_SHAPES_SPEED_BASE,
+    MOVING_SHAPES_SPEED_VARIANCE,
+)
 from .shape_sprite_state import ShapeSpriteState
-
-# Each entry is (num_sides, is_star).  num_sides == 0 is the circle special-case.
-_SHAPE_DEFINITIONS: list[tuple[int, bool]] = [
-    (0, False),   # circle
-    (3, False),   # triangle
-    (4, False),   # square
-    (5, False),   # pentagon
-    (6, False),   # hexagon
-    (8, False),   # octagon
-    (5, True),    # star (5-point, alternating 100%/50% radius)
-]
 
 
 class MovingShapesBackdropFeature(DirectFeature):
@@ -83,11 +80,11 @@ class MovingShapesBackdropFeature(DirectFeature):
 
     def _create_shapes(self) -> None:
         """Divide total_shapes evenly among all available shape types."""
-        num_types = len(_SHAPE_DEFINITIONS)
+        num_types = len(MOVING_SHAPES_DEFINITIONS)
         if num_types == 0:
             return
         base, remainder = divmod(self._total_shapes, num_types)
-        for i, (num_sides, is_star) in enumerate(_SHAPE_DEFINITIONS):
+        for i, (num_sides, is_star) in enumerate(MOVING_SHAPES_DEFINITIONS):
             count = base + (1 if i < remainder else 0)
             for _ in range(count):
                 if num_sides == 0:
@@ -127,12 +124,12 @@ class MovingShapesBackdropFeature(DirectFeature):
 
     def _create_shape_surface_and_colors(self) -> tuple[int, pygame.Surface, tuple[int, int, int, int], tuple[int, int, int, int]]:
         """Build a base square ARGB surface plus randomized fill/border colors."""
-        radius = self._rng.randint(12, 38)
+        radius = self._rng.randint(*MOVING_SHAPES_RADIUS_RANGE)
         diameter = radius * 2
         sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
         base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
-        fill_alpha = self._rng.randint(150, 230)
-        border_alpha = self._rng.randint(150, 230)
+        fill_alpha = self._rng.randint(*MOVING_SHAPES_ALPHA_RANGE)
+        border_alpha = self._rng.randint(*MOVING_SHAPES_ALPHA_RANGE)
         fill_color = base_color + (fill_alpha,)
         border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
         return radius, sprite, fill_color, border_color
@@ -151,7 +148,7 @@ class MovingShapesBackdropFeature(DirectFeature):
 
     def _random_velocity(self) -> tuple[float, float]:
         """Create a random velocity vector with bounded speed."""
-        speed = 2.8 + self._rng.uniform(0.0, 1.8)
+        speed = MOVING_SHAPES_SPEED_BASE + self._rng.uniform(0.0, MOVING_SHAPES_SPEED_VARIANCE)
         angle = self._rng.uniform(0.0, math.tau)
         dx = math.cos(angle) * speed
         dy = math.sin(angle) * speed

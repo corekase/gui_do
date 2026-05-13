@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pygame
 
-from demo_features.main import MainFeature
-from demo_features.showcase import ShowcaseFeature
+from demo_features.main.main_feature import MainFeature
+from demo_features.showcase.showcase_feature import ShowcaseFeature
 from gui_do.events.gui_event import EventType
 from gui_do.events.keyboard_manager import KeyboardManager
 

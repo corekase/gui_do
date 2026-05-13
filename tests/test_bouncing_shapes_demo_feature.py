@@ -2,7 +2,8 @@ import unittest
 
 import pygame
 
-from demo_features.moving_shapes import MovingShapesBackdropFeature, ShapeSpriteState
+from demo_features.moving_shapes.moving_shapes_backdrop_feature import MovingShapesBackdropFeature
+from demo_features.moving_shapes.shape_sprite_state import ShapeSpriteState
 
 
 class _StubHost:

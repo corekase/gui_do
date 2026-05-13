@@ -1,9 +1,4 @@
-"""Life demo feature package.
-
-This package is the canonical container for the Game of Life feature.
-"""
-
-from .life_feature import LifeFeature
+"""Life demo feature package metadata."""
 
 FEATURE_PACKAGE_INFO = {
     "feature_name": "life",
@@ -13,5 +8,4 @@ FEATURE_PACKAGE_INFO = {
 
 __all__ = [
     "FEATURE_PACKAGE_INFO",
-    "LifeFeature",
 ]

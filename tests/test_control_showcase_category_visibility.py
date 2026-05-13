@@ -1,7 +1,7 @@
 import unittest
 
 from gui_do import apply_category_visibility
-from demo_features.showcase.showcase_feature import category_for_row
+from demo_features.showcase.showcase_helpers import category_for_row
 from gui_do.features.feature_lifecycle import PlacedControl
 
 

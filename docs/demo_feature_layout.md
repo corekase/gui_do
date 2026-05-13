@@ -10,6 +10,7 @@ This document defines the required default organization for code in demo_feature
 - Include at least one *_feature.py module and at least one *_specs.py module per feature/scene package.
 - Keep feature-specific classes, specs, helpers, presenters, and small support objects inside that folder.
 - Use underscore filename suffixes to clarify purpose, such as *_specs.py, *_feature.py, *_presenter.py, or other descriptive variants.
+- When a feature has a companion logic Feature class, place it in a *_logic_feature.py module (for example, foo_logic_feature.py).
 - Keep the root of demo_features/ limited to bootstrap-facing files and shared static assets needed by gui_do_demo.py.
 
 ## Runtime Contract

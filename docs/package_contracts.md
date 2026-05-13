@@ -51,7 +51,7 @@ from gui_do import (
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:
-from demo_features.mandelbrot import MandelStatusEvent
+from demo_features.mandelbrot.mandelbrot_status_event import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary

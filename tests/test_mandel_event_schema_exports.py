@@ -1,12 +1,12 @@
 import unittest
 
-from demo_features.mandelbrot import (
+from demo_features.mandelbrot.mandelbrot_specs import (
     MANDEL_KIND_RUNNING_ITERATIVE,
     MANDEL_KIND_STATUS,
     MANDEL_STATUS_SCOPE,
     MANDEL_STATUS_TOPIC,
-    MandelStatusEvent,
 )
+from demo_features.mandelbrot.mandelbrot_status_event import MandelStatusEvent
 
 
 class TestMandelEventSchemaExports(unittest.TestCase):

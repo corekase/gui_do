@@ -3,8 +3,6 @@
 This package owns the main-scene systems window and its tabbed examples.
 """
 
-from .systems_feature import SystemsFeature
-
 FEATURE_PACKAGE_INFO = {
     "feature_name": "systems",
     "scene_scope": "main",
@@ -13,5 +11,4 @@ FEATURE_PACKAGE_INFO = {
 
 __all__ = [
     "FEATURE_PACKAGE_INFO",
-    "SystemsFeature",
 ]

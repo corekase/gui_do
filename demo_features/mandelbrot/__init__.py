@@ -1,16 +1,4 @@
-"""Mandelbrot demo feature package.
-
-This package is the canonical container for Mandelbrot feature behavior and specs.
-"""
-
-from .mandelbrot_status_event import MandelStatusEvent
-from .mandelbrot_feature import MandelbrotFeature
-from .mandelbrot_specs import (
-    MANDEL_KIND_RUNNING_ITERATIVE,
-    MANDEL_KIND_STATUS,
-    MANDEL_STATUS_SCOPE,
-    MANDEL_STATUS_TOPIC,
-)
+"""Mandelbrot demo feature package metadata."""
 
 FEATURE_PACKAGE_INFO = {
     "feature_name": "mandelbrot",
@@ -20,10 +8,4 @@ FEATURE_PACKAGE_INFO = {
 
 __all__ = [
     "FEATURE_PACKAGE_INFO",
-    "MANDEL_KIND_RUNNING_ITERATIVE",
-    "MANDEL_KIND_STATUS",
-    "MANDEL_STATUS_SCOPE",
-    "MANDEL_STATUS_TOPIC",
-    "MandelStatusEvent",
-    "MandelbrotFeature",
 ]

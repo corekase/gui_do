@@ -3,8 +3,6 @@
 This package owns the showcase feature, its specs, and feature-local support classes.
 """
 
-from .showcase_feature import ShowcaseFeature
-
 FEATURE_PACKAGE_INFO = {
     "feature_name": "showcase",
     "scene_scope": "control_showcase",
@@ -12,6 +10,5 @@ FEATURE_PACKAGE_INFO = {
 }
 
 __all__ = [
-    "ShowcaseFeature",
     "FEATURE_PACKAGE_INFO",
 ]
