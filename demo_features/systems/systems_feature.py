@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import tempfile
 
+import pygame
 from pygame import Rect, Surface
 
 from gui_do import (
@@ -15,6 +16,7 @@ from gui_do import (
     AccessibilityTree,
     AppStateStore,
     AnchoredWindowSpec,
+    AnimationSequence,
     AsyncFieldValidator,
     AsyncFormValidator,
     ArrowBoxControl,
@@ -48,6 +50,7 @@ from gui_do import (
     MeasurePolicy,
     MigrationRegistry,
     MigrationStep,
+    ImageControl,
     PanelControl,
     ParticleLayer,
     PipelineStage,
@@ -55,6 +58,7 @@ from gui_do import (
     SchemaFormRuntime,
     SchemaVersion,
     SceneGraph2D,
+    SceneTimeline,
     ScopeStack,
     ScopedTheme,
     ScopedThemeManager,
@@ -67,6 +71,7 @@ from gui_do import (
     SnapshotMigrator,
     StateMachine,
     StateTransaction,
+    SurfaceEffects,
     SurfaceCompositor,
     TabControl,
     TabItem,
@@ -91,6 +96,7 @@ from gui_do import (
     WorkspaceState,
     create_feature_presented_window,
     make_snapshot,
+    TweenManager,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.controls.data.list_view_control import ListItem
@@ -187,6 +193,7 @@ class _SystemsPresenter(WindowPresenter):
         state_panel = feature.build_state_panel(panel_rect)
         infrastructure_panel = feature.build_infrastructure_panel(panel_rect)
         scheduling_panel = feature.build_scheduling_panel(panel_rect)
+        motion_panel = feature.build_motion_panel(panel_rect)
         persistence_panel = feature.build_persistence_panel(panel_rect)
         graphics_panel = feature.build_graphics_panel(panel_rect)
         for panel in (
@@ -197,6 +204,7 @@ class _SystemsPresenter(WindowPresenter):
             state_panel,
             infrastructure_panel,
             scheduling_panel,
+            motion_panel,
             persistence_panel,
             graphics_panel,
         ):
@@ -210,6 +218,7 @@ class _SystemsPresenter(WindowPresenter):
             "state": state_panel,
             "infrastructure": infrastructure_panel,
             "scheduling": scheduling_panel,
+            "motion": motion_panel,
             "persistence": persistence_panel,
             "graphics": graphics_panel,
         }
@@ -230,6 +239,7 @@ class SystemsFeature(Feature):
         ("state", "State"),
         ("infrastructure", "Infrastructure"),
         ("scheduling", "Scheduling"),
+        ("motion", "Motion"),
         ("persistence", "Persistence"),
         ("graphics", "Graphics"),
     )
@@ -253,6 +263,18 @@ class SystemsFeature(Feature):
         self.window = None
         self.systems_tabs = None
         self._tab_panels: dict[str, PanelControl] = {}
+        self._motion_timeline: SceneTimeline | None = None
+        self._motion_tween_value = 0.0
+        self._motion_timeline_stage = "Idle"
+        self._motion_sequence_stage = "Idle"
+        self._motion_timeline_cycles = 0
+        self._motion_sequence_runs = 0
+        self._motion_tweens = TweenManager()
+        self._surface_effect_cycle = ("blur", "greyscale", "tint", "brightness", "vignette", "pixelate")
+        self._surface_effect_index = 0
+        self._surface_effect_source: Surface | None = None
+        self._surface_effect_preview: ImageControl | None = None
+        self._surface_effect_label = None
 
         self._backlog_items = [
             _BacklogItem("QA smoke pass", "Review", 1, "Mira"),
@@ -509,6 +531,10 @@ class SystemsFeature(Feature):
         self.scheduling_task_label = None
         self.scheduling_rollout_label = None
         self.scheduling_timer_label = None
+        self.scheduling_timeline_label = None
+        self.scheduling_tween_label = None
+        self.scheduling_sequence_label = None
+        self.motion_intro_label = None
 
         self._settings_registry = SettingsRegistry()
         self._settings_registry.declare("systems", "profile", default="review", label="Release Profile")
@@ -554,6 +580,7 @@ class SystemsFeature(Feature):
         self.graphics_scene_graph_label = None
         self.graphics_compositor_label = None
         self.graphics_tile_map_label = None
+        self.graphics_surface_effects_label = None
         self.graphics_tile_preview_canvas = None
         self._burst_emitter_panel_offset: tuple = (0.0, 0.0)
         self._ambient_emitter_panel_offset: tuple = (0.0, 0.0)
@@ -596,6 +623,9 @@ class SystemsFeature(Feature):
         self._timers.update(dt)
         self._task_scheduler.update()
         self._cooperative_scheduler.update(dt)
+        self._motion_tweens.update(dt)
+        if self._motion_timeline is not None:
+            self._motion_timeline.update(dt)
         if self.active_tab_key == "validation":
             self._form_validator.update(dt)
             self._refresh_validation_labels()
@@ -625,6 +655,8 @@ class SystemsFeature(Feature):
             self._refresh_infrastructure_labels()
         elif next_key == "scheduling":
             self._refresh_scheduling_labels()
+        elif next_key == "motion":
+            self._refresh_motion_labels()
         elif next_key == "persistence":
             self._refresh_persistence_labels()
         elif next_key == "graphics":
@@ -1382,6 +1414,74 @@ class SystemsFeature(Feature):
         )
         return panel
 
+    def build_motion_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_motion_panel", Rect(rect), draw_background=False)
+        self.motion_intro_label = LabelControl(
+            "systems_motion_intro",
+            Rect(0, 0, rect.width, 28),
+            "SceneTimeline, TweenManager, and AnimationSequence demo motion workflows.",
+            align="left",
+        )
+        panel.add_at(self.motion_intro_label, 0, 0)
+
+        motion_buttons_top = 44
+        self._add_button_rows(
+            panel,
+            rect,
+            motion_buttons_top,
+            [
+                ButtonControl(
+                    "systems_motion_timeline",
+                    Rect(0, 0, 160, 32),
+                    "Play Timeline",
+                    self._play_motion_timeline,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_motion_tween",
+                    Rect(0, 0, 156, 32),
+                    "Run Tween",
+                    self._run_motion_tween,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_motion_sequence",
+                    Rect(0, 0, 176, 32),
+                    "Run Animation Sequence",
+                    self._run_motion_sequence,
+                    style="round",
+                ),
+            ],
+            per_row=3,
+        )
+
+        motion_labels_top = motion_buttons_top + self.BUTTON_ROW_HEIGHT + 8
+        self.scheduling_timeline_label = LabelControl(
+            "systems_motion_timeline_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.scheduling_tween_label = LabelControl(
+            "systems_motion_tween_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.scheduling_sequence_label = LabelControl(
+            "systems_motion_sequence_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        panel.add_at(self.scheduling_timeline_label, 0, motion_labels_top)
+        panel.add_at(self.scheduling_tween_label, 0, motion_labels_top + 36)
+        panel.add_at(self.scheduling_sequence_label, 0, motion_labels_top + 72)
+        self._refresh_motion_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
+        return panel
+
     def build_persistence_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_persistence_panel", Rect(rect), draw_background=False)
         persistence_label_top = self._add_button_rows(
@@ -1560,11 +1660,34 @@ class SystemsFeature(Feature):
             Rect(0, 0, tile_preview_width, tile_preview_h),
             max_events=32,
         )
+        self._surface_effect_source = self._build_surface_effect_source((left_col_width, 104))
+        self._surface_effect_preview = ImageControl(
+            "systems_graphics_surface_effect_preview",
+            Rect(0, 0, left_col_width, 104),
+            self._surface_effect_source,
+            scale=True,
+        )
+        self._surface_effect_label = ButtonControl(
+            "systems_graphics_surface_effect_cycle",
+            Rect(0, 0, 220, 32),
+            "Cycle Surface Effect",
+            self._cycle_surface_effect,
+            style="round",
+        )
+        self.graphics_surface_effects_label = LabelControl(
+            "systems_graphics_surface_effects_status",
+            Rect(0, 0, left_col_width, 28),
+            "",
+            align="left",
+        )
 
         panel.add_at(self.graphics_particle_label, left_col_x, labels_top)
         panel.add_at(self.graphics_layer_label, left_col_x, labels_top + 36)
         panel.add_at(self.graphics_scene_graph_label, left_col_x, labels_top + 72)
         panel.add_at(self.graphics_compositor_label, left_col_x, labels_top + 108)
+        panel.add_at(self.graphics_surface_effects_label, left_col_x, labels_top + 144)
+        panel.add_at(self._surface_effect_label, left_col_x, labels_top + 180)
+        panel.add_at(self._surface_effect_preview, left_col_x, labels_top + 220)
 
         # Right column starts at top; move controls below labels to avoid overlap.
         right_label_top = top_padding
@@ -1631,6 +1754,7 @@ class SystemsFeature(Feature):
         )
 
         self._render_tile_map_preview()
+        self._refresh_surface_effect_preview()
         self._refresh_graphics_labels()
         self._inset_left_side_children(panel)
         return panel
@@ -2032,6 +2156,74 @@ class SystemsFeature(Feature):
             self.scheduling_timer_label.text = (
                 f"Timers active={self._timers.timer_ids()} probe_armed={self._timer_probe_armed} last_event={self._timer_last_event}"
             )
+        if self.scheduling_timeline_label is not None:
+            self.scheduling_timeline_label.text = (
+                f"SceneTimeline stage={self._motion_timeline_stage} cycles={self._motion_timeline_cycles}"
+            )
+        if self.scheduling_tween_label is not None:
+            self.scheduling_tween_label.text = (
+                f"TweenManager value={self._motion_tween_value:.2f} active_tweens={self._motion_tweens.active_count}"
+            )
+        if self.scheduling_sequence_label is not None:
+            self.scheduling_sequence_label.text = (
+                f"AnimationSequence stage={self._motion_sequence_stage} runs={self._motion_sequence_runs}"
+            )
+
+    def _refresh_motion_labels(self) -> None:
+        self._refresh_scheduling_labels()
+
+    def _play_motion_timeline(self) -> None:
+        timeline = SceneTimeline(duration=1.6)
+        timeline.at(0.0, lambda: self._set_motion_timeline_stage("Queued"))
+        timeline.at(0.5, lambda: self._set_motion_timeline_stage("Running"))
+        timeline.at(1.0, lambda: self._set_motion_timeline_stage("Settling"))
+        timeline.on_complete(lambda: self._set_motion_timeline_stage("Complete"))
+        self._motion_timeline_stage = "Queued"
+        self._motion_timeline_cycles += 1
+        self._motion_timeline = timeline
+        self._motion_timeline.play()
+        self._refresh_scheduling_labels()
+
+    def _set_motion_timeline_stage(self, stage: str) -> None:
+        self._motion_timeline_stage = str(stage)
+        self._refresh_scheduling_labels()
+
+    def _run_motion_tween(self) -> None:
+        self._motion_tweens.cancel_all()
+        self._motion_tween_value = 0.0
+        self._motion_sequence_stage = "Tween running"
+        self._motion_tweens.tween(
+            self,
+            "_motion_tween_value",
+            1.0,
+            0.8,
+            on_complete=lambda: self._set_motion_sequence_stage("Tween complete"),
+        )
+        self._refresh_scheduling_labels()
+
+    def _run_motion_sequence(self) -> None:
+        self._motion_tweens.cancel_all()
+        self._motion_tween_value = 0.0
+        self._motion_sequence_runs += 1
+        sequence = AnimationSequence(self._motion_tweens)
+        sequence.then(
+            target=self,
+            attr="_motion_tween_value",
+            end_value=1.0,
+            duration_seconds=0.4,
+        ).wait(0.1).then(
+            target=self,
+            attr="_motion_tween_value",
+            end_value=0.25,
+            duration_seconds=0.45,
+        ).on_done(lambda: self._set_motion_sequence_stage("Sequence complete"))
+        self._motion_sequence_stage = "Sequence running"
+        sequence.start()
+        self._refresh_scheduling_labels()
+
+    def _set_motion_sequence_stage(self, stage: str) -> None:
+        self._motion_sequence_stage = str(stage)
+        self._refresh_scheduling_labels()
 
     def _start_timer_probe(self) -> None:
         self._timer_probe_armed = True
@@ -2131,6 +2323,52 @@ class SystemsFeature(Feature):
         self._particle_layer.particle_system.burst(self._particle_burst_emitter, count=150)
         self._graphics_dirty_tracker.mark_dirty(Rect(0, 0, self._particle_layer.rect.width, self._particle_layer.rect.height))
         self._refresh_graphics_labels()
+
+    def _build_surface_effect_source(self, size: tuple[int, int]) -> Surface:
+        width = max(1, int(size[0]))
+        height = max(1, int(size[1]))
+        surface = Surface((width, height), pygame.SRCALPHA)
+        for y in range(height):
+            t = y / max(1, height - 1)
+            base = int(34 + 78 * t)
+            accent = int(92 + 100 * t)
+            surface.fill((base, base + 10, accent), Rect(0, y, width, 1))
+        pygame.draw.rect(surface, (255, 255, 255), Rect(8, 8, width // 2, height // 2), border_radius=10)
+        pygame.draw.circle(surface, (255, 154, 87), (width - 30, 30), 18)
+        pygame.draw.circle(surface, (90, 200, 166), (width - 54, height - 28), 16)
+        pygame.draw.line(surface, (20, 22, 30), (12, height - 20), (width - 12, 18), 4)
+        pygame.draw.rect(surface, (250, 240, 190), Rect(width // 2 - 18, height // 2 - 10, 36, 22), border_radius=8)
+        return surface
+
+    def _cycle_surface_effect(self) -> None:
+        if self._surface_effect_source is None:
+            return
+        self._surface_effect_index = (self._surface_effect_index + 1) % len(self._surface_effect_cycle)
+        self._refresh_surface_effect_preview()
+
+    def _refresh_surface_effect_preview(self) -> None:
+        if self._surface_effect_source is None:
+            return
+        effect = self._surface_effect_cycle[self._surface_effect_index]
+        source = self._surface_effect_source
+        if effect == "blur":
+            preview = SurfaceEffects.blur(source, 6)
+        elif effect == "greyscale":
+            preview = SurfaceEffects.greyscale(source)
+        elif effect == "tint":
+            preview = SurfaceEffects.tint(source, (255, 168, 92), alpha=110)
+        elif effect == "brightness":
+            preview = SurfaceEffects.brightness(source, 1.25)
+        elif effect == "vignette":
+            preview = SurfaceEffects.vignette(source, 0.7)
+        else:
+            preview = SurfaceEffects.pixelate(source, 8)
+        if self._surface_effect_preview is not None:
+            self._surface_effect_preview.set_image(preview)
+        if self.graphics_surface_effects_label is not None:
+            self.graphics_surface_effects_label.text = (
+                f"SurfaceEffects preview uses {effect} on a generated scene card; click to cycle effects."
+            )
 
     def _reset_particle_layer(self) -> None:
         self._particle_layer.particle_system.clear()
@@ -2236,6 +2474,10 @@ class SystemsFeature(Feature):
             self.graphics_tile_map_label.text = (
                 f"TileMap camera=({self._graphics_tile_camera.left},{self._graphics_tile_camera.top}) "
                 f"visible_tiles={visible_tiles} sample_tile={sample_tile}"
+            )
+        if self.graphics_surface_effects_label is not None and not self.graphics_surface_effects_label.text:
+            self.graphics_surface_effects_label.text = (
+                "SurfaceEffects preview applies image post-processing to a generated scene card."
             )
 
     def _run_pipeline_demo(self) -> None:
