@@ -15,6 +15,7 @@ SYSTEMS_TAB_KEYS = (
     "state",
     "infrastructure",
     "scheduling",
+    "motion",
     "persistence",
     "graphics",
 )

@@ -17,6 +17,8 @@ from gui_do import (
     AppStateStore,
     AnchoredWindowSpec,
     AnimationSequence,
+    AnimationStateMachine,
+    AnimationTransitionMode,
     AsyncFieldValidator,
     AsyncFormValidator,
     ArrowBoxControl,
@@ -31,6 +33,7 @@ from gui_do import (
     CollectionViewQuery,
     CommandHistory,
     CooperativeScheduler,
+    Debouncer,
     DataCache,
     DataflowPipeline,
     DirtyRegionTracker,
@@ -76,6 +79,7 @@ from gui_do import (
     TabControl,
     TabItem,
     TaskScheduler,
+    Throttler,
     TextInputControl,
     ThemeManager,
     ThemeInvalidationBus,
@@ -96,6 +100,9 @@ from gui_do import (
     WorkspaceState,
     create_feature_presented_window,
     make_snapshot,
+    TransitionEvent,
+    TransitionManager,
+    TransitionSpec,
     TweenManager,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
@@ -269,7 +276,75 @@ class SystemsFeature(Feature):
         self._motion_sequence_stage = "Idle"
         self._motion_timeline_cycles = 0
         self._motion_sequence_runs = 0
+        self._motion_transition_value = 0.0
+        self._motion_transition_phase = "Idle"
+        self._motion_animation_state = "idle"
+        self._motion_animation_value = 0.0
         self._motion_tweens = TweenManager()
+        self._transition_manager = TransitionManager(self._motion_tweens)
+        self._transition_manager.register(
+            self,
+            TransitionEvent.SHOW,
+            TransitionSpec(
+                attr="_motion_transition_value",
+                start_value=0.0,
+                end_value=1.0,
+                duration_seconds=0.25,
+                easing="ease_out",
+            ),
+        )
+        self._transition_manager.register(
+            self,
+            TransitionEvent.HIDE,
+            TransitionSpec(
+                attr="_motion_transition_value",
+                start_value=1.0,
+                end_value=0.0,
+                duration_seconds=0.25,
+                easing="ease_in",
+            ),
+        )
+        self._motion_animation_states = ("idle", "hover", "press")
+        self._motion_animation_state_index = 0
+        self._motion_animation_state_machine = AnimationStateMachine(self._motion_tweens)
+        self._motion_animation_state_machine.register_state(
+            "idle",
+            lambda seq: seq.then(
+                target=self,
+                attr="_motion_animation_value",
+                end_value=0.15,
+                duration_seconds=0.12,
+            ),
+        )
+        self._motion_animation_state_machine.register_state(
+            "hover",
+            lambda seq: seq.then(
+                target=self,
+                attr="_motion_animation_value",
+                end_value=0.7,
+                duration_seconds=0.16,
+            ),
+        )
+        self._motion_animation_state_machine.register_state(
+            "press",
+            lambda seq: seq.then(
+                target=self,
+                attr="_motion_animation_value",
+                end_value=1.0,
+                duration_seconds=0.09,
+            ).then(
+                target=self,
+                attr="_motion_animation_value",
+                end_value=0.45,
+                duration_seconds=0.09,
+            ),
+        )
+        self._motion_animation_state_machine.register_transition(
+            "press",
+            "idle",
+            mode=AnimationTransitionMode.COMPLETE_THEN_TRANSITION,
+        )
+        self._motion_animation_state_machine.on_state_changed(self._on_motion_animation_state_changed)
         self._surface_effect_cycle = ("blur", "greyscale", "tint", "brightness", "vignette", "pixelate")
         self._surface_effect_index = 0
         self._surface_effect_source: Surface | None = None
@@ -523,6 +598,23 @@ class SystemsFeature(Feature):
         self._task_last_failure = ""
         self._cooperative_scheduler = CooperativeScheduler()
         self._timers = Timers()
+        self._throttle_event_count = 0
+        self._throttle_last_value = 0
+        self._debounce_commit_count = 0
+        self._debounce_last_value = "none"
+        self._rate_limiter_status = "Debouncer/Throttler idle: no burst input sampled yet."
+        self._throttler = Throttler(
+            interval_ms=120,
+            callback=self._on_throttled_burst_input,
+            timers=self._timers,
+            timer_id="systems_throttled_burst",
+        )
+        self._debouncer = Debouncer(
+            delay_ms=240,
+            callback=self._on_debounced_burst_commit,
+            timers=self._timers,
+            timer_id="systems_debounced_commit",
+        )
         self._timer_tick_count = 0
         self._timer_probe_armed = False
         self._timer_last_event = "Timers idle: no probe callbacks yet."
@@ -531,6 +623,7 @@ class SystemsFeature(Feature):
         self.scheduling_task_label = None
         self.scheduling_rollout_label = None
         self.scheduling_timer_label = None
+        self.scheduling_rate_limiter_label = None
         self.scheduling_timeline_label = None
         self.scheduling_tween_label = None
         self.scheduling_sequence_label = None
@@ -1362,6 +1455,13 @@ class SystemsFeature(Feature):
                     self._start_rollout_sequence,
                     style="round",
                 ),
+                ButtonControl(
+                    "systems_schedule_rate_limit",
+                    Rect(0, 0, 192, 32),
+                    "Simulate Burst Input",
+                    self._simulate_rate_limited_input,
+                    style="round",
+                ),
             ],
         )
         labels_top = self._add_single_column_button_row(
@@ -1391,14 +1491,22 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
+        self.scheduling_rate_limiter_label = LabelControl(
+            "systems_scheduling_rate_limit_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
         label_padding_top = 8
         line_gap = 8
         first_label_top = labels_top + label_padding_top
         second_label_top = first_label_top + 28 + line_gap
         third_label_top = second_label_top + 28 + line_gap
+        fourth_label_top = third_label_top + 28 + line_gap
         panel.add_at(self.scheduling_task_label, 0, first_label_top)
         panel.add_at(self.scheduling_rollout_label, 0, second_label_top)
         panel.add_at(self.scheduling_timer_label, 0, third_label_top)
+        panel.add_at(self.scheduling_rate_limiter_label, 0, fourth_label_top)
         self._refresh_scheduling_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -1416,6 +1524,8 @@ class SystemsFeature(Feature):
 
     def build_motion_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_motion_panel", Rect(rect), draw_background=False)
+        if self._motion_animation_state_machine.current_state is None:
+            self._motion_animation_state_machine.set_state("idle")
         self.motion_intro_label = LabelControl(
             "systems_motion_intro",
             Rect(0, 0, rect.width, 28),
@@ -1425,7 +1535,7 @@ class SystemsFeature(Feature):
         panel.add_at(self.motion_intro_label, 0, 0)
 
         motion_buttons_top = 44
-        self._add_button_rows(
+        motion_labels_anchor_top = self._add_button_rows(
             panel,
             rect,
             motion_buttons_top,
@@ -1451,11 +1561,25 @@ class SystemsFeature(Feature):
                     self._run_motion_sequence,
                     style="round",
                 ),
+                ButtonControl(
+                    "systems_motion_transition",
+                    Rect(0, 0, 170, 32),
+                    "Toggle Transition",
+                    self._toggle_motion_transition,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_motion_asm",
+                    Rect(0, 0, 170, 32),
+                    "Cycle Anim State",
+                    self._cycle_motion_animation_state,
+                    style="round",
+                ),
             ],
             per_row=3,
         )
 
-        motion_labels_top = motion_buttons_top + self.BUTTON_ROW_HEIGHT + 8
+        motion_labels_top = motion_labels_anchor_top + 8
         self.scheduling_timeline_label = LabelControl(
             "systems_motion_timeline_status",
             Rect(0, 0, rect.width, 28),
@@ -2156,6 +2280,11 @@ class SystemsFeature(Feature):
             self.scheduling_timer_label.text = (
                 f"Timers active={self._timers.timer_ids()} probe_armed={self._timer_probe_armed} last_event={self._timer_last_event}"
             )
+        if self.scheduling_rate_limiter_label is not None:
+            self.scheduling_rate_limiter_label.text = (
+                f"{self._rate_limiter_status} | throttled_events={self._throttle_event_count} "
+                f"debounced_commits={self._debounce_commit_count}"
+            )
         if self.scheduling_timeline_label is not None:
             self.scheduling_timeline_label.text = (
                 f"SceneTimeline stage={self._motion_timeline_stage} cycles={self._motion_timeline_cycles}"
@@ -2166,11 +2295,18 @@ class SystemsFeature(Feature):
             )
         if self.scheduling_sequence_label is not None:
             self.scheduling_sequence_label.text = (
-                f"AnimationSequence stage={self._motion_sequence_stage} runs={self._motion_sequence_runs}"
+                f"AnimationSequence stage={self._motion_sequence_stage} runs={self._motion_sequence_runs} | "
+                f"TransitionManager phase={self._motion_transition_phase} value={self._motion_transition_value:.2f} | "
+                f"AnimationStateMachine state={self._motion_animation_state} value={self._motion_animation_value:.2f}"
             )
 
     def _refresh_motion_labels(self) -> None:
         self._refresh_scheduling_labels()
+        if self.motion_intro_label is not None:
+            self.motion_intro_label.text = (
+                "SceneTimeline, TweenManager, AnimationSequence, TransitionManager, "
+                "and AnimationStateMachine demo motion workflows."
+            )
 
     def _play_motion_timeline(self) -> None:
         timeline = SceneTimeline(duration=1.6)
@@ -2221,6 +2357,25 @@ class SystemsFeature(Feature):
         sequence.start()
         self._refresh_scheduling_labels()
 
+    def _toggle_motion_transition(self) -> None:
+        if self._motion_transition_value >= 0.5:
+            self._motion_transition_phase = "Hide"
+            self._transition_manager.on_hide(self)
+        else:
+            self._motion_transition_phase = "Show"
+            self._transition_manager.on_show(self)
+        self._refresh_scheduling_labels()
+
+    def _on_motion_animation_state_changed(self, state_name: str) -> None:
+        self._motion_animation_state = str(state_name)
+        self._refresh_scheduling_labels()
+
+    def _cycle_motion_animation_state(self) -> None:
+        self._motion_animation_state_index = (self._motion_animation_state_index + 1) % len(self._motion_animation_states)
+        next_state = self._motion_animation_states[self._motion_animation_state_index]
+        self._motion_animation_state_machine.set_state(next_state)
+        self._refresh_scheduling_labels()
+
     def _set_motion_sequence_stage(self, stage: str) -> None:
         self._motion_sequence_stage = str(stage)
         self._refresh_scheduling_labels()
@@ -2231,6 +2386,30 @@ class SystemsFeature(Feature):
             self._timers.add_timer("systems_probe_heartbeat", 0.4, self._on_timer_probe_tick)
         self._timers.remove_timer("systems_probe_complete")
         self._timers.add_once("systems_probe_complete", 1.2, self._on_timer_probe_complete)
+        self._refresh_scheduling_labels()
+
+    def _simulate_rate_limited_input(self) -> None:
+        # Simulate rapid slider/typing updates to demonstrate trailing-edge
+        # debounce commits and throttled sampling in a realistic release UI path.
+        for index in range(12):
+            value = index * 10
+            self._throttler.call(value)
+            self._debouncer.call(f"draft-{value:03d}")
+        self._rate_limiter_status = "Burst queued; waiting for throttled sample and debounced commit."
+        self._refresh_scheduling_labels()
+
+    def _on_throttled_burst_input(self, value: int) -> None:
+        self._throttle_event_count += 1
+        self._throttle_last_value = int(value)
+        self._rate_limiter_status = f"Throttler sampled value {self._throttle_last_value}"
+        self._refresh_scheduling_labels()
+
+    def _on_debounced_burst_commit(self, value: str) -> None:
+        self._debounce_commit_count += 1
+        self._debounce_last_value = str(value)
+        self._rate_limiter_status = (
+            f"Debouncer committed {self._debounce_last_value}; last throttled value {self._throttle_last_value}"
+        )
         self._refresh_scheduling_labels()
 
     def _on_timer_probe_tick(self) -> None:
