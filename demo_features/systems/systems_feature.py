@@ -9,6 +9,10 @@ import tempfile
 from pygame import Rect, Surface
 
 from gui_do import (
+    AccessibilityBus,
+    AccessibilityNode,
+    AccessibilityRole,
+    AccessibilityTree,
     AppStateStore,
     AnchoredWindowSpec,
     AsyncFieldValidator,
@@ -54,6 +58,9 @@ from gui_do import (
     ScopeStack,
     ScopedTheme,
     ScopedThemeManager,
+    SoundBankRegistry,
+    SoundCue,
+    SoundEventBus,
     ServiceKey,
     SettingsRegistry,
     Sleep,
@@ -67,6 +74,9 @@ from gui_do import (
     TextInputControl,
     ThemeManager,
     ThemeInvalidationBus,
+    LivePoliteness,
+    Timers,
+    TelemetryCollector,
     TileMap,
     TileSet,
     UndoContextManager,
@@ -224,6 +234,8 @@ class SystemsFeature(Feature):
         ("graphics", "Graphics"),
     )
     PANEL_PADDING_X = 16
+    LEFT_SIDE_INSET_X = 10
+    LABEL_INSET_X = 10
     BUTTON_ROW_HEIGHT = 32
     BUTTON_ROW_GAP = 12
     BUTTON_ROW_SPACING = 12
@@ -443,6 +455,35 @@ class SystemsFeature(Feature):
         self._service_key_channel: ServiceKey[str] = ServiceKey("release_channel")
         self._scope_stack.root.bind(self._service_key_api_base, "https://deploy.internal")
         self._scope_stack.root.bind(self._service_key_channel, "canary")
+        self._accessibility_tree = AccessibilityTree()
+        self._accessibility_root_node = AccessibilityNode(
+            role=AccessibilityRole.WINDOW,
+            label="Systems Window",
+        )
+        self._accessibility_pipeline_node = AccessibilityNode(
+            role=AccessibilityRole.BUTTON,
+            label="Run Pipeline",
+            description="Infrastructure pipeline action",
+        )
+        self._accessibility_tree.register(self._accessibility_root_node)
+        self._accessibility_tree.register(self._accessibility_pipeline_node, parent=self._accessibility_root_node)
+        self._accessibility_bus = AccessibilityBus()
+        self._accessibility_cycle = 0
+        self._accessibility_last_announcement = "AccessibilityBus is idle."
+
+        self._sound_bank = SoundBankRegistry()
+        self._sound_bank.register(
+            "systems.notification",
+            SoundCue("demo_features/data/sounds/click.ogg", volume=0.3),
+        )
+        self._sound_event_bus = SoundEventBus()
+        self._sound_event_bus.load_bank(self._sound_bank)
+        self._sound_demo_muted = False
+        self._sound_last_emit_ok = False
+
+        self._telemetry = TelemetryCollector()
+        self._telemetry.enable()
+        self._telemetry_sample_count = 0
 
         self.infrastructure_pipeline_label = None
         self.infrastructure_interaction_label = None
@@ -452,16 +493,22 @@ class SystemsFeature(Feature):
         self.infrastructure_virtualization_label = None
         self.infrastructure_layout_label = None
         self.infrastructure_scope_label = None
+        self.infrastructure_runtime_label = None
 
         self._task_scheduler = TaskScheduler(max_workers=1)
         self._task_job_index = 0
         self._task_last_summary = "TaskScheduler idle: no background jobs queued yet."
         self._task_last_failure = ""
         self._cooperative_scheduler = CooperativeScheduler()
+        self._timers = Timers()
+        self._timer_tick_count = 0
+        self._timer_probe_armed = False
+        self._timer_last_event = "Timers idle: no probe callbacks yet."
         self._rollout_handle = None
         self._rollout_phase = "Idle"
         self.scheduling_task_label = None
         self.scheduling_rollout_label = None
+        self.scheduling_timer_label = None
 
         self._settings_registry = SettingsRegistry()
         self._settings_registry.declare("systems", "profile", default="review", label="Release Profile")
@@ -546,6 +593,7 @@ class SystemsFeature(Feature):
         if self.window is None or not self.window.visible:
             return
         dt = self._frame_timer.tick()
+        self._timers.update(dt)
         self._task_scheduler.update()
         self._cooperative_scheduler.update(dt)
         if self.active_tab_key == "validation":
@@ -613,6 +661,68 @@ class SystemsFeature(Feature):
             control.rect = Rect(0, 0, slot.width, slot.height)
             panel.add_at(control, slot.left, slot.top)
 
+    def _inset_left_side_children(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
+        shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
+        if shift_x <= 0:
+            return
+        center_x = panel.rect.width // 2
+        for child in panel.children:
+            # Only inset controls anchored to the left side; controls that span
+            # across the midpoint keep their explicit layout alignment.
+            if child.rect.left < center_x and child.rect.right <= center_x:
+                child.rect.x += shift_x
+
+    def _inset_text_labels(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
+        shift_x = self.LABEL_INSET_X if inset_x is None else int(inset_x)
+        if shift_x <= 0:
+            return
+        for child in panel.children:
+            if isinstance(child, LabelControl):
+                child.rect.x += shift_x
+
+    def _inset_children_left_of_x(
+        self,
+        panel: PanelControl,
+        *,
+        cutoff_x: int,
+        inset_x: int | None = None,
+    ) -> None:
+        shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
+        if shift_x <= 0:
+            return
+        cutoff = int(cutoff_x)
+        for child in panel.children:
+            if child.rect.left < cutoff:
+                child.rect.x += shift_x
+
+    def _force_button_left_alignment(
+        self,
+        panel: PanelControl,
+        *,
+        target_button_id: str,
+        reference_button_id: str,
+    ) -> None:
+        by_id = {child.control_id: child for child in panel.children}
+        target = by_id.get(str(target_button_id))
+        reference = by_id.get(str(reference_button_id))
+        if target is None or reference is None:
+            return
+        target.rect.x = reference.rect.left
+
+    def _force_button_right_alignment(
+        self,
+        panel: PanelControl,
+        *,
+        target_button_id: str,
+        reference_button_id: str,
+    ) -> None:
+        by_id = {child.control_id: child for child in panel.children}
+        target = by_id.get(str(target_button_id))
+        reference = by_id.get(str(reference_button_id))
+        if target is None or reference is None:
+            return
+        target.rect.width = max(1, reference.rect.right - target.rect.left)
+
     def _add_button_rows(
         self,
         panel: PanelControl,
@@ -631,6 +741,42 @@ class SystemsFeature(Feature):
             self._place_row_controls(panel, row_bounds, buttons[start:start + row_size])
             current_top = row_bounds.bottom + self.BUTTON_ROW_SPACING
         return current_top
+
+    def _add_single_column_button_row(
+        self,
+        panel: PanelControl,
+        rect: Rect,
+        top: int,
+        button: ButtonControl,
+        *,
+        column_index: int = 0,
+        span_both_columns: bool = False,
+        span_from_window_left: bool = False,
+        left: int | None = None,
+        width: int | None = None,
+    ) -> int:
+        row_bounds = self._row_bounds(rect, top, left=left, width=width)
+        if span_both_columns:
+            inset_x = self.LEFT_SIDE_INSET_X
+            start_x = inset_x if span_from_window_left else row_bounds.left + inset_x
+            button_width = max(1, row_bounds.right - start_x)
+            button.rect = Rect(0, 0, button_width, row_bounds.height)
+            panel.add_at(button, start_x, row_bounds.top)
+            return row_bounds.bottom + self.BUTTON_ROW_SPACING
+        slots = CellCaretLayout.split_columns(
+            row_bounds,
+            count=2,
+            gap=self.BUTTON_ROW_GAP,
+            min_width=1,
+        )
+        if len(slots) >= 2:
+            normalized_index = max(0, min(1, int(column_index)))
+            slot = slots[normalized_index]
+        else:
+            slot = row_bounds
+        button.rect = Rect(0, 0, slot.width, slot.height)
+        panel.add_at(button, slot.left, slot.top)
+        return row_bounds.bottom + self.BUTTON_ROW_SPACING
 
     def build_data_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_data_panel", Rect(rect), draw_background=False)
@@ -716,6 +862,7 @@ class SystemsFeature(Feature):
             on_refresh=self._on_backlog_view_refreshed,
         )
         self._refresh_backlog_view()
+        self._inset_children_left_of_x(panel, cutoff_x=right_x)
         return panel
 
     def build_validation_panel(self, rect: Rect) -> PanelControl:
@@ -782,6 +929,8 @@ class SystemsFeature(Feature):
         panel.add_at(self.validation_local_label, 0, 252)
         panel.add_at(self.validation_async_label, 0, 288)
         self._refresh_validation_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
         return panel
 
     def build_history_panel(self, rect: Rect) -> PanelControl:
@@ -843,6 +992,8 @@ class SystemsFeature(Feature):
         panel.add_at(self.history_undo_label, 0, label_top + 44)
         panel.add_at(self.history_redo_label, 0, label_top + 80)
         self._refresh_history_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
         return panel
 
     def build_theme_panel(self, rect: Rect) -> PanelControl:
@@ -894,6 +1045,8 @@ class SystemsFeature(Feature):
         panel.add_at(self.theme_scope_label, 0, 128)
         panel.add_at(self.theme_resolved_label, 0, 164)
         self._refresh_theme_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
         return panel
 
     def build_state_panel(self, rect: Rect) -> PanelControl:
@@ -911,6 +1064,13 @@ class SystemsFeature(Feature):
         )
         panel.add_at(self.state_context_dropdown, 130, 0)
 
+        cycle_route_button = ButtonControl(
+            "systems_state_route_cycle",
+            Rect(0, 0, 170, 32),
+            "Cycle Route Stack",
+            self._cycle_release_router,
+            style="round",
+        )
         state_label_top = self._add_button_rows(
             panel,
             rect,
@@ -958,14 +1118,16 @@ class SystemsFeature(Feature):
                     self._advance_release_state_machine,
                     style="round",
                 ),
-                ButtonControl(
-                    "systems_state_route_cycle",
-                    Rect(0, 0, 170, 32),
-                    "Cycle Route Stack",
-                    self._cycle_release_router,
-                    style="round",
-                ),
             ],
+        )
+        state_label_top = self._add_single_column_button_row(
+            panel,
+            rect,
+            state_label_top,
+            cycle_route_button,
+            column_index=0,
+            span_both_columns=True,
+            span_from_window_left=False,
         )
 
         self.state_store_label = LabelControl("systems_state_store", Rect(0, 0, rect.width, 28), "", align="left")
@@ -979,10 +1141,29 @@ class SystemsFeature(Feature):
         panel.add_at(self.state_machine_label, 0, state_label_top + 116)
         panel.add_at(self.state_router_label, 0, state_label_top + 152)
         self._refresh_state_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
+        self._force_button_left_alignment(
+            panel,
+            target_button_id="systems_state_route_cycle",
+            reference_button_id="systems_state_redo_context",
+        )
+        self._force_button_right_alignment(
+            panel,
+            target_button_id="systems_state_route_cycle",
+            reference_button_id="systems_state_advance_fsm",
+        )
         return panel
 
     def build_infrastructure_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_infrastructure_panel", Rect(rect), draw_background=False)
+        telemetry_button = ButtonControl(
+            "systems_infra_telemetry",
+            Rect(0, 0, 176, 32),
+            "Record Telemetry",
+            self._sample_telemetry,
+            style="round",
+        )
         infrastructure_label_top = self._add_button_rows(
             panel,
             rect,
@@ -1044,7 +1225,30 @@ class SystemsFeature(Feature):
                     self._push_scope_demo,
                     style="round",
                 ),
+                ButtonControl(
+                    "systems_infra_accessibility",
+                    Rect(0, 0, 176, 32),
+                    "Announce Accessibility",
+                    self._run_accessibility_demo,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_audio",
+                    Rect(0, 0, 170, 32),
+                    "Emit Audio Cue",
+                    self._run_audio_demo,
+                    style="round",
+                ),
             ],
+        )
+        infrastructure_label_top = self._add_single_column_button_row(
+            panel,
+            rect,
+            infrastructure_label_top,
+            telemetry_button,
+            column_index=0,
+            span_both_columns=True,
+            span_from_window_left=False,
         )
 
         self.infrastructure_pipeline_label = LabelControl(
@@ -1071,6 +1275,9 @@ class SystemsFeature(Feature):
         self.infrastructure_scope_label = LabelControl(
             "systems_infra_scope_status", Rect(0, 0, rect.width, 28), "", align="left"
         )
+        self.infrastructure_runtime_label = LabelControl(
+            "systems_infra_runtime_status", Rect(0, 0, rect.width, 56), "", align="left"
+        )
         panel.add_at(self.infrastructure_pipeline_label, 0, infrastructure_label_top + 8)
         panel.add_at(self.infrastructure_interaction_label, 0, infrastructure_label_top + 44)
         panel.add_at(self.infrastructure_schema_label, 0, infrastructure_label_top + 80)
@@ -1079,12 +1286,32 @@ class SystemsFeature(Feature):
         panel.add_at(self.infrastructure_virtualization_label, 0, infrastructure_label_top + 188)
         panel.add_at(self.infrastructure_layout_label, 0, infrastructure_label_top + 224)
         panel.add_at(self.infrastructure_scope_label, 0, infrastructure_label_top + 260)
+        panel.add_at(self.infrastructure_runtime_label, 0, infrastructure_label_top + 296)
         self._refresh_infrastructure_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
+        self._force_button_left_alignment(
+            panel,
+            target_button_id="systems_infra_telemetry",
+            reference_button_id="systems_infra_accessibility",
+        )
+        self._force_button_right_alignment(
+            panel,
+            target_button_id="systems_infra_telemetry",
+            reference_button_id="systems_infra_audio",
+        )
         return panel
 
     def build_scheduling_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_scheduling_panel", Rect(rect), draw_background=False)
-        self._add_button_rows(
+        timer_probe_button = ButtonControl(
+            "systems_schedule_timers",
+            Rect(0, 0, 176, 32),
+            "Start Timer Probe",
+            self._start_timer_probe,
+            style="round",
+        )
+        labels_top = self._add_button_rows(
             panel,
             rect,
             0,
@@ -1105,6 +1332,15 @@ class SystemsFeature(Feature):
                 ),
             ],
         )
+        labels_top = self._add_single_column_button_row(
+            panel,
+            rect,
+            labels_top,
+            timer_probe_button,
+            column_index=0,
+            span_both_columns=True,
+            span_from_window_left=False,
+        )
         self.scheduling_task_label = LabelControl(
             "systems_scheduling_task_status",
             Rect(0, 0, rect.width, 28),
@@ -1117,9 +1353,33 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        panel.add_at(self.scheduling_task_label, 0, 56)
-        panel.add_at(self.scheduling_rollout_label, 0, 92)
+        self.scheduling_timer_label = LabelControl(
+            "systems_scheduling_timer_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        label_padding_top = 8
+        line_gap = 8
+        first_label_top = labels_top + label_padding_top
+        second_label_top = first_label_top + 28 + line_gap
+        third_label_top = second_label_top + 28 + line_gap
+        panel.add_at(self.scheduling_task_label, 0, first_label_top)
+        panel.add_at(self.scheduling_rollout_label, 0, second_label_top)
+        panel.add_at(self.scheduling_timer_label, 0, third_label_top)
         self._refresh_scheduling_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
+        self._force_button_left_alignment(
+            panel,
+            target_button_id="systems_schedule_timers",
+            reference_button_id="systems_schedule_background_job",
+        )
+        self._force_button_right_alignment(
+            panel,
+            target_button_id="systems_schedule_timers",
+            reference_button_id="systems_schedule_rollout",
+        )
         return panel
 
     def build_persistence_panel(self, rect: Rect) -> PanelControl:
@@ -1181,6 +1441,8 @@ class SystemsFeature(Feature):
         panel.add_at(self.persistence_settings_label, 0, persistence_label_top + 44)
         panel.add_at(self.persistence_status_label, 0, persistence_label_top + 80)
         self._refresh_persistence_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
         return panel
 
     def build_graphics_panel(self, rect: Rect) -> PanelControl:
@@ -1370,6 +1632,7 @@ class SystemsFeature(Feature):
 
         self._render_tile_map_preview()
         self._refresh_graphics_labels()
+        self._inset_left_side_children(panel)
         return panel
 
     def _make_window_spec(self, host) -> AnchoredWindowSpec:
@@ -1765,6 +2028,27 @@ class SystemsFeature(Feature):
             self.scheduling_rollout_label.text = (
                 f"CooperativeScheduler phase: {self._rollout_phase} | active coroutines={self._cooperative_scheduler.coroutine_count}"
             )
+        if self.scheduling_timer_label is not None:
+            self.scheduling_timer_label.text = (
+                f"Timers active={self._timers.timer_ids()} probe_armed={self._timer_probe_armed} last_event={self._timer_last_event}"
+            )
+
+    def _start_timer_probe(self) -> None:
+        self._timer_probe_armed = True
+        if not self._timers.has_timer("systems_probe_heartbeat"):
+            self._timers.add_timer("systems_probe_heartbeat", 0.4, self._on_timer_probe_tick)
+        self._timers.remove_timer("systems_probe_complete")
+        self._timers.add_once("systems_probe_complete", 1.2, self._on_timer_probe_complete)
+        self._refresh_scheduling_labels()
+
+    def _on_timer_probe_tick(self) -> None:
+        self._timer_tick_count += 1
+        self._timer_last_event = f"heartbeat #{self._timer_tick_count}"
+
+    def _on_timer_probe_complete(self) -> None:
+        self._timer_probe_armed = False
+        self._timers.remove_timer("systems_probe_heartbeat")
+        self._timer_last_event = f"probe completed after {self._timer_tick_count} heartbeat callbacks"
 
     def _apply_review_profile(self) -> None:
         self._settings_registry.set_value("systems", "profile", "review")
@@ -2031,6 +2315,37 @@ class SystemsFeature(Feature):
                     f"ServiceScope child resolved api={api_base} channel={channel}; root channel remains canary"
                 )
 
+    def _run_accessibility_demo(self) -> None:
+        self._accessibility_cycle += 1
+        self._accessibility_pipeline_node.enabled = not self._accessibility_pipeline_node.enabled
+        politeness = LivePoliteness.ASSERTIVE if self._accessibility_cycle % 3 == 0 else LivePoliteness.POLITE
+        self._accessibility_bus.announce(
+            f"Release checklist update {self._accessibility_cycle}",
+            politeness=politeness,
+        )
+        announcements = self._accessibility_bus.consume_announcements()
+        if announcements:
+            latest = announcements[-1]
+            self._accessibility_last_announcement = f"{latest.politeness.value}: {latest.message}"
+        self._refresh_infrastructure_labels()
+
+    def _run_audio_demo(self) -> None:
+        # Keep this sample resilient in CI/no-audio environments: emit() returns False when unavailable.
+        event_name = "systems.notification"
+        self._sound_demo_muted = not self._sound_demo_muted
+        if self._sound_demo_muted:
+            self._sound_event_bus.mute(event_name)
+        else:
+            self._sound_event_bus.unmute(event_name)
+        self._sound_last_emit_ok = self._sound_event_bus.emit(event_name, volume=0.25)
+        self._refresh_infrastructure_labels()
+
+    def _sample_telemetry(self) -> None:
+        with self._telemetry.span("systems", "infrastructure_sample", {"tab": self.active_tab_key}):
+            self._accessibility_tree.snapshot()
+        self._telemetry_sample_count = len(self._telemetry.snapshot())
+        self._refresh_infrastructure_labels()
+
     def _refresh_infrastructure_labels(self) -> None:
         if self.infrastructure_pipeline_label is not None and not self.infrastructure_pipeline_label.text:
             self.infrastructure_pipeline_label.text = "DataflowPipeline ready: normalize -> stamp -> route"
@@ -2069,4 +2384,14 @@ class SystemsFeature(Feature):
             self.infrastructure_scope_label.text = (
                 f"ScopeStack root api={self._scope_stack.root.get(self._service_key_api_base)} "
                 f"channel={self._scope_stack.root.get(self._service_key_channel)}"
+            )
+        if self.infrastructure_runtime_label is not None:
+            self.infrastructure_runtime_label.text = (
+                " | ".join(
+                    (
+                        f"AccessibilityTree nodes={len(self._accessibility_tree)} last='{self._accessibility_last_announcement}'",
+                        f"SoundEventBus events={self._sound_event_bus.registered_event_names()} muted={self._sound_demo_muted} played={self._sound_last_emit_ok}",
+                        f"TelemetryCollector samples={self._telemetry_sample_count}",
+                    )
+                )
             )
