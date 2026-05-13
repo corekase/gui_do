@@ -1,5 +1,6 @@
 from demo_features.moving_shapes import MovingShapesBackdropFeature
 from demo_features.showcase import ShowcaseFeature
+from demo_features.systems import SystemsFeature
 from demo_features.life import LifeFeature
 from demo_features.main import MainFeature
 from demo_features.mandelbrot import MandelbrotFeature
@@ -64,11 +65,20 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         ),
         feature_window_bundle_entries=(
             FeatureWindowBundleBindingSpec(
+                "_systems_feature",
+                SystemsFeature,
+                "systems",
+                task_panel_label="Systems",
+                task_panel_style="round",
+                task_panel_slot_index=1,
+            ),
+            FeatureWindowBundleBindingSpec(
                 "_life_feature",
                 LifeFeature,
                 "life",
                 task_panel_label="Life",
                 task_panel_style="round",
+                task_panel_slot_index=2,
             ),
             FeatureWindowBundleBindingSpec(
                 "_mandel_feature",
@@ -76,6 +86,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 "mandel",
                 task_panel_label="Mandelbrot",
                 task_panel_style="round",
+                task_panel_slot_index=3,
             ),
         ),
         action_entries=(

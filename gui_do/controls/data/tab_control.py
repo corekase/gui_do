@@ -39,7 +39,8 @@ class TabControl(UiNode):
 
     Renders a horizontal strip of tab buttons at the top and a content panel
     below.  Selecting a tab fires ``on_change(key)`` and swaps the visible
-    content node.
+    content node.  The tab strip can optionally be inset from the left/right
+    edges to accommodate window frame borders or other layout constraints.
 
     Usage::
 
@@ -52,6 +53,7 @@ class TabControl(UiNode):
                 TabItem("b", "Beta",  panel_b),
             ],
             on_change=lambda key: print("selected", key),
+            horizontal_padding=2,  # Inset tabs by 2px on each side
         )
     """
 
@@ -64,12 +66,14 @@ class TabControl(UiNode):
         on_change: Optional[Callable[[str], None]] = None,
         font_role: str = "body",
         font_size: Optional[int] = None,
+        horizontal_padding: int = 0,
     ) -> None:
         super().__init__(control_id, rect)
         self._items: List[TabItem] = list(items or [])
         self._on_change = on_change
         self._font_role = str(font_role)
         self._font_size: Optional[int] = None if font_size is None else max(6, int(font_size))
+        self._horizontal_padding: int = max(0, int(horizontal_padding))
         self.tab_index = 0  # the whole control is keyboard-navigable
 
         # Determine initial selection
@@ -164,9 +168,10 @@ class TabControl(UiNode):
 
     def _build_tab_rects(self, theme: "ColorTheme") -> List[Rect]:
         rects: List[Rect] = []
-        x = self.rect.left
+        x = self.rect.left + self._horizontal_padding
         y = self.rect.top
-        max_x = self.rect.right
+        right_padding = max(0, self._horizontal_padding - 1) if self._horizontal_padding > 0 else 0
+        max_x = self.rect.right - right_padding
         for item in self._items:
             try:
                 fs = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
@@ -176,8 +181,8 @@ class TabControl(UiNode):
                 w = len(item.label) * (fs // 2)
             tab_w = w + _TAB_PAD_H * 2
             # Wrap to next row if this tab would overflow the right edge
-            if x + tab_w > max_x and x > self.rect.left:
-                x = self.rect.left
+            if x + tab_w > max_x and x > self.rect.left + self._horizontal_padding:
+                x = self.rect.left + self._horizontal_padding
                 y += _TAB_H
             rects.append(Rect(x, y, tab_w, _TAB_H))
             x += tab_w
@@ -198,7 +203,7 @@ class TabControl(UiNode):
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             pos = event.pos
-            tab_strip_rect = Rect(self.rect.left, self.rect.top, self.rect.width, self._tab_strip_h())
+            tab_strip_rect = Rect(self.rect.left + self._horizontal_padding, self.rect.top, self.rect.width - self._horizontal_padding - max(0, self._horizontal_padding - 1), self._tab_strip_h())
             if tab_strip_rect.collidepoint(pos):
                 for i, tab_rect in enumerate(self._tab_rects):
                     if tab_rect.collidepoint(pos) and i < len(self._items):
@@ -256,7 +261,7 @@ class TabControl(UiNode):
         self._tab_rects = tab_rects  # cache for hit testing
 
         # Draw tab strip background (all rows)
-        strip_rect = Rect(r.left, r.top, r.width, self._tab_strip_h())
+        strip_rect = Rect(r.left + 1, r.top, max(1, r.width - 3), self._tab_strip_h())
         bg_color = theme.dark
         pygame.draw.rect(surface, bg_color, strip_rect)
 

@@ -71,6 +71,13 @@ class TestErrorBoundaryInitial(unittest.TestCase):
         eb = ErrorBoundary(child)
         self.assertIn(child, eb.children)
 
+    def test_child_tracks_boundary_rect_when_wrapper_moves(self):
+        child = _SimpleNode(Rect(0, 0, 150, 80))
+        eb = ErrorBoundary(child)
+        eb.set_rect(Rect(40, 55, 150, 80))
+        self.assertEqual(Rect(40, 55, 150, 80), eb.rect)
+        self.assertEqual(Rect(40, 55, 150, 80), child.rect)
+
     def test_error_text_stored(self):
         child = _SimpleNode()
         eb = ErrorBoundary(child, error_text="Widget unavailable")

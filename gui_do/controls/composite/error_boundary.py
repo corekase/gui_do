@@ -91,6 +91,18 @@ class ErrorBoundary(UiNode):
         # Adopt the child
         self.children.append(child)
 
+    def set_pos(self, x: int, y: int) -> None:
+        super().set_pos(x, y)
+        self._sync_child_rect()
+
+    def resize(self, width: int, height: int) -> None:
+        super().resize(width, height)
+        self._sync_child_rect()
+
+    def set_rect(self, rect: "Rect") -> None:
+        super().set_rect(rect)
+        self._sync_child_rect()
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -117,6 +129,7 @@ class ErrorBoundary(UiNode):
     def on_mount(self, parent: "UiNode | None") -> None:
         if self._recover_on_mount:
             self._error = None
+        self._sync_child_rect()
         self._child.on_mount(self)
 
     def on_unmount(self, parent: "UiNode | None") -> None:
@@ -135,8 +148,7 @@ class ErrorBoundary(UiNode):
     # ------------------------------------------------------------------
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        # Keep our rect in sync with the child
-        self.rect = Rect(self._child.rect)
+        self._sync_child_rect()
 
         if self._error is not None:
             self._draw_placeholder(surface)
@@ -149,7 +161,7 @@ class ErrorBoundary(UiNode):
             self._draw_placeholder(surface)
 
     def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app=None) -> None:
-        self.rect = Rect(self._child.rect)
+        self._sync_child_rect()
         if self._error is not None:
             self._draw_placeholder(surface)
             return
@@ -225,7 +237,7 @@ class ErrorBoundary(UiNode):
         """Render an error placeholder in the child's rect area using a standard font role."""
         import pygame  # deferred import — keep top-level importable without display init
 
-        r = Rect(self._child.rect)
+        r = Rect(self.rect)
         if r.width <= 0 or r.height <= 0:
             return
 
@@ -249,3 +261,8 @@ class ErrorBoundary(UiNode):
             text_surf = render_text(line[:60], self._FALLBACK_FG)
             surface.blit(text_surf, (r.x + 6, y))
             y += 16
+
+    def _sync_child_rect(self) -> None:
+        """Keep the wrapped child aligned to the boundary's assigned geometry."""
+        if self._child.rect != self.rect:
+            self._child.set_rect(self.rect)

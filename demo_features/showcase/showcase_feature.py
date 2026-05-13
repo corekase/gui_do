@@ -29,6 +29,7 @@ from gui_do import (
     DockWorkspacePanel,
     DropdownControl,
     DropdownOption,
+    ErrorBoundary,
     ExpanderControl,
     Feature,
     FixedPatternFormatter,
@@ -987,6 +988,22 @@ class ShowcaseFeature(Feature):
             panel = PanelControl("control_ext_row4", Rect(0, 0, col_w, row4_h), draw_background=False)
             color_picker = ColorPickerControl("control_color_picker", Rect(0, 0, sc0_w, 160))
             _add_cell(panel, "color_picker", sc0_x, sc0_w, "Color Picker", color_picker)
+            boundary_child = PanelControl("control_error_boundary_child", Rect(0, 0, sc1_w, 90), draw_background=True)
+            boundary_child.add_at(
+                LabelControl(
+                    "control_error_boundary_label",
+                    Rect(0, 0, sc1_w - 16, 24),
+                    "Protected preview surface",
+                    align="left",
+                ),
+                8,
+                8,
+            )
+            error_boundary = ErrorBoundary(
+                boundary_child,
+                error_text="Preview unavailable",
+            )
+            _add_cell(panel, "error_boundary", sc1_x, sc1_w, "Error Boundary", error_boundary)
             return panel
 
         return [
