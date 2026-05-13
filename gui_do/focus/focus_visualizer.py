@@ -149,25 +149,37 @@ class FocusVisualizer:
             return
         right = x + w - 1
         bottom = y + h - 1
+        rgb = tuple(color[:3])
+
+        # Keep rendering constrained to the target hint rectangle so hints
+        # cannot spill to full-screen guide lines on some backends.
+        previous_clip = surface.get_clip()
+        clip_rect = previous_clip.clip(rect)
+        if clip_rect.width <= 0 or clip_rect.height <= 0:
+            return
+        surface.set_clip(clip_rect)
 
         def draw_dashes(x1, y1, x2, y2):
             if x1 == x2:  # Vertical line
                 start, end = min(y1, y2), max(y1, y2)
                 pos = start
-                while pos < end:
-                    next_pos = min(pos + self.DASH_WIDTH, end)
-                    pygame.draw.line(surface, color[:3], (x1, pos), (x1, next_pos), self.LINE_WIDTH)
-                    pos = next_pos + self.GAP_WIDTH
+                while pos <= end:
+                    next_pos = min(pos + self.DASH_WIDTH - 1, end)
+                    pygame.draw.rect(surface, rgb, pygame.Rect(x1, pos, self.LINE_WIDTH, next_pos - pos + 1))
+                    pos = next_pos + self.GAP_WIDTH + 1
             else:  # Horizontal line
                 start, end = min(x1, x2), max(x1, x2)
                 pos = start
-                while pos < end:
-                    next_pos = min(pos + self.DASH_WIDTH, end)
-                    pygame.draw.line(surface, color[:3], (pos, y1), (next_pos, y1), self.LINE_WIDTH)
-                    pos = next_pos + self.GAP_WIDTH
+                while pos <= end:
+                    next_pos = min(pos + self.DASH_WIDTH - 1, end)
+                    pygame.draw.rect(surface, rgb, pygame.Rect(pos, y1, next_pos - pos + 1, self.LINE_WIDTH))
+                    pos = next_pos + self.GAP_WIDTH + 1
 
         # Draw four dashed lines (top, right, bottom, left)
-        draw_dashes(x, y, right, y)  # Top
-        draw_dashes(right, y, right, bottom)  # Right
-        draw_dashes(right, bottom, x, bottom)  # Bottom
-        draw_dashes(x, bottom, x, y)  # Left
+        try:
+            draw_dashes(x, y, right, y)  # Top
+            draw_dashes(right, y, right, bottom)  # Right
+            draw_dashes(right, bottom, x, bottom)  # Bottom
+            draw_dashes(x, bottom, x, y)  # Left
+        finally:
+            surface.set_clip(previous_clip)
