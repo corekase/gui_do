@@ -59,6 +59,7 @@ class MainFeature(Feature):
             scene_name="main",
         )
 
+        # Menu bar
         host.desktop_menu_bar = add_scene_menu_strip_from_spec(
             host.root,
             host,
@@ -86,6 +87,7 @@ class MainFeature(Feature):
                 scene_name="main",
             )
         )
+
         host.task_panel = ensure_scene_task_panel(
             host,
             SceneTaskPanelSpec(
@@ -98,7 +100,6 @@ class MainFeature(Feature):
                 auto_hide=True,
             ),
         )
-
         task_panel_layout = create_task_panel_linear_layout(
             host.task_panel,
             TaskPanelLinearLayoutSpec(

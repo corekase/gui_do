@@ -115,36 +115,51 @@ class _MandelbrotPresenter(WindowPresenter):
         self.host = host
 
     def on_create(self) -> None:
+        from gui_do import FlexLayout, GridLayout, GridPlacement
         f = self.feature
         host = self.host
-        area = inset_rect(self.window.content_rect(), padding_x=_PAD, padding_y=_PAD)
+        content_rect = self.window.content_rect()
+        inner_rect = Rect(
+            content_rect.left + _PAD,
+            content_rect.top + _PAD,
+            max(1, content_rect.width - _PAD * 2),
+            max(1, content_rect.height - _PAD * 2),
+        )
 
-        # Primary canvas (full-size, used for iterative / recursive / one-split modes)
-        canvas_rect = Rect(area.left, area.top, _CANVAS_W, _CANVAS_H)
-        f.primary_canvas = self._add(CanvasControl("mandel_canvas", Rect(canvas_rect), max_events=128))
+        # Primary canvas (full-size)
+        primary_canvas = CanvasControl("mandel_canvas", Rect(0, 0, _CANVAS_W, _CANVAS_H), max_events=128)
+        f.primary_canvas = self._add(primary_canvas)
+        canvas_rect = Rect(inner_rect.left, inner_rect.top, _CANVAS_W, _CANVAS_H)
+        primary_canvas.rect = Rect(canvas_rect)
 
-        # Four split canvases in a 2x2 grid (shown only for the 4M 4Tasks mode)
+        # Four split canvases in a 2x2 grid (hidden by default)
+        split_gap = 6
+        split_canvas_w = max(1, (_CANVAS_W - split_gap) // 2)
+        split_canvas_h = max(1, (_CANVAS_H - split_gap) // 2)
+        split_grid = GridLayout(
+            row_tracks=[split_canvas_h, split_canvas_h],
+            col_tracks=[split_canvas_w, split_canvas_w],
+            gap=split_gap,
+            padding=0,
+        )
         f.split_canvases = {}
-        for key, rect in zip(_SPLIT_KEYS, partition_rects(canvas_rect, rows=2, cols=2, gap=6)):
-            canvas = CanvasControl(key, rect, max_events=32)
+        for idx, key in enumerate(_SPLIT_KEYS):
+            row = idx // 2
+            col = idx % 2
+            canvas = CanvasControl(key, Rect(0, 0, split_canvas_w, split_canvas_h), max_events=32)
             canvas.visible = False
+            split_grid.place(canvas, GridPlacement(row=row, col=col))
             self.add_control(canvas)
             f.split_canvases[key] = canvas
+        split_grid.apply(canvas_rect)
 
-        # Button row: Reset | Iterative | Recursive | 1M 4Tasks | 4M 4Tasks
-        btn_y = area.top + _CANVAS_H + 8
-        slots = centered_horizontal_strip_layout(
-            left=area.left + _ROW_PAD,
-            width=_CANVAS_W - 2 * _ROW_PAD,
-            y=btn_y,
-            item_count=_NUM_BTNS,
-            item_height=_BTN_H,
-            spacing=_BTN_GAP,
-        )
+        # Button row using FlexLayout
+        btn_row = FlexLayout(direction="row", gap=_BTN_GAP, padding=0)
         f.reset_button = self._add(ButtonControl(
-            "mandel_reset", slots[0], "Reset", lambda: f.clear(host), style="angle",
+            "mandel_reset", Rect(0, 0, 120, _BTN_H), "Reset", lambda: f.clear(host), style="angle",
         ))
         f.reset_button.set_accessibility(role="button", label="Clear Mandelbrot surfaces")
+        btn_row.add(f.reset_button, grow=0)
 
         task_defs = (
             ("mandel_iter",       "Iterative",  f.launch_iterative,  "Run iterative"),
@@ -153,17 +168,26 @@ class _MandelbrotPresenter(WindowPresenter):
             ("mandel_four_split", "4M 4Tasks",  f.launch_four_split, "Run 4-canvas 4-task split"),
         )
         f.task_buttons = tuple(
-            self._make_task_btn(cid, label, method, tip, slot)
-            for (cid, label, method, tip), slot in zip(task_defs, slots[1:])
+            self._make_task_btn(cid, label, method, tip, Rect(0, 0, 120, _BTN_H))
+            for (cid, label, method, tip) in task_defs
         )
+        for btn in f.task_buttons:
+            btn_row.add(btn, grow=0)
+        btn_row_rect = Rect(
+            inner_rect.left + _ROW_PAD,
+            canvas_rect.bottom + 9,
+            max(1, _CANVAS_W - (_ROW_PAD * 2)),
+            _BTN_H,
+        )
+        btn_row.apply(btn_row_rect)
 
         # Status label
-        status_y = btn_y + _BTN_H + 6
         f.status_label = self._add(LabelControl(
             "mandel_status",
-            Rect(area.left, status_y, _CANVAS_W, _STATUS_H),
+            Rect(0, 0, _CANVAS_W, _STATUS_H),
             f.status_text,
         ))
+        f.status_label.rect = Rect(inner_rect.left, btn_row_rect.bottom + 9, _CANVAS_W, _STATUS_H)
 
         f.window = self.window
         f.demo = host

@@ -197,46 +197,27 @@ class _SystemsPresenter(WindowPresenter):
             content_rect.width,
             max(1, content_rect.height - tab_height - tab_gap),
         )
-
-        data_panel = feature.build_data_panel(panel_rect)
-        validation_panel = feature.build_validation_panel(panel_rect)
-        history_panel = feature.build_history_panel(panel_rect)
-        theme_panel = feature.build_theme_panel(panel_rect)
-        state_panel = feature.build_state_panel(panel_rect)
-        infrastructure_panel = feature.build_infrastructure_panel(panel_rect)
-        scheduling_panel = feature.build_scheduling_panel(panel_rect)
-        motion_panel = feature.build_motion_panel(panel_rect)
-        persistence_panel = feature.build_persistence_panel(panel_rect)
-        graphics_panel = feature.build_graphics_panel(panel_rect)
-        text_panel = feature.build_text_panel(panel_rect)
-        for panel in (
-            data_panel,
-            validation_panel,
-            history_panel,
-            theme_panel,
-            state_panel,
-            infrastructure_panel,
-            scheduling_panel,
-            motion_panel,
-            persistence_panel,
-            graphics_panel,
-            text_panel,
-        ):
+        panel_builders = [
+            feature.build_data_panel,
+            feature.build_validation_panel,
+            feature.build_history_panel,
+            feature.build_theme_panel,
+            feature.build_state_panel,
+            feature.build_infrastructure_panel,
+            feature.build_scheduling_panel,
+            feature.build_motion_panel,
+            feature.build_persistence_panel,
+            feature.build_graphics_panel,
+            feature.build_text_panel,
+        ]
+        panel_keys = [
+            "data", "validation", "history", "theme", "state", "infrastructure", "scheduling", "motion", "persistence", "graphics", "text",
+        ]
+        panels = [builder(panel_rect) for builder in panel_builders]
+        for panel in panels:
             self.add_control(panel)
 
-        feature._tab_panels = {
-            "data": data_panel,
-            "validation": validation_panel,
-            "history": history_panel,
-            "theme": theme_panel,
-            "state": state_panel,
-            "infrastructure": infrastructure_panel,
-            "scheduling": scheduling_panel,
-            "motion": motion_panel,
-            "persistence": persistence_panel,
-            "graphics": graphics_panel,
-            "text": text_panel,
-        }
+        feature._tab_panels = dict(zip(panel_keys, panels))
         feature.window = self.window
         feature.demo = self.host
         feature.set_active_tab(feature.active_tab_key)

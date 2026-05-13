@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from .layout_registry import LayoutRegistry
 from typing import Any, Dict, List, Optional, Union
 
 
@@ -81,11 +82,34 @@ class DockSplit:
         }
 
 
-class DockWorkspace:
-    """Serializable docking layout model for panes, tabs, and splits."""
 
-    def __init__(self, root: DockNode | None = None) -> None:
+class DockWorkspace:
+    """Serializable docking layout model for panes, tabs, and splits, with standardized padding, inset, and margin."""
+
+    def __init__(self, root: DockNode | None = None, *, padding: int = 0, inset: int | tuple = 0, margin: int | tuple = 0) -> None:
         self.root = root
+        self._padding: int = int(padding)
+        self._inset = self._parse_box_param(inset)
+        self._margin = self._parse_box_param(margin)
+
+    @staticmethod
+    def _parse_box_param(val):
+        if isinstance(val, int):
+            return (val, val, val, val)
+        if isinstance(val, (tuple, list)) and len(val) == 4:
+            return tuple(int(x) for x in val)
+        return (0, 0, 0, 0)
+
+    def adjust_container(self, container_rect):
+        pad = self._padding
+        inset_l, inset_t, inset_r, inset_b = self._inset
+        margin_l, margin_t, margin_r, margin_b = self._margin
+        return (
+            container_rect.x + pad + inset_l + margin_l,
+            container_rect.y + pad + inset_t + margin_t,
+            container_rect.width - 2 * pad - inset_l - inset_r - margin_l - margin_r,
+            container_rect.height - 2 * pad - inset_t - inset_b - margin_t - margin_b,
+        )
 
     def pane_ids(self) -> List[str]:
         return sorted(self._collect_panes(self.root).keys())
@@ -181,3 +205,78 @@ class DockWorkspace:
         for child in node.children:
             result.update(DockWorkspace._collect_panes(child))
         return result
+
+    def __init__(self, root: DockNode | None = None, *, padding: int = 0, inset: int | tuple = 0, margin: int | tuple = 0) -> None:
+        self.root = root
+        self._padding: int = int(padding)
+        self._inset = self._parse_box_param(inset)
+        self._margin = self._parse_box_param(margin)
+
+    @staticmethod
+    def _parse_box_param(val):
+        if isinstance(val, int):
+            return (val, val, val, val)
+        if isinstance(val, (tuple, list)) and len(val) == 4:
+            return tuple(int(x) for x in val)
+        return (0, 0, 0, 0)
+
+
+    def adjust_container(self, container_rect):
+        pad = self._padding
+        inset_l, inset_t, inset_r, inset_b = self._inset
+        margin_l, margin_t, margin_r, margin_b = self._margin
+        return (
+            container_rect.x + pad + inset_l + margin_l,
+            container_rect.y + pad + inset_t + margin_t,
+            container_rect.width - 2 * pad - inset_l - inset_r - margin_l - margin_r,
+            container_rect.height - 2 * pad - inset_t - inset_b - margin_t - margin_b,
+        )
+
+    def pane_ids(self) -> List[str]:
+        return sorted(self._collect_panes(self.root).keys())
+
+    def find_pane(self, pane_id: str) -> Optional[DockPane]:
+        return self._collect_panes(self.root).get(str(pane_id))
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"root": None if self.root is None else self.node_to_dict(self.root)}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DockWorkspace":
+        root = data.get("root")
+        if root is None:
+            return cls()
+        return cls(root=cls.node_from_dict(root))
+
+    @classmethod
+    def node_to_dict(cls, node: DockNode) -> Dict[str, Any]:
+        return node.to_dict()
+
+
+    @classmethod
+    def node_from_dict(cls, data: Dict[str, Any]) -> DockNode:
+        kind = str(data.get("kind", "")).strip()
+        if kind == "pane":
+            return DockPane(
+                pane_id=str(data.get("pane_id", "")),
+                title=str(data.get("title", "")),
+                payload=dict(data.get("payload", {})),
+            )
+        if kind == "tabs":
+            return DockTabs(
+                tabs_id=str(data.get("tabs_id", "")),
+                panes=[cls.node_from_dict(item) for item in list(data.get("panes", []))],
+                active_pane_id=data.get("active_pane_id"),
+            )
+        if kind == "split":
+            return DockSplit(
+                axis=str(data.get("axis", "horizontal")),
+                children=[cls.node_from_dict(item) for item in list(data.get("children", []))],
+                ratios=[float(value) for value in list(data.get("ratios", []))],
+            )
+        raise ValueError(f"Unknown dock node kind: {kind!r}")
+
+
+
+# Register in LayoutRegistry
+LayoutRegistry.register('dock', DockWorkspace)

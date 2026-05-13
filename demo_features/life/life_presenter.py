@@ -9,14 +9,14 @@ from gui_do import (
 	CanvasControl,
 	SliderControl,
 	ToggleControl,
-	centered_horizontal_strip_layout,
-	inset_rect,
-	split_slot_bounds,
+	FlexLayout,
+	GridLayout,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
 from .life_specs import (
 	_LIFE_CANVAS_CONTROL_SPEC,
+	_LIFE_CANVAS_SIZE,
 	_LIFE_CTRL_GAP,
 	_LIFE_CTRL_H,
 	_LIFE_CTRL_SPACING,
@@ -40,58 +40,61 @@ class LifePresenter(WindowPresenter):
 
 	def on_create(self):
 		content_rect = self.window.content_rect()
-		padded = inset_rect(content_rect, padding_x=_LIFE_PAD, padding_y=_LIFE_PAD)
-		left = padded.left
-		top = padded.top
-		width = padded.width
-		height = padded.height
-
-		ctrl_y = top + height - _LIFE_CTRL_H
-		canvas_h = max(1, ctrl_y - _LIFE_CTRL_GAP - top)
-		canvas_rect = Rect(left, top, width, canvas_h)
-		self.canvas = self._add_presenter_control(
-			CanvasControl(
-				_LIFE_CANVAS_CONTROL_SPEC["control_id"],
-				canvas_rect,
-				max_events=int(_LIFE_CANVAS_CONTROL_SPEC["max_events"]),
-			)
+		inner_rect = Rect(
+			content_rect.left + _LIFE_PAD,
+			content_rect.top + _LIFE_PAD,
+			max(1, content_rect.width - _LIFE_PAD * 2),
+			max(1, content_rect.height - _LIFE_PAD * 2),
 		)
+		canvas_area_h = max(1, inner_rect.height - _LIFE_CTRL_GAP - _LIFE_CTRL_H)
+		canvas_area = Rect(inner_rect.left, inner_rect.top, inner_rect.width, canvas_area_h)
+		# Canvas control (flex grow=1)
+		canvas_control = CanvasControl(
+			_LIFE_CANVAS_CONTROL_SPEC["control_id"],
+			Rect(0, 0, canvas_area.width, _LIFE_CANVAS_SIZE),
+			max_events=int(_LIFE_CANVAS_CONTROL_SPEC["max_events"]),
+		)
+		canvas_layout = FlexLayout(direction="column", gap=0, padding=0)
+		canvas_layout.add(canvas_control, grow=1, basis=_LIFE_CANVAS_SIZE)
+		canvas_layout.apply(canvas_area)
+		self.canvas = self._add_presenter_control(canvas_control)
 		self.feature.canvas = self.canvas
 
-		slots = centered_horizontal_strip_layout(
-			left=left, width=width, y=ctrl_y, item_count=4, item_height=_LIFE_CTRL_H, spacing=_LIFE_CTRL_SPACING,
+		# Control strip (horizontal flex)
+		strip_layout = FlexLayout(
+			direction="row",
+			gap=_LIFE_CTRL_SPACING,
+			align="center",
+			padding=0,
 		)
-		zoom_slider_slot_1, zoom_slider_slot_2 = slots[2], slots[3]
-
+		# Add controls from spec
 		for control_spec in _LIFE_STRIP_CONTROL_SPECS:
-			self._build_strip_control_from_spec(control_spec, slots)
+			slot_control = self._build_strip_control_from_spec(control_spec)
+			self._add_presenter_control(slot_control)
+			strip_layout.add(slot_control, grow=0)
 
-		slider_left, slider_right = split_slot_bounds([zoom_slider_slot_1, zoom_slider_slot_2])
-		slider_height = int(_LIFE_ZOOM_SLIDER_SPEC["height"])
-		slider_y = ctrl_y + max(0, (_LIFE_CTRL_H - slider_height) // 2)
-		slider_rect = Rect(
-			slider_left,
-			slider_y,
-			max(int(_LIFE_ZOOM_SLIDER_SPEC["min_width"]), slider_right - slider_left),
-			slider_height,
-		)
+		# Zoom slider (spans two slots)
 		on_change = getattr(self.feature, str(_LIFE_ZOOM_SLIDER_SPEC["on_change_attr"]))
-		self.zoom_slider = self._add_presenter_control(
-			SliderControl(
-				str(_LIFE_ZOOM_SLIDER_SPEC["control_id"]),
-				slider_rect,
-				_LIFE_ZOOM_SLIDER_SPEC["axis"],
-				float(_LIFE_ZOOM_SLIDER_SPEC["min"]),
-				float(_LIFE_ZOOM_SLIDER_SPEC["max"]),
-				float(_LIFE_ZOOM_SLIDER_SPEC["value"]),
-				on_change=on_change,
-			)
+		zoom_slider = SliderControl(
+			str(_LIFE_ZOOM_SLIDER_SPEC["control_id"]),
+			Rect(0, 0, int(_LIFE_ZOOM_SLIDER_SPEC["min_width"]), int(_LIFE_ZOOM_SLIDER_SPEC["height"])),
+			_LIFE_ZOOM_SLIDER_SPEC["axis"],
+			float(_LIFE_ZOOM_SLIDER_SPEC["min"]),
+			float(_LIFE_ZOOM_SLIDER_SPEC["max"]),
+			float(_LIFE_ZOOM_SLIDER_SPEC["value"]),
+			on_change=on_change,
 		)
+		strip_layout.add(zoom_slider, grow=1)
+		self.zoom_slider = self._add_presenter_control(zoom_slider)
 		self.zoom_slider.set_accessibility(
 			role=str(_LIFE_ZOOM_SLIDER_SPEC["accessibility_role"]),
 			label=str(_LIFE_ZOOM_SLIDER_SPEC["accessibility_label"]),
 		)
 		self._bind_control_refs(_LIFE_ZOOM_SLIDER_SPEC, self.zoom_slider)
+
+		# Apply strip layout below the canvas area.
+		strip_rect = Rect(inner_rect.left, canvas_area.bottom + _LIFE_CTRL_GAP, inner_rect.width, _LIFE_CTRL_H)
+		strip_layout.apply(strip_rect)
 
 		self.feature.demo = self.host
 		self.feature.window = self.window
@@ -106,30 +109,25 @@ class LifePresenter(WindowPresenter):
 		self.add_control(control)
 		return control
 
-	def _build_strip_control_from_spec(self, control_spec, slots) -> None:
-		slot_rect = Rect(slots[int(control_spec["slot_index"])])
+	def _build_strip_control_from_spec(self, control_spec) -> object:
 		kind = str(control_spec["kind"])
 		if kind == "button":
 			handler = getattr(self.feature, str(control_spec["handler_attr"]))
-			control = self._add_presenter_control(
-				ButtonControl(
-					str(control_spec["control_id"]),
-					slot_rect,
-					str(control_spec["label"]),
-					handler,
-					style=str(control_spec["style"]),
-				)
+			control = ButtonControl(
+				str(control_spec["control_id"]),
+				Rect(0, 0, 80, _LIFE_CTRL_H),
+				str(control_spec["label"]),
+				handler,
+				style=str(control_spec["style"]),
 			)
 		elif kind == "toggle":
-			control = self._add_presenter_control(
-				ToggleControl(
-					str(control_spec["control_id"]),
-					slot_rect,
-					str(control_spec["off_text"]),
-					str(control_spec["on_text"]),
-					pushed=bool(control_spec["pushed"]),
-					style=str(control_spec["style"]),
-				)
+			control = ToggleControl(
+				str(control_spec["control_id"]),
+				Rect(0, 0, 80, _LIFE_CTRL_H),
+				str(control_spec["off_text"]),
+				str(control_spec["on_text"]),
+				pushed=bool(control_spec["pushed"]),
+				style=str(control_spec["style"]),
 			)
 		else:
 			raise ValueError(f"Unsupported life strip control kind: {kind}")
@@ -139,6 +137,7 @@ class LifePresenter(WindowPresenter):
 			label=str(control_spec["accessibility_label"]),
 		)
 		self._bind_control_refs(control_spec, control)
+		return control
 
 	def _bind_control_refs(self, control_spec, control) -> None:
 		presenter_attr = control_spec.get("presenter_attr")

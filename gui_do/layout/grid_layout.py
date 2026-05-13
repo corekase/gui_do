@@ -47,6 +47,7 @@ from typing import Optional, Sequence, TYPE_CHECKING
 
 from pygame import Rect
 
+from .layout_registry import LayoutRegistry
 from .rect_source import RectSource, resolve_rect
 
 if TYPE_CHECKING:
@@ -153,14 +154,32 @@ class GridLayout:
         gap: int = 0,
         row_gap: Optional[int] = None,
         col_gap: Optional[int] = None,
+        padding: int = 0,
+        inset: int | tuple = 0,
+        margin: int | tuple = 0,
     ) -> None:
-        self._row_tracks: List[GridTrack] = list(row_tracks)
-        self._col_tracks: List[GridTrack] = list(col_tracks)
+        self._row_tracks: List[GridTrack] = [
+            track if isinstance(track, GridTrack) else GridTrack(track) for track in row_tracks
+        ]
+        self._col_tracks: List[GridTrack] = [
+            track if isinstance(track, GridTrack) else GridTrack(track) for track in col_tracks
+        ]
         # row_gap / col_gap override the symmetric gap
         self._row_gap: int = int(row_gap) if row_gap is not None else int(gap)
         self._col_gap: int = int(col_gap) if col_gap is not None else int(gap)
+        self._padding: int = int(padding)
+        self._inset = self._parse_box_param(inset)
+        self._margin = self._parse_box_param(margin)
         # Ordered list of (node, placement) pairs
         self._placements: List[Tuple["UiNode", GridPlacement]] = []
+
+    @staticmethod
+    def _parse_box_param(val):
+        if isinstance(val, int):
+            return (val, val, val, val)
+        if isinstance(val, (tuple, list)) and len(val) == 4:
+            return tuple(int(x) for x in val)
+        return (0, 0, 0, 0)
 
     # ------------------------------------------------------------------
     # Placement API
@@ -200,6 +219,15 @@ class GridLayout:
         5. Apply cell rect + alignment to each registered node.
         """
         container = resolve_rect(container_rect)
+        pad = self._padding
+        inset_l, inset_t, inset_r, inset_b = self._inset
+        margin_l, margin_t, margin_r, margin_b = self._margin
+        container = Rect(
+            container.x + pad + inset_l + margin_l,
+            container.y + pad + inset_t + margin_t,
+            container.width - 2 * pad - inset_l - inset_r - margin_l - margin_r,
+            container.height - 2 * pad - inset_t - inset_b - margin_t - margin_b,
+        )
         n_rows = len(self._row_tracks)
         n_cols = len(self._col_tracks)
 
@@ -345,3 +373,7 @@ class GridLayout:
             h = nh
 
         return Rect(x, y, max(0, w), max(0, h))
+
+
+# Register in LayoutRegistry
+LayoutRegistry.register('grid', GridLayout)

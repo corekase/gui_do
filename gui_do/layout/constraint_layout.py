@@ -6,7 +6,9 @@ from typing import Optional, TYPE_CHECKING
 
 from pygame import Rect
 
+
 from .rect_source import RectSource, resolve_rect
+from .layout_registry import LayoutRegistry
 
 if TYPE_CHECKING:
     from ..controls.base.ui_node import UiNode
@@ -107,12 +109,24 @@ class AnchorConstraint:
         return Rect(new_left, new_top, new_width, new_height)
 
 
-class ConstraintLayout:
-    """Applies AnchorConstraints for registered nodes relative to a parent rect."""
 
-    def __init__(self) -> None:
+class ConstraintLayout:
+    """Applies AnchorConstraints for registered nodes relative to a parent rect, with standardized padding, inset, and margin."""
+
+    def __init__(self, *, padding: int = 0, inset: int | tuple = 0, margin: int | tuple = 0) -> None:
         self._nodes: List["UiNode"] = []
         self._constraints: Dict[int, AnchorConstraint] = {}
+        self._padding: int = int(padding)
+        self._inset = self._parse_box_param(inset)
+        self._margin = self._parse_box_param(margin)
+
+    @staticmethod
+    def _parse_box_param(val):
+        if isinstance(val, int):
+            return (val, val, val, val)
+        if isinstance(val, (tuple, list)) and len(val) == 4:
+            return tuple(int(x) for x in val)
+        return (0, 0, 0, 0)
 
     def add(self, node: "UiNode", constraint: AnchorConstraint) -> None:
         """Register a node with a constraint."""
@@ -139,6 +153,15 @@ class ConstraintLayout:
     def apply(self, parent_rect: RectSource) -> None:
         """Recompute and mutate rect of all registered nodes."""
         parent = resolve_rect(parent_rect)
+        pad = self._padding
+        inset_l, inset_t, inset_r, inset_b = self._inset
+        margin_l, margin_t, margin_r, margin_b = self._margin
+        parent = Rect(
+            parent.x + pad + inset_l + margin_l,
+            parent.y + pad + inset_t + margin_t,
+            parent.width - 2 * pad - inset_l - inset_r - margin_l - margin_r,
+            parent.height - 2 * pad - inset_t - inset_b - margin_t - margin_b,
+        )
         for node in self._nodes:
             nid = id(node)
             constraint = self._constraints.get(nid)
@@ -157,6 +180,10 @@ class ConstraintLayout:
 
     def node_count(self) -> int:
         return len(self._nodes)
+
+
+# Register in LayoutRegistry
+LayoutRegistry.register('constraint', ConstraintLayout)
 
 
 class ConstraintBuilder:

@@ -66,36 +66,26 @@ class FlexItem:
     align_self: Optional[FlexAlign] = None
 
 
+
+from .layout_registry import LayoutRegistry
+
 class FlexLayout:
-    """Row or column flex layout engine.
+    """Row or column flex layout engine with standardized padding, gap, inset, and margin.
 
     :meth:`apply` computes and mutates child rects in place given a
     *container_rect*.  It does **not** call ``invalidate()`` on children;
     callers should do that after applying layout.
 
-    Usage::
-
-        layout = FlexLayout(
-            direction=FlexDirection.ROW,
-            gap=8,
-            align=FlexAlign.CENTER,
-            justify=FlexJustify.START,
-        )
-        layout.items = [
-            FlexItem(label, grow=0, basis=120),
-            FlexItem(text_input, grow=1),
-            FlexItem(button, grow=0, basis=80),
-        ]
-        layout.apply(container_rect)
-        for item in layout.items:
-            item.node.invalidate()
-
-    Re-applying on resize::
-
-        def on_resize(new_rect):
-            layout.apply(new_rect)
-            for item in layout.items:
-                item.node.invalidate()
+    Parameters
+    ----------
+    direction: FlexDirection
+    gap: int
+    align: FlexAlign
+    justify: FlexJustify
+    padding: int
+    inset: int or tuple (left, top, right, bottom)
+    margin: int or tuple (left, top, right, bottom)
+    items: Optional[List[FlexItem]]
     """
 
     def __init__(
@@ -106,14 +96,26 @@ class FlexLayout:
         align: FlexAlign = FlexAlign.START,
         justify: FlexJustify = FlexJustify.START,
         padding: int = 0,
-        items: Optional[List[FlexItem]] = None,
+        inset: int | tuple = 0,
+        margin: int | tuple = 0,
+        items: Optional[list] = None,
     ) -> None:
         self.direction: FlexDirection = FlexDirection(direction) if isinstance(direction, str) else direction
         self.gap: int = max(0, int(gap))
         self.align: FlexAlign = FlexAlign(align) if isinstance(align, str) else align
         self.justify: FlexJustify = FlexJustify(justify) if isinstance(justify, str) else justify
         self.padding: int = max(0, int(padding))
-        self.items: List[FlexItem] = list(items) if items else []
+        self.inset = self._parse_box_param(inset)
+        self.margin = self._parse_box_param(margin)
+        self.items: list = list(items) if items else []
+
+    @staticmethod
+    def _parse_box_param(val):
+        if isinstance(val, int):
+            return (val, val, val, val)
+        if isinstance(val, (tuple, list)) and len(val) == 4:
+            return tuple(int(x) for x in val)
+        return (0, 0, 0, 0)
 
     # ------------------------------------------------------------------
     # Layout computation
@@ -128,12 +130,15 @@ class FlexLayout:
         if not self.items:
             return
 
+
         container = resolve_rect(container_rect)
         pad = self.padding
-        cx = container.x + pad
-        cy = container.y + pad
-        cw = container.width - pad * 2
-        ch = container.height - pad * 2
+        inset_l, inset_t, inset_r, inset_b = self.inset
+        margin_l, margin_t, margin_r, margin_b = self.margin
+        cx = container.x + pad + inset_l + margin_l
+        cy = container.y + pad + inset_t + margin_t
+        cw = container.width - 2 * pad - inset_l - inset_r - margin_l - margin_r
+        ch = container.height - 2 * pad - inset_t - inset_b - margin_t - margin_b
 
         is_row = self.direction is FlexDirection.ROW
         main_size = cw if is_row else ch
@@ -251,3 +256,7 @@ class FlexLayout:
     def clear(self) -> None:
         """Remove all items."""
         self.items.clear()
+
+
+# Register in LayoutRegistry
+LayoutRegistry.register('flex', FlexLayout)
