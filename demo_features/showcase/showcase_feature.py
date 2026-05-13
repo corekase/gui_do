@@ -365,24 +365,27 @@ class ShowcaseFeature(Feature):
             panel = PanelControl("control_arrow_boxes_cell", Rect(0, 0, w, h), draw_background=False)
             area_w, area_h = min(60, w), min(60, h)
             area = Rect((w - area_w) // 2, (h - area_h) // 2, area_w, area_h)
-            cols = split_columns(area, count=2, gap=inner_gap, min_width=10)
-            box_h = max(10, (area_h - inner_gap) // 2)
-            left_st, _, _, _ = column_stack_from_anchor(
-                anchor=cols[0], content_bottom=cols[0].bottom,
-                preferred_width=cols[0].width, item_gap_y=inner_gap,
+            cell_w = max(10, (area_w - inner_gap) // 2)
+            cell_h = max(10, (area_h - inner_gap) // 2)
+            arrows = [
+                ArrowBoxControl("control_arrow_up", Rect(0, 0, cell_w, cell_h), 90),
+                ArrowBoxControl("control_arrow_down", Rect(0, 0, cell_w, cell_h), 270),
+                ArrowBoxControl("control_arrow_left", Rect(0, 0, cell_w, cell_h), 180),
+                ArrowBoxControl("control_arrow_right", Rect(0, 0, cell_w, cell_h), 0),
+            ]
+            layout = GridLayout(
+                row_tracks=[cell_h, cell_h],
+                col_tracks=[cell_w, cell_w],
+                gap=inner_gap,
+                padding=0,
             )
-            up_r = Rect(left_st.add_slot_or_overflow(box_h, overflow_gap=0))
-            left_r = Rect(left_st.add_slot_or_overflow(box_h, overflow_gap=0))
-            right_st, _, _, _ = column_stack_from_anchor(
-                anchor=cols[1], content_bottom=cols[1].bottom,
-                preferred_width=cols[1].width, item_gap_y=inner_gap,
-            )
-            down_r = Rect(right_st.add_slot_or_overflow(box_h, overflow_gap=0))
-            right_r = Rect(right_st.add_slot_or_overflow(box_h, overflow_gap=0))
-            panel.add_at(ArrowBoxControl("control_arrow_up", Rect(0, 0, up_r.width, up_r.height), 90), up_r.left, up_r.top)
-            panel.add_at(ArrowBoxControl("control_arrow_down", Rect(0, 0, down_r.width, down_r.height), 270), down_r.left, down_r.top)
-            panel.add_at(ArrowBoxControl("control_arrow_left", Rect(0, 0, left_r.width, left_r.height), 180), left_r.left, left_r.top)
-            panel.add_at(ArrowBoxControl("control_arrow_right", Rect(0, 0, right_r.width, right_r.height), 0), right_r.left, right_r.top)
+            layout.place(arrows[0], GridPlacement(row=0, col=0))
+            layout.place(arrows[1], GridPlacement(row=0, col=1))
+            layout.place(arrows[2], GridPlacement(row=1, col=0))
+            layout.place(arrows[3], GridPlacement(row=1, col=1))
+            layout.apply(area)
+            for control in arrows:
+                panel.add_at(control, control.rect.left, control.rect.top)
             return panel
 
         def make_vertical_buttons(w: int, h: int):
@@ -457,22 +460,34 @@ class ShowcaseFeature(Feature):
 
         def make_horiz_pair(w: int, h: int):
             panel = PanelControl("control_horizontal_pair_cell", Rect(0, 0, w, h), draw_background=False)
-            col_st, _, _, _ = column_stack_from_anchor(
-                anchor=Rect(0, 0, w, h), content_bottom=h, preferred_width=w, item_gap_y=row_gap,
+            scrollbar = ScrollbarControl(
+                "control_horizontal_scrollbar",
+                Rect(0, 0, max(1, w), 24),
+                LayoutAxis.HORIZONTAL,
+                self.SCROLLBAR_CONTENT_SIZE,
+                self.SCROLLBAR_VIEWPORT_SIZE,
+                offset=self.SCROLLBAR_DEFAULT_OFFSET,
+                step=self.SCROLLBAR_STEP,
             )
-            sb_r = Rect(col_st.add_slot_or_overflow(24, overflow_gap=0))
-            sl_r = Rect(col_st.add_slot_or_overflow(24, overflow_gap=0))
-            panel.add_at(
-                ScrollbarControl("control_horizontal_scrollbar", Rect(0, 0, sb_r.width, sb_r.height),
-                    LayoutAxis.HORIZONTAL, self.SCROLLBAR_CONTENT_SIZE, self.SCROLLBAR_VIEWPORT_SIZE,
-                    offset=self.SCROLLBAR_DEFAULT_OFFSET, step=self.SCROLLBAR_STEP),
-                sb_r.left, sb_r.top,
+            slider = SliderControl(
+                "control_horizontal_slider",
+                Rect(0, 0, max(1, w), 24),
+                LayoutAxis.HORIZONTAL,
+                self.SLIDER_MINIMUM,
+                self.SLIDER_MAXIMUM,
+                self.SLIDER_DEFAULT_VALUE,
             )
-            panel.add_at(
-                SliderControl("control_horizontal_slider", Rect(0, 0, sl_r.width, sl_r.height),
-                    LayoutAxis.HORIZONTAL, self.SLIDER_MINIMUM, self.SLIDER_MAXIMUM, self.SLIDER_DEFAULT_VALUE),
-                sl_r.left, sl_r.top,
+            layout = GridLayout(
+                row_tracks=[24, 24],
+                col_tracks=["1fr"],
+                gap=row_gap,
+                padding=0,
             )
+            layout.place(scrollbar, GridPlacement(row=0, col=0))
+            layout.place(slider, GridPlacement(row=1, col=0))
+            layout.apply(Rect(0, 0, max(1, w), max(1, h)))
+            panel.add_at(scrollbar, scrollbar.rect.left, scrollbar.rect.top)
+            panel.add_at(slider, slider.rect.left, slider.rect.top)
             return panel
 
         def make_vert_pair(w: int, h: int):
@@ -480,28 +495,68 @@ class ShowcaseFeature(Feature):
             track_w, gap_x = 24, 12
             track_h = max(80, h)
             y = max(0, (h - track_h) // 2)
-            panel.add_at(
-                ScrollbarControl("control_vertical_scrollbar", Rect(0, 0, track_w, track_h),
-                    LayoutAxis.VERTICAL, self.SCROLLBAR_CONTENT_SIZE, self.SCROLLBAR_VIEWPORT_SIZE,
-                    offset=self.SCROLLBAR_DEFAULT_OFFSET, step=self.SCROLLBAR_STEP),
-                0, y,
+            scrollbar = ScrollbarControl(
+                "control_vertical_scrollbar",
+                Rect(0, 0, track_w, track_h),
+                LayoutAxis.VERTICAL,
+                self.SCROLLBAR_CONTENT_SIZE,
+                self.SCROLLBAR_VIEWPORT_SIZE,
+                offset=self.SCROLLBAR_DEFAULT_OFFSET,
+                step=self.SCROLLBAR_STEP,
             )
-            panel.add_at(
-                SliderControl("control_vertical_slider", Rect(0, 0, track_w, track_h),
-                    LayoutAxis.VERTICAL, self.SLIDER_MINIMUM, self.SLIDER_MAXIMUM, self.SLIDER_DEFAULT_VALUE),
-                track_w + gap_x, y,
+            slider = SliderControl(
+                "control_vertical_slider",
+                Rect(0, 0, track_w, track_h),
+                LayoutAxis.VERTICAL,
+                self.SLIDER_MINIMUM,
+                self.SLIDER_MAXIMUM,
+                self.SLIDER_DEFAULT_VALUE,
             )
+            layout = GridLayout(
+                row_tracks=[track_h],
+                col_tracks=[track_w, track_w],
+                gap=gap_x,
+                padding=0,
+            )
+            layout.place(scrollbar, GridPlacement(row=0, col=0))
+            layout.place(slider, GridPlacement(row=0, col=1))
+            layout.apply(Rect(0, y, (track_w * 2) + gap_x, track_h))
+            panel.add_at(scrollbar, scrollbar.rect.left, scrollbar.rect.top)
+            panel.add_at(slider, slider.rect.left, slider.rect.top)
             return panel
 
         def make_text_area_with_input(w: int, h: int):
             panel = PanelControl("control_text_area_cell", Rect(0, 0, w, h), draw_background=False)
             ta_h, ti_h, gap = 96, 32, 8
-            panel.add_at(TextAreaControl("control_text_area", Rect(0, 0, w, ta_h),
-                value="Release Notes\nWrap keeps spaces with the text they separate.\nEdit this sample to check caret placement."), 0, 0)
-            panel.add_at(LabelControl("label_control_text_input_inline", Rect(0, 0, w, label_h),
-                "Text Input", align="left"), 0, ta_h + gap)
-            panel.add_at(TextInputControl("control_text_input", Rect(0, 0, w, ti_h),
-                placeholder="Type here"), 0, ta_h + gap + label_h + label_gap)
+            text_area = TextAreaControl(
+                "control_text_area",
+                Rect(0, 0, w, ta_h),
+                value="Release Notes\nWrap keeps spaces with the text they separate.\nEdit this sample to check caret placement.",
+            )
+            text_label = LabelControl(
+                "label_control_text_input_inline",
+                Rect(0, 0, w, label_h),
+                "Text Input",
+                align="left",
+            )
+            text_input = TextInputControl(
+                "control_text_input",
+                Rect(0, 0, w, ti_h),
+                placeholder="Type here",
+            )
+            layout = GridLayout(
+                row_tracks=[ta_h, gap, label_h, label_gap, ti_h],
+                col_tracks=["1fr"],
+                gap=0,
+                padding=0,
+            )
+            layout.place(text_area, GridPlacement(row=0, col=0))
+            layout.place(text_label, GridPlacement(row=2, col=0))
+            layout.place(text_input, GridPlacement(row=4, col=0))
+            layout.apply(Rect(0, 0, max(1, w), ta_h + gap + label_h + label_gap + ti_h))
+            panel.add_at(text_area, text_area.rect.left, text_area.rect.top)
+            panel.add_at(text_label, text_label.rect.left, text_label.rect.top)
+            panel.add_at(text_input, text_input.rect.left, text_input.rect.top)
             return panel
 
         def make_tab_control(w: int, h: int):
@@ -626,8 +681,17 @@ class ShowcaseFeature(Feature):
                 ),
                 align="left",
             )
-            panel.add_at(canvas, 0, 0)
-            panel.add_at(info, 0, 78)
+            layout = GridLayout(
+                row_tracks=[72, 6, 34],
+                col_tracks=["1fr"],
+                gap=0,
+                padding=0,
+            )
+            layout.place(canvas, GridPlacement(row=0, col=0))
+            layout.place(info, GridPlacement(row=2, col=0))
+            layout.apply(Rect(0, 0, max(1, col_w), 112))
+            panel.add_at(canvas, canvas.rect.left, canvas.rect.top)
+            panel.add_at(info, info.rect.left, info.rect.top)
             return panel
 
         return [
