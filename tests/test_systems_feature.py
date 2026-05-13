@@ -33,6 +33,7 @@ class TestSystemsFeature(unittest.TestCase):
                 "state",
                 "infrastructure",
                 "scheduling",
+                "motion",
                 "persistence",
                 "graphics",
             ],
@@ -121,6 +122,58 @@ class TestSystemsFeature(unittest.TestCase):
         right_arrow = next(child for child in nav_cluster.children if child.control_id == "systems_graphics_nav_right")
         right_arrow._invoke_click()
         self.assertGreaterEqual(feature._graphics_tile_camera.x, start_x)
+
+    def test_scheduling_rate_limiter_simulation_updates_status(self):
+        feature = self._make_feature()
+        feature.build_scheduling_panel(Rect(0, 0, 640, 360))
+
+        feature._simulate_rate_limited_input()
+        self.assertIn("Burst queued", feature._rate_limiter_status)
+        self.assertTrue(feature._debouncer.is_pending)
+        self.assertTrue(feature._throttler.is_locked)
+
+        feature._timers.update(0.13)
+        self.assertGreaterEqual(feature._throttle_event_count, 1)
+        self.assertIn("Throttler sampled value", feature._rate_limiter_status)
+
+        feature._timers.update(0.25)
+        self.assertGreaterEqual(feature._debounce_commit_count, 1)
+        self.assertIn("Debouncer committed", feature._rate_limiter_status)
+        self.assertIsNotNone(feature.scheduling_rate_limiter_label)
+        self.assertIn("debounced_commits=", feature.scheduling_rate_limiter_label.text)
+
+    def test_motion_panel_initializes_animation_state_machine_lazily(self):
+        feature = self._make_feature()
+
+        self.assertIsNone(feature._motion_animation_state_machine.current_state)
+        panel = feature.build_motion_panel(Rect(0, 0, 640, 360))
+
+        self.assertEqual("idle", feature._motion_animation_state_machine.current_state)
+        panel_child_ids = {child.control_id for child in panel.children}
+        self.assertIn("systems_motion_transition", panel_child_ids)
+        self.assertIn("systems_motion_asm", panel_child_ids)
+
+    def test_motion_transition_toggle_updates_phase_and_value(self):
+        feature = self._make_feature()
+        feature.build_motion_panel(Rect(0, 0, 640, 360))
+
+        feature._toggle_motion_transition()
+        self.assertEqual("Show", feature._motion_transition_phase)
+        feature._motion_tweens.update(0.3)
+        self.assertGreater(feature._motion_transition_value, 0.0)
+
+        feature._toggle_motion_transition()
+        self.assertEqual("Hide", feature._motion_transition_phase)
+
+    def test_motion_animation_state_cycle_changes_state(self):
+        feature = self._make_feature()
+        feature.build_motion_panel(Rect(0, 0, 640, 360))
+
+        self.assertEqual("idle", feature._motion_animation_state)
+        feature._cycle_motion_animation_state()
+        self.assertEqual("hover", feature._motion_animation_state)
+        feature._cycle_motion_animation_state()
+        self.assertEqual("press", feature._motion_animation_state)
 
 
 if __name__ == "__main__":
