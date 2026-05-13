@@ -1163,7 +1163,7 @@ def add_task_panel_button(
     style: str = "angle",
     assign_tab_index: bool = True,
 ):
-    """Create and add a standard task-panel button positioned by linear slot index."""
+    """Create and add a standard task-panel button positioned by slot index."""
     return _add_task_panel_button(
         task_panel,
         app_layout,

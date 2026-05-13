@@ -920,6 +920,61 @@ class SystemsFeature(Feature):
         panel.add_at(label, label.rect.left, label.rect.top)
         panel.add_at(field, field.rect.left, field.rect.top)
 
+    def _place_graphics_particle_layer(
+        self,
+        panel: PanelControl,
+        *,
+        left: int,
+        top: int,
+        width: int,
+        height: int,
+    ) -> None:
+        self._particle_layer.rect = Rect(0, 0, int(width), int(height))
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(int(left), int(top), max(1, int(width)), max(1, int(height))),
+            [(self._particle_layer, int(height), 0)],
+        )
+
+    def _sync_graphics_emitter_offsets(
+        self,
+        *,
+        panel_rect: Rect,
+        left_col_x: int,
+        left_col_width: int,
+        labels_top: int,
+    ) -> None:
+        # Emitters align to the horizontal midpoint of the Burst/Reset row and
+        # sit just above the stacked status labels.
+        burst_dx = left_col_x + left_col_width / 2
+        emitter_padding = 12
+        burst_dy = labels_top - emitter_padding
+        self._burst_emitter_panel_offset = (burst_dx, burst_dy)
+        self._ambient_emitter_panel_offset = (burst_dx, burst_dy)
+        self._particle_burst_emitter.x = panel_rect.left + burst_dx
+        self._particle_burst_emitter.y = panel_rect.top + burst_dy
+        self._particle_ambient_emitter.x = panel_rect.left + burst_dx
+        self._particle_ambient_emitter.y = panel_rect.top + burst_dy
+
+    def _place_text_preview_region(
+        self,
+        panel: PanelControl,
+        *,
+        top: int,
+        width: int,
+        height: int,
+    ) -> None:
+        self.text_preview_canvas = CanvasControl(
+            "systems_text_preview",
+            Rect(0, 0, max(240, int(width)), max(1, int(height))),
+            max_events=24,
+        )
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(self.PANEL_PADDING_X, int(top), max(1, int(width)), max(1, int(height))),
+            [(self.text_preview_canvas, int(height), 0)],
+        )
+
     def _inset_left_side_children(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
         shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
         if shift_x <= 0:
@@ -1122,9 +1177,16 @@ class SystemsFeature(Feature):
             "Select a backlog item to inspect its cached deployment note.",
             align="left",
         )
-        panel.add_at(self.data_summary_label, right_x, 52)
-        panel.add_at(self.data_cache_label, right_x, 88)
-        panel.add_at(self.data_detail_label, right_x, 132)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(right_x, 52, max(1, right_w), 164),
+            [
+                self.data_summary_label,
+                self.data_cache_label,
+                self.data_detail_label,
+            ],
+            gap=8,
+        )
 
         self._backlog_unsub = self.data_list.bind_collection_view(
             self._backlog_view,
@@ -1960,31 +2022,30 @@ class SystemsFeature(Feature):
         )
 
         preview_width = min(520, left_col_width)
-        self._particle_layer.rect = Rect(0, 0, preview_width, 180)
+        particle_layer_height = 180
         self._graphics_compositor.resize((preview_width, 180))
         self._graphics_camera.viewport_rect = Rect(0, 0, preview_width, 180)
         self._graphics_tile_camera.size = (tile_preview_width, tile_preview_h)
 
         # Left column particle stack.
         particle_layer_top = buttons_top + 32 + self.BUTTON_ROW_SPACING
-        panel.add_at(self._particle_layer, left_col_x, particle_layer_top)
+        self._place_graphics_particle_layer(
+            panel,
+            left=left_col_x,
+            top=particle_layer_top,
+            width=preview_width,
+            height=particle_layer_height,
+        )
         # Store panel-local offsets for the emitters so they can be re-synced
         # to screen space each frame (emitters are plain dataclasses and won't
         # move automatically when the window is dragged).
-        # Emitters align to the horizontal midpoint of the Burst/Reset button row.
-        _burst_dx = left_col_x + left_col_width / 2
-        labels_top = particle_layer_top + 180 + 12
-        emitter_padding = 12
-        _burst_dy = labels_top - emitter_padding
-        _ambient_dy = _burst_dy
-        self._burst_emitter_panel_offset = (_burst_dx, _burst_dy)
-        _ambient_dx = _burst_dx
-        self._ambient_emitter_panel_offset = (_ambient_dx, _ambient_dy)
-        # Set initial positions (panel.rect matches rect at build time).
-        self._particle_burst_emitter.x = rect.left + _burst_dx
-        self._particle_burst_emitter.y = rect.top + _burst_dy
-        self._particle_ambient_emitter.x = rect.left + _ambient_dx
-        self._particle_ambient_emitter.y = rect.top + _ambient_dy
+        labels_top = particle_layer_top + particle_layer_height + 12
+        self._sync_graphics_emitter_offsets(
+            panel_rect=Rect(rect),
+            left_col_x=left_col_x,
+            left_col_width=left_col_width,
+            labels_top=labels_top,
+        )
         self.graphics_particle_label = LabelControl(
             "systems_graphics_particle_status",
             Rect(0, 0, left_col_width, 28),
@@ -2041,13 +2102,26 @@ class SystemsFeature(Feature):
             align="left",
         )
 
-        panel.add_at(self.graphics_particle_label, left_col_x, labels_top)
-        panel.add_at(self.graphics_layer_label, left_col_x, labels_top + 36)
-        panel.add_at(self.graphics_scene_graph_label, left_col_x, labels_top + 72)
-        panel.add_at(self.graphics_compositor_label, left_col_x, labels_top + 108)
-        panel.add_at(self.graphics_surface_effects_label, left_col_x, labels_top + 144)
-        panel.add_at(self._surface_effect_label, left_col_x, labels_top + 180)
-        panel.add_at(self._surface_effect_preview, left_col_x, labels_top + 220)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(left_col_x, labels_top, max(1, left_col_width), 172),
+            [
+                self.graphics_particle_label,
+                self.graphics_layer_label,
+                self.graphics_scene_graph_label,
+                self.graphics_compositor_label,
+                self.graphics_surface_effects_label,
+            ],
+            gap=8,
+        )
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(left_col_x, labels_top + 180, max(1, left_col_width), 144),
+            [
+                (self._surface_effect_label, 32, 8),
+                (self._surface_effect_preview, 104, 0),
+            ],
+        )
 
         # Right column starts at top; move controls below labels to avoid overlap.
         right_label_top = top_padding
@@ -2067,51 +2141,62 @@ class SystemsFeature(Feature):
             "Tile Navigation",
             align="left",
         )
-        panel.add_at(tile_preview_label, tile_preview_x, right_label_top)
-        panel.add_at(nav_cluster_label, nav_cluster_x, right_label_top)
-        panel.add_at(self.graphics_tile_preview_canvas, tile_preview_x, tile_preview_top)
-        panel.add_at(nav_cluster, nav_cluster_x, nav_cluster_y)
-        panel.add_at(self.graphics_tile_map_label, tile_preview_x, tile_preview_top + tile_preview_h + 12)
-        nav_cluster.add_at(
-            ArrowBoxControl(
-                "systems_graphics_nav_left",
-                Rect(0, 0, 44, 44),
-                180,
-                on_activate=lambda: self._pan_tile_camera(-24, 0),
-            ),
-            2,
-            2,
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(tile_preview_x, right_label_top, max(1, tile_preview_width), tile_preview_h + 62),
+            [
+                (tile_preview_label, 22, 4),
+                (self.graphics_tile_preview_canvas, tile_preview_h, 12),
+                (self.graphics_tile_map_label, 28, 0),
+            ],
         )
-        nav_cluster.add_at(
-            ArrowBoxControl(
-                "systems_graphics_nav_up",
-                Rect(0, 0, 44, 44),
-                90,
-                on_activate=lambda: self._pan_tile_camera(0, -24),
-            ),
-            50,
-            2,
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(nav_cluster_x, right_label_top, max(1, nav_cluster.rect.width), nav_cluster.rect.height + 26),
+            [
+                (nav_cluster_label, 22, 4),
+                (nav_cluster, nav_cluster.rect.height, 0),
+            ],
         )
-        nav_cluster.add_at(
-            ArrowBoxControl(
-                "systems_graphics_nav_down",
-                Rect(0, 0, 44, 44),
-                270,
-                on_activate=lambda: self._pan_tile_camera(0, 24),
-            ),
-            2,
-            50,
+        nav_left = ArrowBoxControl(
+            "systems_graphics_nav_left",
+            Rect(0, 0, 44, 44),
+            180,
+            on_activate=lambda: self._pan_tile_camera(-24, 0),
         )
-        nav_cluster.add_at(
-            ArrowBoxControl(
-                "systems_graphics_nav_right",
-                Rect(0, 0, 44, 44),
-                0,
-                on_activate=lambda: self._pan_tile_camera(24, 0),
-            ),
-            50,
-            50,
+        nav_up = ArrowBoxControl(
+            "systems_graphics_nav_up",
+            Rect(0, 0, 44, 44),
+            90,
+            on_activate=lambda: self._pan_tile_camera(0, -24),
         )
+        nav_down = ArrowBoxControl(
+            "systems_graphics_nav_down",
+            Rect(0, 0, 44, 44),
+            270,
+            on_activate=lambda: self._pan_tile_camera(0, 24),
+        )
+        nav_right = ArrowBoxControl(
+            "systems_graphics_nav_right",
+            Rect(0, 0, 44, 44),
+            0,
+            on_activate=lambda: self._pan_tile_camera(24, 0),
+        )
+        nav_grid = GridLayout(
+            row_tracks=[44, 44],
+            col_tracks=[44, 44],
+            gap=4,
+            padding=0,
+        )
+        nav_grid.place(nav_left, GridPlacement(row=0, col=0))
+        nav_grid.place(nav_up, GridPlacement(row=0, col=1))
+        nav_grid.place(nav_down, GridPlacement(row=1, col=0))
+        nav_grid.place(nav_right, GridPlacement(row=1, col=1))
+        nav_grid.apply(Rect(2, 2, 92, 92))
+        nav_cluster.add_at(nav_left, nav_left.rect.left, nav_left.rect.top)
+        nav_cluster.add_at(nav_up, nav_up.rect.left, nav_up.rect.top)
+        nav_cluster.add_at(nav_down, nav_down.rect.left, nav_down.rect.top)
+        nav_cluster.add_at(nav_right, nav_right.rect.left, nav_right.rect.top)
 
         self._render_tile_map_preview()
         self._refresh_surface_effect_preview()
@@ -2261,11 +2346,7 @@ class SystemsFeature(Feature):
         )
         preview_top = labels_top + 80
         preview_height = max(120, rect.height - preview_top - 12)
-        self.text_preview_canvas = CanvasControl(
-            "systems_text_preview",
-            Rect(0, 0, max(240, rect.width - self.PANEL_PADDING_X * 2), preview_height),
-            max_events=24,
-        )
+        preview_width = rect.width - self.PANEL_PADDING_X * 2
         self._place_vertical_label_stack(
             panel,
             Rect(0, labels_top + 8, max(1, rect.width), 64),
@@ -2275,7 +2356,12 @@ class SystemsFeature(Feature):
             ],
             gap=8,
         )
-        panel.add_at(self.text_preview_canvas, self.PANEL_PADDING_X, preview_top)
+        self._place_text_preview_region(
+            panel,
+            top=preview_top,
+            width=preview_width,
+            height=preview_height,
+        )
         self._refresh_text_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)

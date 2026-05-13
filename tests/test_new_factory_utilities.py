@@ -454,7 +454,7 @@ class TestSceneTaskPanelHelpers(unittest.TestCase):
         button = MagicMock()
         task_panel.add.return_value = button
         app_layout = MagicMock()
-        app_layout.linear.return_value = Rect(10, 108, 120, 24)
+        app_layout.slot_rect.return_value = Rect(10, 108, 120, 24)
         host = MagicMock()
         host.go_to_main = MagicMock()
         spec = TaskPanelSceneNavButtonSpec(
@@ -482,7 +482,7 @@ class TestSceneTaskPanelHelpers(unittest.TestCase):
         button = MagicMock()
         task_panel.add.return_value = button
         app_layout = MagicMock()
-        app_layout.linear.return_value = Rect(0, 0, 110, 30)
+        app_layout.slot_rect.return_value = Rect(0, 0, 110, 30)
         host = MagicMock()
         host.go_to_main = None
         host.scene_transitions = MagicMock()
