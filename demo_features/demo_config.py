@@ -31,7 +31,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         scene_bundle_entries=(
             SceneBundleBindingSpec(
                 scene_name="main",
-                pretty_name="Desktop Demo",
+                pretty_name="Desktop",
                 transition_style=SceneTransitionStyle.SLIDE_RIGHT,
                 transition_duration=0.5,
                 pristine_asset="demo_features/data/images/backdrop.jpg",

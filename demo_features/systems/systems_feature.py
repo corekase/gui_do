@@ -1161,7 +1161,7 @@ class SystemsFeature(Feature):
         height = max(420, int(host.screen_rect.height * 0.8))
         return AnchoredWindowSpec(
             control_id="systems_window",
-            title="Systems Demo",
+            title="Systems",
             size=(width, height),
             anchor="center",
             margin=(0, 0),

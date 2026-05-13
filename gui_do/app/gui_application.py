@@ -1,4 +1,5 @@
 import pygame
+from collections import deque
 from pathlib import Path
 from dataclasses import replace
 import os
@@ -46,6 +47,10 @@ class GuiApplication:
     _SCHEDULER_DISPATCH_BUDGET_FRACTION = 0.10
     _SCHEDULER_DISPATCH_BUDGET_MIN_MS = 0.35
     _SCHEDULER_DISPATCH_BUDGET_MAX_MS = 2.5
+    _DEFERRED_PREWARM_BUDGET_FRACTION = 0.02
+    _DEFERRED_PREWARM_BUDGET_MIN_MS = 0.10
+    _DEFERRED_PREWARM_BUDGET_MAX_MS = 0.35
+    _DEFERRED_PREWARM_MAX_STEPS_PER_FRAME = 1
 
     def __init__(self, surface: pygame.Surface, font_roles=None) -> None:
         self.surface = surface
@@ -111,10 +116,160 @@ class GuiApplication:
         self.configure_first_frame_profiling(enabled=os.getenv("GUI_DO_PROFILE_FIRST_OPEN", "").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_scene_scheduler_activity(self._active_scene_name)
         self._dialogs: Optional[DialogManager] = None
+        self._scene_deferred_prewarm_jobs: dict[str, deque[tuple[str, Callable[[pygame.Surface, "ColorTheme"], None]]]] = {}
+        self._scene_deferred_prewarm_job_keys: dict[str, set[str]] = {}
         # Wire the invalidation tracker into the initial active scene so that
         # per-control invalidate() calls register dirty rects immediately.
         self.invalidation.set_screen_size(self.surface.get_size())
         self.scene.set_invalidation_tracker(self.invalidation)
+
+    def _ensure_deferred_prewarm_state(self) -> None:
+        if not hasattr(self, "_scene_deferred_prewarm_jobs"):
+            self._scene_deferred_prewarm_jobs = {}
+        if not hasattr(self, "_scene_deferred_prewarm_job_keys"):
+            self._scene_deferred_prewarm_job_keys = {}
+
+    def _enqueue_scene_deferred_prewarm_job(
+        self,
+        scene_name: str,
+        key: str,
+        job: Callable[[pygame.Surface, "ColorTheme"], None],
+    ) -> bool:
+        self._ensure_deferred_prewarm_state()
+        scene_key = str(scene_name)
+        keys = self._scene_deferred_prewarm_job_keys.setdefault(scene_key, set())
+        if key in keys:
+            return False
+        queue = self._scene_deferred_prewarm_jobs.setdefault(scene_key, deque())
+        queue.append((str(key), job))
+        keys.add(str(key))
+        return True
+
+    def _run_deferred_scene_prewarm_jobs(
+        self,
+        scene_name: str,
+        surface: pygame.Surface,
+        theme: "ColorTheme",
+        *,
+        budget_ms: Optional[float] = None,
+        max_steps: Optional[int] = None,
+    ) -> int:
+        self._ensure_deferred_prewarm_state()
+        scene_key = str(scene_name)
+        queue = self._scene_deferred_prewarm_jobs.get(scene_key)
+        if not queue:
+            return 0
+
+        steps = 0
+        start = perf_counter()
+        while queue:
+            if max_steps is not None and steps >= int(max_steps):
+                break
+            if budget_ms is not None and steps > 0:
+                elapsed_ms = (perf_counter() - start) * 1000.0
+                if elapsed_ms >= float(budget_ms):
+                    break
+            key, job = queue.popleft()
+            try:
+                job(surface, theme)
+            except Exception as exc:
+                report_nonfatal_error(
+                    "deferred scene prewarm job failed",
+                    kind="logical",
+                    subsystem="gui.application",
+                    operation="GuiApplication._run_deferred_scene_prewarm_jobs",
+                    cause=exc,
+                    details={"scene_name": scene_key, "job_key": key},
+                    source_skip_frames=1,
+                )
+            finally:
+                keys = self._scene_deferred_prewarm_job_keys.get(scene_key)
+                if keys is not None:
+                    keys.discard(key)
+            steps += 1
+
+        if not queue:
+            self._scene_deferred_prewarm_jobs.pop(scene_key, None)
+            self._scene_deferred_prewarm_job_keys.pop(scene_key, None)
+        return steps
+
+    def _draw_window_content_only(self, window, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        children = list(getattr(window, "children", ()) or ())
+        if not children:
+            draw = getattr(window, "draw", None)
+            if callable(draw):
+                draw(surface, theme)
+            return
+
+        previous_clip = surface.get_clip()
+        content_rect_fn = getattr(window, "content_rect", None)
+        if callable(content_rect_fn):
+            clip_rect = previous_clip.clip(content_rect_fn())
+            surface.set_clip(clip_rect)
+        try:
+            for child in children:
+                if not bool(getattr(child, "visible", False)):
+                    continue
+                draw = getattr(child, "draw", None)
+                if callable(draw):
+                    draw(surface, theme)
+        finally:
+            surface.set_clip(previous_clip)
+
+    def _schedule_hidden_window_child_prewarm(self, scene_name: str, window) -> int:
+        find_descendants_of_type = getattr(window, "find_descendants_of_type", None)
+        if not callable(find_descendants_of_type):
+            return 0
+
+        try:
+            from ..controls.data.tab_control import TabControl
+        except Exception:
+            return 0
+
+        tab_controls = list(find_descendants_of_type(TabControl))
+        if not tab_controls:
+            return 0
+
+        scheduled = 0
+        for tab_control in tab_controls:
+            items_fn = getattr(tab_control, "items", None)
+            select_fn = getattr(tab_control, "select", None)
+            if not callable(items_fn) or not callable(select_fn):
+                continue
+
+            original_key = getattr(tab_control, "selected_key", None)
+            enabled_keys = [
+                str(item.key)
+                for item in items_fn()
+                if bool(getattr(item, "enabled", False))
+            ]
+            warm_keys = [key for key in enabled_keys if key != original_key]
+            if not warm_keys:
+                continue
+
+            window_id = id(window)
+            tab_id = id(tab_control)
+            for key in warm_keys:
+                job_key = f"window:{window_id}:tab:{tab_id}:select:{key}"
+
+                def _warm_tab(surface, theme, tab=tab_control, target_key=key, host_window=window):
+                    tab.select(target_key)
+                    self._draw_window_content_only(host_window, surface, theme)
+
+                if self._enqueue_scene_deferred_prewarm_job(scene_name, job_key, _warm_tab):
+                    scheduled += 1
+
+            if original_key is not None:
+                restore_key = str(original_key)
+                restore_job_key = f"window:{window_id}:tab:{tab_id}:restore:{restore_key}"
+
+                def _restore_tab(_surface, _theme, tab=tab_control, key=restore_key):
+                    tab.select(key)
+
+                if self._enqueue_scene_deferred_prewarm_job(scene_name, restore_job_key, _restore_tab):
+                    scheduled += 1
+
+        return scheduled
 
     def _on_focus_changed(self, _previous, current) -> None:
         focused_id = current.control_id if current is not None else None
@@ -435,12 +590,33 @@ class GuiApplication:
             if self._screen_lifecycle_active and self._screen_postamble is not None:
                 self._screen_postamble()
             self.features.update_features()
+            runtime = self._scenes[self._active_scene_name]
+            if self._scene_deferred_prewarm_jobs.get(self._active_scene_name):
+                warm_surface = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
+                self._run_deferred_scene_prewarm_jobs(
+                    self._active_scene_name,
+                    warm_surface,
+                    runtime.theme,
+                    budget_ms=self._compute_deferred_prewarm_budget_ms(dt_seconds),
+                    max_steps=self._DEFERRED_PREWARM_MAX_STEPS_PER_FRAME,
+                )
 
     def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
         dt_ms = (dt_seconds if dt_seconds > 0.0 else 0.0) * 1000.0
         target_ms = dt_ms * self._SCHEDULER_DISPATCH_BUDGET_FRACTION
         min_ms = self._SCHEDULER_DISPATCH_BUDGET_MIN_MS
         max_ms = self._SCHEDULER_DISPATCH_BUDGET_MAX_MS
+        if target_ms < min_ms:
+            return min_ms
+        if target_ms > max_ms:
+            return max_ms
+        return target_ms
+
+    def _compute_deferred_prewarm_budget_ms(self, dt_seconds: float) -> float:
+        dt_ms = (dt_seconds if dt_seconds > 0.0 else 0.0) * 1000.0
+        target_ms = dt_ms * self._DEFERRED_PREWARM_BUDGET_FRACTION
+        min_ms = self._DEFERRED_PREWARM_BUDGET_MIN_MS
+        max_ms = self._DEFERRED_PREWARM_BUDGET_MAX_MS
         if target_ms < min_ms:
             return min_ms
         if target_ms > max_ms:
@@ -981,15 +1157,23 @@ class GuiApplication:
         # initialized in update()/draw() rather than feature prewarm hooks.
         runtime.scene.update(0.0)
         runtime.scene.draw(warm_surface, runtime.theme)
-        self._prewarm_hidden_windows(runtime.scene, warm_surface, runtime.theme)
+        self._prewarm_hidden_windows(runtime.scene, warm_surface, runtime.theme, scene_name=target_scene)
         return warmed
 
-    def _prewarm_hidden_windows(self, scene: "Scene", surface: pygame.Surface, theme: "ColorTheme") -> int:
+    def _prewarm_hidden_windows(
+        self,
+        scene: "Scene",
+        surface: pygame.Surface,
+        theme: "ColorTheme",
+        *,
+        scene_name: Optional[str] = None,
+    ) -> int:
         """Draw hidden windows once so first user show does not hitch on lazy visuals."""
         query_windows = getattr(scene, "_window_query_nodes", None)
         if not callable(query_windows):
             return 0
 
+        target_scene = self._active_scene_name if scene_name is None else str(scene_name)
         windows, _task_panels = query_windows()
         warmed = 0
         for window in windows:
@@ -999,6 +1183,7 @@ class GuiApplication:
             if not callable(draw):
                 continue
             draw(surface, theme)
+            self._schedule_hidden_window_child_prewarm(target_scene, window)
             warmed += 1
         return warmed
 
