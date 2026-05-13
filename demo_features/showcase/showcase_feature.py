@@ -569,7 +569,15 @@ class ShowcaseFeature(Feature):
                 ],
                 selected_key="one",
             )
-            panel.add_at(tab, 0, 0)
+            layout = GridLayout(
+                row_tracks=[max(1, h)],
+                col_tracks=["1fr"],
+                gap=0,
+                padding=0,
+            )
+            layout.place(tab, GridPlacement(row=0, col=0))
+            layout.apply(Rect(0, 0, max(1, w), max(1, h)))
+            panel.add_at(tab, tab.rect.left, tab.rect.top)
             return panel
 
         def make_data_grid(w: int, h: int):
@@ -584,7 +592,15 @@ class ShowcaseFeature(Feature):
                 ],
                 row_height=24,
             )
-            panel.add_at(dg, 0, 0)
+            layout = GridLayout(
+                row_tracks=[max(1, h)],
+                col_tracks=["1fr"],
+                gap=0,
+                padding=0,
+            )
+            layout.place(dg, GridPlacement(row=0, col=0))
+            layout.apply(Rect(0, 0, max(1, w), max(1, h)))
+            panel.add_at(dg, dg.rect.left, dg.rect.top)
             return panel
 
         kw = dict(stack=stack, label_height=label_h, label_gap=label_gap, overflow_gap=row_gap)
@@ -772,23 +788,45 @@ class ShowcaseFeature(Feature):
         self._showcase_anim_ctrl = anim_ctrl
 
         def _add_labeled(panel: PanelControl, y: int, *, key: str, label: str, control, control_h: int) -> int:
-            panel.add_at(
-                LabelControl(f"label_{key}_inline", Rect(0, 0, col_w, label_h), label, align="left"),
-                0,
-                y,
+            label_control = LabelControl(
+                f"label_{key}_inline",
+                Rect(0, 0, col_w, label_h),
+                label,
+                align="left",
             )
-            y += label_h + label_gap
-            panel.add_at(control, 0, y)
-            return y + int(control_h) + row_gap
+            content_h = max(1, int(control_h))
+            layout = GridLayout(
+                row_tracks=[label_h, label_gap, content_h],
+                col_tracks=[max(1, int(col_w))],
+                gap=0,
+                padding=0,
+            )
+            layout.place(label_control, GridPlacement(row=0, col=0))
+            layout.place(control, GridPlacement(row=2, col=0))
+            layout.apply(Rect(0, int(y), max(1, int(col_w)), label_h + label_gap + content_h))
+            panel.add_at(label_control, label_control.rect.left, label_control.rect.top)
+            panel.add_at(control, control.rect.left, control.rect.top)
+            return int(y) + label_h + label_gap + content_h + row_gap
 
         def _make_overlay_panel() -> OverlayPanelControl:
             op = OverlayPanelControl("control_overlay_panel", Rect(0, 0, col_w, 90), draw_background=True)
-            for i, txt in enumerate(("Overlay Item A", "Overlay Item B", "Overlay Item C")):
-                op.add_at(
-                    LabelControl(f"overlay_child_{i}", Rect(0, 0, col_w - 16, 22), txt, align="left"),
-                    rel_x=8,
-                    rel_y=6 + i * 26,
-                )
+            items = ["Overlay Item A", "Overlay Item B", "Overlay Item C"]
+            labels = [
+                LabelControl(f"overlay_child_{i}", Rect(0, 0, col_w - 16, 22), txt, align="left")
+                for i, txt in enumerate(items)
+            ]
+            layout = GridLayout(
+                row_tracks=[22, 4, 22, 4, 22],
+                col_tracks=[max(1, int(col_w - 16))],
+                gap=0,
+                padding=0,
+            )
+            layout.place(labels[0], GridPlacement(row=0, col=0))
+            layout.place(labels[1], GridPlacement(row=2, col=0))
+            layout.place(labels[2], GridPlacement(row=4, col=0))
+            layout.apply(Rect(8, 6, max(1, int(col_w - 16)), 74))
+            for label in labels:
+                op.add_at(label, rel_x=label.rect.left, rel_y=label.rect.top)
             return op
 
         def _make_dock() -> DockWorkspacePanel:
@@ -941,11 +979,24 @@ class ShowcaseFeature(Feature):
             label: str,
             control,
         ) -> None:
-            panel.add_at(
-                LabelControl(f"label_{key}_ext", Rect(0, 0, w, label_h), label, align="left"),
-                x, 0,
+            label_control = LabelControl(
+                f"label_{key}_ext",
+                Rect(0, 0, w, label_h),
+                label,
+                align="left",
             )
-            panel.add_at(control, x, label_h + label_gap)
+            content_h = max(1, int(control.rect.height))
+            layout = GridLayout(
+                row_tracks=[label_h, label_gap, content_h],
+                col_tracks=[max(1, int(w))],
+                gap=0,
+                padding=0,
+            )
+            layout.place(label_control, GridPlacement(row=0, col=0))
+            layout.place(control, GridPlacement(row=2, col=0))
+            layout.apply(Rect(int(x), 0, max(1, int(w)), label_h + label_gap + content_h))
+            panel.add_at(label_control, label_control.rect.left, label_control.rect.top)
+            panel.add_at(control, control.rect.left, control.rect.top)
 
         # Row 1: Toolbar | Split Button | Breadcrumb  (tallest = Toolbar 36px)
         row1_h = label_h + label_gap + 36

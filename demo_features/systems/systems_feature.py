@@ -846,6 +846,8 @@ class SystemsFeature(Feature):
         panel: PanelControl,
         bounds: Rect,
         items: list[tuple[object, int, int]],
+        *,
+        stretch_width: bool = True,
     ) -> None:
         """Place controls in one column with per-item spacer rows using GridLayout."""
         if not items:
@@ -863,7 +865,8 @@ class SystemsFeature(Feature):
 
         layout = GridLayout(row_tracks=row_tracks, col_tracks=["1fr"], gap=0, padding=0)
         for row_index, control, target_height in placements:
-            control.rect = Rect(0, 0, max(1, bounds.width), target_height)
+            target_width = max(1, bounds.width) if stretch_width else max(1, int(control.rect.width))
+            control.rect = Rect(0, 0, target_width, target_height)
             layout.place(control, GridPlacement(row=row_index, col=0))
         layout.apply(bounds)
         for _row_index, control, _target_height in placements:
@@ -1157,7 +1160,11 @@ class SystemsFeature(Feature):
             on_select=self._on_backlog_selected,
         )
         self.data_list.set_accessibility(role="listbox", label="Deployment backlog")
-        panel.add_at(self.data_list, 0, 44)
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(0, 44, max(1, left_w), max(1, self.data_list.rect.height)),
+            [(self.data_list, int(self.data_list.rect.height), 0)],
+        )
 
         self.data_summary_label = LabelControl(
             "systems_data_summary",
@@ -1218,22 +1225,6 @@ class SystemsFeature(Feature):
             selected_index=0,
             on_change=lambda value, _index: self._on_environment_changed(value),
         )
-        fields_bounds = Rect(0, 0, max(1, rect.width), 144)
-        self._place_vertical_grid_sequence(
-            panel,
-            fields_bounds,
-            [
-                (name_label, 28, 2),
-                (self.validation_name_input, 32, 20),
-                (env_label, 28, 2),
-                (self.validation_environment_dropdown, 32, 0),
-            ],
-        )
-        self.validation_name_input.rect.width = min(320, max(180, rect.width - 16))
-        self.validation_name_input.rect.left = panel.rect.left
-        self.validation_environment_dropdown.rect.width = 220
-        self.validation_environment_dropdown.rect.left = panel.rect.left
-
         run_checks = ButtonControl(
             "systems_validation_run_checks",
             Rect(0, 0, 148, 32),
@@ -1244,31 +1235,74 @@ class SystemsFeature(Feature):
         suggested = ButtonControl(
             "systems_validation_use_suggested",
             Rect(0, 0, 160, 32),
-            "Use Suggested Name",
+            "Use Suggested Names",
             self._apply_suggested_name,
             style="round",
         )
-        self._add_button_rows(panel, rect, 156, [run_checks, suggested])
+
+        grid_inset_x = self.PANEL_PADDING_X
+        grid_gap = 10
+        grid_width = max(1, int(rect.width) - (grid_inset_x * 2))
+        col_width = max(1, (grid_width - grid_gap) // 2)
+        row_tracks = [28, 32, 32]
+        grid_height = sum(row_tracks) + (grid_gap * (len(row_tracks) - 1))
+        grid_bounds = Rect(grid_inset_x, 0, grid_width, grid_height)
+
+        name_label.rect = Rect(0, 0, col_width, 28)
+        env_label.rect = Rect(0, 0, col_width, 28)
+        self.validation_name_input.rect = Rect(0, 0, max(180, min(320, col_width)), 32)
+        self.validation_environment_dropdown.rect = Rect(0, 0, max(160, min(220, col_width)), 32)
+        run_checks.rect = Rect(0, 0, min(148, col_width), 32)
+        suggested.rect = Rect(0, 0, min(160, col_width), 32)
+
+        layout = GridLayout(
+            row_tracks=row_tracks,
+            col_tracks=[col_width, col_width],
+            gap=grid_gap,
+            padding=0,
+        )
+        layout.place(name_label, GridPlacement(row=0, col=0))
+        layout.place(env_label, GridPlacement(row=0, col=1))
+        layout.place(self.validation_name_input, GridPlacement(row=1, col=0))
+        layout.place(self.validation_environment_dropdown, GridPlacement(row=1, col=1))
+        layout.place(run_checks, GridPlacement(row=2, col=0))
+        layout.place(suggested, GridPlacement(row=2, col=1))
+        layout.apply(grid_bounds)
+        for control in (
+            name_label,
+            env_label,
+            self.validation_name_input,
+            self.validation_environment_dropdown,
+            run_checks,
+            suggested,
+        ):
+            panel.add_at(control, control.rect.left, control.rect.top)
 
         self.validation_state_label = LabelControl(
             "systems_validation_state",
-            Rect(0, 0, rect.width, 28),
+            Rect(0, 0, grid_width, 28),
             "Form state pending.",
             align="left",
         )
         self.validation_local_label = LabelControl(
             "systems_validation_local",
-            Rect(0, 0, rect.width, 28),
+            Rect(0, 0, grid_width, 28),
             "Local checks pending.",
             align="left",
         )
         self.validation_async_label = LabelControl(
             "systems_validation_async",
-            Rect(0, 0, rect.width, 28),
+            Rect(0, 0, grid_width, 28),
             "Async availability check pending.",
             align="left",
         )
-        status_bounds = Rect(0, 216, max(1, rect.width), 100)
+        status_top = grid_bounds.bottom + 8
+        status_bounds = Rect(
+            grid_inset_x,
+            status_top,
+            grid_width,
+            max(1, int(rect.height) - status_top),
+        )
         self._place_vertical_label_stack(
             panel,
             status_bounds,
@@ -1280,8 +1314,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_validation_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         return panel
 
     def build_history_panel(self, rect: Rect) -> PanelControl:
@@ -1811,7 +1843,11 @@ class SystemsFeature(Feature):
             "SceneTimeline, TweenManager, and AnimationSequence demo motion workflows.",
             align="left",
         )
-        panel.add_at(self.motion_intro_label, 0, 0)
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(0, 0, max(1, rect.width), 28),
+            [(self.motion_intro_label, 28, 0)],
+        )
 
         motion_buttons_top = 44
         motion_labels_anchor_top = self._add_button_rows(
