@@ -8,13 +8,16 @@ from gui_do import *
 from pygame import Rect
 from gui_do.features.data_driven_runtime import (
     SceneMenuStripSpec,
+    TaskPanelSlotLayoutSpec,
     add_scene_menu_strip_from_spec,
     build_tab_builder_specs,
+    create_task_panel_slot_layout,
     create_tab_control_from_specs,
     setup_routed_runtime,
 )
 from gui_do.features.control_spec import ControlDefinition
 from gui_do.features.feature_lifecycle import ControlPlacementSpec
+from gui_do.features.layout_geometry import column_stack_from_anchor, split_columns
 from .showcase_inspectable import ShowcaseInspectable
 from .showcase_specs import _CONTROLS_RUNTIME_SPEC
 
@@ -249,7 +252,7 @@ class ShowcaseFeature(Feature):
     # ------------------------------------------------------------------
 
     def _col_width(self, bounds: Rect, num_cols: int) -> int:
-        cols = CellCaretLayout.split_columns(bounds, count=num_cols, gap=self.ROW_GAP, min_width=100)
+        cols = split_columns(bounds, count=num_cols, gap=self.ROW_GAP, min_width=100)
         return cols[0].width if cols else bounds.width
 
     def _default_rect(self, host) -> Rect:
@@ -300,9 +303,9 @@ class ShowcaseFeature(Feature):
                 auto_hide=True,
             ),
         )
-        task_panel_layout = create_task_panel_linear_layout(
+        task_panel_layout = create_task_panel_slot_layout(
             self.task_panel,
-            TaskPanelLinearLayoutSpec(
+            TaskPanelSlotLayoutSpec(
                 left=self.TASK_PANEL_BUTTON_LEFT,
                 top_offset=self.TASK_PANEL_BUTTON_TOP_OFFSET,
                 item_width=self.TASK_PANEL_BUTTON_WIDTH,
@@ -349,7 +352,7 @@ class ShowcaseFeature(Feature):
         row_gap = int(self.ROW_GAP)
         inner_gap = int(self.BASICS_INNER_GAP)
 
-        stack, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+        stack, _, _, _ = column_stack_from_anchor(
             anchor=bounds,
             content_bottom=bounds.bottom,
             preferred_width=bounds.width,
@@ -362,15 +365,15 @@ class ShowcaseFeature(Feature):
             panel = PanelControl("control_arrow_boxes_cell", Rect(0, 0, w, h), draw_background=False)
             area_w, area_h = min(60, w), min(60, h)
             area = Rect((w - area_w) // 2, (h - area_h) // 2, area_w, area_h)
-            cols = CellCaretLayout.split_columns(area, count=2, gap=inner_gap, min_width=10)
+            cols = split_columns(area, count=2, gap=inner_gap, min_width=10)
             box_h = max(10, (area_h - inner_gap) // 2)
-            left_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+            left_st, _, _, _ = column_stack_from_anchor(
                 anchor=cols[0], content_bottom=cols[0].bottom,
                 preferred_width=cols[0].width, item_gap_y=inner_gap,
             )
             up_r = Rect(left_st.add_slot_or_overflow(box_h, overflow_gap=0))
             left_r = Rect(left_st.add_slot_or_overflow(box_h, overflow_gap=0))
-            right_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+            right_st, _, _, _ = column_stack_from_anchor(
                 anchor=cols[1], content_bottom=cols[1].bottom,
                 preferred_width=cols[1].width, item_gap_y=inner_gap,
             )
@@ -385,7 +388,7 @@ class ShowcaseFeature(Feature):
         def make_vertical_buttons(w: int, h: int):
             panel = PanelControl("control_button_cell", Rect(0, 0, w, h), draw_background=False)
             btn_w = min(100, w)
-            col_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+            col_st, _, _, _ = column_stack_from_anchor(
                 anchor=Rect(0, 0, btn_w, h), content_bottom=h,
                 preferred_width=btn_w, item_gap_y=inner_gap,
             )
@@ -403,7 +406,7 @@ class ShowcaseFeature(Feature):
             def _factory(w: int, h: int) -> PanelControl:
                 panel = PanelControl(group_id, Rect(0, 0, w, h), draw_background=False)
                 btn_w = min(100, w)
-                col_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                col_st, _, _, _ = column_stack_from_anchor(
                     anchor=Rect(0, 0, btn_w, h), content_bottom=h,
                     preferred_width=btn_w, item_gap_y=inner_gap,
                 )
@@ -422,7 +425,7 @@ class ShowcaseFeature(Feature):
             def _factory(w: int, h: int) -> PanelControl:
                 panel = PanelControl(group_id, Rect(0, 0, w, h), draw_background=False)
                 btn_w = min(100, w)
-                col_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+                col_st, _, _, _ = column_stack_from_anchor(
                     anchor=Rect(0, 0, btn_w, h), content_bottom=h,
                     preferred_width=btn_w, item_gap_y=inner_gap,
                 )
@@ -446,7 +449,7 @@ class ShowcaseFeature(Feature):
 
         def make_horiz_pair(w: int, h: int):
             panel = PanelControl("control_horizontal_pair_cell", Rect(0, 0, w, h), draw_background=False)
-            col_st, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+            col_st, _, _, _ = column_stack_from_anchor(
                 anchor=Rect(0, 0, w, h), content_bottom=h, preferred_width=w, item_gap_y=row_gap,
             )
             sb_r = Rect(col_st.add_slot_or_overflow(24, overflow_gap=0))
@@ -851,7 +854,7 @@ class ShowcaseFeature(Feature):
         row_gap = int(self.ROW_GAP)
 
         # Compute sub-column rects (relative to 0,0 of the panel)
-        sub_cols = CellCaretLayout.split_columns(
+        sub_cols = split_columns(
             Rect(0, 0, col_w, 100), count=3, gap=row_gap, min_width=80
         )
         sc0_x, sc0_w = int(sub_cols[0].left), int(sub_cols[0].width)

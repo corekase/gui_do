@@ -75,7 +75,7 @@ def add_window_toggle_task_panel_controls(
         toggle = task_panel.add(
             ToggleControl(
                 binding.task_panel_toggle_button_id or f"show_{binding.key}",
-                app_layout.linear(slot_index),
+                app_layout.slot_rect(slot_index),
                 binding.task_panel_label or binding.key.title(),
                 binding.task_panel_label or binding.key.title(),
                 pushed=False,

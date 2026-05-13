@@ -16,7 +16,7 @@ from gui_do.features.data_driven_runtime import (
     SceneMenuStripSpec,
     RightAnchoredTaskPanelButtonSpec,
     SceneTaskPanelSpec,
-    TaskPanelLinearLayoutSpec,
+    TaskPanelSlotLayoutSpec,
     TaskPanelSceneNavButtonSpec,
     TaskPanelWindowToggleGroupSpec,
     add_right_anchored_task_panel_button,
@@ -24,7 +24,7 @@ from gui_do.features.data_driven_runtime import (
     TooltipBindingSpec,
     add_scene_task_panel_items,
     add_scene_menu_strip_from_spec,
-    create_task_panel_linear_layout,
+    create_task_panel_slot_layout,
     create_auto_sized_styled_label,
     ensure_scene_task_panel,
     setup_routed_runtime,
@@ -100,9 +100,9 @@ class MainFeature(Feature):
                 auto_hide=True,
             ),
         )
-        task_panel_layout = create_task_panel_linear_layout(
+        task_panel_layout = create_task_panel_slot_layout(
             host.task_panel,
-            TaskPanelLinearLayoutSpec(
+            TaskPanelSlotLayoutSpec(
                 left=16,
                 top_offset=10,
                 item_width=124,
@@ -141,7 +141,7 @@ class MainFeature(Feature):
         )
         toggle_controls = task_panel_items.window_toggle_controls
 
-        slot0_rect = task_panel_layout.linear(0)
+        slot0_rect = task_panel_layout.slot_rect(0)
         host.help_button = add_right_anchored_task_panel_button(
             host,
             host.task_panel,

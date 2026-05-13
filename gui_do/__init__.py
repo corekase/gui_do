@@ -49,7 +49,7 @@ from .features.data_driven_runtime import (
     ActionHotkeySpec,
     ControlKeyBindingSpec,
     SceneTaskPanelSpec,
-    TaskPanelLinearLayoutSpec,
+    TaskPanelSlotLayoutSpec,
     TaskPanelWindowToggleGroupSpec,
     SceneCommandPaletteSpec,
     TaskPanelSceneNavButtonSpec,
@@ -215,17 +215,12 @@ from .telemetry.telemetry_analyzer import (
 # Layout engines, constraint systems, and spatial organization.
 
 from .layout.layout_axis import LayoutAxis
-from .layout.layout_manager import LayoutManager
-from .layout.window_tiling_manager import WindowTilingManager
 from .layout.constraint_layout import ConstraintLayout, AnchorConstraint
 from .layout.dock_workspace import DockPane, DockTabs, DockSplit, DockWorkspace
 from .layout.flex_layout import FlexLayout, FlexItem, FlexDirection, FlexAlign, FlexJustify
 from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
-from .layout.cell_caret_layout import CellCaretLayout, CellCaretState
 from .layout.layout_animator import LayoutAnimator
 from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
-from .layout.responsive_layout import ResponsiveLayout, Breakpoint
-from .layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer, SnapTarget
 from .layout.flow_layout import FlowLayout, FlowItem
 from .layout.viewport import Viewport
 
@@ -432,10 +427,7 @@ from .features.feature_lifecycle import (
     toggle_window_visibility,
     create_anchored_feature_window,
     add_window_scene_menu_strip,
-    inset_rect,
-    centered_horizontal_strip_layout,
     split_slot_bounds,
-    partition_rects,
     place_control,
     place_control_unlabeled,
     register_placed_control,
@@ -472,7 +464,7 @@ from .features.data_driven_runtime import (
     register_action_hotkeys,
     draw_controls_prewarm,
     ensure_scene_task_panel,
-    create_task_panel_linear_layout,
+    create_task_panel_slot_layout,
     add_task_panel_scene_nav_button,
     add_scene_task_panel_items,
     centered_overlay_rect,
@@ -600,7 +592,6 @@ from .layout.adaptive_constraint_layout import (
     ConstraintAttr,
     LayoutConstraint,
     ConstraintSet,
-    ConstraintLayoutEngine,
     AdaptivePolicy,
     resolve_adaptive_policy,
 )
@@ -688,7 +679,7 @@ __all__ = [
     "ActionHotkeySpec",
     "ControlKeyBindingSpec",
     "SceneTaskPanelSpec",
-    "TaskPanelLinearLayoutSpec",
+    "TaskPanelSlotLayoutSpec",
     "TaskPanelSceneNavButtonSpec",
     "EventSubscriptionSpec",
     "ShortcutOverlaySpec",
@@ -828,8 +819,6 @@ __all__ = [
     "render_telemetry_report",
     # Tier 8: LAYOUT
     "LayoutAxis",
-    "LayoutManager",
-    "WindowTilingManager",
     "ConstraintLayout",
     "AnchorConstraint",
     "DockPane",
@@ -844,19 +833,11 @@ __all__ = [
     "GridLayout",
     "GridTrack",
     "GridPlacement",
-    "CellCaretLayout",
-    "CellCaretState",
     "LayoutAnimator",
     "LayoutPass",
     "MeasureContext",
     "ArrangeContext",
     "LayoutRoot",
-    "ResponsiveLayout",
-    "Breakpoint",
-    "SnapGrid",
-    "AlignmentGuide",
-    "SnapComposer",
-    "SnapTarget",
     "FlowLayout",
     "FlowItem",
     "Viewport",
@@ -1056,10 +1037,7 @@ __all__ = [
     "toggle_window_visibility",
     "create_anchored_feature_window",
     "add_window_scene_menu_strip",
-    "inset_rect",
-    "centered_horizontal_strip_layout",
     "split_slot_bounds",
-    "partition_rects",
     "place_control",
     "place_control_unlabeled",
     "register_placed_control",
@@ -1097,7 +1075,7 @@ __all__ = [
     "register_action_hotkeys",
     "draw_controls_prewarm",
     "ensure_scene_task_panel",
-    "create_task_panel_linear_layout",
+    "create_task_panel_slot_layout",
     "add_task_panel_scene_nav_button",
     "add_scene_task_panel_items",
     "centered_overlay_rect",
@@ -1154,7 +1132,6 @@ __all__ = [
     "ConstraintAttr",
     "LayoutConstraint",
     "ConstraintSet",
-    "ConstraintLayoutEngine",
     "AdaptivePolicy",
     "resolve_adaptive_policy",
     # Tier 29: UNIFIED VIRTUALIZATION CORE

@@ -15,7 +15,7 @@ from ..controls.data.tab_control import TabControl, TabItem
 from ..controls.input.button_control import ButtonControl
 from ..controls.display.label_control import LabelControl
 from ..controls.input.toggle_control import ToggleControl
-from ..layout.layout_manager import LayoutManager
+from ..layout.flex_layout import FlexLayout
 from ..text.localization import LocaleRegistry
 from .feature_lifecycle import (
     FeatureWindowPresentationModel,
@@ -297,8 +297,8 @@ class SceneTaskPanelSpec:
 
 
 @dataclass(frozen=True)
-class TaskPanelLinearLayoutSpec:
-    """Declarative descriptor for linear task-panel item layout."""
+class TaskPanelSlotLayoutSpec:
+    """Declarative descriptor for task-panel slot layout."""
 
     left: int = 16
     top_offset: int = 10
@@ -1293,20 +1293,60 @@ def ensure_scene_task_panel(host, spec: SceneTaskPanelSpec):
     )
 
 
-def create_task_panel_linear_layout(task_panel, spec: TaskPanelLinearLayoutSpec):
-    """Create a LayoutManager configured for linear scene task-panel items."""
-    layout = LayoutManager()
-    layout.set_linear_properties(
-        anchor=(
-            int(spec.left),
-            int(task_panel.rect.top + int(spec.top_offset)),
-        ),
-        item_width=int(spec.item_width),
-        item_height=int(spec.item_height),
-        spacing=int(spec.spacing),
-        horizontal=bool(spec.horizontal),
-    )
-    return layout
+class _TaskPanelSlotNode:
+    def __init__(self, width: int, height: int) -> None:
+        self.rect = Rect(0, 0, int(width), int(height))
+
+
+class _FlexTaskPanelSlotLayout:
+    """Flex-backed adapter exposing slot rectangles for task-panel content."""
+
+    def __init__(self, task_panel, spec: TaskPanelSlotLayoutSpec) -> None:
+        self._task_panel = task_panel
+        self._left = int(spec.left)
+        self._top = int(spec.top_offset)
+        self._item_width = int(spec.item_width)
+        self._item_height = int(spec.item_height)
+        self._spacing = int(spec.spacing)
+        self._horizontal = bool(spec.horizontal)
+        self._slots: list[_TaskPanelSlotNode] = []
+
+    def _ensure_slot(self, index: int) -> None:
+        while len(self._slots) <= int(index):
+            self._slots.append(_TaskPanelSlotNode(self._item_width, self._item_height))
+
+        layout = FlexLayout(
+            direction="row" if self._horizontal else "column",
+            gap=self._spacing,
+            padding=0,
+        )
+        for slot in self._slots:
+            layout.add(slot, grow=0, basis=self._item_width if self._horizontal else self._item_height)
+
+        if self._horizontal:
+            container = Rect(
+                self._left,
+                int(self._task_panel.rect.top) + self._top,
+                max(1, int(self._task_panel.rect.width) - (self._left * 2)),
+                self._item_height,
+            )
+        else:
+            container = Rect(
+                self._left,
+                int(self._task_panel.rect.top) + self._top,
+                self._item_width,
+                max(1, int(self._task_panel.rect.height) - (self._top * 2)),
+            )
+        layout.apply(container)
+
+    def slot_rect(self, index: int) -> Rect:
+        self._ensure_slot(int(index))
+        return Rect(self._slots[int(index)].rect)
+
+
+def create_task_panel_slot_layout(task_panel, spec: TaskPanelSlotLayoutSpec):
+    """Create a flex-backed slot adapter for scene task-panel items."""
+    return _FlexTaskPanelSlotLayout(task_panel, spec)
 
 
 def _resolve_scene_navigation_callback(host, spec: TaskPanelSceneNavButtonSpec):

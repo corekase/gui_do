@@ -21,10 +21,7 @@ from pygame import PixelArray, Rect
 from gui_do import (
     ButtonControl,
     CanvasControl,
-    centered_horizontal_strip_layout,
-    inset_rect,
     LabelControl,
-    partition_rects,
     RoutedFeature,
     WindowControl,
 )

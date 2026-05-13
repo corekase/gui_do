@@ -32,9 +32,9 @@ class TestBuildGridSpecs(unittest.TestCase):
         with patch(
             "gui_do.features.control_spec.build_specs_from_column_section",
         ) as mock_build, patch(
-            "gui_do.features.control_spec.CellCaretLayout.split_columns",
+            "gui_do.features.control_spec.split_columns",
         ) as mock_split, patch(
-            "gui_do.features.control_spec.CellCaretLayout.column_stack_from_anchor",
+            "gui_do.features.control_spec.column_stack_from_anchor",
         ) as mock_stack:
             col_rects = [Rect(i * 200, 0, 200, 500) for i in range(num_cols)]
             mock_split.return_value = col_rects

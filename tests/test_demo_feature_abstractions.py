@@ -6,7 +6,7 @@ from gui_do.features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     AnchoredWindowSpec,
     LogicBindingSpec,
-    TaskPanelLinearLayoutSpec,
+    TaskPanelSlotLayoutSpec,
     TaskPanelSceneNavButtonSpec,
     TaskPanelWindowToggleGroupSpec,
     RightAnchoredTaskPanelButtonSpec,
@@ -32,7 +32,7 @@ from gui_do.features.data_driven_runtime import (
     create_tab_control_from_specs,
     compute_tabbed_window_layout,
     collect_window_toggle_controls,
-    create_task_panel_linear_layout,
+    create_task_panel_slot_layout,
     create_feature_presented_window,
     create_presented_anchored_window,
     create_presented_window_from_spec,
@@ -209,7 +209,7 @@ class _StubToggleHost:
 
 
 class _StubLayout:
-    def linear(self, index: int):
+    def slot_rect(self, index: int):
         return Rect(int(index), 0, 120, 30)
 
 
@@ -926,12 +926,12 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertIs(host.first_button, task_panel.added_controls[0])
         self.assertIs(host.second_button, task_panel.added_controls[1])
 
-    def test_create_task_panel_linear_layout_anchors_to_task_panel_top(self):
+    def test_create_task_panel_slot_layout_anchors_to_task_panel_top(self):
         task_panel = _StubTaskPanel()
 
-        layout = create_task_panel_linear_layout(
+        layout = create_task_panel_slot_layout(
             task_panel,
-            TaskPanelLinearLayoutSpec(
+            TaskPanelSlotLayoutSpec(
                 left=16,
                 top_offset=10,
                 item_width=124,
@@ -941,8 +941,8 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             ),
         )
 
-        rect0 = layout.linear(0)
-        rect1 = layout.linear(1)
+        rect0 = layout.slot_rect(0)
+        rect1 = layout.slot_rect(1)
         self.assertEqual((16, 110, 124, 30), (rect0.left, rect0.top, rect0.width, rect0.height))
         self.assertEqual(150, rect1.left)
 

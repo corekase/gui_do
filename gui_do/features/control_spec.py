@@ -1,8 +1,8 @@
 """Generic data-driven control placement spec building utilities.
 
 :class:`ControlDefinition` is the canonical declarative descriptor for one
-control in a column section.  Pass a sequence of them together with an active
-:class:`~gui_do.CellCaretLayout` stack to :func:`build_specs_from_column_section`
+control in a column section. Pass a sequence of them together with an active
+column stack to :func:`build_specs_from_column_section`
 and receive back a tuple of :class:`~gui_do.ControlPlacementSpec` objects ready
 for :func:`~gui_do.features.feature_lifecycle.place_control_specs`.
 
@@ -49,7 +49,7 @@ from typing import Any
 from pygame import Rect
 
 from .feature_lifecycle import ControlPlacementSpec
-from ..layout.cell_caret_layout import CellCaretLayout
+from .layout_geometry import column_stack_from_anchor, labeled_slot_height, split_columns
 
 
 @dataclass(frozen=True)
@@ -97,28 +97,26 @@ class ControlDefinition:
 def build_specs_from_column_section(
     definitions: Sequence[ControlDefinition],
     *,
-    stack: CellCaretLayout,
+    stack,
     slot_height_for: Callable[[int], int],
     overflow_gap: int = 0,
 ) -> tuple[tuple[ControlPlacementSpec, ...], int]:
     """Build placement specs for a sequence of :class:`ControlDefinition` objects.
 
-    Each definition drives one slot in *stack* via
-    :meth:`~gui_do.CellCaretLayout.add_slot_or_overflow`.  The resulting
+    Each definition drives one slot in *stack* via its
+    ``add_slot_or_overflow`` method. The resulting
     :class:`~gui_do.ControlPlacementSpec` carries the final rect, accessibility
     metadata, and column/row indices ready for
     :func:`~gui_do.features.feature_lifecycle.place_control_specs`.
 
     Args:
         definitions: Ordered sequence of :class:`ControlDefinition` objects.
-        stack: Active :class:`~gui_do.CellCaretLayout` that owns the column's
-            vertical caret.  The stack is mutated in-place as slots are claimed.
+        stack: Active column stack that owns the column's vertical flow. The
+            stack is mutated in-place as slots are claimed.
         slot_height_for: Callable mapping a raw control height to the full
-            labeled-slot height (typically
-            :meth:`~gui_do.CellCaretLayout.labeled_slot_height` wrapped in a
-            local closure).
+            labeled-slot height.
         overflow_gap: Vertical gap in pixels to insert before an overflow slot
-            (forwarded directly to :meth:`~gui_do.CellCaretLayout.add_slot_or_overflow`).
+            (forwarded directly to ``stack.add_slot_or_overflow``).
 
     Returns:
         A ``(specs, bottom_y)`` pair where *specs* is an immutable tuple of
@@ -204,7 +202,7 @@ class RowCellSpec:
 def build_horizontal_row_specs(
     cells: Sequence[RowCellSpec],
     *,
-    stack: CellCaretLayout,
+    stack,
     label_height: int,
     label_gap: int,
     col_gap: int = 8,
@@ -220,14 +218,13 @@ def build_horizontal_row_specs(
 
     Args:
         cells: Ordered sequence of :class:`RowCellSpec` objects.
-        stack: Active :class:`~gui_do.CellCaretLayout` that owns the vertical
-            caret.  The stack is mutated in-place as the row slot is claimed.
+        stack: Active column stack that owns the vertical flow. The stack is
+            mutated in-place as the row slot is claimed.
         label_height: Height in pixels reserved above the control for a label.
         label_gap: Gap in pixels between the label bottom and the control top.
         col_gap: Horizontal gap between columns.
         overflow_gap: Gap before the slot when *stack* overflows.
-        min_col_width: Minimum column width passed to
-            :meth:`~gui_do.CellCaretLayout.split_columns`.
+        min_col_width: Minimum column width passed to the column splitter.
 
     Returns:
         An immutable tuple of :class:`ControlPlacementSpec` objects, one per cell.
@@ -240,7 +237,7 @@ def build_horizontal_row_specs(
     gap_x = int(col_gap)
 
     def _slot_h(control_h: int) -> int:
-        return CellCaretLayout.labeled_slot_height(
+        return labeled_slot_height(
             max(1, int(control_h)), label_height=label_h, label_gap=label_g
         )
 
@@ -260,7 +257,7 @@ def build_horizontal_row_specs(
             col_rects.append(Rect(x, row_slot_rect.top, int(w), row_slot_rect.height))
             x += int(w) + gap_x
     else:
-        col_rects = CellCaretLayout.split_columns(
+        col_rects = split_columns(
             row_slot_rect,
             count=len(cells),
             gap=gap_x,
@@ -332,8 +329,7 @@ def build_multi_column_grid_specs(
     """Place *definitions* in reading order across *num_cols* columns.
 
     Distributes definitions round-robin (left-to-right, top-to-bottom) across
-    *num_cols* independent columns built on :class:`~gui_do.CellCaretLayout`
-    stacks.  Returns specs interleaved in row-major order so keyboard focus
+    *num_cols* independent columns built on column stacks. Returns specs interleaved in row-major order so keyboard focus
     traversal goes left-to-right across the page.
 
     Args:
@@ -344,8 +340,7 @@ def build_multi_column_grid_specs(
         row_gap: Vertical gap between slots.
         slot_height_for: Callable mapping intrinsic control height to labeled
             slot height (see :func:`~gui_do.make_labeled_slot_height_fn`).
-        min_col_width: Minimum column width passed to
-            :meth:`~gui_do.CellCaretLayout.split_columns`.
+        min_col_width: Minimum column width passed to the column splitter.
 
     Returns:
         A ``(specs, max_bottom_y)`` pair where *specs* is an immutable tuple of
@@ -355,7 +350,7 @@ def build_multi_column_grid_specs(
     if not definitions or num_cols < 1:
         return (), int(bounds.top)
 
-    col_rects = CellCaretLayout.split_columns(
+    col_rects = split_columns(
         bounds, count=num_cols, gap=row_gap, min_width=max(1, int(min_col_width))
     )
     n = min(num_cols, len(col_rects))
@@ -367,7 +362,7 @@ def build_multi_column_grid_specs(
     col_specs: list[tuple] = []
     max_bottom = int(bounds.top)
     for idx, col_rect in enumerate(col_rects[:n]):
-        stack, _, _, _ = CellCaretLayout.column_stack_from_anchor(
+        stack, _, _, _ = column_stack_from_anchor(
             anchor=col_rect,
             content_bottom=content_bottom,
             preferred_width=col_rect.width,

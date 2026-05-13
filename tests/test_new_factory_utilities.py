@@ -167,21 +167,21 @@ class TestMakeLabeledSlotHeightFn(unittest.TestCase):
 
     def test_matches_cell_caret_layout_labeled_slot_height(self):
         from gui_do import make_labeled_slot_height_fn
-        from gui_do.layout.cell_caret_layout import CellCaretLayout
+        from gui_do.features.layout_geometry import labeled_slot_height
         label_h, label_gap = 18, 4
         fn = make_labeled_slot_height_fn(label_h, label_gap)
         for control_h in (28, 34, 48, 90, 120):
-            expected = CellCaretLayout.labeled_slot_height(control_h, label_height=label_h, label_gap=label_gap)
+            expected = labeled_slot_height(control_h, label_height=label_h, label_gap=label_gap)
             self.assertEqual(fn(control_h), expected, f"Mismatch for control_h={control_h}")
 
     def test_captures_parameters_independently(self):
         from gui_do import make_labeled_slot_height_fn
-        from gui_do.layout.cell_caret_layout import CellCaretLayout
+        from gui_do.features.layout_geometry import labeled_slot_height
         fn_a = make_labeled_slot_height_fn(18, 4)
         fn_b = make_labeled_slot_height_fn(20, 8)
         h = 40
-        self.assertEqual(fn_a(h), CellCaretLayout.labeled_slot_height(h, label_height=18, label_gap=4))
-        self.assertEqual(fn_b(h), CellCaretLayout.labeled_slot_height(h, label_height=20, label_gap=8))
+        self.assertEqual(fn_a(h), labeled_slot_height(h, label_height=18, label_gap=4))
+        self.assertEqual(fn_b(h), labeled_slot_height(h, label_height=20, label_gap=8))
         self.assertNotEqual(fn_a(h), fn_b(h))
 
     def test_integer_coercion(self):
@@ -411,7 +411,6 @@ class TestSceneTaskPanelHelpers(unittest.TestCase):
     def test_scene_task_panel_spec_and_scene_nav_button_spec_exported(self):
         import gui_do
         self.assertTrue(hasattr(gui_do, "SceneTaskPanelSpec"))
-        self.assertTrue(hasattr(gui_do, "TaskPanelLinearLayoutSpec"))
         self.assertTrue(hasattr(gui_do, "TaskPanelSceneNavButtonSpec"))
 
     def test_ensure_scene_task_panel_exported(self):
@@ -420,7 +419,6 @@ class TestSceneTaskPanelHelpers(unittest.TestCase):
 
     def test_add_scene_nav_button_helpers_exported(self):
         import gui_do
-        self.assertTrue(hasattr(gui_do, "create_task_panel_linear_layout"))
         self.assertTrue(hasattr(gui_do, "add_task_panel_scene_nav_button"))
         self.assertTrue(hasattr(gui_do, "add_scene_task_panel_items"))
 

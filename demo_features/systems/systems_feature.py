@@ -24,11 +24,9 @@ from gui_do import (
     ArrowBoxControl,
     ButtonControl,
     ConstraintAttr,
-    ConstraintLayoutEngine,
     ConstraintSet,
     Camera2D,
     CanvasControl,
-    CellCaretLayout,
     CollectionView,
     CollectionViewQuery,
     CommandHistory,
@@ -43,8 +41,11 @@ from gui_do import (
     FieldGraphSchema,
     FieldSchema,
     Feature,
+    FlexLayout,
     FormField,
     FrameTimer,
+    GridLayout,
+    GridPlacement,
     InteractionContext,
     InteractionStateMachine,
     LayoutConstraint,
@@ -110,6 +111,7 @@ from gui_do import (
     TransitionSpec,
     TweenManager,
 )
+from gui_do.layout.adaptive_constraint_layout import ConstraintLayoutEngine
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.controls.data.list_view_control import ListItem
 
@@ -830,15 +832,13 @@ class SystemsFeature(Feature):
     def _place_row_controls(self, panel: PanelControl, row_bounds: Rect, controls: list[object]) -> None:
         if not controls:
             return
-        slots = CellCaretLayout.split_columns(
-            row_bounds,
-            count=len(controls),
-            gap=self.BUTTON_ROW_GAP,
-            min_width=1,
-        )
-        for control, slot in zip(controls, slots):
-            control.rect = Rect(0, 0, slot.width, slot.height)
-            panel.add_at(control, slot.left, slot.top)
+        layout = FlexLayout(direction="row", gap=self.BUTTON_ROW_GAP, padding=0)
+        for control in controls:
+            control.rect = Rect(0, 0, max(1, row_bounds.width), row_bounds.height)
+            layout.add(control, grow=1)
+        layout.apply(row_bounds)
+        for control in controls:
+            panel.add_at(control, control.rect.left, control.rect.top)
 
     def _inset_left_side_children(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
         shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
@@ -942,19 +942,17 @@ class SystemsFeature(Feature):
             button.rect = Rect(0, 0, button_width, row_bounds.height)
             panel.add_at(button, start_x, row_bounds.top)
             return row_bounds.bottom + self.BUTTON_ROW_SPACING
-        slots = CellCaretLayout.split_columns(
-            row_bounds,
-            count=2,
+        normalized_index = max(0, min(1, int(column_index)))
+        grid = GridLayout(
+            row_tracks=[row_bounds.height],
+            col_tracks=["1fr", "1fr"],
             gap=self.BUTTON_ROW_GAP,
-            min_width=1,
+            padding=0,
         )
-        if len(slots) >= 2:
-            normalized_index = max(0, min(1, int(column_index)))
-            slot = slots[normalized_index]
-        else:
-            slot = row_bounds
-        button.rect = Rect(0, 0, slot.width, slot.height)
-        panel.add_at(button, slot.left, slot.top)
+        button.rect = Rect(0, 0, max(1, row_bounds.width // 2), row_bounds.height)
+        grid.place(button, GridPlacement(row=0, col=normalized_index))
+        grid.apply(row_bounds)
+        panel.add_at(button, button.rect.left, button.rect.top)
         return row_bounds.bottom + self.BUTTON_ROW_SPACING
 
     def build_data_panel(self, rect: Rect) -> PanelControl:

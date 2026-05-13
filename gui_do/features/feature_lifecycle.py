@@ -299,12 +299,13 @@ def make_labeled_slot_height_fn(label_height: int, label_gap: int):
     constants on every slot-height call::
 
         slot_h = make_labeled_slot_height_fn(LABEL_HEIGHT, LABEL_GAP)
-        h = slot_h(34)   # same as CellCaretLayout.labeled_slot_height(34, ...)
+        h = slot_h(34)
     """
-    from ..layout.cell_caret_layout import CellCaretLayout as _CellCaretLayout
+    from .layout_geometry import labeled_slot_height
+
     lh = int(label_height)
     lg = int(label_gap)
-    return lambda h: _CellCaretLayout.labeled_slot_height(int(h), label_height=lh, label_gap=lg)
+    return lambda h: labeled_slot_height(int(h), label_height=lh, label_gap=lg)
 
 
 class ControlRegistry:
