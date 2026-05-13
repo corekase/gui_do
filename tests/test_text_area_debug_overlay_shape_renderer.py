@@ -154,6 +154,22 @@ class TestTextAreaControlFocusedKeyConsumption(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertEqual(2, ta.cursor_pos)
 
+    def test_home_and_end_use_current_visual_line_at_wrap_boundary(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="abcd")
+        ta._focused = True
+        ta._wrapped_lines = ["ab", "cd"]
+        ta._line_cache_key = ("wrapped",)
+        ta._cursor_pos = 2
+
+        home_consumed = ta.handle_event(self._key_event(pygame.K_HOME), app=None)
+        self.assertTrue(home_consumed)
+        self.assertEqual(0, ta.cursor_pos)
+
+        ta._cursor_pos = 2
+        end_consumed = ta.handle_event(self._key_event(pygame.K_END), app=None)
+        self.assertTrue(end_consumed)
+        self.assertEqual(2, ta.cursor_pos)
+
     def test_end_keeps_insertions_on_wrapped_visual_line_end(self):
         ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="abcde")
         ta._focused = True
@@ -167,6 +183,19 @@ class TestTextAreaControlFocusedKeyConsumption(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertEqual("abXcde", ta.value)
         self.assertEqual(3, ta.cursor_pos)
+
+    def test_end_stays_on_current_line_before_explicit_newline(self):
+        ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="ab\ncd")
+        ta._focused = True
+        ta._wrapped_lines = ["ab", "cd"]
+        ta._line_cache_key = ("wrapped",)
+        ta._cursor_pos = 1
+
+        consumed = ta.handle_event(self._key_event(pygame.K_END), app=None)
+
+        self.assertTrue(consumed)
+        self.assertEqual(2, ta.cursor_pos)
+        self.assertEqual((0, 2), ta._get_visual_line_bounds())
 
     def test_wrap_preserves_space_at_visual_break(self):
         ta = TextAreaControl("ta", Rect(0, 0, 400, 200), value="ab cd")

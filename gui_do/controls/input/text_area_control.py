@@ -1,7 +1,7 @@
 """TextAreaControl — multi-line editable text field with word wrap and scrolling."""
 from __future__ import annotations
 
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING, List, Tuple
 
 import pygame
 from pygame import Rect
@@ -72,11 +72,11 @@ class TextAreaControl(AbstractTextInputControl):
     def get_pixel_for_char_index(self, index: int, theme=None) -> Tuple[int, int]:
         font = self._get_font(theme)
         line_spans = self._get_visual_line_spans()
-        for line_idx, (line_start, line_end, line_text) in enumerate(line_spans):
-            if index <= line_end:
-                px, _ = font.text_size(line_text[:index - line_start])
-                y = self.rect.top + _V_PAD + line_idx * font.line_height
-                return (self.rect.left + _H_PAD + px, y)
+        line_idx, line_start, _, line_text = self._get_visual_line_span_at_index(index, line_spans)
+        if line_text is not None:
+            px, _ = font.text_size(line_text[:index - line_start])
+            y = self.rect.top + _V_PAD + line_idx * font.line_height
+            return (self.rect.left + _H_PAD + px, y)
         # Fallback: end of last line
         _, _, last_line = line_spans[-1]
         px, _ = font.text_size(last_line)
@@ -350,8 +350,10 @@ class TextAreaControl(AbstractTextInputControl):
             return True
 
         if key == pygame.K_HOME:
-            new_pos = self._get_visual_line_bounds()[0]
-            self._move_cursor(new_pos, shift)
+            # Determine the start of the current wrapped line
+            line_spans = self._get_visual_line_spans()
+            line_idx, line_start, _, _ = self._get_visual_line_span_at_index(self._cursor_pos, line_spans)
+            self._move_cursor(line_start, shift)
             return True
 
         if key == pygame.K_END:
@@ -403,8 +405,10 @@ class TextAreaControl(AbstractTextInputControl):
         y = r.top + _V_PAD - self._scroll_top
         cursor_y: Optional[int] = None
         cursor_x: Optional[int] = None
+        line_spans = self._get_visual_line_spans(lines)
+        cursor_line = self._get_visual_line_span_at_index(self._cursor_pos, line_spans)
 
-        for line_start_abs, line_end_abs, line_text in self._get_visual_line_spans(lines):
+        for line_idx, (line_start_abs, line_end_abs, line_text) in enumerate(line_spans):
             line_len = len(line_text)
 
             if y + line_h >= r.top and y < r.bottom:
@@ -429,7 +433,7 @@ class TextAreaControl(AbstractTextInputControl):
                 surface.blit(text_surf, (r.left + _H_PAD, y))
 
             # Cursor position
-            if self._cursor_pos >= line_start_abs and self._cursor_pos <= line_end_abs:
+            if cursor_line[0] == line_idx:
                 offset_in_line = self._cursor_pos - line_start_abs
                 cursor_x = r.left + _H_PAD + self._text_width(theme, line_text[:offset_in_line])
                 cursor_y = y
@@ -526,7 +530,7 @@ class TextAreaControl(AbstractTextInputControl):
         except Exception:
             if self._measure_font is None:
                 try:
-                    self._measure_font = theme.fonts.font_instance(getattr(self, "_font_role", "text_area.text"), size=self._resolve_fs(theme))
+                    self._measure_font = app.theme.fonts.font_instance(getattr(self, "_font_role", "text_area.text"), size=self._resolve_fs(app.theme))
                 except Exception:
                     self._measure_font = False
 
@@ -562,11 +566,51 @@ class TextAreaControl(AbstractTextInputControl):
         return spans
 
     def _get_visual_line_bounds(self) -> Tuple[int, int]:
-        for line_start, line_end, _ in self._get_visual_line_spans():
-            if self._cursor_pos <= line_end:
-                return (line_start, line_end)
+        line_spans = self._get_visual_line_spans()
+        line_idx, line_start, line_end, _ = self._get_visual_line_span_at_index(self._cursor_pos, line_spans)
+        if line_idx >= 0:
+            return (line_start, line_end)
+        if line_spans:
+            last_start, last_end, _ = line_spans[-1]
+            return (last_start, last_end)
         value_len = len(self._value)
         return (value_len, value_len)
+
+    @staticmethod
+    def _is_index_on_visual_line(index: int, line_start: int, line_end: int) -> bool:
+        if line_start == line_end:
+            return index == line_start
+        return line_start <= index < line_end
+
+    def _get_visual_line_span_at_index(
+        self,
+        index: int,
+        line_spans: Optional[List[Tuple[int, int, str]]] = None,
+    ) -> Tuple[int, int, int, Optional[str]]:
+        if line_spans is None:
+            line_spans = self._get_visual_line_spans()
+        if not line_spans:
+            return (-1, 0, 0, None)
+        value_len = len(self._value)
+        for line_idx, (line_start, line_end, line_text) in enumerate(line_spans):
+            if line_start <= index < line_end:
+                return (line_idx, line_start, line_end, line_text)
+            if line_start == line_end:
+                if index == line_start:
+                    return (line_idx, line_start, line_end, line_text)
+                continue
+            if index == line_end:
+                if line_end < value_len and self._value[line_end: line_end + 1] == "\n":
+                    return (line_idx, line_start, line_end, line_text)
+                return (line_idx, line_start, line_end, line_text)
+            if index < line_start:
+                # Ensure the cursor stays within the current visual line
+                if line_idx > 0:
+                    prev_start, prev_end, prev_text = line_spans[line_idx - 1]
+                    if prev_end == line_start and index == line_start:
+                        # Stay at the start of the current line
+                        return (line_idx, line_start, line_end, line_text)
+                return (line_idx, line_start, line_end, line_text)
 
     def _text_width(self, theme: "ColorTheme", text: str) -> int:
         try:
@@ -600,7 +644,11 @@ class TextAreaControl(AbstractTextInputControl):
         """Return cached wrapped lines; falls back to raw split if no cache available."""
         if self._wrapped_lines is not None and self._line_cache_key is not None:
             return self._wrapped_lines
-        return self._value.split("\n")
+        if self._wrapped_lines is None or self._line_cache_key is None:
+            # Populate the cache if not available
+            theme = self._default_theme  # Assuming a default theme is available
+            self._wrapped_lines = self._get_wrapped_lines(theme)
+        return self._wrapped_lines
 
     def _wrap(self, theme: "ColorTheme", max_width: int) -> List[str]:
         """Word-wrap self._value into a list of display line strings."""
