@@ -1,6 +1,5 @@
 """Tests for gui_do.accessibility.accessibility_tree (S3)."""
 import unittest
-from unittest.mock import MagicMock
 
 from gui_do.accessibility.accessibility_tree import (
     AccessibilityRole,

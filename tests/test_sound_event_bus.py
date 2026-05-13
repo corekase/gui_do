@@ -3,7 +3,6 @@ import unittest
 
 import gui_do
 from gui_do import SoundEventBus, SoundCue, SoundBankRegistry
-from gui_do.data.observable_collections import ChangeKind
 
 
 class TestSoundCue(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from gui_do.state.command_history import CommandHistory, CommandTransaction
+from gui_do.state.command_history import CommandHistory
 from gui_do.data.object_pool import ObjectPool
 
 
@@ -158,7 +158,6 @@ class TestCommandHistory(unittest.TestCase):
 
     def test_abort_transaction_discards_it(self):
         h = CommandHistory()
-        counter = []
         h.begin_transaction("t")
         h.abort_transaction()
         self.assertFalse(h.can_undo)

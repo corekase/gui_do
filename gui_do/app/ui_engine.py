@@ -27,10 +27,9 @@ class UiEngine:
             while app.running:
                 if max_frames is not None and frame_count >= max_frames:
                     break
-                for event in event_get():
-                    app.process_event(event)
-                    if not app.running:
-                        break
+                events = event_get()
+                if events:
+                    app.process_events(events)
                 if not app.running:
                     break
                 dt_seconds = clock.tick(target_fps) / 1000.0

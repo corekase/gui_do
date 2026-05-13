@@ -3,10 +3,8 @@ DirtyRegionTracker, and VectorPath geometry.
 
 All tests are pure computation — no pygame display is required.
 """
-import math
 import unittest
 
-import pygame
 from pygame import Rect
 
 from gui_do.overlays.transfer_data import TransferData, TransferManager

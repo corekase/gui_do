@@ -1431,7 +1431,6 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
             CursorBindingSpec,
             HostApplicationBindingSpec,
             RuntimeSceneBindingSpec,
-            SceneSetupBindingSpec,
             SceneTransitionStyle,
             TelemetryConfig,
             WindowToggleBindingSpec,

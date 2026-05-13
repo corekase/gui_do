@@ -3,14 +3,11 @@ import unittest
 
 from gui_do.data.observable_collections import (
     ChangeKind,
-    CollectionChange,
     ObservableDict,
     ObservableList,
 )
 from gui_do.state.command_history import (
-    Command,
     CommandHistory,
-    CommandTransaction,
 )
 
 

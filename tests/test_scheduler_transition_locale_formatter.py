@@ -16,7 +16,7 @@ from gui_do.scheduling.transition_manager import (
     TransitionSpec,
     TransitionEvent,
 )
-from gui_do.scheduling.tween_manager import TweenManager, Easing
+from gui_do.scheduling.tween_manager import TweenManager
 from gui_do.text.localization import StringTable, LocaleRegistry
 from gui_do.text.text_formatter import NumericFormatter, PatternFormatter
 

@@ -9,7 +9,6 @@ from gui_do.overlays.popup_placement import (
     Alignment, PlacementResult, PopupPlacement, Side, compute_popup_rect
 )
 from gui_do.overlays.notification_center import NotificationCenter, NotificationRecord
-from gui_do.overlays.toast_manager import ToastSeverity
 
 
 # ===========================================================================

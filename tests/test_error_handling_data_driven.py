@@ -10,10 +10,8 @@ from gui_do.app.error_handling import (
 )
 from gui_do.features.data_driven_runtime import (
     FeatureSpec,
-    WindowSpec,
     RuntimeSceneSpec,
     ActionSpec,
-    StaticAccessibilitySpec,
 )
 
 

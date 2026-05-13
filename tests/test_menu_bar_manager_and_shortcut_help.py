@@ -7,9 +7,9 @@ from pygame import Rect
 
 from gui_do.overlays.menu_bar_manager import MenuBarManager
 from gui_do.overlays.context_menu_manager import ContextMenuItem
-from gui_do.controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
+from gui_do.controls.chrome.menu_bar_control import MenuBarControl
 from gui_do.overlays.shortcut_help_overlay import (
-    ShortcutEntry, ShortcutSection, ShortcutHelpOverlay, _format_chord,
+    ShortcutEntry, ShortcutSection, ShortcutHelpOverlay,
 )
 
 pygame.init()

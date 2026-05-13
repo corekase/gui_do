@@ -1,7 +1,6 @@
 import unittest
 
 from gui_do.scheduling.cooperative_scheduler import (
-    CoroutineHandle,
     CooperativeScheduler,
     Pause,
     Sleep,

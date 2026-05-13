@@ -10,7 +10,7 @@ Provides the building blocks for virtualised UI controls:
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import Callable, Generic, Set, TypeVar
+from typing import Callable, Generic, TypeVar
 
 __all__ = [
     "MeasurePolicy",
@@ -262,17 +262,18 @@ class VirtualizationCore(Generic[T]):
             self._active.clear()
             return []
 
-        needed: Set[int] = set(range(first, last + 1))
-        current: Set[int] = set(self._active.keys())
-
+        active = self._active
         # Release cells no longer needed
-        for idx in current - needed:
-            self._pool.release(self._active.pop(idx))
+        for idx in tuple(active.keys()):
+            if idx < first or idx > last:
+                self._pool.release(active.pop(idx))
 
         # Acquire cells for newly visible indices
-        for idx in sorted(needed - current):
+        for idx in range(first, last + 1):
+            if idx in active:
+                continue
             cell = self._pool.acquire()
             self._bind_fn(cell, idx)
-            self._active[idx] = cell
+            active[idx] = cell
 
-        return [(idx, self._active[idx]) for idx in sorted(self._active)]
+        return [(idx, active[idx]) for idx in range(first, last + 1)]

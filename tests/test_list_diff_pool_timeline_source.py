@@ -6,7 +6,6 @@ from gui_do.data.list_diff import (
     ListDiff,
     DiffInsert,
     DiffRemove,
-    DiffMove,
 )
 from gui_do.data.object_pool import ObjectPool
 from gui_do.scheduling.scene_timeline import SceneTimeline

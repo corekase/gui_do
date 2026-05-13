@@ -4,7 +4,6 @@ pygame.Surface works without a display; no pygame.display.init() is needed.
 """
 import unittest
 
-import pygame
 from pygame import Surface
 
 from gui_do.graphics.sprite_sheet import FrameAnimation, SpriteSheet

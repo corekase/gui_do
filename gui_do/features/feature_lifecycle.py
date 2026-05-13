@@ -9,7 +9,6 @@ from .lifecycle_models import FrameTimer, PlacedControl
 from .lifecycle_layout_helpers import calculate_grid_layout as _calculate_grid_layout
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
     from collections.abc import Callable, Iterable, Deque
     from typing import Any, Optional, Dict, List
 

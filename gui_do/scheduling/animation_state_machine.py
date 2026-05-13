@@ -199,9 +199,7 @@ class AnimationStateMachine:
 
     def is_transitioning(self) -> bool:
         """Return True if a sequence is currently running."""
-        return self._current_handle is not None and not getattr(
-            self._current_handle, "cancelled", True
-        )
+        return self._current_handle is not None and not self._current_handle.cancelled
 
     # ------------------------------------------------------------------
     # Internal

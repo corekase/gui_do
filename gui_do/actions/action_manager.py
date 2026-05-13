@@ -34,9 +34,15 @@ class ActionManager:
     def __init__(self) -> None:
         self._actions: dict[str, ActionHandler] = {}
         self._keymap: dict[KeyBinding, list[str]] = defaultdict(list)
+        self._keymap_fast: dict[tuple[int, str | None, bool], list[str]] = {}
         self._bindings_by_action: dict[str, list[KeyBinding]] = defaultdict(list)
         self._global_keymap: dict[KeyBinding, list[str]] = defaultdict(list)
+        self._global_keymap_fast: dict[tuple[int, str | None, bool], list[str]] = {}
         self._middlewares: List[ActionMiddleware] = []
+
+    @staticmethod
+    def _binding_key(binding: KeyBinding) -> tuple[int, str | None, bool]:
+        return (int(binding.key), binding.scene, bool(binding.window_only))
 
     def register_action(self, action_name: str, handler: ActionHandler) -> None:
         self._actions[str(action_name)] = handler
@@ -67,6 +73,7 @@ class ActionManager:
         names = self._keymap[binding]
         if action_name not in names:
             names.append(action_name)
+            self._keymap_fast[self._binding_key(binding)] = names
             bindings = self._bindings_by_action[action_name]
             if binding not in bindings:
                 bindings.append(binding)
@@ -81,6 +88,7 @@ class ActionManager:
         names.remove(action_name)
         if not names:
             del self._keymap[binding]
+            self._keymap_fast.pop(self._binding_key(binding), None)
         bindings = self._bindings_by_action.get(action_name)
         if bindings and binding in bindings:
             bindings.remove(binding)
@@ -112,6 +120,7 @@ class ActionManager:
         names = self._global_keymap[binding]
         if action_name not in names:
             names.append(action_name)
+            self._global_keymap_fast[self._binding_key(binding)] = names
 
     def unbind_global_key(self, key: int, action_name: str, *, scene: str | None = None) -> bool:
         """Remove a global key binding.  Returns ``True`` if it existed."""
@@ -122,6 +131,7 @@ class ActionManager:
         names.remove(str(action_name))
         if not names:
             del self._global_keymap[binding]
+            self._global_keymap_fast.pop(self._binding_key(binding), None)
         return True
 
     def trigger_global_key_from_event(self, event, app) -> bool:
@@ -135,12 +145,12 @@ class ActionManager:
             return False
         scene_name = app.active_scene_name
         key = int(event.key)
-        candidates = (
-            KeyBinding(key, scene=scene_name, window_only=False),
-            KeyBinding(key, scene=None, window_only=False),
-        )
-        for binding in candidates:
-            for action_name in self._global_keymap.get(binding, ()):
+        fast = self._global_keymap_fast
+        for action_name in fast.get((key, scene_name, False), ()):
+            handler = self._actions.get(action_name)
+            if handler is not None and self._dispatch(action_name, handler, event):
+                return True
+        for action_name in fast.get((key, None, False), ()):
                 handler = self._actions.get(action_name)
                 if handler is not None and self._dispatch(action_name, handler, event):
                     return True
@@ -171,6 +181,7 @@ class ActionManager:
                 continue
             if not names:
                 del self._keymap[binding]
+                self._keymap_fast.pop(self._binding_key(binding), None)
 
         added = 0
         new_bindings: list[KeyBinding] = []
@@ -191,6 +202,7 @@ class ActionManager:
             names = self._keymap[binding]
             if normalized not in names:
                 names.append(normalized)
+                self._keymap_fast[self._binding_key(binding)] = names
             added += 1
 
         if new_bindings:
@@ -199,6 +211,7 @@ class ActionManager:
 
     def clear_bindings(self) -> None:
         self._keymap.clear()
+        self._keymap_fast.clear()
         self._bindings_by_action.clear()
 
     def trigger_from_event(self, event, app) -> bool:
@@ -207,22 +220,22 @@ class ActionManager:
         scene_name = app.active_scene_name
         has_window = bool(app.scene.active_window())
         key = int(event.key)
-
+        fast = self._keymap_fast
         if has_window:
-            candidates = (
-                KeyBinding(key, scene=scene_name, window_only=True),
-                KeyBinding(key, scene=scene_name, window_only=False),
-                KeyBinding(key, scene=None, window_only=True),
-                KeyBinding(key, scene=None, window_only=False),
+            candidate_keys = (
+                (key, scene_name, True),
+                (key, scene_name, False),
+                (key, None, True),
+                (key, None, False),
             )
         else:
-            candidates = (
-                KeyBinding(key, scene=scene_name, window_only=False),
-                KeyBinding(key, scene=None, window_only=False),
+            candidate_keys = (
+                (key, scene_name, False),
+                (key, None, False),
             )
 
-        for binding in candidates:
-            for action_name in self._keymap.get(binding, ()):
+        for binding_key in candidate_keys:
+            for action_name in fast.get(binding_key, ()):
                 handler = self._actions.get(action_name)
                 if handler is not None and self._dispatch(action_name, handler, event):
                     return True
@@ -288,6 +301,7 @@ class ActionManager:
             removed += 1
             if not names:
                 del self._keymap[binding]
+                self._keymap_fast.pop(self._binding_key(binding), None)
         if action_name in self._bindings_by_action:
             del self._bindings_by_action[action_name]
         return removed

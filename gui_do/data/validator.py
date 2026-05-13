@@ -43,10 +43,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..scheduling.task_scheduler import TaskScheduler
+from typing import Any, Callable, List, Optional
 
 
 # ---------------------------------------------------------------------------

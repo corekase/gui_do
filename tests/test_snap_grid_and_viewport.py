@@ -7,7 +7,7 @@ import unittest
 import pygame
 from pygame import Rect
 
-from gui_do.layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer, SnapTarget
+from gui_do.layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer
 from gui_do.layout.viewport import Viewport
 
 pygame.init()

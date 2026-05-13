@@ -126,13 +126,51 @@ class ListViewControl(_VirtualizedScrollListBase):
         if cv is None:
             self.set_items([])
             return
+        old_items = self._items
+
+        def _value_key(value: Any) -> tuple[str, Any]:
+            try:
+                hash(value)
+                return ("h", value)
+            except TypeError:
+                return ("i", id(value))
+
+        reusable: Dict[tuple[str, Any], List[ListItem]] = {}
+        for existing in old_items:
+            key = _value_key(existing.value)
+            reusable.setdefault(key, []).append(existing)
+
+        selected_keys = {
+            _value_key(old_items[idx].value)
+            for idx in self._selected_indices
+            if 0 <= idx < len(old_items)
+        }
+
         converted: List[ListItem] = []
         for item in cv.items:
             if isinstance(item, ListItem):
                 converted.append(item)
+                continue
+            key = _value_key(item)
+            bucket = reusable.get(key)
+            if bucket:
+                cell = bucket.pop()
+                cell.label = str(item)
+                cell.value = item
+                converted.append(cell)
             else:
                 converted.append(ListItem(label=str(item), value=item))
-        self.set_items(converted)
+
+        self._items = converted
+        if selected_keys:
+            selected = [i for i, item in enumerate(converted) if _value_key(item.value) in selected_keys]
+            if not self._multi_select and selected:
+                selected = [selected[0]]
+            self._selected_indices = selected
+            self._selected_set = set(selected)
+        self._clamp_scroll()
+        self._ensure_selection_invariant()
+        self.invalidate()
 
     def bind_collection_view(
         self,

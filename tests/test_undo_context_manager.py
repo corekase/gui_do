@@ -1,6 +1,6 @@
 """Tests for gui_do.state.undo_context_manager (S6)."""
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from gui_do.state.undo_context_manager import UndoContextManager
 

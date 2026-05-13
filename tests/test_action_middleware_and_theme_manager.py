@@ -7,7 +7,7 @@ import unittest
 from types import SimpleNamespace
 
 from gui_do.actions.action_middleware import ActionContext, build_middleware_chain
-from gui_do.actions.action_manager import ActionManager, KeyBinding
+from gui_do.actions.action_manager import ActionManager
 from gui_do.theme.theme_manager import DesignTokens, ThemeManager
 from gui_do.events.gui_event import EventType
 

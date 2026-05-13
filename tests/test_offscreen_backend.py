@@ -4,7 +4,6 @@ import unittest
 import gui_do
 from gui_do import (
     RenderTarget,
-    LiveRenderTarget,
     OffscreenRenderTarget,
     create_render_target,
     create_surface,

@@ -31,7 +31,7 @@ Usage::
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Tuple
 
 from pygame import Rect
 
@@ -59,7 +59,7 @@ class SceneSpatialIndex:
         # control_id -> node reference
         self._nodes: Dict[str, object] = {}
         # control_id -> set of cells it occupies
-        self._node_cells: Dict[str, Set[Tuple[int, int]]] = {}
+        self._node_cells: Dict[str, List[Tuple[int, int]]] = {}
         # Monotonically increasing counter — assigned to each new node as a
         # stable sort key.  Stale values after removal still give correct
         # relative ordering since removed nodes no longer appear in _nodes.
@@ -105,7 +105,7 @@ class SceneSpatialIndex:
         if cid is None:
             return
         # Remove old cells
-        old_cells = self._node_cells.pop(cid, set())
+        old_cells = self._node_cells.pop(cid, [])
         for cell in old_cells:
             try:
                 self._cells[cell].remove(cid)
@@ -119,7 +119,7 @@ class SceneSpatialIndex:
         cid = getattr(node, "control_id", None)
         if cid is None:
             return
-        old_cells = self._node_cells.pop(cid, set())
+        old_cells = self._node_cells.pop(cid, [])
         for cell in old_cells:
             try:
                 self._cells[cell].remove(cid)
@@ -160,14 +160,15 @@ class SceneSpatialIndex:
         """
         r = Rect(rect)
         touched_cells = self._cells_for_rect(r)
-        candidate_set: Set[str] = set()
+        candidate_set: Dict[str, None] = {}
         for cell in touched_cells:
-            candidate_set.update(self._cells.get(cell, []))
+            for cid in self._cells.get(cell, []):
+                candidate_set[cid] = None
         if not candidate_set:
             return []
         order_index = self._order_index
         results = []
-        for cid in candidate_set:
+        for cid in candidate_set.keys():
             node = self._nodes.get(cid)
             if node is None:
                 continue
@@ -208,16 +209,16 @@ class SceneSpatialIndex:
         cs = self._cell_size
         return (int(x) // cs, int(y) // cs)
 
-    def _cells_for_rect(self, r: Rect) -> Set[Tuple[int, int]]:
+    def _cells_for_rect(self, r: Rect) -> List[Tuple[int, int]]:
         cs = self._cell_size
         col_min = r.left // cs
         col_max = max(col_min, (r.right - 1) // cs)
         row_min = r.top // cs
         row_max = max(row_min, (r.bottom - 1) // cs)
-        result: Set[Tuple[int, int]] = set()
+        result: List[Tuple[int, int]] = []
         for col in range(col_min, col_max + 1):
             for row in range(row_min, row_max + 1):
-                result.add((col, row))
+                result.append((col, row))
         return result
 
     # ------------------------------------------------------------------

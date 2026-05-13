@@ -5,7 +5,6 @@ import unittest
 
 from gui_do.state.app_state_store import (
     AppStateStore,
-    StateSelector,
     StateTransaction,
 )
 

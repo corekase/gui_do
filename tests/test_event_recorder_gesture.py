@@ -1,7 +1,6 @@
 """Tests for EventRecorder, EventPlayback, RecordedEvent, and GestureRecognizer."""
 import unittest
 import tempfile
-import json
 from pathlib import Path
 from types import SimpleNamespace
 

@@ -1,7 +1,6 @@
 """Tests for gui_do.scheduling.dataflow_pipeline."""
 from __future__ import annotations
 
-import threading
 import unittest
 
 from gui_do.scheduling.dataflow_pipeline import (

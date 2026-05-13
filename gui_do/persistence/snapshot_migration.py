@@ -13,7 +13,7 @@ from __future__ import annotations
 import copy
 from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Callable, Dict, List, Optional, TypedDict
 
 __all__ = [
     "SchemaVersion",

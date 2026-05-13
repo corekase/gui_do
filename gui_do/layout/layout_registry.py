@@ -1,5 +1,5 @@
 """LayoutRegistry — extensible registry for layout handlers."""
-from typing import Callable, Dict, Type, Any
+from typing import Dict, Type
 
 class LayoutRegistry:
     """Registry for named layout handler classes."""

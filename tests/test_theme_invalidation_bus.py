@@ -1,6 +1,6 @@
 """Tests for gui_do.theme.theme_invalidation_bus (S5)."""
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from gui_do.data.presentation_model import ObservableValue
 from gui_do.theme.theme_invalidation_bus import ThemeInvalidationBus

@@ -1,6 +1,6 @@
 import unittest
 
-from gui_do.state.router import Router, RouteEntry
+from gui_do.state.router import Router
 from gui_do.scheduling.animation_sequence import AnimationSequence, AnimationHandle
 from gui_do.scheduling.tween_manager import TweenManager, Easing
 from gui_do.data.observable_stream import ObservableStream

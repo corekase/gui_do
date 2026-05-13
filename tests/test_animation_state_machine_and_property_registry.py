@@ -27,7 +27,6 @@ class _FakeTarget:
 
 def _empty_builder(seq) -> None:
     """Builder with no steps — sequence completes synchronously on start."""
-    pass
 
 
 def _x_builder(tweens_target, duration: float = 0.5):

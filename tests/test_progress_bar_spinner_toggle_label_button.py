@@ -1,6 +1,5 @@
 """Tests for ProgressBarControl, SpinnerControl, ToggleControl, LabelControl."""
 import unittest
-from types import SimpleNamespace
 
 import pygame
 from pygame import Rect

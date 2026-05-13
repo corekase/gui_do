@@ -10,7 +10,6 @@ from gui_do import (
 	SliderControl,
 	ToggleControl,
 	FlexLayout,
-	GridLayout,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 

@@ -10,8 +10,6 @@ from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.focus.focus_manager import FocusManager
 from gui_do.features.feature_lifecycle import add_window_scene_menu_strip
 from gui_do.overlays.context_menu_manager import ContextMenuItem
-from gui_do.app.gui_application import GuiApplication
-from gui_do.controls.input.button_control import ButtonControl
 
 
 class _StubWindowNode:
@@ -174,7 +172,7 @@ class TestSceneMenuStripControl(unittest.TestCase):
             windows_shown=True,
         )
 
-        theme = app.theme
+        app.theme
 
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),

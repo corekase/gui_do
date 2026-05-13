@@ -1037,8 +1037,6 @@ class SystemsFeature(Feature):
         right_x = left_w + 20
         right_w = max(180, rect.width - right_x - self.PANEL_PADDING_X)
         action_button_w = 120
-        action_button_gap = 8
-        action_button_right_pad = 12
 
         filter_label = LabelControl(
             "systems_data_filter_label",
@@ -2126,8 +2124,6 @@ class SystemsFeature(Feature):
         # Right column starts at top; move controls below labels to avoid overlap.
         right_label_top = top_padding
         right_content_top = right_label_top + 26
-        tile_preview_top = right_content_top
-        nav_cluster_y = right_content_top
 
         tile_preview_label = LabelControl(
             "systems_graphics_tile_map_preview_label",

@@ -153,7 +153,6 @@ class TaskScheduler:
             for _tid in removed:
                 self._finished_events.pop(_tid, None)
                 self._failed_events.pop(_tid, None)
-            self._task_messages = deque(message for message in self._task_messages if message.task_id not in removed)
 
     def remove_all(self) -> None:
         with self._lock:
@@ -613,7 +612,6 @@ class TaskScheduler:
         self._task_message_counts.pop(task_id, None)
         task = self._tasks.pop(task_id, None)
         self._results.pop(task_id, None)
-        self._task_messages = deque(message for message in self._task_messages if message.task_id != task_id)
         if task_id in self._running:
             self._running.discard(task_id)
             if task is not None and task.future is not None:

@@ -11,10 +11,9 @@ from pygame import Rect
 from ..controls.chrome.menu_bar_control import MenuEntry
 from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 from ..controls.chrome.window_control import WindowControl
-from ..controls.data.tab_control import TabControl, TabItem
+from ..controls.data.tab_control import TabControl
 from ..controls.input.button_control import ButtonControl
 from ..controls.display.label_control import LabelControl
-from ..controls.input.toggle_control import ToggleControl
 from ..layout.flex_layout import FlexLayout
 from ..text.localization import LocaleRegistry
 from .feature_lifecycle import (

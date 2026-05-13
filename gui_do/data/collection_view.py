@@ -61,8 +61,19 @@ class CollectionView:
 
     def _materialize(self) -> None:
         items = list(self._source() if callable(self._source) else self._source)
-        for predicate in self._query.filters:
-            items = [item for item in items if predicate(item)]
+        filters = self._query.filters
+        if filters:
+            if len(filters) == 1:
+                predicate = filters[0]
+                items = [item for item in items if predicate(item)]
+            else:
+                def _all_filters(item: Any) -> bool:
+                    for predicate in filters:
+                        if not predicate(item):
+                            return False
+                    return True
+
+                items = [item for item in items if _all_filters(item)]
         if self._query.sort_key is not None:
             items.sort(key=self._query.sort_key, reverse=self._query.reverse)
         if self._query.projector is not None:
@@ -76,7 +87,7 @@ class CollectionView:
             # is not supported (would require a snapshot copy).
             for callback in self._refresh_subscribers.values():
                 callback()
-        return self.items
+        return list(self._items)
 
     def set_source(self, source: Iterable[Any] | Callable[[], Iterable[Any]]) -> None:
         self._source = source

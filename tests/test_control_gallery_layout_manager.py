@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 from pygame import Rect
 
 from gui_do import build_multi_column_grid_specs
-from demo_features.showcase.showcase_feature import category_for_row
 
 
 class TestBuildGridSpecs(unittest.TestCase):
@@ -40,7 +39,6 @@ class TestBuildGridSpecs(unittest.TestCase):
             mock_split.return_value = col_rects
             mock_stack.return_value = (MagicMock(), None, None, None)
             # Return one spec per definition per column call
-            call_count = [0]
             def _fake_build(col_d, stack, slot_height_for, overflow_gap):
                 specs = []
                 for d in col_d:

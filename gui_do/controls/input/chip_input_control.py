@@ -226,9 +226,7 @@ class ChipInputControl(UiNode):
         chip_font_size = fonts.scaled_size(_FONT_SCALE)
         input_font_size = fonts.scaled_size(_INPUT_FONT_SCALE)
         pad_x = max(3, fonts.scaled_size(_CHIP_PAD_X_RATIO))
-        pad_y = max(2, fonts.scaled_size(_CHIP_PAD_Y_RATIO))
         close_w = max(10, fonts.scaled_size(_CHIP_CLOSE_RATIO))
-        min_input_w = max(40, fonts.scaled_size(_INPUT_MIN_W_RATIO))
 
         # Background
         if not self.enabled:

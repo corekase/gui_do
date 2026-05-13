@@ -3,17 +3,13 @@ import unittest
 
 from gui_do.features.data_driven_runtime import (
     FeatureSpec,
-    WindowSpec,
     RuntimeSceneSpec,
     ActionSpec,
-    StaticAccessibilitySpec,
     CursorSpec,
     SceneRootSpec,
     AnchoredWindowSpec,
     LogicBindingSpec,
     TaskPanelButtonSpec,
-    AccessibilitySequenceSpec,
-    TabBuilderSpec,
     TelemetryConfig,
     ActiveTabUpdateRouter,
     PresenterLabelSpec,

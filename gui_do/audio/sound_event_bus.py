@@ -282,7 +282,6 @@ class SoundEventBus:
             return False
 
         try:
-            import pygame  # type: ignore[import]
             effective_volume = (volume if volume is not None else cue.volume)
             effective_volume = float(max(0.0, min(1.0, effective_volume))) * self._master_volume
 

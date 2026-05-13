@@ -25,6 +25,8 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
+from bisect import bisect_right
+from collections import defaultdict
 from typing import Any, Callable, Optional
 
 
@@ -200,6 +202,26 @@ def _lcs(a: List, b: List) -> List:
     la, lb = len(a), len(b)
     if la == 0 or lb == 0:
         return []
+
+    # Keep exact dynamic programming for small lists where minimal diffs matter most,
+    # but avoid quadratic memory growth for larger inputs.
+    if la * lb > 4096:
+        positions = defaultdict(list)
+        for idx, value in enumerate(b):
+            positions[value].append(idx)
+        result = []
+        last_idx = -1
+        for value in a:
+            locs = positions.get(value)
+            if not locs:
+                continue
+            pos = bisect_right(locs, last_idx)
+            if pos >= len(locs):
+                continue
+            next_idx = locs[pos]
+            result.append(value)
+            last_idx = next_idx
+        return result
 
     # Build DP table
     dp = [[0] * (lb + 1) for _ in range(la + 1)]

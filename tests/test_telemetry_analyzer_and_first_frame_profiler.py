@@ -3,10 +3,10 @@ import unittest
 from datetime import datetime
 
 from gui_do.telemetry.telemetry_analyzer import (
-    TelemetryHotspot, TelemetryAnalysis,
-    _percentile, analyze_telemetry_records, render_telemetry_report,
+    _percentile, analyze_telemetry_records,
+    render_telemetry_report,
 )
-from gui_do.app.first_frame_profiler import FirstFrameProfiler, FirstFrameSample
+from gui_do.app.first_frame_profiler import FirstFrameProfiler
 from gui_do.scheduling.task_scheduler import TaskScheduler
 
 

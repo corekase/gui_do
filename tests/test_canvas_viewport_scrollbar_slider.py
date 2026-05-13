@@ -1,5 +1,4 @@
 """Tests for CanvasViewport, ScrollbarControl, and SliderControl."""
-import math
 import unittest
 
 import pygame

@@ -1,6 +1,6 @@
 import unittest
 
-from gui_do.data.list_diff import DiffInsert, DiffMove, DiffRemove, ListDiff, ListDiffCalculator
+from gui_do.data.list_diff import DiffInsert, ListDiff, ListDiffCalculator
 
 
 class TestListDiffCalculator(unittest.TestCase):

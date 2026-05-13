@@ -10,7 +10,6 @@ from pygame import Rect
 from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
-    from ...app.gui_application import GuiApplication
     from ...theme.color_theme import ColorTheme
 
 # Ratios relative to the default font size so text stays legible at any scale.

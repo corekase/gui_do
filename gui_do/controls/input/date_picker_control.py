@@ -255,7 +255,6 @@ class DatePickerControl(UiNode):
         """Return (field_h, btn_w) from font metrics."""
         if fonts is None:
             return 30, 28
-        font_size = fonts.scaled_size(_FONT_SCALE)
         field_h = max(20, fonts.scaled_size(_FIELD_H_RATIO))
         btn_w = max(20, fonts.scaled_size(_BTN_W_RATIO))
         return field_h, btn_w
@@ -285,8 +284,8 @@ class DatePickerControl(UiNode):
 
     def _handle_cal_click(self, pos: tuple, cal_rect: Rect, fonts) -> bool:
         font_size = fonts.scaled_size(_FONT_SCALE) if fonts else 14
-        nav_w = max(16, round(font_size * _CAL_NAV_BTN_W_RATIO))
         header_h = max(20, round(font_size * _CAL_HEADER_H_RATIO))
+        nav_w = max(16, round(font_size * _CAL_NAV_BTN_W_RATIO))
         prev_rect = Rect(cal_rect.left, cal_rect.top, nav_w, header_h)
         next_rect = Rect(cal_rect.right - nav_w, cal_rect.top, nav_w, header_h)
         if prev_rect.collidepoint(pos):
@@ -357,7 +356,6 @@ class DatePickerControl(UiNode):
         day_lbl_h = max(14, round(font_size * _DAY_LABEL_H_RATIO))
         cell_w = max(16, round(font_size * _CELL_W_RATIO))
         cell_h = max(14, round(font_size * _CELL_H_RATIO))
-        nav_w = max(16, round(font_size * _CAL_NAV_BTN_W_RATIO))
 
         pygame.draw.rect(surface, theme.background, cr)
         pygame.draw.rect(surface, theme.dark, cr, 1)

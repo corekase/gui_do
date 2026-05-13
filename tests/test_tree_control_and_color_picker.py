@@ -5,7 +5,7 @@ import pygame
 from pygame import Rect
 
 from gui_do.controls.data.tree_control import (
-    TreeControl, TreeNode, _flatten, _FlatRow
+    TreeControl, TreeNode, _flatten
 )
 from gui_do.controls.input.color_picker_control import ColorPickerControl
 

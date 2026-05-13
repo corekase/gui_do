@@ -90,25 +90,13 @@ class StateSelector(Generic[T]):
     # Internal — called by the store
     # ------------------------------------------------------------------
 
-    def _update(self, new_state: Dict[str, Any], changed_keys: List[str] | None = None) -> None:
+    def _update(self, new_state: Dict[str, Any], changed_keys: List[str]) -> None:
         """Update the selector if its dependencies changed.
 
         Args:
             new_state: New state dict to evaluate
-            changed_keys: List of keys that changed in this patch. If provided and
-                          _depends_on is set, only updates if overlap exists.
-                          If changed_keys is None, always updates (legacy behavior).
+            changed_keys: List of keys that changed in this update.
         """
-        # Legacy behavior: if no changed_keys provided, always update.
-        # (Used for backward compatibility with code that calls _update without changed_keys)
-        if changed_keys is None:
-            new_val = self._extractor(new_state)
-            if new_val != self._cached:
-                self._cached = new_val
-                for cb in self._iter_listeners():
-                    cb(new_val)
-            return
-
         # Dependency-aware update: only recompute if a dependency changed.
         if self._depends_on is None:
             # No dependencies declared: conservative, always update
@@ -250,8 +238,9 @@ class AppStateStore:
                 if key in state_copy:
                     for cb in list(callbacks):
                         cb(state_copy[key])
+            changed_keys = list(state_copy.keys())
             for sel in list(self._selectors):
-                sel._update(state_copy)
+                sel._update(state_copy, changed_keys=changed_keys)
 
     # ------------------------------------------------------------------
     # Direct read (no reactive tracking)

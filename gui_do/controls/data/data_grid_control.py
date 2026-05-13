@@ -130,15 +130,56 @@ class DataGridControl(_VirtualizedScrollListBase):
         if cv is None:
             self.set_rows([])
             return
+        old_rows = self._rows
+
+        def _row_key(row: GridRow) -> tuple[str, Any]:
+            if row.row_id is not None:
+                return ("id", row.row_id)
+            data = row.data
+            try:
+                hash(data)
+                return ("h", data)
+            except TypeError:
+                return ("i", id(data))
+
+        reusable: Dict[tuple[str, Any], List[GridRow]] = {}
+        for row in old_rows:
+            reusable.setdefault(_row_key(row), []).append(row)
+
+        selected_key = None
+        if 0 <= self._selected_row < len(old_rows):
+            selected_key = _row_key(old_rows[self._selected_row])
+
         converted: List[GridRow] = []
         for item in cv.items:
             if isinstance(item, GridRow):
                 converted.append(item)
-            elif isinstance(item, dict):
-                converted.append(GridRow(data=item))
+                continue
+            if isinstance(item, dict):
+                target_data = item
             else:
-                converted.append(GridRow(data={"value": item}))
-        self.set_rows(converted)
+                target_data = {"value": item}
+
+            try:
+                hash(target_data)
+                key = ("h", target_data)
+            except TypeError:
+                key = ("i", id(target_data))
+            bucket = reusable.get(key)
+            if bucket:
+                row = bucket.pop()
+                row.data = target_data
+                converted.append(row)
+            else:
+                converted.append(GridRow(data=target_data))
+
+        self._rows = converted
+        if selected_key is not None:
+            self._selected_row = next((i for i, row in enumerate(converted) if _row_key(row) == selected_key), -1)
+        else:
+            self._selected_row = -1
+        self._clamp_scroll()
+        self.invalidate()
 
     def bind_collection_view(
         self,

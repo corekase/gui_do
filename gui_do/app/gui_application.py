@@ -120,6 +120,7 @@ class GuiApplication:
         self._startup_scene_prewarm_job_keys: set[str] = set()
         self._scene_deferred_prewarm_jobs: dict[str, deque[tuple[str, Callable[[pygame.Surface, "ColorTheme"], None]]]] = {}
         self._scene_deferred_prewarm_job_keys: dict[str, set[str]] = {}
+        self._scheduler_backlog_ema: float = 0.0
         # Wire the invalidation tracker into the initial active scene so that
         # per-control invalidate() calls register dirty rects immediately.
         self.invalidation.set_screen_size(self.surface.get_size())
@@ -641,6 +642,17 @@ class GuiApplication:
     def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
         dt_ms = (dt_seconds if dt_seconds > 0.0 else 0.0) * 1000.0
         target_ms = dt_ms * self._SCHEDULER_DISPATCH_BUDGET_FRACTION
+        scheduler = getattr(self, "scheduler", None)
+        if scheduler is not None:
+            pressure = 0.0
+            try:
+                pending = float(scheduler.pending_count())
+                running = float(scheduler.running_count())
+                pressure = pending + max(0.0, running - 1.0)
+            except Exception:
+                pressure = 0.0
+            self._scheduler_backlog_ema = (self._scheduler_backlog_ema * 0.8) + (pressure * 0.2)
+            target_ms += min(1.0, self._scheduler_backlog_ema * 0.08)
         min_ms = self._SCHEDULER_DISPATCH_BUDGET_MIN_MS
         max_ms = self._SCHEDULER_DISPATCH_BUDGET_MAX_MS
         if target_ms < min_ms:
@@ -699,6 +711,9 @@ class GuiApplication:
                     self.input_state.pointer_pos = wheel_pos
                     gui_event = replace(gui_event, pos=wheel_pos, raw_pos=wheel_pos)
             raw_pos = gui_event.pos
+            normalized_raw_pos = None
+            if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
+                normalized_raw_pos = (int(raw_pos[0]), int(raw_pos[1]))
             if gui_event.kind == EventType.MOUSE_BUTTON_DOWN:
                 self._pending_warp_target = None
                 self._pending_warp_ignore_budget = 0
@@ -726,9 +741,9 @@ class GuiApplication:
             # offset from logical drag position. Keep logical position stable on
             # release so controls do not jump on drag-end.
             self._logical_pointer_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
-        elif gui_event.kind == EventType.MOUSE_MOTION and self._pending_warp_target is not None and isinstance(raw_pos, tuple) and len(raw_pos) == 2:
+        elif gui_event.kind == EventType.MOUSE_MOTION and self._pending_warp_target is not None and normalized_raw_pos is not None:
             tx, ty = int(self._pending_warp_target[0]), int(self._pending_warp_target[1])
-            rx, ry = int(raw_pos[0]), int(raw_pos[1])
+            rx, ry = normalized_raw_pos
             # After a release-time cursor warp, OS/event queues may emit several stale
             # absolute positions. Keep logical pointer pinned to the warp target
             # until packets converge (or budget expires) so no position debt accrues.
@@ -743,8 +758,8 @@ class GuiApplication:
                 self._pending_warp_target = None
                 self._pending_warp_ignore_budget = 0
                 self._logical_pointer_pos = (rx, ry)
-        elif isinstance(raw_pos, tuple) and len(raw_pos) == 2:
-            self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
+        elif normalized_raw_pos is not None:
+            self._logical_pointer_pos = normalized_raw_pos
         if self.lock_area is not None:
             self._logical_pointer_pos = self._clamp_to_rect(self._logical_pointer_pos, self.lock_area)
             self.input_state.pointer_pos = self._logical_pointer_pos
@@ -839,6 +854,16 @@ class GuiApplication:
                 self.invalidation.invalidate_all()
                 return True
         return False
+
+    def process_events(self, events) -> int:
+        """Process a batch of events and return the number of consumed events."""
+        consumed_count = 0
+        for event in events:
+            if self.process_event(event):
+                consumed_count += 1
+            if not self.running:
+                break
+        return consumed_count
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name: Optional[str] = None) -> None:
         self._screen_lifecycle_base = _ScreenLifecycleEntry(

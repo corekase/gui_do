@@ -154,8 +154,11 @@ class SortFilterProxySource:
 
     def _invalidate(self) -> None:
         self._dirty = True
-        self._recompute()
-        for handler in list(self._subscribers):
+        subscribers = self._subscribers
+        if not subscribers:
+            return
+        snapshot = subscribers if len(subscribers) == 1 else tuple(subscribers)
+        for handler in snapshot:
             handler()
 
     def _ensure_fresh(self) -> None:
@@ -164,18 +167,19 @@ class SortFilterProxySource:
 
     def _recompute(self) -> None:
         raw_count = self._raw_count()
+        source_item_at = self._source_item_at
+        predicate = self._filter
+        sort_key = self._sort_key
 
-        if self._filter is None and self._sort_key is None:
+        if predicate is None and sort_key is None:
             # No transform: expose all indices in source order.
             self._visible = list(range(raw_count))
             self._dirty = False
             return
 
-        if self._filter is not None and self._sort_key is None:
+        if predicate is not None and sort_key is None:
             # Filter-only fast path: single streaming pass, no pre-built pairs list.
             visible = []
-            source_item_at = self._source_item_at
-            predicate = self._filter
             for i in range(raw_count):
                 if predicate(source_item_at(i)):
                     visible.append(i)
@@ -183,16 +187,17 @@ class SortFilterProxySource:
             self._dirty = False
             return
 
-        # Sort (with optional filter): build (index, item) pairs once.
-        pairs = [(i, self._source_item_at(i)) for i in range(raw_count)]
+        if predicate is None:
+            visible = list(range(raw_count))
+        else:
+            visible = []
+            for i in range(raw_count):
+                if predicate(source_item_at(i)):
+                    visible.append(i)
 
-        if self._filter is not None:
-            pairs = [(i, item) for i, item in pairs if self._filter(item)]
-
-        _sort_key = self._sort_key
-        pairs.sort(key=lambda p: _sort_key(p[1]), reverse=self._sort_reverse)
-
-        self._visible = [i for i, _ in pairs]
+        # Sort indices directly to avoid index-item tuple allocation.
+        visible.sort(key=lambda idx: sort_key(source_item_at(idx)), reverse=self._sort_reverse)
+        self._visible = visible
         self._dirty = False
 
     # ------------------------------------------------------------------

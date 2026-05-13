@@ -3,7 +3,7 @@ import unittest
 
 from gui_do.forms.form_model import FieldError, FormField, FormModel
 from gui_do.forms.form_schema import FormSchema, SchemaField
-from gui_do.forms.wizard_flow import WizardFlow, WizardHandle, WizardStep
+from gui_do.forms.wizard_flow import WizardFlow, WizardStep
 
 
 # ---------------------------------------------------------------------------

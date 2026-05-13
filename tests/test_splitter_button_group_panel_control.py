@@ -188,7 +188,7 @@ class TestButtonGroupControlSetOnActivate(unittest.TestCase):
 class TestButtonGroupControlClearGroupRegistry(unittest.TestCase):
     def test_clear_specific_group(self):
         ButtonGroupControl.clear_group_registry("my_group")
-        btn = ButtonGroupControl("a", Rect(0, 0, 80, 28), "my_group", "A", selected=True)
+        ButtonGroupControl("a", Rect(0, 0, 80, 28), "my_group", "A", selected=True)
         ButtonGroupControl.clear_group_registry("my_group")
         self.assertNotIn("my_group", ButtonGroupControl._selection_by_group)
 

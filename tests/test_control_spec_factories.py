@@ -79,7 +79,8 @@ class TestControlDefinition(unittest.TestCase):
             defn.name = "y"  # type: ignore[misc]
 
     def test_exported_from_gui_do(self):
-        from gui_do import ControlDefinition  # noqa: F401
+        from gui_do import ControlDefinition
+        self.assertIsNotNone(ControlDefinition)
 
 
 # ===========================================================================
@@ -197,7 +198,8 @@ class TestBuildSpecsFromColumnSection(unittest.TestCase):
         self.assertEqual(2, len(specs))
 
     def test_exported_from_gui_do(self):
-        from gui_do import build_specs_from_column_section  # noqa: F401
+        from gui_do import build_specs_from_column_section
+        self.assertIsNotNone(build_specs_from_column_section)
 
     def test_rects_are_non_empty(self):
         from gui_do.features.control_spec import build_specs_from_column_section
@@ -241,7 +243,8 @@ class TestNotificationSpec(unittest.TestCase):
             spec.message = "y"  # type: ignore[misc]
 
     def test_exported_from_gui_do(self):
-        from gui_do import NotificationSpec  # noqa: F401
+        from gui_do import NotificationSpec
+        self.assertIsNotNone(NotificationSpec)
 
 
 # ===========================================================================
@@ -251,7 +254,7 @@ class TestNotificationSpec(unittest.TestCase):
 
 class TestBuildNotificationCenter(unittest.TestCase):
     def test_returns_notification_center(self):
-        from gui_do.features.data_driven_runtime import NotificationSpec, build_notification_center
+        from gui_do.features.data_driven_runtime import build_notification_center
         from gui_do.overlays.notification_center import NotificationCenter
         nc = build_notification_center((), max_records=10)
         self.assertIsInstance(nc, NotificationCenter)
@@ -294,7 +297,8 @@ class TestBuildNotificationCenter(unittest.TestCase):
         self.assertLessEqual(len(nc.records.value), 3)
 
     def test_exported_from_gui_do(self):
-        from gui_do import build_notification_center  # noqa: F401
+        from gui_do import build_notification_center
+        self.assertIsNotNone(build_notification_center)
 
 
 if __name__ == "__main__":

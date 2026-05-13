@@ -1,7 +1,7 @@
 import unittest
 
 from gui_do.actions.action_registry import ActionDescriptor, ActionRegistry
-from gui_do.actions.input_map import InputBinding, InputMap
+from gui_do.actions.input_map import InputMap
 
 
 # ---------------------------------------------------------------------------
