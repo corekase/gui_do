@@ -44,7 +44,7 @@ class TestCellCaretLayout(unittest.TestCase):
         self.assertEqual(Rect(130, 0, 100, 80), second)
         self.assertEqual(Rect(0, 130, 100, 80), third)
 
-    def test_bind_layout_manager_to_cell_content(self):
+    def test_bind_anchor_layout_to_cell_content(self):
         layout = CellCaretLayout(
             bounds=Rect(20, 30, 300, 300),
             cell_width=100,
