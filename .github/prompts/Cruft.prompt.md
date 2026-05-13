@@ -22,6 +22,7 @@ You are performing a cruft-removal pass on this package. Your job is to find and
 - Collapsed coordinator or facade classes that once delegated to another object but whose routing layer has since been inlined into the caller.
 - `getattr`/`hasattr` duck-typed probing fallbacks in production code that guard against missing attributes or methods that are now guaranteed to exist by the canonical contract.
 - Legacy conditional branches (e.g., `if scene_name == "..."`) that are permanently dead because the triggering condition can never be satisfied given the current architecture.
+- **Known deprecated patterns to prioritize**: Look for and remove optional `changed_keys=None` parameter paths in `AppStateStore`, scene generator interface shims (if any), and hardcoded timing workarounds like `_FONT_SIZE` constants that could be derived from proper font metrics.
 
 **Stale test infrastructure.** Remove test helper stubs, fixture builders, or shared factory presets that are no longer consumed by any test. Do not remove tests themselves unless the functionality they cover has been deleted.
 

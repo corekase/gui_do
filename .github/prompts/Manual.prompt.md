@@ -156,12 +156,12 @@ MANUAL.md must contain these top-level sections in this order:
 Every system chapter must include all of these subsections:
 
 - **What it is and why it exists** — purpose and design rationale
-- **Mental model and lifecycle placement** — how to think about it; when in the lifecycle it is used
+- **Mental model and lifecycle placement** — how to think about it; when in the lifecycle it is used; **especially for systems involved in subscriptions, explicitly state which lifecycle phase subscriptions should be registered in and which phase they must be cleaned up in**
 - **Primary public APIs and key types** — list the relevant exports by name
 - **Typical usage flow** — numbered steps for the common case
 - **Minimal example** — short runnable code block
 - **Advanced pattern(s)** — at least one non-trivial composition
-- **Common mistakes and anti-patterns** — specific, actionable
+- **Common mistakes and anti-patterns** — specific, actionable; **especially for systems involving subscriptions, observables, or lifecycle phases, always include at least one detailed anti-pattern about subscription lifecycle and memory safety**
 - **Cross-links to related systems** — reference other chapters by number
 - **Back-to-top link** — `[Back to Table of Contents](#table-of-contents)`
 

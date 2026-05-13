@@ -18,6 +18,8 @@ Produce a prioritized roadmap of the best next generalized systems to implement,
 - Prioritize "systems" work over one-off controls or narrow feature additions.
 - Favor additions that integrate cleanly with existing data-driven runtime and feature lifecycle patterns.
 - Identify dependencies between candidates so foundational systems come first.
+- **Architectural patterns to preserve and extend**: All recommendations must align with (1) feature lifecycle phases (`build` → `bind_runtime` → `on_update` → `draw` → `shutdown_runtime`), (2) reactive state and subscription lifecycle, (3) declarative spec-driven composition, and (4) scene-local isolation with shared app managers.
+- **Feature types to promote**: Emphasize how new systems integrate with `Feature`, `DirectFeature`, `LogicFeature`, and `RoutedFeature`. Highlight `RoutedFeature` + `RoutedRuntimeSpec` patterns as the preferred extension mechanism for event-driven and scheduler-managed behavior.
 
 ## Hard Constraint
 
@@ -32,5 +34,7 @@ Produce a prioritized roadmap of the best next generalized systems to implement,
 	- Why it belongs at its priority rank.
 	- Expected impact on existing architecture and downstream features.
 	- Key implementation risks and mitigation notes.
+	- **How lifecycle order and subscription cleanup will be enforced** (this is critical: document which lifecycle phase(s) the system relies on and how subscribers will be cleaned up to avoid leaks).
 3. Recommended implementation sequence with dependency notes.
 4. Brief rationale for what was intentionally deferred and why.
+5. Summary of architectural patterns demonstrated by the proposal (what existing pattern does it extend or build upon?).

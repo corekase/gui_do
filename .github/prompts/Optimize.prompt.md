@@ -32,6 +32,14 @@ Work through opportunities in this order:
 
 **6. Allocation reduction in tight loops.** Find object construction (tuples, rects, event objects, intermediate lists) inside loops that execute on every event or every frame. Hoist construction outside the loop or replace with in-place mutation where the contract permits.
 
+## High-Impact Opportunities (Prioritize These)
+
+Based on current architecture analysis, these areas are candidates for meaningful optimization:
+
+- **Scheduler budget tuning** (`scheduling/cooperative_scheduler.py`, `scheduling/task_scheduler.py`): Measure and optimize cooperative task time budgets and inter-frame overhead. Profile whether default budget allocations match actual workload patterns.
+- **Event batching** (`events/`, `actions/`): Analyze hotpaths where multiple events are processed per frame. Consider batching strategies to reduce per-event overhead (callback invocation, intermediate object creation, dispatch routing).
+- **Collection view incremental updates** (`data/collection_view.py`, `data/sort_filter_proxy.py`): Optimize incremental list diff calculations and proxy transformations; profile whether diffs are being computed unnecessarily on static data. Look for opportunities to cache filter/sort results when inputs haven't changed.
+
 ## Structural Changes
 
 If an opportunity is classified `structural`, do not inline it into the main pass. Instead:
