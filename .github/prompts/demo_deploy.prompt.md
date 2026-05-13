@@ -19,6 +19,8 @@ Ensure controls are demonstrated in the controls showcase and systems are integr
 	- For any newly created Systems window, populate a tab strip with the systems the window demonstrates.
 	- If a Systems window definition already exists, update its existing tabs with the new system examples where they fit, and only create new tabs for systems that do not belong in an existing tab.
 	- Ensure systems not currently covered by the demo are added to this Systems window.
+	- Explicitly include graphics/runtime systems that are easy to miss in control-focused passes, including `ParticleSystem` (and related emitters/layers when useful) and other non-control `gui_do` systems/functions that have meaningful demo value.
+	- Treat this as a broad systems sweep across `gui_do/` (not only controls). If a candidate system belongs better in another scene/feature than the Systems window, integrate it there and document the placement rationale in code comments/docstrings.
 3. Prefer realistic usage patterns for each integrated item.
 4. If a control/system does not have a clear in-repo use-case, add a clean placeholder example with sensible names, structure, and sample data.
 5. Update `demo_features/showcase/showcase_feature.py` with any missing example controls.
@@ -31,3 +33,4 @@ Ensure controls are demonstrated in the controls showcase and systems are integr
 - Keep naming and grouping understandable for someone exploring the demo for the first time.
 - Keep Systems window tab organization stable and non-duplicative; do not split related systems across multiple tabs without a clear functional reason.
 - Prefer updating existing systems demo structures over introducing parallel patterns that overlap in responsibility.
+- Ensure systems coverage includes representative examples of major non-control runtime domains (for example graphics pipelines like particles, state/runtime orchestration, scheduling, persistence, and dataflow) where practical.

@@ -12,6 +12,11 @@ SYSTEMS_TAB_KEYS = (
     "validation",
     "history",
     "theme",
+    "state",
+    "infrastructure",
+    "scheduling",
+    "persistence",
+    "graphics",
 )
 
 

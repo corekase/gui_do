@@ -3,34 +3,72 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+import tempfile
 
 from pygame import Rect
 
 from gui_do import (
+    AppStateStore,
     AnchoredWindowSpec,
     AsyncFieldValidator,
     AsyncFormValidator,
     ButtonControl,
+    ConstraintAttr,
+    ConstraintLayoutEngine,
+    ConstraintSet,
+    CellCaretLayout,
     CollectionView,
     CollectionViewQuery,
     CommandHistory,
+    CooperativeScheduler,
     DataCache,
+    DataflowPipeline,
     DropdownControl,
     DropdownOption,
+    Emitter,
+    FieldGraphSchema,
+    FieldSchema,
     Feature,
     FormField,
     FrameTimer,
+    InteractionContext,
+    InteractionStateMachine,
+    LayoutConstraint,
     LabelControl,
     ListViewControl,
+    MeasurePolicy,
+    MigrationRegistry,
+    MigrationStep,
     PanelControl,
+    ParticleLayer,
+    PipelineStage,
+    RecyclePool,
+    SchemaFormRuntime,
+    SchemaVersion,
+    ScopeStack,
     ScopedTheme,
     ScopedThemeManager,
+    ServiceKey,
+    SettingsRegistry,
+    Sleep,
+    SnapshotMigrator,
+    StateTransaction,
     TabControl,
     TabItem,
+    TaskScheduler,
     TextInputControl,
     ThemeManager,
+    ThemeInvalidationBus,
+    UndoContextManager,
+    ValidationPolicy,
+    VirtualizationCore,
+    VirtualizedWindow,
     WindowControl,
+    WorkspacePersistenceManager,
+    WorkspaceState,
     create_feature_presented_window,
+    make_snapshot,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.controls.data.list_view_control import ListItem
@@ -64,6 +102,32 @@ class _StatusChangeCommand:
         self._feature._refresh_history_labels()
 
 
+class _SetIndexCommand:
+    def __init__(self, feature: "SystemsFeature", attr_name: str, new_index: int, description: str) -> None:
+        self._feature = feature
+        self._attr_name = str(attr_name)
+        self._new_index = int(new_index)
+        self._old_index = int(getattr(feature, attr_name))
+        self._description = str(description)
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    def execute(self) -> None:
+        setattr(self._feature, self._attr_name, self._new_index)
+        self._feature._refresh_state_labels()
+
+    def undo(self) -> None:
+        setattr(self._feature, self._attr_name, self._old_index)
+        self._feature._refresh_state_labels()
+
+
+@dataclass
+class _VirtualCell:
+    index: int = -1
+
+
 class _SystemsPresenter(WindowPresenter):
     def __init__(self, feature: "SystemsFeature", host) -> None:
         super().__init__(None)
@@ -78,12 +142,7 @@ class _SystemsPresenter(WindowPresenter):
         tabs = TabControl(
             "systems_tabs",
             Rect(content_rect.left, content_rect.top, content_rect.width, tab_height),
-            items=[
-                TabItem("data", "Data"),
-                TabItem("validation", "Validation"),
-                TabItem("history", "History"),
-                TabItem("theme", "Theme"),
-            ],
+            items=[TabItem(key, label) for key, label in feature.TAB_DEFINITIONS],
             selected_key=feature.active_tab_key,
             on_change=feature.set_active_tab,
             horizontal_padding=2,
@@ -103,7 +162,22 @@ class _SystemsPresenter(WindowPresenter):
         validation_panel = feature.build_validation_panel(panel_rect)
         history_panel = feature.build_history_panel(panel_rect)
         theme_panel = feature.build_theme_panel(panel_rect)
-        for panel in (data_panel, validation_panel, history_panel, theme_panel):
+        state_panel = feature.build_state_panel(panel_rect)
+        infrastructure_panel = feature.build_infrastructure_panel(panel_rect)
+        scheduling_panel = feature.build_scheduling_panel(panel_rect)
+        persistence_panel = feature.build_persistence_panel(panel_rect)
+        graphics_panel = feature.build_graphics_panel(panel_rect)
+        for panel in (
+            data_panel,
+            validation_panel,
+            history_panel,
+            theme_panel,
+            state_panel,
+            infrastructure_panel,
+            scheduling_panel,
+            persistence_panel,
+            graphics_panel,
+        ):
             self.add_control(panel)
 
         feature._tab_panels = {
@@ -111,6 +185,11 @@ class _SystemsPresenter(WindowPresenter):
             "validation": validation_panel,
             "history": history_panel,
             "theme": theme_panel,
+            "state": state_panel,
+            "infrastructure": infrastructure_panel,
+            "scheduling": scheduling_panel,
+            "persistence": persistence_panel,
+            "graphics": graphics_panel,
         }
         feature.window = self.window
         feature.demo = self.host
@@ -120,6 +199,22 @@ class _SystemsPresenter(WindowPresenter):
 
 class SystemsFeature(Feature):
     """Tabbed main-scene systems window with practical demo integrations."""
+
+    TAB_DEFINITIONS = (
+        ("data", "Data"),
+        ("validation", "Validation"),
+        ("history", "History"),
+        ("theme", "Theme"),
+        ("state", "State"),
+        ("infrastructure", "Infrastructure"),
+        ("scheduling", "Scheduling"),
+        ("persistence", "Persistence"),
+        ("graphics", "Graphics"),
+    )
+    PANEL_PADDING_X = 16
+    BUTTON_ROW_HEIGHT = 32
+    BUTTON_ROW_GAP = 12
+    BUTTON_ROW_SPACING = 12
 
     HOST_REQUIREMENTS = {
         "build": ("app", "root", "screen_rect"),
@@ -216,6 +311,161 @@ class SystemsFeature(Feature):
         self.theme_scope_label = None
         self.theme_resolved_label = None
 
+        self._release_store = AppStateStore(
+            {
+                "pending": 4,
+                "approved": 1,
+                "blocked": 0,
+                "status": "Review",
+            }
+        )
+        self._release_readiness = self._release_store.select(
+            lambda state: max(0, int(state.get("approved", 0)) * 25 - int(state.get("blocked", 0)) * 10)
+        )
+        self._state_history = CommandHistory()
+        self._state_build_history = CommandHistory()
+        self._state_stages = ("Draft", "Review", "Approved", "Released")
+        self._state_stage_index = 0
+        self._state_build_stages = ("Queued", "Running", "Passed")
+        self._state_build_stage_index = 0
+        self._undo_context = UndoContextManager(default_key="release")
+        self._undo_context.register("release", self._state_history, make_active=True)
+        self._undo_context.register("build", self._state_build_history)
+        self._undo_context_key = "release"
+        self.state_context_dropdown = None
+        self.state_store_label = None
+        self.state_readiness_label = None
+        self.state_context_label = None
+
+        self._pipeline = DataflowPipeline(
+            [
+                PipelineStage("normalize", lambda value, _token: str(value).strip().lower()),
+                PipelineStage("stamp", lambda value, _token: f"{value}-signed"),
+                PipelineStage("route", lambda value, _token: f"artifact://release/{value}"),
+            ]
+        )
+        self._interaction = InteractionStateMachine.with_standard_pointer_transitions()
+        self._interaction_event_index = 0
+        self._schema_runtime = SchemaFormRuntime(
+            FieldGraphSchema(
+                [
+                    FieldSchema(
+                        "channel",
+                        default="canary",
+                        required=True,
+                        validators=[
+                            lambda value: None if str(value) in {"canary", "stable"} else "Channel must be canary or stable"
+                        ],
+                    ),
+                    FieldSchema(
+                        "approver",
+                        default="Mira",
+                        required=True,
+                        validators=[
+                            lambda value: None
+                            if len(str(value).strip()) >= 3
+                            else "Approver must have at least 3 characters"
+                        ],
+                    ),
+                ]
+            ),
+            ValidationPolicy.ON_CHANGE,
+        )
+        self._schema_use_invalid_value = False
+        self._version_v1 = SchemaVersion(1, 0)
+        self._version_v2 = SchemaVersion(2, 0)
+        self._version_v3 = SchemaVersion(3, 0)
+        self._migration_registry = MigrationRegistry()
+        self._migration_registry.register(
+            MigrationStep(self._version_v1, self._version_v2, lambda data: {**data, "build_template": "modern"})
+        )
+        self._migration_registry.register(
+            MigrationStep(self._version_v2, self._version_v3, lambda data: {**data, "checks": ["lint", "tests"]})
+        )
+        self._snapshot_migrator = SnapshotMigrator(self._migration_registry)
+        self._theme_invalidation_ticks = 0
+        self._theme_invalidation_bus = ThemeInvalidationBus(theme_manager=self._theme_manager)
+        self._theme_invalidation_bus.register(self, self._record_theme_invalidation)
+        self._virtual_window = VirtualizedWindow(
+            viewport_height=108,
+            overscan=1,
+            policy=MeasurePolicy(item_height=24),
+        )
+        self._virtual_pool = RecyclePool(_VirtualCell, reset_fn=lambda cell: setattr(cell, "index", -1))
+        self._virtual_core = VirtualizationCore(self._virtual_window, self._virtual_pool, self._bind_virtual_cell)
+        self._virtual_scroll_offset = 0
+        self._constraint_engine = ConstraintLayoutEngine()
+        self._constraint_engine.set_initial_rect("call_to_action", Rect(0, 0, 220, 34))
+        self._scope_stack = ScopeStack()
+        self._service_key_api_base: ServiceKey[str] = ServiceKey("api_base")
+        self._service_key_channel: ServiceKey[str] = ServiceKey("release_channel")
+        self._scope_stack.root.bind(self._service_key_api_base, "https://deploy.internal")
+        self._scope_stack.root.bind(self._service_key_channel, "canary")
+
+        self.infrastructure_pipeline_label = None
+        self.infrastructure_interaction_label = None
+        self.infrastructure_schema_label = None
+        self.infrastructure_migration_label = None
+        self.infrastructure_theme_bus_label = None
+        self.infrastructure_virtualization_label = None
+        self.infrastructure_layout_label = None
+        self.infrastructure_scope_label = None
+
+        self._task_scheduler = TaskScheduler(max_workers=1)
+        self._task_job_index = 0
+        self._task_last_summary = "TaskScheduler idle: no background jobs queued yet."
+        self._task_last_failure = ""
+        self._cooperative_scheduler = CooperativeScheduler()
+        self._rollout_handle = None
+        self._rollout_phase = "Idle"
+        self.scheduling_task_label = None
+        self.scheduling_rollout_label = None
+
+        self._settings_registry = SettingsRegistry()
+        self._settings_registry.declare("systems", "profile", default="review", label="Release Profile")
+        self._settings_registry.declare("systems", "autosave", default=True, label="Autosave Workspace")
+        self._settings_registry.declare("systems", "parallel_checks", default=2, label="Parallel Checks")
+        self._workspace_persistence = WorkspacePersistenceManager()
+        self._workspace_persistence.register_settings("systems", self._settings_registry)
+        self._workspace_state_path = Path(tempfile.gettempdir()) / "gui_do_demo" / "systems_workspace_state.json"
+        self._saved_workspace_state: WorkspaceState | None = None
+        self._persistence_last_status = "WorkspacePersistenceManager ready to serialize systems settings."
+        self._persistence_last_report: dict[str, object] | None = None
+        self.persistence_overview_label = None
+        self.persistence_settings_label = None
+        self.persistence_status_label = None
+
+        preview_rect = Rect(0, 0, 520, 180)
+        self._particle_layer = ParticleLayer("systems_graphics_particle_layer", preview_rect, max_particles=384)
+        self._particle_ambient_emitter = Emitter(
+            x=preview_rect.width * 0.5,
+            y=preview_rect.height * 0.78,
+            rate=28,
+            lifetime=(1.0, 1.8),
+            speed=(42, 96),
+            angle_range=(258, 282),
+            size=(2.0, 1.0),
+            colors=[(255, 214, 140), (255, 241, 188)],
+            gravity=-26,
+        )
+        self._particle_burst_emitter = Emitter(
+            x=preview_rect.width * 0.5,
+            y=preview_rect.height * 0.42,
+            rate=0,
+            burst_count=0,
+            lifetime=(0.7, 1.3),
+            speed=(70, 170),
+            angle_range=(0, 360),
+            size=(3.0, 1.0),
+            colors=[(255, 119, 87), (255, 196, 87), (87, 166, 255), (87, 224, 173)],
+            gravity=120,
+        )
+        self.graphics_particle_label = None
+        self.graphics_layer_label = None
+        self._burst_emitter_panel_offset: tuple = (0.0, 0.0)
+        self._ambient_emitter_panel_offset: tuple = (0.0, 0.0)
+        self._reset_particle_layer()
+
     def build(self, host) -> None:
         self.window = create_feature_presented_window(
             host,
@@ -228,10 +478,16 @@ class SystemsFeature(Feature):
     def on_update(self, host) -> None:
         if self.window is None or not self.window.visible:
             return
-        if self.active_tab_key != "validation":
-            return
-        self._form_validator.update(self._frame_timer.tick())
-        self._refresh_validation_labels()
+        dt = self._frame_timer.tick()
+        self._task_scheduler.update()
+        self._cooperative_scheduler.update(dt)
+        if self.active_tab_key == "validation":
+            self._form_validator.update(dt)
+            self._refresh_validation_labels()
+        elif self.active_tab_key == "scheduling":
+            self._refresh_scheduling_labels()
+        elif self.active_tab_key == "graphics":
+            self._advance_graphics_demo(dt)
 
     def set_active_tab(self, key: str) -> None:
         next_key = str(key)
@@ -248,12 +504,72 @@ class SystemsFeature(Feature):
             self._refresh_history_labels()
         elif next_key == "theme":
             self._refresh_theme_labels()
+        elif next_key == "state":
+            self._refresh_state_labels()
+        elif next_key == "infrastructure":
+            self._refresh_infrastructure_labels()
+        elif next_key == "scheduling":
+            self._refresh_scheduling_labels()
+        elif next_key == "persistence":
+            self._refresh_persistence_labels()
+        elif next_key == "graphics":
+            self._refresh_graphics_labels()
+
+    def _row_bounds(
+        self,
+        rect: Rect,
+        top: int,
+        *,
+        left: int | None = None,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> Rect:
+        row_left = self.PANEL_PADDING_X if left is None else int(left)
+        row_height = self.BUTTON_ROW_HEIGHT if height is None else max(1, int(height))
+        if width is None:
+            right_padding = self.PANEL_PADDING_X if left is None else self.PANEL_PADDING_X
+            row_width = rect.width - row_left - right_padding
+        else:
+            row_width = int(width)
+        return Rect(row_left, int(top), max(1, row_width), row_height)
+
+    def _place_row_controls(self, panel: PanelControl, row_bounds: Rect, controls: list[object]) -> None:
+        if not controls:
+            return
+        slots = CellCaretLayout.split_columns(
+            row_bounds,
+            count=len(controls),
+            gap=self.BUTTON_ROW_GAP,
+            min_width=1,
+        )
+        for control, slot in zip(controls, slots):
+            control.rect = Rect(0, 0, slot.width, slot.height)
+            panel.add_at(control, slot.left, slot.top)
+
+    def _add_button_rows(
+        self,
+        panel: PanelControl,
+        rect: Rect,
+        top: int,
+        buttons: list[ButtonControl],
+        *,
+        per_row: int = 2,
+        left: int | None = None,
+        width: int | None = None,
+    ) -> int:
+        current_top = int(top)
+        row_size = max(1, int(per_row))
+        for start in range(0, len(buttons), row_size):
+            row_bounds = self._row_bounds(rect, current_top, left=left, width=width)
+            self._place_row_controls(panel, row_bounds, buttons[start:start + row_size])
+            current_top = row_bounds.bottom + self.BUTTON_ROW_SPACING
+        return current_top
 
     def build_data_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_data_panel", Rect(rect), draw_background=False)
         left_w = max(280, int(rect.width * 0.58))
         right_x = left_w + 20
-        right_w = max(180, rect.width - right_x)
+        right_w = max(180, rect.width - right_x - self.PANEL_PADDING_X)
         action_button_w = 120
         action_button_gap = 8
         action_button_right_pad = 12
@@ -287,10 +603,15 @@ class SystemsFeature(Feature):
             self._clear_backlog_cache,
             style="round",
         )
-        cache_button_x = max(0, rect.width - action_button_right_pad - action_button_w)
-        add_button_x = max(0, cache_button_x - action_button_gap - action_button_w)
-        panel.add_at(add_button, add_button_x, 0)
-        panel.add_at(cache_button, cache_button_x, 0)
+        self._add_button_rows(
+            panel,
+            rect,
+            0,
+            [add_button, cache_button],
+            per_row=2,
+            left=right_x,
+            width=right_w,
+        )
 
         self.data_list = ListViewControl(
             "systems_backlog_list",
@@ -370,8 +691,7 @@ class SystemsFeature(Feature):
             self._apply_suggested_name,
             style="round",
         )
-        panel.add_at(run_checks, 248, 112)
-        panel.add_at(suggested, 408, 112)
+        self._add_button_rows(panel, rect, 156, [run_checks, suggested])
 
         self.validation_state_label = LabelControl(
             "systems_validation_state",
@@ -391,9 +711,9 @@ class SystemsFeature(Feature):
             "Async availability check pending.",
             align="left",
         )
-        panel.add_at(self.validation_state_label, 0, 176)
-        panel.add_at(self.validation_local_label, 0, 212)
-        panel.add_at(self.validation_async_label, 0, 248)
+        panel.add_at(self.validation_state_label, 0, 216)
+        panel.add_at(self.validation_local_label, 0, 252)
+        panel.add_at(self.validation_async_label, 0, 288)
         self._refresh_validation_labels()
         return panel
 
@@ -427,10 +747,12 @@ class SystemsFeature(Feature):
             self._redo_history_stage,
             style="round",
         )
-        panel.add_at(advance_button, 0, 0)
-        panel.add_at(batch_button, 152, 0)
-        panel.add_at(undo_button, 324, 0)
-        panel.add_at(redo_button, 432, 0)
+        label_top = self._add_button_rows(
+            panel,
+            rect,
+            0,
+            [advance_button, batch_button, undo_button, redo_button],
+        )
 
         self.history_current_label = LabelControl(
             "systems_history_current",
@@ -450,9 +772,9 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        panel.add_at(self.history_current_label, 0, 68)
-        panel.add_at(self.history_undo_label, 0, 104)
-        panel.add_at(self.history_redo_label, 0, 140)
+        panel.add_at(self.history_current_label, 0, label_top + 8)
+        panel.add_at(self.history_undo_label, 0, label_top + 44)
+        panel.add_at(self.history_redo_label, 0, label_top + 80)
         self._refresh_history_labels()
         return panel
 
@@ -470,8 +792,6 @@ class SystemsFeature(Feature):
             selected_index=0,
             on_change=lambda value, _index: self._on_theme_changed(value),
         )
-        panel.add_at(self.theme_dropdown, 0, 30)
-
         toggle_scope = ButtonControl(
             "systems_theme_toggle_scope",
             Rect(0, 0, 164, 32),
@@ -479,7 +799,11 @@ class SystemsFeature(Feature):
             self._toggle_review_scope,
             style="round",
         )
-        panel.add_at(toggle_scope, 204, 30)
+        self._place_row_controls(
+            panel,
+            self._row_bounds(rect, 30),
+            [self.theme_dropdown, toggle_scope],
+        )
 
         self.theme_state_label = LabelControl(
             "systems_theme_state",
@@ -503,6 +827,333 @@ class SystemsFeature(Feature):
         panel.add_at(self.theme_scope_label, 0, 128)
         panel.add_at(self.theme_resolved_label, 0, 164)
         self._refresh_theme_labels()
+        return panel
+
+    def build_state_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_state_panel", Rect(rect), draw_background=False)
+        panel.add_at(LabelControl("systems_state_context_title", Rect(0, 0, 120, 28), "Undo Context", align="left"), 0, 0)
+        self.state_context_dropdown = DropdownControl(
+            "systems_state_context",
+            Rect(0, 0, 180, 32),
+            options=[
+                DropdownOption("Release", "release"),
+                DropdownOption("Build", "build"),
+            ],
+            selected_index=0,
+            on_change=lambda value, _index: self._on_state_context_changed(value),
+        )
+        panel.add_at(self.state_context_dropdown, 130, 0)
+
+        state_label_top = self._add_button_rows(
+            panel,
+            rect,
+            44,
+            [
+                ButtonControl(
+                    "systems_state_approve",
+                    Rect(0, 0, 140, 32),
+                    "Approve Item",
+                    self._approve_release_item,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_state_blocker",
+                    Rect(0, 0, 140, 32),
+                    "Add Blocker",
+                    self._add_release_blocker,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_state_advance_context",
+                    Rect(0, 0, 190, 32),
+                    "Advance Active Context",
+                    self._advance_active_context,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_state_undo_context",
+                    Rect(0, 0, 96, 32),
+                    "Undo",
+                    self._undo_active_context,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_state_redo_context",
+                    Rect(0, 0, 96, 32),
+                    "Redo",
+                    self._redo_active_context,
+                    style="round",
+                ),
+            ],
+        )
+
+        self.state_store_label = LabelControl("systems_state_store", Rect(0, 0, rect.width, 28), "", align="left")
+        self.state_readiness_label = LabelControl("systems_state_readiness", Rect(0, 0, rect.width, 28), "", align="left")
+        self.state_context_label = LabelControl("systems_state_context_status", Rect(0, 0, rect.width, 28), "", align="left")
+        panel.add_at(self.state_store_label, 0, state_label_top + 8)
+        panel.add_at(self.state_readiness_label, 0, state_label_top + 44)
+        panel.add_at(self.state_context_label, 0, state_label_top + 80)
+        self._refresh_state_labels()
+        return panel
+
+    def build_infrastructure_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_infrastructure_panel", Rect(rect), draw_background=False)
+        infrastructure_label_top = self._add_button_rows(
+            panel,
+            rect,
+            0,
+            [
+                ButtonControl(
+                    "systems_infra_run_pipeline",
+                    Rect(0, 0, 156, 32),
+                    "Run Pipeline",
+                    self._run_pipeline_demo,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_pointer_event",
+                    Rect(0, 0, 168, 32),
+                    "Next Pointer Event",
+                    self._advance_interaction_state,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_schema",
+                    Rect(0, 0, 172, 32),
+                    "Toggle Schema Input",
+                    self._toggle_schema_example,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_migrate",
+                    Rect(0, 0, 168, 32),
+                    "Migrate Snapshot",
+                    self._run_snapshot_migration,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_theme_bus",
+                    Rect(0, 0, 194, 32),
+                    "Trigger Theme Invalidation",
+                    self._trigger_theme_invalidation,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_virtualize",
+                    Rect(0, 0, 190, 32),
+                    "Refresh Virtual Window",
+                    self._refresh_virtualization_demo,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_layout",
+                    Rect(0, 0, 170, 32),
+                    "Solve Constraints",
+                    self._solve_constraint_layout,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_infra_scope",
+                    Rect(0, 0, 156, 32),
+                    "Push Child Scope",
+                    self._push_scope_demo,
+                    style="round",
+                ),
+            ],
+        )
+
+        self.infrastructure_pipeline_label = LabelControl(
+            "systems_infra_pipeline_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_interaction_label = LabelControl(
+            "systems_infra_interaction_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_schema_label = LabelControl(
+            "systems_infra_schema_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_migration_label = LabelControl(
+            "systems_infra_migration_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_theme_bus_label = LabelControl(
+            "systems_infra_theme_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_virtualization_label = LabelControl(
+            "systems_infra_virtualization_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_layout_label = LabelControl(
+            "systems_infra_layout_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        self.infrastructure_scope_label = LabelControl(
+            "systems_infra_scope_status", Rect(0, 0, rect.width, 28), "", align="left"
+        )
+        panel.add_at(self.infrastructure_pipeline_label, 0, infrastructure_label_top + 8)
+        panel.add_at(self.infrastructure_interaction_label, 0, infrastructure_label_top + 44)
+        panel.add_at(self.infrastructure_schema_label, 0, infrastructure_label_top + 80)
+        panel.add_at(self.infrastructure_migration_label, 0, infrastructure_label_top + 116)
+        panel.add_at(self.infrastructure_theme_bus_label, 0, infrastructure_label_top + 152)
+        panel.add_at(self.infrastructure_virtualization_label, 0, infrastructure_label_top + 188)
+        panel.add_at(self.infrastructure_layout_label, 0, infrastructure_label_top + 224)
+        panel.add_at(self.infrastructure_scope_label, 0, infrastructure_label_top + 260)
+        self._refresh_infrastructure_labels()
+        return panel
+
+    def build_scheduling_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_scheduling_panel", Rect(rect), draw_background=False)
+        self._add_button_rows(
+            panel,
+            rect,
+            0,
+            [
+                ButtonControl(
+                    "systems_schedule_background_job",
+                    Rect(0, 0, 180, 32),
+                    "Queue Artifact Build",
+                    self._queue_background_job,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_schedule_rollout",
+                    Rect(0, 0, 176, 32),
+                    "Start Rollout Script",
+                    self._start_rollout_sequence,
+                    style="round",
+                ),
+            ],
+        )
+        self.scheduling_task_label = LabelControl(
+            "systems_scheduling_task_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.scheduling_rollout_label = LabelControl(
+            "systems_scheduling_rollout_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        panel.add_at(self.scheduling_task_label, 0, 56)
+        panel.add_at(self.scheduling_rollout_label, 0, 92)
+        self._refresh_scheduling_labels()
+        return panel
+
+    def build_persistence_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_persistence_panel", Rect(rect), draw_background=False)
+        persistence_label_top = self._add_button_rows(
+            panel,
+            rect,
+            0,
+            [
+                ButtonControl(
+                    "systems_persistence_review_profile",
+                    Rect(0, 0, 150, 32),
+                    "Apply Review Profile",
+                    self._apply_review_profile,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_persistence_prod_profile",
+                    Rect(0, 0, 184, 32),
+                    "Apply Production Profile",
+                    self._apply_production_profile,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_persistence_save",
+                    Rect(0, 0, 148, 32),
+                    "Save Workspace",
+                    self._save_workspace_state,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_persistence_restore",
+                    Rect(0, 0, 164, 32),
+                    "Restore Workspace",
+                    self._restore_workspace_state,
+                    style="round",
+                ),
+            ],
+        )
+        self.persistence_overview_label = LabelControl(
+            "systems_persistence_overview",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.persistence_settings_label = LabelControl(
+            "systems_persistence_settings",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.persistence_status_label = LabelControl(
+            "systems_persistence_status",
+            Rect(0, 0, rect.width, 56),
+            "",
+            align="left",
+        )
+        panel.add_at(self.persistence_overview_label, 0, persistence_label_top + 8)
+        panel.add_at(self.persistence_settings_label, 0, persistence_label_top + 44)
+        panel.add_at(self.persistence_status_label, 0, persistence_label_top + 80)
+        self._refresh_persistence_labels()
+        return panel
+
+    def build_graphics_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_graphics_panel", Rect(rect), draw_background=False)
+        self._add_button_rows(
+            panel,
+            rect,
+            0,
+            [
+                ButtonControl(
+                    "systems_graphics_burst",
+                    Rect(0, 0, 156, 32),
+                    "Burst Particles",
+                    self._trigger_particle_burst,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_graphics_reset",
+                    Rect(0, 0, 170, 32),
+                    "Reset Particle Layer",
+                    self._reset_particle_layer,
+                    style="round",
+                ),
+            ],
+        )
+        preview_width = min(rect.width, 520)
+        self._particle_layer.rect = Rect(0, 0, preview_width, 180)
+        panel.add_at(self._particle_layer, 0, 48)
+        # Store panel-local offsets for the emitters so they can be re-synced
+        # to screen space each frame (emitters are plain dataclasses and won't
+        # move automatically when the window is dragged).
+        _row_available = rect.width - 2 * self.PANEL_PADDING_X
+        _burst_dx = self.PANEL_PADDING_X + (_row_available - self.BUTTON_ROW_GAP) / 4
+        _ambient_dy = 48 + 180 * 0.78
+        _burst_dy = _ambient_dy
+        self._burst_emitter_panel_offset = (_burst_dx, _burst_dy)
+        _ambient_dx = _burst_dx
+        self._ambient_emitter_panel_offset = (_ambient_dx, _ambient_dy)
+        # Set initial positions (panel.rect matches rect at build time).
+        self._particle_burst_emitter.x = rect.left + _burst_dx
+        self._particle_burst_emitter.y = rect.top + _burst_dy
+        self._particle_ambient_emitter.x = rect.left + _ambient_dx
+        self._particle_ambient_emitter.y = rect.top + _ambient_dy
+        self.graphics_particle_label = LabelControl(
+            "systems_graphics_particle_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.graphics_layer_label = LabelControl(
+            "systems_graphics_layer_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        panel.add_at(self.graphics_particle_label, 0, 236)
+        panel.add_at(self.graphics_layer_label, 0, 272)
+        self._refresh_graphics_labels()
         return panel
 
     def _make_window_spec(self, host) -> AnchoredWindowSpec:
@@ -715,4 +1366,378 @@ class SystemsFeature(Feature):
         if self.theme_resolved_label is not None:
             self.theme_resolved_label.text = (
                 f"Resolved primary token global {global_primary} | scoped {scoped_primary}"
+            )
+
+    def _on_state_context_changed(self, value: str) -> None:
+        key = str(value)
+        if key not in {"release", "build"}:
+            return
+        self._undo_context.set_active(key)
+        self._undo_context_key = key
+        self._refresh_state_labels()
+
+    def _approve_release_item(self) -> None:
+        pending = int(self._release_store.get("pending", 0))
+        approved = int(self._release_store.get("approved", 0))
+        blocked = int(self._release_store.get("blocked", 0))
+        if pending <= 0:
+            return
+        with StateTransaction(self._release_store):
+            next_pending = max(0, pending - 1)
+            self._release_store.dispatch(
+                {
+                    "pending": next_pending,
+                    "approved": approved + 1,
+                    "status": "Ready" if next_pending == 0 and blocked == 0 else "Review",
+                }
+            )
+        self._refresh_state_labels()
+
+    def _add_release_blocker(self) -> None:
+        blocked = int(self._release_store.get("blocked", 0))
+        self._release_store.dispatch({"blocked": blocked + 1, "status": "Blocked"})
+        self._refresh_state_labels()
+
+    def _advance_active_context(self) -> None:
+        if self._undo_context_key == "release":
+            current = self._state_stage_index
+            if current >= len(self._state_stages) - 1:
+                return
+            next_index = current + 1
+            self._state_history.push(
+                _SetIndexCommand(
+                    self,
+                    "_state_stage_index",
+                    next_index,
+                    f"Set release milestone to {self._state_stages[next_index]}",
+                )
+            )
+        else:
+            current = self._state_build_stage_index
+            if current >= len(self._state_build_stages) - 1:
+                return
+            next_index = current + 1
+            self._state_build_history.push(
+                _SetIndexCommand(
+                    self,
+                    "_state_build_stage_index",
+                    next_index,
+                    f"Set build lane to {self._state_build_stages[next_index]}",
+                )
+            )
+        self._refresh_state_labels()
+
+    def _undo_active_context(self) -> None:
+        self._undo_context.undo()
+        self._refresh_state_labels()
+
+    def _redo_active_context(self) -> None:
+        self._undo_context.redo()
+        self._refresh_state_labels()
+
+    def _refresh_state_labels(self) -> None:
+        pending = int(self._release_store.get("pending", 0))
+        approved = int(self._release_store.get("approved", 0))
+        blocked = int(self._release_store.get("blocked", 0))
+        status = str(self._release_store.get("status", "Review"))
+        readiness = int(self._release_readiness.value)
+        active_key = self._undo_context.active_key or "none"
+        if self.state_store_label is not None:
+            self.state_store_label.text = (
+                f"AppStateStore release queue -> pending {pending} | approved {approved} | blocked {blocked} | status {status}"
+            )
+        if self.state_readiness_label is not None:
+            self.state_readiness_label.text = (
+                f"StateSelector readiness score: {readiness} (approved contributes +25, blockers contribute -10 each)"
+            )
+        if self.state_context_label is not None:
+            release_stage = self._state_stages[self._state_stage_index]
+            build_stage = self._state_build_stages[self._state_build_stage_index]
+            self.state_context_label.text = (
+                f"UndoContextManager active={active_key} | release={release_stage} | build={build_stage} "
+                f"| can_undo={self._undo_context.can_undo} | can_redo={self._undo_context.can_redo}"
+            )
+
+    def _queue_background_job(self) -> None:
+        self._task_job_index += 1
+        task_id = f"artifact-{self._task_job_index:02d}"
+        payload = {
+            "lane": self._settings_registry.get_value("systems", "profile"),
+            "checks": int(self._settings_registry.get_value("systems", "parallel_checks")),
+        }
+        self._task_scheduler.add_task(task_id, self._build_artifact_job, payload)
+        self._task_last_summary = f"TaskScheduler queued {task_id} for the {payload['lane']} lane."
+        self._task_last_failure = ""
+        self._refresh_scheduling_labels()
+
+    def _build_artifact_job(self, task_id: str, payload: dict[str, object]) -> str:
+        lane = str(payload.get("lane", "review"))
+        checks = int(payload.get("checks", 1))
+        return f"{task_id} built for {lane} with {checks} parallel checks"
+
+    def _start_rollout_sequence(self) -> None:
+        if self._rollout_handle is not None and self._rollout_handle.is_running:
+            return
+
+        def _sequence():
+            self._rollout_phase = "Prime canary ring"
+            yield Sleep(0.05)
+            self._rollout_phase = "Wait for smoke checks"
+            yield Sleep(0.05)
+            self._rollout_phase = "Promote stable ring"
+            yield Sleep(0.05)
+            self._rollout_phase = "Rollout complete"
+
+        self._rollout_handle = self._cooperative_scheduler.start(_sequence())
+        self._refresh_scheduling_labels()
+
+    def _refresh_scheduling_labels(self) -> None:
+        finished = self._task_scheduler.get_finished_tasks()
+        if finished:
+            latest_task = finished[-1]
+            result = self._task_scheduler.pop_result(latest_task, None)
+            if result is not None:
+                self._task_last_summary = f"TaskScheduler finished {latest_task}: {result}"
+            self._task_scheduler.clear_finished_tasks()
+        failures = self._task_scheduler.get_failed_tasks()
+        if failures:
+            latest_task, error = failures[-1]
+            self._task_last_failure = f"TaskScheduler failed {latest_task}: {error}"
+            self._task_scheduler.clear_failed_tasks()
+        if self.scheduling_task_label is not None:
+            summary = self._task_last_failure or self._task_last_summary
+            self.scheduling_task_label.text = (
+                f"{summary} | pending={self._task_scheduler.pending_count()} running={self._task_scheduler.running_count()}"
+            )
+        if self.scheduling_rollout_label is not None:
+            self.scheduling_rollout_label.text = (
+                f"CooperativeScheduler phase: {self._rollout_phase} | active coroutines={self._cooperative_scheduler.coroutine_count}"
+            )
+
+    def _apply_review_profile(self) -> None:
+        self._settings_registry.set_value("systems", "profile", "review")
+        self._settings_registry.set_value("systems", "autosave", True)
+        self._settings_registry.set_value("systems", "parallel_checks", 2)
+        self._persistence_last_status = "SettingsRegistry switched to the review workspace profile."
+        self._refresh_persistence_labels()
+
+    def _apply_production_profile(self) -> None:
+        self._settings_registry.set_value("systems", "profile", "production")
+        self._settings_registry.set_value("systems", "autosave", False)
+        self._settings_registry.set_value("systems", "parallel_checks", 4)
+        self._persistence_last_status = "SettingsRegistry switched to the production workspace profile."
+        self._refresh_persistence_labels()
+
+    def _build_workspace_state(self) -> WorkspaceState:
+        # Keep the persistence demo focused on settings blocks so users can restore
+        # a realistic workspace payload without mutating the live main-scene graph.
+        return WorkspaceState(
+            active_scene_name=self.scene_name,
+            scene_snapshot={},
+            settings_blocks={
+                block_name: WorkspacePersistenceManager._registry_values(self._settings_registry)
+                for block_name in self._workspace_persistence.registered_blocks()
+            },
+            metadata={
+                "profile": self._settings_registry.get_value("systems", "profile"),
+                "autosave": self._settings_registry.get_value("systems", "autosave"),
+            },
+        )
+
+    def _save_workspace_state(self) -> None:
+        state = self._build_workspace_state()
+        state.save(self._workspace_state_path)
+        self._saved_workspace_state = state
+        self._persistence_last_report = None
+        self._persistence_last_status = f"WorkspaceState saved to {self._workspace_state_path}"
+        self._refresh_persistence_labels()
+
+    def _restore_workspace_state(self) -> None:
+        state = self._saved_workspace_state
+        if state is None and self._workspace_state_path.exists():
+            state = WorkspaceState.load(self._workspace_state_path)
+        if state is None:
+            self._persistence_last_status = "No workspace snapshot saved yet."
+            self._refresh_persistence_labels()
+            return
+        self._saved_workspace_state = state
+        if self.demo is None:
+            self._persistence_last_status = "Systems demo host is not available for restore."
+            self._refresh_persistence_labels()
+            return
+        self._persistence_last_report = self._workspace_persistence.restore(state, self.demo.app)
+        self._persistence_last_status = "WorkspacePersistenceManager restored the saved settings block into the live demo."
+        self._refresh_persistence_labels()
+
+    def _refresh_persistence_labels(self) -> None:
+        profile = self._settings_registry.get_value("systems", "profile")
+        autosave = self._settings_registry.get_value("systems", "autosave")
+        checks = self._settings_registry.get_value("systems", "parallel_checks")
+        if self.persistence_overview_label is not None:
+            self.persistence_overview_label.text = (
+                f"WorkspacePersistenceManager blocks={self._workspace_persistence.registered_blocks()} file={self._workspace_state_path.name}"
+            )
+        if self.persistence_settings_label is not None:
+            self.persistence_settings_label.text = (
+                f"SettingsRegistry systems/profile={profile} autosave={autosave} parallel_checks={checks}"
+            )
+        if self.persistence_status_label is not None:
+            if self._persistence_last_report is None:
+                self.persistence_status_label.text = self._persistence_last_status
+            else:
+                applied = self._persistence_last_report.get("applied_settings", 0)
+                skipped = self._persistence_last_report.get("skipped_settings", 0)
+                self.persistence_status_label.text = (
+                    f"{self._persistence_last_status} applied={applied} skipped={skipped}"
+                )
+
+    def _trigger_particle_burst(self) -> None:
+        self._particle_layer.particle_system.burst(self._particle_burst_emitter, count=28)
+        self._refresh_graphics_labels()
+
+    def _reset_particle_layer(self) -> None:
+        self._particle_layer.particle_system.clear()
+        self._particle_layer.particle_system.add_emitter(self._particle_ambient_emitter)
+        self._particle_layer.particle_system.add_emitter(self._particle_burst_emitter)
+        self._refresh_graphics_labels()
+
+    def _advance_graphics_demo(self, dt: float) -> None:
+        # Re-sync emitter screen positions to follow window drags.
+        graphics_panel = self._tab_panels.get("graphics")
+        if graphics_panel is not None:
+            bx, by = self._burst_emitter_panel_offset
+            ax, ay = self._ambient_emitter_panel_offset
+            self._particle_burst_emitter.x = graphics_panel.rect.left + bx
+            self._particle_burst_emitter.y = graphics_panel.rect.top + by
+            self._particle_ambient_emitter.x = graphics_panel.rect.left + ax
+            self._particle_ambient_emitter.y = graphics_panel.rect.top + ay
+        self._particle_layer.update_particles(dt)
+        self._refresh_graphics_labels()
+
+    def _refresh_graphics_labels(self) -> None:
+        if self.graphics_particle_label is not None:
+            self.graphics_particle_label.text = (
+                f"ParticleSystem emitters={self._particle_layer.particle_system.emitter_count} "
+                f"active_particles={self._particle_layer.particle_system.active_particle_count}"
+            )
+        if self.graphics_layer_label is not None:
+            self.graphics_layer_label.text = (
+                "ParticleLayer hosts an ambient release trail plus on-demand burst confetti preview."
+            )
+
+    def _run_pipeline_demo(self) -> None:
+        result = self._pipeline.run(" nightly ").result
+        if self.infrastructure_pipeline_label is not None:
+            self.infrastructure_pipeline_label.text = f"DataflowPipeline output: {result}"
+
+    def _advance_interaction_state(self) -> None:
+        sequence = (
+            "pointer_enter",
+            "pointer_down",
+            "drag_start",
+            "pointer_up",
+            "cancel",
+        )
+        event_kind = sequence[self._interaction_event_index % len(sequence)]
+        self._interaction_event_index += 1
+        changed = self._interaction.handle_event(InteractionContext(event_kind=event_kind))
+        if self.infrastructure_interaction_label is not None:
+            self.infrastructure_interaction_label.text = (
+                f"InteractionStateMachine event={event_kind} changed={changed} phase={self._interaction.phase.name.lower()}"
+            )
+
+    def _toggle_schema_example(self) -> None:
+        self._schema_use_invalid_value = not self._schema_use_invalid_value
+        if self._schema_use_invalid_value:
+            self._schema_runtime.set_value("approver", "QA")
+            self._schema_runtime.set_value("channel", "beta")
+        else:
+            self._schema_runtime.set_value("approver", "Mira")
+            self._schema_runtime.set_value("channel", "canary")
+        self._schema_runtime.validate_all()
+        self._refresh_infrastructure_labels()
+
+    def _run_snapshot_migration(self) -> None:
+        snapshot = make_snapshot(self._version_v1, {"pipeline": "nightly-gui"})
+        migrated = self._snapshot_migrator.migrate(snapshot, self._version_v3)
+        if self.infrastructure_migration_label is not None:
+            self.infrastructure_migration_label.text = (
+                f"SnapshotMigrator {snapshot['schema_version']} -> {migrated['schema_version']} data keys={sorted(migrated['data'].keys())}"
+            )
+
+    def _record_theme_invalidation(self) -> None:
+        self._theme_invalidation_ticks += 1
+
+    def _trigger_theme_invalidation(self) -> None:
+        self._theme_invalidation_bus.trigger_invalidation()
+        self._refresh_infrastructure_labels()
+
+    def _bind_virtual_cell(self, cell: _VirtualCell, index: int) -> None:
+        cell.index = int(index)
+
+    def _refresh_virtualization_demo(self) -> None:
+        self._virtual_scroll_offset = (self._virtual_scroll_offset + 48) % 480
+        self._virtual_core.refresh(scroll_offset=self._virtual_scroll_offset, item_count=120)
+        self._refresh_infrastructure_labels()
+
+    def _solve_constraint_layout(self) -> None:
+        constraints = ConstraintSet()
+        constraints.add(LayoutConstraint("call_to_action", ConstraintAttr.LEFT, 0.1, is_fraction=True))
+        constraints.add(LayoutConstraint("call_to_action", ConstraintAttr.TOP, 84))
+        constraints.add(LayoutConstraint("call_to_action", ConstraintAttr.WIDTH, 320))
+        solved = self._constraint_engine.solve(constraints, Rect(0, 0, 960, 540))
+        resolved = solved["call_to_action"]
+        if self.infrastructure_layout_label is not None:
+            self.infrastructure_layout_label.text = (
+                f"ConstraintLayoutEngine call_to_action -> x={resolved.left} y={resolved.top} w={resolved.width} h={resolved.height}"
+            )
+
+    def _push_scope_demo(self) -> None:
+        with self._scope_stack.push() as child:
+            child.bind(self._service_key_channel, "stable")
+            api_base = child.get(self._service_key_api_base)
+            channel = child.get(self._service_key_channel)
+            if self.infrastructure_scope_label is not None:
+                self.infrastructure_scope_label.text = (
+                    f"ServiceScope child resolved api={api_base} channel={channel}; root channel remains canary"
+                )
+
+    def _refresh_infrastructure_labels(self) -> None:
+        if self.infrastructure_pipeline_label is not None and not self.infrastructure_pipeline_label.text:
+            self.infrastructure_pipeline_label.text = "DataflowPipeline ready: normalize -> stamp -> route"
+        if self.infrastructure_interaction_label is not None and not self.infrastructure_interaction_label.text:
+            self.infrastructure_interaction_label.text = (
+                f"InteractionStateMachine phase={self._interaction.phase.name.lower()}"
+            )
+        if self.infrastructure_schema_label is not None:
+            errors = [
+                *self._schema_runtime.get_errors("channel"),
+                *self._schema_runtime.get_errors("approver"),
+            ]
+            if errors:
+                self.infrastructure_schema_label.text = f"SchemaFormRuntime errors: {'; '.join(errors)}"
+            else:
+                self.infrastructure_schema_label.text = (
+                    f"SchemaFormRuntime valid for channel={self._schema_runtime.get_value('channel')} "
+                    f"approver={self._schema_runtime.get_value('approver')}"
+                )
+        if self.infrastructure_migration_label is not None and not self.infrastructure_migration_label.text:
+            self.infrastructure_migration_label.text = (
+                f"SnapshotMigrator path available: {self._snapshot_migrator.can_migrate(self._version_v1, self._version_v3)}"
+            )
+        if self.infrastructure_theme_bus_label is not None:
+            self.infrastructure_theme_bus_label.text = (
+                f"ThemeInvalidationBus callbacks triggered {self._theme_invalidation_ticks} times"
+            )
+        if self.infrastructure_virtualization_label is not None:
+            first, last = self._virtual_window.visible_range()
+            self.infrastructure_virtualization_label.text = (
+                f"VirtualizationCore visible range [{first}, {last}] at scroll={self._virtual_scroll_offset}; pool={self._virtual_pool.pool_size}"
+            )
+        if self.infrastructure_layout_label is not None and not self.infrastructure_layout_label.text:
+            self.infrastructure_layout_label.text = "ConstraintLayoutEngine ready with container-relative constraints"
+        if self.infrastructure_scope_label is not None and not self.infrastructure_scope_label.text:
+            self.infrastructure_scope_label.text = (
+                f"ScopeStack root api={self._scope_stack.root.get(self._service_key_api_base)} "
+                f"channel={self._scope_stack.root.get(self._service_key_channel)}"
             )
