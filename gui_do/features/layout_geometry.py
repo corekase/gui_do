@@ -39,6 +39,49 @@ def split_columns(bounds: Rect, *, count: int, gap: int = 0, min_width: int = 1)
     ]
 
 
+def column_flow_anchors_for(
+    bounds: Rect,
+    count: int,
+    *,
+    overall_rows: int,
+    overall_columns: int,
+    column_spacing: int = 8,
+    row_spacing: int = 8,
+    column_span: int = 1,
+) -> tuple[Rect, ...]:
+    """Return sequential column-flow anchors for a bounded conceptual grid.
+
+    This mirrors the one-shot legacy behavior while keeping the implementation
+    in the modern geometry helpers module.
+    """
+    total = max(0, int(count))
+    rows = max(1, int(overall_rows))
+    cols = max(1, int(overall_columns))
+    gap_x = max(0, int(column_spacing))
+    gap_y = max(0, int(row_spacing))
+    span = max(1, int(column_span))
+
+    box = Rect(bounds)
+    total_gap_x = gap_x * max(0, rows - 1)
+    total_gap_y = gap_y * max(0, cols - 1)
+    cell_w = max(1, (box.width - total_gap_x) // rows)
+    cell_h = max(1, (box.height - total_gap_y) // cols)
+
+    x_counter = 0
+    y_counter = 0
+    anchors: list[Rect] = []
+    for _ in range(total):
+        if x_counter + span > rows:
+            x_counter = 0
+            y_counter += 1
+        x = box.left + (x_counter * (cell_w + gap_x))
+        y = box.top + (y_counter * (cell_h + gap_y))
+        w = (cell_w * span) + (gap_x * (span - 1))
+        anchors.append(Rect(x, y, w, cell_h))
+        x_counter += span
+    return tuple(anchors)
+
+
 def column_stack_from_anchor(*, anchor: Rect, content_bottom: int, preferred_width: int, item_gap_y: int) -> tuple[ColumnStack, int, int, int]:
     col_x = int(anchor.left)
     col_w = min(int(preferred_width), int(anchor.width))

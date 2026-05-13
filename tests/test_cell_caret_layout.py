@@ -3,7 +3,7 @@ import unittest
 from pygame import Rect
 
 from gui_do.layout.cell_caret_layout import CellCaretLayout
-from gui_do.layout.layout_manager import LayoutManager
+from gui_do.layout.anchor_layout import AnchorLayout
 
 
 class TestCellCaretLayout(unittest.TestCase):
@@ -53,7 +53,7 @@ class TestCellCaretLayout(unittest.TestCase):
             cell_gap_x=8,
             cell_gap_y=12,
         )
-        manager = LayoutManager()
+        manager = AnchorLayout()
 
         content = layout.bind_layout_manager(manager, col=1, row=2, padding=(4, 6, 8, 10))
         anchored = manager.anchored((20, 10), anchor="top_left", margin=(0, 0))

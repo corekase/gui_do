@@ -978,68 +978,6 @@ class SystemsFeature(Feature):
             [(self.text_preview_canvas, int(height), 0)],
         )
 
-    def _inset_left_side_children(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
-        shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
-        if shift_x <= 0:
-            return
-        center_x = panel.rect.width // 2
-        for child in panel.children:
-            # Only inset controls anchored to the left side; controls that span
-            # across the midpoint keep their explicit layout alignment.
-            if child.rect.left < center_x and child.rect.right <= center_x:
-                child.rect.x += shift_x
-
-    def _inset_text_labels(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
-        shift_x = self.LABEL_INSET_X if inset_x is None else int(inset_x)
-        if shift_x <= 0:
-            return
-        for child in panel.children:
-            if isinstance(child, LabelControl):
-                child.rect.x += shift_x
-
-    def _inset_children_left_of_x(
-        self,
-        panel: PanelControl,
-        *,
-        cutoff_x: int,
-        inset_x: int | None = None,
-    ) -> None:
-        shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
-        if shift_x <= 0:
-            return
-        cutoff = int(cutoff_x)
-        for child in panel.children:
-            if child.rect.left < cutoff:
-                child.rect.x += shift_x
-
-    def _force_button_left_alignment(
-        self,
-        panel: PanelControl,
-        *,
-        target_button_id: str,
-        reference_button_id: str,
-    ) -> None:
-        by_id = {child.control_id: child for child in panel.children}
-        target = by_id.get(str(target_button_id))
-        reference = by_id.get(str(reference_button_id))
-        if target is None or reference is None:
-            return
-        target.rect.x = reference.rect.left
-
-    def _force_button_right_alignment(
-        self,
-        panel: PanelControl,
-        *,
-        target_button_id: str,
-        reference_button_id: str,
-    ) -> None:
-        by_id = {child.control_id: child for child in panel.children}
-        target = by_id.get(str(target_button_id))
-        reference = by_id.get(str(reference_button_id))
-        if target is None or reference is None:
-            return
-        target.rect.width = max(1, reference.rect.right - target.rect.left)
-
     def _add_button_rows(
         self,
         panel: PanelControl,
@@ -1122,6 +1060,7 @@ class SystemsFeature(Feature):
         )
         self._place_compact_labeled_row(
             panel,
+            left=self.LEFT_SIDE_INSET_X,
             top=0,
             label=filter_label,
             field=self.data_filter_dropdown,
@@ -1162,7 +1101,12 @@ class SystemsFeature(Feature):
         self.data_list.set_accessibility(role="listbox", label="Deployment backlog")
         self._place_vertical_grid_sequence(
             panel,
-            Rect(0, 44, max(1, left_w), max(1, self.data_list.rect.height)),
+            Rect(
+                self.LEFT_SIDE_INSET_X,
+                44,
+                max(1, left_w),
+                max(1, self.data_list.rect.height),
+            ),
             [(self.data_list, int(self.data_list.rect.height), 0)],
         )
 
@@ -1200,7 +1144,6 @@ class SystemsFeature(Feature):
             on_refresh=self._on_backlog_view_refreshed,
         )
         self._refresh_backlog_view()
-        self._inset_children_left_of_x(panel, cutoff_x=right_x)
         return panel
 
     def build_validation_panel(self, rect: Rect) -> PanelControl:
@@ -1564,6 +1507,8 @@ class SystemsFeature(Feature):
             column_index=0,
             span_both_columns=True,
             span_from_window_left=False,
+            left=self.PANEL_PADDING_X,
+            width=max(1, rect.width - (self.PANEL_PADDING_X * 2) - self.LEFT_SIDE_INSET_X),
         )
 
         self.state_store_label = LabelControl("systems_state_store", Rect(0, 0, rect.width, 28), "", align="left")
@@ -1589,16 +1534,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_state_labels()
-        self._force_button_left_alignment(
-            panel,
-            target_button_id="systems_state_route_cycle",
-            reference_button_id="systems_state_redo_context",
-        )
-        self._force_button_right_alignment(
-            panel,
-            target_button_id="systems_state_route_cycle",
-            reference_button_id="systems_state_advance_fsm",
-        )
         return panel
 
     def build_infrastructure_panel(self, rect: Rect) -> PanelControl:
@@ -1700,6 +1635,8 @@ class SystemsFeature(Feature):
             column_index=0,
             span_both_columns=True,
             span_from_window_left=False,
+            left=self.PANEL_PADDING_X,
+            width=max(1, rect.width - (self.PANEL_PADDING_X * 2) - self.LEFT_SIDE_INSET_X),
         )
 
         self.infrastructure_pipeline_label = LabelControl(
@@ -1751,16 +1688,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_infrastructure_labels()
-        self._force_button_left_alignment(
-            panel,
-            target_button_id="systems_infra_telemetry",
-            reference_button_id="systems_infra_accessibility",
-        )
-        self._force_button_right_alignment(
-            panel,
-            target_button_id="systems_infra_telemetry",
-            reference_button_id="systems_infra_audio",
-        )
         return panel
 
     def build_scheduling_panel(self, rect: Rect) -> PanelControl:
@@ -1813,6 +1740,8 @@ class SystemsFeature(Feature):
             column_index=0,
             span_both_columns=True,
             span_from_window_left=False,
+            left=self.PANEL_PADDING_X,
+            width=max(1, rect.width - (self.PANEL_PADDING_X * 2) - self.LEFT_SIDE_INSET_X),
         )
         self.scheduling_task_label = LabelControl(
             "systems_scheduling_task_status",
@@ -1855,16 +1784,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_scheduling_labels()
-        self._force_button_left_alignment(
-            panel,
-            target_button_id="systems_schedule_timers",
-            reference_button_id="systems_schedule_background_job",
-        )
-        self._force_button_right_alignment(
-            panel,
-            target_button_id="systems_schedule_timers",
-            reference_button_id="systems_schedule_rollout",
-        )
         return panel
 
     def build_motion_panel(self, rect: Rect) -> PanelControl:
@@ -1968,11 +1887,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_motion_labels()
-        self._force_button_left_alignment(
-            panel,
-            target_button_id="systems_motion_timeline",
-            reference_button_id="systems_motion_transition",
-        )
         return panel
 
     def build_persistence_panel(self, rect: Rect) -> PanelControl:
@@ -2059,7 +1973,7 @@ class SystemsFeature(Feature):
 
         # Two columns: left (particle systems), right (tile navigation + tilemap).
         top_padding = 8
-        left_col_x = self.PANEL_PADDING_X
+        left_col_x = self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X
         left_col_width = max(160, rect.width // 2 - self.PANEL_PADDING_X * 2)
         right_col_x = rect.width // 2 + self.PANEL_PADDING_X
         right_col_width = max(160, rect.width - right_col_x - self.PANEL_PADDING_X)
@@ -2287,7 +2201,6 @@ class SystemsFeature(Feature):
         self._render_tile_map_preview()
         self._refresh_surface_effect_preview()
         self._refresh_graphics_labels()
-        self._inset_left_side_children(panel)
         return panel
 
     def build_text_panel(self, rect: Rect) -> PanelControl:
@@ -2314,7 +2227,7 @@ class SystemsFeature(Feature):
         )
         self._place_compact_labeled_row(
             panel,
-            left=0,
+            left=self.LEFT_SIDE_INSET_X,
             top=0,
             label=locale_label,
             field=self.text_locale_dropdown,
@@ -2337,7 +2250,7 @@ class SystemsFeature(Feature):
         )
         self._place_compact_labeled_row(
             panel,
-            left=278,
+            left=278 + self.LEFT_SIDE_INSET_X,
             top=0,
             label=query_label,
             field=self.text_query_input,
@@ -2408,9 +2321,10 @@ class SystemsFeature(Feature):
                 ),
             ],
             per_row=3,
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
             width=max(
                 1,
-                rect.width - (self.PANEL_PADDING_X * 2) - self.LEFT_SIDE_INSET_X,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
             ),
         )
 
@@ -2439,7 +2353,12 @@ class SystemsFeature(Feature):
         preview_width = rect.width - self.PANEL_PADDING_X * 2
         self._place_vertical_label_stack(
             panel,
-            Rect(0, labels_top + 8, max(1, rect.width), 64),
+            Rect(
+                self.LABEL_INSET_X,
+                labels_top + 8,
+                max(1, rect.width - self.LABEL_INSET_X),
+                64,
+            ),
             [
                 self.text_search_status_label,
                 self.text_search_match_label,
@@ -2453,18 +2372,6 @@ class SystemsFeature(Feature):
             height=preview_height,
         )
         self._refresh_text_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
-        self._force_button_left_alignment(
-            panel,
-            target_button_id="systems_text_search",
-            reference_button_id="systems_text_regex_preset",
-        )
-        self._force_button_left_alignment(
-            panel,
-            target_button_id="systems_text_mode_case",
-            reference_button_id="systems_text_regex_preset",
-        )
         return panel
 
     def _make_window_spec(self, host) -> AnchoredWindowSpec:

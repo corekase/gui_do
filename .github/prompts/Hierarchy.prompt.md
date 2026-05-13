@@ -50,7 +50,7 @@ Transform the gui_do library to:
 ### Files & Modules
 - **Public modules**: `snake_case.py` (e.g., `button_control.py`, `event_manager.py`).
 - **Private/internal modules**: `_leading_underscore.py` (e.g., `_internal_helpers.py`, `_platform_specific.py`).
-- **File names match primary export**: If a module exports a single class `LayoutManager`, name the file `layout_manager.py`.
+- **File names match primary export**: If a module exports a single class `WindowLayoutHandler`, name the file `window_layout_handler.py`.
 - **Avoid generic names**: Use specific, domain-appropriate names like `focus_manager.py`, not `manager.py`.
 
 ### Folders
@@ -71,7 +71,7 @@ Transform the gui_do library to:
 - **Avoid deep nesting**: Prefer 2–3 levels max. If a subdirectory has only 1–2 files, consider flattening.
 
 ### Classes & Types
-- **Public classes**: `PascalCase` (e.g., `ButtonControl`, `EventManager`, `LayoutManager`).
+- **Public classes**: `PascalCase` (e.g., `ButtonControl`, `EventManager`, `WindowLayoutHandler`).
 - **Private classes**: `_PascalCase` prefix (e.g., `_InternalEventDispatcher`, `_PlatformSpecificRenderer`).
 - **Abstract base classes**: Use `ABC` from `abc` module and follow naming: `_BaseClassName` or `_AbstractClassName` for truly internal ABCs; `PublicBaseClass` if part of the extension API.
 - **Enums**: `PascalCase` (e.g., `EventType`, `LayoutMode`).
@@ -142,11 +142,11 @@ Transform the gui_do library to:
 **Purpose**: Layout engines and geometric calculation.
 
 - **`gui_do/layout/`** — Layout engines (flex, grid, dock, etc.).
-  - `layout_manager.py` — Overall layout orchestration.
+  - `anchor_layout.py` — Anchor-based placement helper.
   - `flex_layout.py` — CSS Flexbox-like layout.
   - `grid_layout.py` — CSS Grid-like layout.
   - `dock_workspace.py` — Dock-panel workspace layout.
-  - `window_tiling_manager.py` — Window tiling and resizing.
+  - `window_layout_handler.py` — Window tiling and resizing.
   - `adaptive_constraint_layout.py` — Constraint-based layout.
 
 ### Tier 4: Theme & Styling

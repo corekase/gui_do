@@ -139,7 +139,7 @@ layout.add(FlexItem(control=main_area, grow=1))
 **Minimal example:** `FlexLayout` with two panels.
 
 **Advanced pattern:** `ConstraintLayoutEngine` with `AdaptivePolicy` for a panel that
-rearranges controls at narrow/wide breakpoints. `WindowTilingManager` for desktop-style
+rearranges controls at narrow/wide breakpoints. `WindowLayoutHandler` for desktop-style
 window tiling.
 
 **Mistakes:** Mixing conflicting layout systems in one container without clear ownership;

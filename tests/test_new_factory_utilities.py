@@ -3,7 +3,7 @@
 Covers:
 - ControlRegistry (feature_lifecycle)
 - make_labeled_slot_height_fn (feature_lifecycle)
-- LayoutManager.column_flow_anchors_for (layout_manager)
+- column_flow_anchors_for (layout_geometry)
 - bind_task_panel_focus_toggle (data_driven_runtime)
 """
 from __future__ import annotations
@@ -193,20 +193,19 @@ class TestMakeLabeledSlotHeightFn(unittest.TestCase):
 
 
 # ===========================================================================
-# LayoutManager.column_flow_anchors_for
+# layout_geometry.column_flow_anchors_for
 # ===========================================================================
 
 class TestColumnFlowAnchorsFor(unittest.TestCase):
 
-    def test_classmethod_accessible(self):
-        from gui_do.layout.layout_manager import LayoutManager
-        self.assertTrue(hasattr(LayoutManager, "column_flow_anchors_for"))
-        self.assertTrue(callable(LayoutManager.column_flow_anchors_for))
+    def test_function_accessible(self):
+        from gui_do.features.layout_geometry import column_flow_anchors_for
+        self.assertTrue(callable(column_flow_anchors_for))
 
     def test_returns_tuple_of_rects(self):
-        from gui_do.layout.layout_manager import LayoutManager
+        from gui_do.features.layout_geometry import column_flow_anchors_for
         bounds = Rect(0, 0, 800, 400)
-        anchors = LayoutManager.column_flow_anchors_for(
+        anchors = column_flow_anchors_for(
             bounds, 4, overall_rows=4, overall_columns=1
         )
         self.assertIsInstance(anchors, tuple)
@@ -214,39 +213,33 @@ class TestColumnFlowAnchorsFor(unittest.TestCase):
         for r in anchors:
             self.assertIsInstance(r, Rect)
 
-    def test_matches_equivalent_instance_call(self):
-        from gui_do.layout.layout_manager import LayoutManager
+    def test_repeatable_for_same_inputs(self):
+        from gui_do.features.layout_geometry import column_flow_anchors_for
         bounds = Rect(10, 20, 600, 300)
         count = 6
         kwargs = dict(overall_rows=6, overall_columns=2, column_spacing=8, row_spacing=8)
 
-        # via classmethod
-        anchors_cls = LayoutManager.column_flow_anchors_for(bounds, count, **kwargs)
-
-        # via instance
-        mgr = LayoutManager()
-        mgr.set_column_flow_properties(bounds=bounds, **kwargs)
-        anchors_inst = mgr.column_flow_anchors(count)
-
-        self.assertEqual(anchors_cls, anchors_inst)
+        anchors_a = column_flow_anchors_for(bounds, count, **kwargs)
+        anchors_b = column_flow_anchors_for(bounds, count, **kwargs)
+        self.assertEqual(anchors_a, anchors_b)
 
     def test_column_span_respected(self):
-        from gui_do.layout.layout_manager import LayoutManager
+        from gui_do.features.layout_geometry import column_flow_anchors_for
         bounds = Rect(0, 0, 400, 200)
-        anchors = LayoutManager.column_flow_anchors_for(
+        anchors = column_flow_anchors_for(
             bounds, 2, overall_rows=4, overall_columns=1, column_span=2
         )
         self.assertEqual(len(anchors), 2)
         # Each anchor should span 2 columns, so should be wider than a single-span anchor
-        single = LayoutManager.column_flow_anchors_for(
+        single = column_flow_anchors_for(
             bounds, 2, overall_rows=4, overall_columns=1, column_span=1
         )
         self.assertGreater(anchors[0].width, single[0].width)
 
     def test_zero_count_returns_empty_tuple(self):
-        from gui_do.layout.layout_manager import LayoutManager
+        from gui_do.features.layout_geometry import column_flow_anchors_for
         bounds = Rect(0, 0, 400, 200)
-        anchors = LayoutManager.column_flow_anchors_for(
+        anchors = column_flow_anchors_for(
             bounds, 0, overall_rows=4, overall_columns=1
         )
         self.assertEqual(anchors, ())
