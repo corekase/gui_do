@@ -58,6 +58,7 @@ from gui_do import (
     SettingsRegistry,
     Sleep,
     SnapshotMigrator,
+    StateMachine,
     StateTransaction,
     SurfaceCompositor,
     TabControl,
@@ -70,6 +71,8 @@ from gui_do import (
     TileSet,
     UndoContextManager,
     ValidationPolicy,
+    Router,
+    HierarchicalStateMachine,
     Node2D,
     VirtualizationCore,
     VirtualizedWindow,
@@ -341,10 +344,40 @@ class SystemsFeature(Feature):
         self._undo_context.register("release", self._state_history, make_active=True)
         self._undo_context.register("build", self._state_build_history)
         self._undo_context_key = "release"
+        self._release_state_machine = StateMachine("draft")
+        self._release_state_machine.add_state("review")
+        self._release_state_machine.add_state("approved")
+        self._release_state_machine.add_state("released")
+        self._release_state_machine.add_transition("draft", "review", trigger="advance")
+        self._release_state_machine.add_transition("review", "approved", trigger="advance")
+        self._release_state_machine.add_transition("approved", "released", trigger="advance")
+        self._release_state_machine.add_transition("released", "draft", trigger="advance")
+        release_ring_machine = StateMachine("canary")
+        release_ring_machine.add_state("stable")
+        release_ring_machine.add_transition("canary", "stable", trigger="promote")
+        release_ring_machine.add_transition("stable", "canary", trigger="reset")
+        self._release_hierarchical_state_machine = HierarchicalStateMachine("planning")
+        self._release_hierarchical_state_machine.add_history(
+            "execution",
+            release_ring_machine,
+            initial="canary",
+        )
+        self._release_hierarchical_state_machine.add_transition("planning", "execution", trigger="start")
+        self._release_hierarchical_state_machine.add_transition("execution", "planning", trigger="pause")
+        self._release_hierarchical_state_machine.trigger("start")
+        self._release_router = Router()
+        self._release_router.register("/main", "main")
+        self._release_router.register("/systems", "main")
+        self._release_router.register("/showcase", "control_showcase")
+        self._release_router.push("/systems", {"entry": "task_panel"})
+        self._router_cycle_paths = ("/showcase", "/main", "/systems")
+        self._router_cycle_index = 0
         self.state_context_dropdown = None
         self.state_store_label = None
         self.state_readiness_label = None
         self.state_context_label = None
+        self.state_machine_label = None
+        self.state_router_label = None
 
         self._pipeline = DataflowPipeline(
             [
@@ -918,15 +951,33 @@ class SystemsFeature(Feature):
                     self._redo_active_context,
                     style="round",
                 ),
+                ButtonControl(
+                    "systems_state_advance_fsm",
+                    Rect(0, 0, 156, 32),
+                    "Advance FSM",
+                    self._advance_release_state_machine,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_state_route_cycle",
+                    Rect(0, 0, 170, 32),
+                    "Cycle Route Stack",
+                    self._cycle_release_router,
+                    style="round",
+                ),
             ],
         )
 
         self.state_store_label = LabelControl("systems_state_store", Rect(0, 0, rect.width, 28), "", align="left")
         self.state_readiness_label = LabelControl("systems_state_readiness", Rect(0, 0, rect.width, 28), "", align="left")
         self.state_context_label = LabelControl("systems_state_context_status", Rect(0, 0, rect.width, 28), "", align="left")
+        self.state_machine_label = LabelControl("systems_state_machine_status", Rect(0, 0, rect.width, 28), "", align="left")
+        self.state_router_label = LabelControl("systems_state_router_status", Rect(0, 0, rect.width, 28), "", align="left")
         panel.add_at(self.state_store_label, 0, state_label_top + 8)
         panel.add_at(self.state_readiness_label, 0, state_label_top + 44)
         panel.add_at(self.state_context_label, 0, state_label_top + 80)
+        panel.add_at(self.state_machine_label, 0, state_label_top + 116)
+        panel.add_at(self.state_router_label, 0, state_label_top + 152)
         self._refresh_state_labels()
         return panel
 
@@ -1600,6 +1651,29 @@ class SystemsFeature(Feature):
         self._undo_context.redo()
         self._refresh_state_labels()
 
+    def _advance_release_state_machine(self) -> None:
+        self._release_state_machine.trigger("advance")
+        if self._release_hierarchical_state_machine.current.value == "planning":
+            self._release_hierarchical_state_machine.trigger("start")
+        else:
+            promoted = self._release_hierarchical_state_machine.sub_trigger("execution", "promote")
+            if not promoted:
+                self._release_hierarchical_state_machine.trigger("pause")
+        self._refresh_state_labels()
+
+    def _cycle_release_router(self) -> None:
+        phase = self._router_cycle_index % 3
+        next_route = self._router_cycle_paths[self._router_cycle_index % len(self._router_cycle_paths)]
+        if phase == 0:
+            self._release_router.push(next_route, {"source": "systems_demo"})
+        elif phase == 1:
+            self._release_router.replace(next_route, {"mode": "replace"})
+        else:
+            if not self._release_router.pop():
+                self._release_router.push(next_route, {"source": "systems_demo"})
+        self._router_cycle_index += 1
+        self._refresh_state_labels()
+
     def _refresh_state_labels(self) -> None:
         pending = int(self._release_store.get("pending", 0))
         approved = int(self._release_store.get("approved", 0))
@@ -1621,6 +1695,19 @@ class SystemsFeature(Feature):
             self.state_context_label.text = (
                 f"UndoContextManager active={active_key} | release={release_stage} | build={build_stage} "
                 f"| can_undo={self._undo_context.can_undo} | can_redo={self._undo_context.can_redo}"
+            )
+        if self.state_machine_label is not None:
+            hierarchy_state = self._release_hierarchical_state_machine.current.value
+            hierarchy_ring = self._release_hierarchical_state_machine.sub_current("execution")
+            self.state_machine_label.text = (
+                f"StateMachine stage={self._release_state_machine.current.value} | "
+                f"HierarchicalStateMachine outer={hierarchy_state} ring={hierarchy_ring}"
+            )
+        if self.state_router_label is not None:
+            current_route = self._release_router.current_route or "none"
+            self.state_router_label.text = (
+                f"Router route={current_route} history={len(self._release_router.history)} "
+                f"can_pop={self._release_router.can_pop()}"
             )
 
     def _queue_background_job(self) -> None:
