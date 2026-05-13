@@ -1612,15 +1612,22 @@ class SystemsFeature(Feature):
         self.infrastructure_runtime_label = LabelControl(
             "systems_infra_runtime_status", Rect(0, 0, rect.width, 56), "", align="left"
         )
-        panel.add_at(self.infrastructure_pipeline_label, 0, infrastructure_label_top + 8)
-        panel.add_at(self.infrastructure_interaction_label, 0, infrastructure_label_top + 44)
-        panel.add_at(self.infrastructure_schema_label, 0, infrastructure_label_top + 80)
-        panel.add_at(self.infrastructure_migration_label, 0, infrastructure_label_top + 116)
-        panel.add_at(self.infrastructure_theme_bus_label, 0, infrastructure_label_top + 152)
-        panel.add_at(self.infrastructure_virtualization_label, 0, infrastructure_label_top + 188)
-        panel.add_at(self.infrastructure_layout_label, 0, infrastructure_label_top + 224)
-        panel.add_at(self.infrastructure_scope_label, 0, infrastructure_label_top + 260)
-        panel.add_at(self.infrastructure_runtime_label, 0, infrastructure_label_top + 296)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, infrastructure_label_top + 8, max(1, rect.width), 344),
+            [
+                self.infrastructure_pipeline_label,
+                self.infrastructure_interaction_label,
+                self.infrastructure_schema_label,
+                self.infrastructure_migration_label,
+                self.infrastructure_theme_bus_label,
+                self.infrastructure_virtualization_label,
+                self.infrastructure_layout_label,
+                self.infrastructure_scope_label,
+                self.infrastructure_runtime_label,
+            ],
+            gap=8,
+        )
         self._refresh_infrastructure_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -1883,9 +1890,16 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        panel.add_at(self.persistence_overview_label, 0, persistence_label_top + 8)
-        panel.add_at(self.persistence_settings_label, 0, persistence_label_top + 44)
-        panel.add_at(self.persistence_status_label, 0, persistence_label_top + 80)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, persistence_label_top + 8, max(1, rect.width), 128),
+            [
+                self.persistence_overview_label,
+                self.persistence_settings_label,
+                self.persistence_status_label,
+            ],
+            gap=8,
+        )
         self._refresh_persistence_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -2252,8 +2266,15 @@ class SystemsFeature(Feature):
             Rect(0, 0, max(240, rect.width - self.PANEL_PADDING_X * 2), preview_height),
             max_events=24,
         )
-        panel.add_at(self.text_search_status_label, 0, labels_top + 8)
-        panel.add_at(self.text_search_match_label, 0, labels_top + 44)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, labels_top + 8, max(1, rect.width), 64),
+            [
+                self.text_search_status_label,
+                self.text_search_match_label,
+            ],
+            gap=8,
+        )
         panel.add_at(self.text_preview_canvas, self.PANEL_PADDING_X, preview_top)
         self._refresh_text_labels()
         self._inset_left_side_children(panel)
