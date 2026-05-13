@@ -4,7 +4,7 @@ Wraps any set of existing layout managers
 (:class:`~gui_do.FlexLayout`, :class:`~gui_do.GridLayout`,
 :class:`~gui_do.ConstraintLayout`) and hot-swaps the active one based on the
 current container width.  When the container is resized (e.g. via
-:class:`~gui_do.ResizeManager` or :class:`~gui_do.WindowTilingManager`) call
+:class:`~gui_do.ResizeManager` or :class:`~gui_do.WindowLayoutHandler`) call
 :meth:`update` with the new width; the active layout switches automatically
 and :attr:`active_breakpoint` notifies reactive subscribers.
 

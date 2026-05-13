@@ -223,6 +223,7 @@ from .layout.layout_animator import LayoutAnimator
 from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
 from .layout.flow_layout import FlowLayout, FlowItem
 from .layout.viewport import Viewport
+from .layout.window_layout_handler import WindowLayoutHandler
 
 # ============================================================================
 # TIER 9: OVERLAY MANAGERS & WINDOWS

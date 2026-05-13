@@ -27,8 +27,8 @@ from ..focus.window_focus_manager import WindowFocusManager
 from ..focus.task_panel_focus_manager import TaskPanelFocusManager
 from ..scheduling.task_scheduler import TaskScheduler
 from ..scheduling.timers import Timers
-from ..layout.layout_manager import LayoutManager
-from ..layout.window_tiling_manager import WindowTilingManager
+from ..layout.anchor_layout import AnchorLayout
+from ..layout.window_layout_handler import WindowLayoutHandler
 from ..theme.color_theme import ColorTheme
 from ..features.feature_lifecycle import FeatureManager
 from .error_handling import logical_error, report_nonfatal_error
@@ -79,7 +79,7 @@ class GuiApplication:
         self.tweens = active_runtime.tweens
         self.overlay = active_runtime.overlay
         self.drag_drop = active_runtime.drag_drop
-        self.layout = LayoutManager()
+        self.layout = AnchorLayout()
         self.window_tiling = active_runtime.window_tiling
         self.theme = active_runtime.theme
         self.graphics_factory = active_runtime.graphics_factory
@@ -474,7 +474,7 @@ class GuiApplication:
             timers=Timers(),
             theme=theme,
             graphics_factory=factory,
-            window_tiling=WindowTilingManager(self, scene=scene),
+            window_tiling=WindowLayoutHandler(self, scene=scene),
             tweens=TweenManager(),
             overlay=OverlayManager(),
             drag_drop=DragDropManager(),

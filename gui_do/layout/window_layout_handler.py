@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Iterable, Optional
+from typing import Dict, Iterable, List, Optional
 
 from pygame import Rect
 
 
-class WindowTilingManager:
-    """Non-overlapping window tiling for the scene graph."""
+class WindowLayoutHandler:
+    """Arrange window-like scene nodes into a non-overlapping tiled grid."""
 
     def __init__(self, app, scene=None) -> None:
         self.app = app
@@ -41,7 +41,9 @@ class WindowTilingManager:
 
     def _ensure_registration(self, windows: Iterable[object]) -> None:
         current = set(windows)
-        self._registration_order = {w: idx for w, idx in self._registration_order.items() if w in current}
+        self._registration_order = {
+            w: idx for w, idx in self._registration_order.items() if w in current
+        }
         for window in windows:
             if window not in self._registration_order:
                 self._registration_order[window] = self._next_order

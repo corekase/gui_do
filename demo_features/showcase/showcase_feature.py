@@ -388,36 +388,44 @@ class ShowcaseFeature(Feature):
         def make_vertical_buttons(w: int, h: int):
             panel = PanelControl("control_button_cell", Rect(0, 0, w, h), draw_background=False)
             btn_w = min(100, w)
-            col_st, _, _, _ = column_stack_from_anchor(
-                anchor=Rect(0, 0, btn_w, h), content_bottom=h,
-                preferred_width=btn_w, item_gap_y=inner_gap,
-            )
             btn_h = max(20, (h - inner_gap * 2) // 3)
+            controls: list[ButtonControl] = []
             for ctrl_id, label in [
                 ("control_button", "Button A"),
                 ("control_button_2", "Button B"),
                 ("control_button_3", "Button C"),
             ]:
-                slot = Rect(col_st.add_slot_or_overflow(btn_h, overflow_gap=0))
-                panel.add_at(ButtonControl(ctrl_id, Rect(0, 0, slot.width, slot.height), label), slot.left, slot.top)
+                controls.append(ButtonControl(ctrl_id, Rect(0, 0, btn_w, btn_h), label))
+            layout = FlexLayout(direction="column", gap=inner_gap, padding=0)
+            for control in controls:
+                layout.add(control, grow=0, basis=btn_h)
+            layout.apply(Rect(0, 0, btn_w, h))
+            for control in controls:
+                panel.add_at(control, control.rect.left, control.rect.top)
             return panel
 
         def make_button_group(group_id: str, group_name: str, items: list):
             def _factory(w: int, h: int) -> PanelControl:
                 panel = PanelControl(group_id, Rect(0, 0, w, h), draw_background=False)
                 btn_w = min(100, w)
-                col_st, _, _, _ = column_stack_from_anchor(
-                    anchor=Rect(0, 0, btn_w, h), content_bottom=h,
-                    preferred_width=btn_w, item_gap_y=inner_gap,
-                )
                 btn_h = max(20, (h - inner_gap * 2) // 3)
+                controls: list[ButtonGroupControl] = []
                 for ctrl_id, label in items:
-                    slot = Rect(col_st.add_slot_or_overflow(btn_h, overflow_gap=0))
-                    panel.add_at(
-                        ButtonGroupControl(ctrl_id, Rect(0, 0, slot.width, slot.height),
-                                           f"controls_showcase_{group_name}", label, selected=False),
-                        slot.left, slot.top,
+                    controls.append(
+                        ButtonGroupControl(
+                            ctrl_id,
+                            Rect(0, 0, btn_w, btn_h),
+                            f"controls_showcase_{group_name}",
+                            label,
+                            selected=False,
+                        )
                     )
+                layout = FlexLayout(direction="column", gap=inner_gap, padding=0)
+                for control in controls:
+                    layout.add(control, grow=0, basis=btn_h)
+                layout.apply(Rect(0, 0, btn_w, h))
+                for control in controls:
+                    panel.add_at(control, control.rect.left, control.rect.top)
                 return panel
             return _factory
 
@@ -425,24 +433,24 @@ class ShowcaseFeature(Feature):
             def _factory(w: int, h: int) -> PanelControl:
                 panel = PanelControl(group_id, Rect(0, 0, w, h), draw_background=False)
                 btn_w = min(100, w)
-                col_st, _, _, _ = column_stack_from_anchor(
-                    anchor=Rect(0, 0, btn_w, h), content_bottom=h,
-                    preferred_width=btn_w, item_gap_y=inner_gap,
-                )
                 btn_h = max(20, (h - inner_gap * 2) // 3)
+                controls: list[ToggleControl] = []
                 for ctrl_id, suffix in items:
-                    slot = Rect(col_st.add_slot_or_overflow(btn_h, overflow_gap=0))
-                    panel.add_at(
+                    controls.append(
                         ToggleControl(
                             ctrl_id,
-                            Rect(0, 0, slot.width, slot.height),
+                            Rect(0, 0, btn_w, btn_h),
                             text_on=f"Pressed {suffix}",
                             text_off=f"Raised {suffix}",
                             pushed=False,
-                        ),
-                        slot.left,
-                        slot.top,
+                        )
                     )
+                layout = FlexLayout(direction="column", gap=inner_gap, padding=0)
+                for control in controls:
+                    layout.add(control, grow=0, basis=btn_h)
+                layout.apply(Rect(0, 0, btn_w, h))
+                for control in controls:
+                    panel.add_at(control, control.rect.left, control.rect.top)
                 return panel
 
             return _factory

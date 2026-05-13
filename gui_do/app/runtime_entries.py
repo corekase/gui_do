@@ -11,7 +11,7 @@ class _SceneRuntime:
     timers: "Timers"
     theme: "ColorTheme"
     graphics_factory: "BuiltInGraphicsFactory"
-    window_tiling: "WindowTilingManager"
+    window_tiling: "WindowLayoutHandler"
     tweens: "TweenManager"
     overlay: "OverlayManager"
     drag_drop: "DragDropManager"
