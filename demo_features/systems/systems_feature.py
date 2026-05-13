@@ -50,6 +50,7 @@ from gui_do import (
     LayoutConstraint,
     LabelControl,
     ListViewControl,
+    LocaleRegistry,
     MeasurePolicy,
     MigrationRegistry,
     MigrationStep,
@@ -81,6 +82,9 @@ from gui_do import (
     TaskScheduler,
     Throttler,
     TextInputControl,
+    TextFlow,
+    TextSearcher,
+    TextSpan,
     ThemeManager,
     ThemeInvalidationBus,
     LivePoliteness,
@@ -88,6 +92,7 @@ from gui_do import (
     TelemetryCollector,
     TileMap,
     TileSet,
+    StringTable,
     UndoContextManager,
     ValidationPolicy,
     Router,
@@ -203,6 +208,7 @@ class _SystemsPresenter(WindowPresenter):
         motion_panel = feature.build_motion_panel(panel_rect)
         persistence_panel = feature.build_persistence_panel(panel_rect)
         graphics_panel = feature.build_graphics_panel(panel_rect)
+        text_panel = feature.build_text_panel(panel_rect)
         for panel in (
             data_panel,
             validation_panel,
@@ -214,6 +220,7 @@ class _SystemsPresenter(WindowPresenter):
             motion_panel,
             persistence_panel,
             graphics_panel,
+            text_panel,
         ):
             self.add_control(panel)
 
@@ -228,6 +235,7 @@ class _SystemsPresenter(WindowPresenter):
             "motion": motion_panel,
             "persistence": persistence_panel,
             "graphics": graphics_panel,
+            "text": text_panel,
         }
         feature.window = self.window
         feature.demo = self.host
@@ -249,6 +257,7 @@ class SystemsFeature(Feature):
         ("motion", "Motion"),
         ("persistence", "Persistence"),
         ("graphics", "Graphics"),
+        ("text", "Text"),
     )
     PANEL_PADDING_X = 16
     LEFT_SIDE_INSET_X = 10
@@ -700,6 +709,55 @@ class SystemsFeature(Feature):
         self._graphics_runtime_step = 0
         self._reset_particle_layer()
 
+        self._locale_registry = LocaleRegistry(default_locale="en", fallback_locale="en")
+        self._locale_registry.register(
+            StringTable(
+                "en",
+                {
+                    "systems.text.title": "Release Notes",
+                    "systems.text.summary": "The release candidate adds systems demos for scheduling, graphics, and persistence.",
+                    "systems.text.actions": "Action items: verify smoke checks, confirm rollback path, and announce the rollout.",
+                    "systems.text.hint": "Search this note for keywords like release, rollout, or checks.",
+                    "systems.text.replacement": "deployment",
+                },
+            )
+        )
+        self._locale_registry.register(
+            StringTable(
+                "es",
+                {
+                    "systems.text.title": "Notas de Lanzamiento",
+                    "systems.text.summary": "La version candidata agrega demos de sistemas para planificacion, graficos y persistencia.",
+                    "systems.text.actions": "Tareas: verificar pruebas rapidas, confirmar reversa y anunciar el despliegue.",
+                    "systems.text.hint": "Busca palabras como despliegue, planificacion o pruebas.",
+                    "systems.text.replacement": "entrega",
+                },
+            )
+        )
+        self._locale_registry.register(
+            StringTable(
+                "fr",
+                {
+                    "systems.text.title": "Notes de Version",
+                    "systems.text.summary": "Cette version ajoute des demos systeme pour l'ordonnancement, le rendu et la persistance.",
+                    "systems.text.actions": "Actions: verifier les controles, confirmer le plan de retour, puis annoncer le deploiement.",
+                    "systems.text.hint": "Recherchez des mots comme deploiement, verifications ou etapes.",
+                    "systems.text.replacement": "livraison",
+                },
+            )
+        )
+        self._text_search_query = "release"
+        self._text_search_cursor = 0
+        self._text_last_action = "Text systems ready."
+        self._text_searcher = TextSearcher("", case_sensitive=False, whole_word=False, use_regex=False)
+        self._text_flow = TextFlow(width=480, line_spacing=3)
+        self.text_locale_dropdown = None
+        self.text_query_input = None
+        self.text_search_status_label = None
+        self.text_search_match_label = None
+        self.text_preview_canvas = None
+        self._rebuild_text_document()
+
     def build(self, host) -> None:
         self.window = create_feature_presented_window(
             host,
@@ -726,6 +784,8 @@ class SystemsFeature(Feature):
             self._refresh_scheduling_labels()
         elif self.active_tab_key == "graphics":
             self._advance_graphics_demo(dt)
+        elif self.active_tab_key == "text":
+            self._refresh_text_labels()
 
     def set_active_tab(self, key: str) -> None:
         next_key = str(key)
@@ -754,6 +814,8 @@ class SystemsFeature(Feature):
             self._refresh_persistence_labels()
         elif next_key == "graphics":
             self._refresh_graphics_labels()
+        elif next_key == "text":
+            self._refresh_text_labels()
 
     def _row_bounds(
         self,
@@ -1883,6 +1945,92 @@ class SystemsFeature(Feature):
         self._inset_left_side_children(panel)
         return panel
 
+    def build_text_panel(self, rect: Rect) -> PanelControl:
+        panel = PanelControl("systems_text_panel", Rect(rect), draw_background=False)
+        panel.add_at(LabelControl("systems_text_locale_label", Rect(0, 0, 96, 28), "Locale", align="left"), 0, 0)
+
+        locale_options = [DropdownOption(code.upper(), code) for code in self._locale_registry.registered_locales]
+        selected_locale = self._locale_registry.active_locale
+        selected_index = next(
+            (index for index, option in enumerate(locale_options) if option.value == selected_locale),
+            0,
+        )
+        self.text_locale_dropdown = DropdownControl(
+            "systems_text_locale",
+            Rect(0, 0, 160, 32),
+            options=locale_options,
+            selected_index=selected_index,
+            on_change=lambda value, _index: self._on_text_locale_changed(value),
+        )
+        panel.add_at(self.text_locale_dropdown, 98, 0)
+
+        panel.add_at(LabelControl("systems_text_query_label", Rect(0, 0, 72, 28), "Search", align="left"), 278, 0)
+        self.text_query_input = TextInputControl(
+            "systems_text_query",
+            Rect(0, 0, max(180, rect.width - 386), 32),
+            value=self._text_search_query,
+            placeholder="release",
+            on_change=self._on_text_query_changed,
+        )
+        panel.add_at(self.text_query_input, 350, 0)
+
+        labels_top = self._add_button_rows(
+            panel,
+            rect,
+            44,
+            [
+                ButtonControl(
+                    "systems_text_search",
+                    Rect(0, 0, 140, 32),
+                    "Run Search",
+                    self._run_text_search,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_text_next",
+                    Rect(0, 0, 146, 32),
+                    "Next Match",
+                    self._next_text_match,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_text_replace",
+                    Rect(0, 0, 174, 32),
+                    "Replace First Match",
+                    self._replace_first_text_match,
+                    style="round",
+                ),
+            ],
+            per_row=3,
+        )
+
+        self.text_search_status_label = LabelControl(
+            "systems_text_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        self.text_search_match_label = LabelControl(
+            "systems_text_match_status",
+            Rect(0, 0, rect.width, 28),
+            "",
+            align="left",
+        )
+        preview_top = labels_top + 80
+        preview_height = max(120, rect.height - preview_top - 12)
+        self.text_preview_canvas = CanvasControl(
+            "systems_text_preview",
+            Rect(0, 0, max(240, rect.width - self.PANEL_PADDING_X * 2), preview_height),
+            max_events=24,
+        )
+        panel.add_at(self.text_search_status_label, 0, labels_top + 8)
+        panel.add_at(self.text_search_match_label, 0, labels_top + 44)
+        panel.add_at(self.text_preview_canvas, self.PANEL_PADDING_X, preview_top)
+        self._refresh_text_labels()
+        self._inset_left_side_children(panel)
+        self._inset_text_labels(panel)
+        return panel
+
     def _make_window_spec(self, host) -> AnchoredWindowSpec:
         width = max(640, int(host.screen_rect.width * 0.8))
         height = max(420, int(host.screen_rect.height * 0.8))
@@ -1894,6 +2042,146 @@ class SystemsFeature(Feature):
             margin=(0, 0),
             use_frame_backdrop=True,
         )
+
+    def _rebuild_text_document(self) -> None:
+        title = self._locale_registry.t("systems.text.title", fallback="Release Notes")
+        summary = self._locale_registry.t("systems.text.summary", fallback="Systems demo summary unavailable.")
+        actions = self._locale_registry.t("systems.text.actions", fallback="Action items unavailable.")
+        hint = self._locale_registry.t("systems.text.hint", fallback="Search for release.")
+        self._text_searcher.text = f"{title}\n{summary}\n{actions}\n{hint}"
+
+    def _on_text_locale_changed(self, value: str) -> None:
+        self._locale_registry.set_locale(str(value))
+        self._text_search_cursor = 0
+        self._text_last_action = f"Locale switched to {self._locale_registry.active_locale.upper()}."
+        self._rebuild_text_document()
+        self._refresh_text_labels()
+
+    def _on_text_query_changed(self, value: str) -> None:
+        self._text_search_query = str(value)
+
+    def _run_text_search(self) -> None:
+        self._text_search_cursor = 0
+        self._text_last_action = "Search refreshed for current localized note."
+        self._refresh_text_labels()
+
+    def _next_text_match(self) -> None:
+        query = self._text_search_query.strip()
+        matches = self._text_searcher.find_all(query)
+        if not matches:
+            self._text_last_action = "No matches available for next navigation."
+            self._refresh_text_labels()
+            return
+        self._text_search_cursor = (self._text_search_cursor + 1) % len(matches)
+        self._text_last_action = f"Advanced to match {self._text_search_cursor + 1} of {len(matches)}."
+        self._refresh_text_labels()
+
+    def _replace_first_text_match(self) -> None:
+        query = self._text_search_query.strip()
+        if not query:
+            self._text_last_action = "Enter a search token before replace."
+            self._refresh_text_labels()
+            return
+        match = self._text_searcher.find_next(query, from_pos=0)
+        if match is None:
+            self._text_last_action = "No match found to replace."
+            self._refresh_text_labels()
+            return
+        replacement = self._locale_registry.t("systems.text.replacement", fallback="deployment")
+        self._text_searcher.text = self._text_searcher.replace(match, replacement)
+        self._text_search_cursor = 0
+        self._text_last_action = f"Replaced first '{query}' with '{replacement}'."
+        self._refresh_text_labels()
+
+    def _build_text_preview_spans(self, text: str, matches: list[object], active_index: int) -> list[TextSpan]:
+        if not matches:
+            return [TextSpan(text, color=(226, 232, 240), role="body")]
+        spans: list[TextSpan] = []
+        cursor = 0
+        for index, match in enumerate(matches):
+            start = int(match.start)
+            end = int(match.end)
+            if start > cursor:
+                spans.append(TextSpan(text[cursor:start], color=(226, 232, 240), role="body"))
+            spans.append(
+                TextSpan(
+                    text[start:end],
+                    bold=True,
+                    color=(255, 202, 122) if index == active_index else (155, 209, 255),
+                    role="body",
+                )
+            )
+            cursor = end
+        if cursor < len(text):
+            spans.append(TextSpan(text[cursor:], color=(226, 232, 240), role="body"))
+        return spans
+
+    def _render_text_preview_fallback(self, surface: Surface, text: str) -> None:
+        font = pygame.font.Font(None, 20)
+        color = (226, 232, 240)
+        y = 8
+        max_width = max(8, surface.get_width() - 16)
+        for line in text.splitlines():
+            words = line.split(" ")
+            current = ""
+            for word in words:
+                test = word if not current else f"{current} {word}"
+                if font.size(test)[0] <= max_width:
+                    current = test
+                else:
+                    surface.blit(font.render(current, True, color), (8, y))
+                    y += 22
+                    current = word
+            if current:
+                surface.blit(font.render(current, True, color), (8, y))
+                y += 22
+            y += 4
+            if y > surface.get_height() - 24:
+                break
+
+    def _render_text_preview(self, matches: list[object], active_index: int) -> None:
+        if self.text_preview_canvas is None:
+            return
+        surface = self.text_preview_canvas.get_canvas_surface()
+        surface.fill((27, 32, 38))
+        text = self._text_searcher.text
+        spans = self._build_text_preview_spans(text, matches, active_index)
+        self._text_flow.width = max(1, surface.get_width() - 12)
+        self._text_flow.set_content(spans)
+        theme = getattr(getattr(self.demo, "app", None), "theme", None)
+        if theme is not None:
+            try:
+                self._text_flow.layout(theme)
+                self._text_flow.render(surface, 6, 6)
+            except Exception:
+                self._render_text_preview_fallback(surface, text)
+        else:
+            self._render_text_preview_fallback(surface, text)
+        self.text_preview_canvas.invalidate()
+
+    def _refresh_text_labels(self) -> None:
+        query = self._text_search_query.strip()
+        matches = self._text_searcher.find_all(query)
+        active_index = min(self._text_search_cursor, max(0, len(matches) - 1)) if matches else -1
+        if self.text_search_status_label is not None:
+            locale = self._locale_registry.active_locale.upper()
+            translated_title = self._locale_registry.t("systems.text.title", fallback="Release Notes")
+            self.text_search_status_label.text = (
+                f"LocaleRegistry active={locale} locales={self._locale_registry.registered_locales} | "
+                f"StringTable title='{translated_title}'"
+            )
+        if self.text_search_match_label is not None:
+            if not query:
+                self.text_search_match_label.text = "TextSearcher waiting for a search token."
+            elif not matches:
+                self.text_search_match_label.text = f"TextSearcher found no matches for '{query}'. {self._text_last_action}"
+            else:
+                current = matches[active_index]
+                self.text_search_match_label.text = (
+                    f"TextSearcher matches={len(matches)} current={active_index + 1} "
+                    f"span=({current.start},{current.end}) | {self._text_last_action}"
+                )
+        self._render_text_preview(matches, active_index)
 
     def _project_backlog_item(self, item: _BacklogItem) -> ListItem:
         return ListItem(

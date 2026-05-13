@@ -36,6 +36,7 @@ class TestSystemsFeature(unittest.TestCase):
                 "motion",
                 "persistence",
                 "graphics",
+                "text",
             ],
             [key for key, _label in SystemsFeature.TAB_DEFINITIONS],
         )
@@ -174,6 +175,23 @@ class TestSystemsFeature(unittest.TestCase):
         self.assertEqual("hover", feature._motion_animation_state)
         feature._cycle_motion_animation_state()
         self.assertEqual("press", feature._motion_animation_state)
+
+    def test_text_panel_localization_and_search_updates_labels(self):
+        feature = self._make_feature()
+        panel = feature.build_text_panel(Rect(0, 0, 640, 360))
+
+        panel_child_ids = {child.control_id for child in panel.children}
+        self.assertIn("systems_text_preview", panel_child_ids)
+        self.assertIn("systems_text_search", panel_child_ids)
+
+        feature._on_text_locale_changed("es")
+        feature._on_text_query_changed("despliegue")
+        feature._run_text_search()
+
+        self.assertIsNotNone(feature.text_search_status_label)
+        self.assertIn("active=ES", feature.text_search_status_label.text)
+        self.assertIsNotNone(feature.text_search_match_label)
+        self.assertIn("TextSearcher", feature.text_search_match_label.text)
 
 
 if __name__ == "__main__":
