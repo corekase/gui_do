@@ -6,17 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 import tempfile
 
-from pygame import Rect
+from pygame import Rect, Surface
 
 from gui_do import (
     AppStateStore,
     AnchoredWindowSpec,
     AsyncFieldValidator,
     AsyncFormValidator,
+    ArrowBoxControl,
     ButtonControl,
     ConstraintAttr,
     ConstraintLayoutEngine,
     ConstraintSet,
+    Camera2D,
+    CanvasControl,
     CellCaretLayout,
     CollectionView,
     CollectionViewQuery,
@@ -24,6 +27,7 @@ from gui_do import (
     CooperativeScheduler,
     DataCache,
     DataflowPipeline,
+    DirtyRegionTracker,
     DropdownControl,
     DropdownOption,
     Emitter,
@@ -46,6 +50,7 @@ from gui_do import (
     RecyclePool,
     SchemaFormRuntime,
     SchemaVersion,
+    SceneGraph2D,
     ScopeStack,
     ScopedTheme,
     ScopedThemeManager,
@@ -54,14 +59,18 @@ from gui_do import (
     Sleep,
     SnapshotMigrator,
     StateTransaction,
+    SurfaceCompositor,
     TabControl,
     TabItem,
     TaskScheduler,
     TextInputControl,
     ThemeManager,
     ThemeInvalidationBus,
+    TileMap,
+    TileSet,
     UndoContextManager,
     ValidationPolicy,
+    Node2D,
     VirtualizationCore,
     VirtualizedWindow,
     WindowControl,
@@ -436,11 +445,11 @@ class SystemsFeature(Feature):
         self.persistence_status_label = None
 
         preview_rect = Rect(0, 0, 520, 180)
-        self._particle_layer = ParticleLayer("systems_graphics_particle_layer", preview_rect, max_particles=384)
+        self._particle_layer = ParticleLayer("systems_graphics_particle_layer", preview_rect, max_particles=1024)
         self._particle_ambient_emitter = Emitter(
             x=preview_rect.width * 0.5,
             y=preview_rect.height * 0.78,
-            rate=28,
+            rate=150,
             lifetime=(1.0, 1.8),
             speed=(42, 96),
             angle_range=(258, 282),
@@ -462,8 +471,33 @@ class SystemsFeature(Feature):
         )
         self.graphics_particle_label = None
         self.graphics_layer_label = None
+        self.graphics_scene_graph_label = None
+        self.graphics_compositor_label = None
+        self.graphics_tile_map_label = None
+        self.graphics_tile_preview_canvas = None
         self._burst_emitter_panel_offset: tuple = (0.0, 0.0)
         self._ambient_emitter_panel_offset: tuple = (0.0, 0.0)
+        self._graphics_scene_graph = SceneGraph2D()
+        release_node = Node2D("release_stage", pos=(84.0, 56.0), scale=(1.0, 1.0))
+        release_node.add_child(Node2D("approval_badge", pos=(36.0, 4.0), scale=(0.8, 0.8)))
+        release_node.add_child(Node2D("timeline_anchor", pos=(18.0, 28.0), scale=(1.1, 1.0)))
+        self._graphics_scene_graph.add(release_node)
+        self._graphics_camera = Camera2D(Rect(0, 0, preview_rect.width, preview_rect.height), zoom=1.0)
+        self._graphics_dirty_tracker = DirtyRegionTracker()
+        self._graphics_compositor = SurfaceCompositor((preview_rect.width, preview_rect.height))
+        self._graphics_compositor.add_layer("scene", z_index=0)
+        self._graphics_compositor.add_layer("particles", z_index=10, opacity=0.92)
+        self._graphics_compositor.add_layer("ui", z_index=20)
+        tile_atlas = Surface((32, 16))
+        tile_atlas.fill((61, 112, 74), Rect(0, 0, 16, 16))
+        tile_atlas.fill((102, 132, 72), Rect(16, 0, 16, 16))
+        self._graphics_tile_set = TileSet(tile_atlas, tile_w=16, tile_h=16)
+        self._graphics_tile_map = TileMap(tile_w=16, tile_h=16, cols=40, rows=24, tile_set=self._graphics_tile_set)
+        self._graphics_tile_map.fill(0)
+        self._graphics_tile_map.fill_rect(4, 2, 10, 5, 1)
+        self._graphics_tile_map.fill_rect(21, 10, 8, 7, 1)
+        self._graphics_tile_camera = Rect(0, 0, preview_rect.width, preview_rect.height)
+        self._graphics_runtime_step = 0
         self._reset_particle_layer()
 
     def build(self, host) -> None:
@@ -1100,10 +1134,37 @@ class SystemsFeature(Feature):
 
     def build_graphics_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_graphics_panel", Rect(rect), draw_background=False)
+        tile_preview_h = 120
+
+        # Two columns: left (particle systems), right (tile navigation + tilemap).
+        top_padding = 8
+        left_col_x = self.PANEL_PADDING_X
+        left_col_width = max(160, rect.width // 2 - self.PANEL_PADDING_X * 2)
+        right_col_x = rect.width // 2 + self.PANEL_PADDING_X
+        right_col_width = max(160, rect.width - right_col_x - self.PANEL_PADDING_X)
+
+        nav_cluster = PanelControl(
+            "systems_graphics_tile_nav_cluster",
+            Rect(0, 0, 96, 96),
+            draw_background=True,
+        )
+        # Right-column elements are left-justified as a group and keep
+        # their relative placement (nav cluster left of tile preview).
+        nav_gap = 12
+        tile_preview_nudge_x = 12
+        tile_preview_width = min(
+            360,
+            max(160, right_col_width - nav_cluster.rect.width - nav_gap - tile_preview_nudge_x),
+        )
+        tile_preview_x = right_col_x + nav_cluster.rect.width + nav_gap + tile_preview_nudge_x
+        nav_cluster_x = right_col_x
+
+        # Left column starts at top.
+        buttons_top = top_padding
         self._add_button_rows(
             panel,
             rect,
-            0,
+            buttons_top,
             [
                 ButtonControl(
                     "systems_graphics_burst",
@@ -1120,17 +1181,29 @@ class SystemsFeature(Feature):
                     style="round",
                 ),
             ],
+            per_row=2,
+            left=left_col_x,
+            width=left_col_width,
         )
-        preview_width = min(rect.width, 520)
+
+        preview_width = min(520, left_col_width)
         self._particle_layer.rect = Rect(0, 0, preview_width, 180)
-        panel.add_at(self._particle_layer, 0, 48)
+        self._graphics_compositor.resize((preview_width, 180))
+        self._graphics_camera.viewport_rect = Rect(0, 0, preview_width, 180)
+        self._graphics_tile_camera.size = (tile_preview_width, tile_preview_h)
+
+        # Left column particle stack.
+        particle_layer_top = buttons_top + 32 + self.BUTTON_ROW_SPACING
+        panel.add_at(self._particle_layer, left_col_x, particle_layer_top)
         # Store panel-local offsets for the emitters so they can be re-synced
         # to screen space each frame (emitters are plain dataclasses and won't
         # move automatically when the window is dragged).
-        _row_available = rect.width - 2 * self.PANEL_PADDING_X
-        _burst_dx = self.PANEL_PADDING_X + (_row_available - self.BUTTON_ROW_GAP) / 4
-        _ambient_dy = 48 + 180 * 0.78
-        _burst_dy = _ambient_dy
+        # Emitters align to the horizontal midpoint of the Burst/Reset button row.
+        _burst_dx = left_col_x + left_col_width / 2
+        labels_top = particle_layer_top + 180 + 12
+        emitter_padding = 12
+        _burst_dy = labels_top - emitter_padding
+        _ambient_dy = _burst_dy
         self._burst_emitter_panel_offset = (_burst_dx, _burst_dy)
         _ambient_dx = _burst_dx
         self._ambient_emitter_panel_offset = (_ambient_dx, _ambient_dy)
@@ -1141,18 +1214,110 @@ class SystemsFeature(Feature):
         self._particle_ambient_emitter.y = rect.top + _ambient_dy
         self.graphics_particle_label = LabelControl(
             "systems_graphics_particle_status",
-            Rect(0, 0, rect.width, 28),
+            Rect(0, 0, left_col_width, 28),
             "",
             align="left",
         )
         self.graphics_layer_label = LabelControl(
             "systems_graphics_layer_status",
-            Rect(0, 0, rect.width, 28),
+            Rect(0, 0, left_col_width, 28),
             "",
             align="left",
         )
-        panel.add_at(self.graphics_particle_label, 0, 236)
-        panel.add_at(self.graphics_layer_label, 0, 272)
+        self.graphics_scene_graph_label = LabelControl(
+            "systems_graphics_scene_graph_status",
+            Rect(0, 0, left_col_width, 28),
+            "",
+            align="left",
+        )
+        self.graphics_compositor_label = LabelControl(
+            "systems_graphics_compositor_status",
+            Rect(0, 0, left_col_width, 28),
+            "",
+            align="left",
+        )
+        self.graphics_tile_map_label = LabelControl(
+            "systems_graphics_tile_map_status",
+            Rect(0, 0, tile_preview_width, 28),
+            "",
+            align="left",
+        )
+        self.graphics_tile_preview_canvas = CanvasControl(
+            "systems_graphics_tile_map_preview",
+            Rect(0, 0, tile_preview_width, tile_preview_h),
+            max_events=32,
+        )
+
+        panel.add_at(self.graphics_particle_label, left_col_x, labels_top)
+        panel.add_at(self.graphics_layer_label, left_col_x, labels_top + 36)
+        panel.add_at(self.graphics_scene_graph_label, left_col_x, labels_top + 72)
+        panel.add_at(self.graphics_compositor_label, left_col_x, labels_top + 108)
+
+        # Right column starts at top; move controls below labels to avoid overlap.
+        right_label_top = top_padding
+        right_content_top = right_label_top + 26
+        tile_preview_top = right_content_top
+        nav_cluster_y = right_content_top
+
+        tile_preview_label = LabelControl(
+            "systems_graphics_tile_map_preview_label",
+            Rect(0, 0, tile_preview_width, 22),
+            "Tilemap Output",
+            align="left",
+        )
+        nav_cluster_label = LabelControl(
+            "systems_graphics_tile_nav_label",
+            Rect(0, 0, nav_cluster.rect.width, 22),
+            "Tile Navigation",
+            align="left",
+        )
+        panel.add_at(tile_preview_label, tile_preview_x, right_label_top)
+        panel.add_at(nav_cluster_label, nav_cluster_x, right_label_top)
+        panel.add_at(self.graphics_tile_preview_canvas, tile_preview_x, tile_preview_top)
+        panel.add_at(nav_cluster, nav_cluster_x, nav_cluster_y)
+        panel.add_at(self.graphics_tile_map_label, tile_preview_x, tile_preview_top + tile_preview_h + 12)
+        nav_cluster.add_at(
+            ArrowBoxControl(
+                "systems_graphics_nav_left",
+                Rect(0, 0, 44, 44),
+                180,
+                on_activate=lambda: self._pan_tile_camera(-24, 0),
+            ),
+            2,
+            2,
+        )
+        nav_cluster.add_at(
+            ArrowBoxControl(
+                "systems_graphics_nav_up",
+                Rect(0, 0, 44, 44),
+                90,
+                on_activate=lambda: self._pan_tile_camera(0, -24),
+            ),
+            50,
+            2,
+        )
+        nav_cluster.add_at(
+            ArrowBoxControl(
+                "systems_graphics_nav_down",
+                Rect(0, 0, 44, 44),
+                270,
+                on_activate=lambda: self._pan_tile_camera(0, 24),
+            ),
+            2,
+            50,
+        )
+        nav_cluster.add_at(
+            ArrowBoxControl(
+                "systems_graphics_nav_right",
+                Rect(0, 0, 44, 44),
+                0,
+                on_activate=lambda: self._pan_tile_camera(24, 0),
+            ),
+            50,
+            50,
+        )
+
+        self._render_tile_map_preview()
         self._refresh_graphics_labels()
         return panel
 
@@ -1592,14 +1757,41 @@ class SystemsFeature(Feature):
                 )
 
     def _trigger_particle_burst(self) -> None:
-        self._particle_layer.particle_system.burst(self._particle_burst_emitter, count=28)
+        self._particle_layer.particle_system.burst(self._particle_burst_emitter, count=150)
+        self._graphics_dirty_tracker.mark_dirty(Rect(0, 0, self._particle_layer.rect.width, self._particle_layer.rect.height))
         self._refresh_graphics_labels()
 
     def _reset_particle_layer(self) -> None:
         self._particle_layer.particle_system.clear()
         self._particle_layer.particle_system.add_emitter(self._particle_ambient_emitter)
         self._particle_layer.particle_system.add_emitter(self._particle_burst_emitter)
+        self._graphics_dirty_tracker.mark_dirty(Rect(0, 0, self._particle_layer.rect.width, self._particle_layer.rect.height))
         self._refresh_graphics_labels()
+
+    def _advance_graphics_runtime(self) -> None:
+        self._graphics_runtime_step += 1
+        phase = self._graphics_runtime_step % 4
+        release_node = self._graphics_scene_graph.find("release_stage")
+        if release_node is not None:
+            release_node.pos = (84.0 + phase * 24.0, 56.0 + (phase % 2) * 14.0)
+        self._graphics_camera.pan_screen(10.0, 0.0)
+        next_zoom = 1.0 + 0.08 * phase
+        self._graphics_camera.set_zoom(next_zoom, anchor_screen=(36.0, 36.0))
+        self._graphics_compositor.set_layer_visible("particles", phase != 1)
+        self._graphics_compositor.set_layer_opacity("ui", 0.86 if phase in {2, 3} else 1.0)
+        self._pan_tile_camera(24, 12, refresh=False)
+        self._graphics_dirty_tracker.mark_dirty(Rect(0, 0, self._particle_layer.rect.width, self._particle_layer.rect.height))
+        self._render_tile_map_preview()
+        self._refresh_graphics_labels()
+
+    def _pan_tile_camera(self, dx: int, dy: int, *, refresh: bool = True) -> None:
+        max_x = max(0, self._graphics_tile_map.pixel_width - self._graphics_tile_camera.width)
+        max_y = max(0, self._graphics_tile_map.pixel_height - self._graphics_tile_camera.height)
+        self._graphics_tile_camera.x = max(0, min(max_x, self._graphics_tile_camera.x + int(dx)))
+        self._graphics_tile_camera.y = max(0, min(max_y, self._graphics_tile_camera.y + int(dy)))
+        if refresh:
+            self._render_tile_map_preview()
+            self._refresh_graphics_labels()
 
     def _advance_graphics_demo(self, dt: float) -> None:
         # Re-sync emitter screen positions to follow window drags.
@@ -1612,7 +1804,27 @@ class SystemsFeature(Feature):
             self._particle_ambient_emitter.x = graphics_panel.rect.left + ax
             self._particle_ambient_emitter.y = graphics_panel.rect.top + ay
         self._particle_layer.update_particles(dt)
+        self._graphics_dirty_tracker.mark_dirty(Rect(0, 0, self._particle_layer.rect.width, self._particle_layer.rect.height))
+        self._render_tile_map_preview()
         self._refresh_graphics_labels()
+
+    def _render_tile_map_preview(self) -> None:
+        canvas_control = self.graphics_tile_preview_canvas
+        if canvas_control is None:
+            return
+        canvas_surface = canvas_control.get_canvas_surface()
+        canvas_surface.fill((24, 28, 33))
+        camera_rect = Rect(self._graphics_tile_camera)
+        camera_rect.width = max(1, min(camera_rect.width, self._graphics_tile_map.pixel_width))
+        camera_rect.height = max(1, min(camera_rect.height, self._graphics_tile_map.pixel_height))
+        self._graphics_tile_map.draw(canvas_surface, camera_rect, offset=(0, 0))
+
+        marker_world_x = camera_rect.left + camera_rect.width // 2
+        marker_world_y = camera_rect.top + camera_rect.height // 2
+        marker_screen_x = max(0, min(canvas_surface.get_width() - 1, marker_world_x - camera_rect.left))
+        marker_screen_y = max(0, min(canvas_surface.get_height() - 1, marker_world_y - camera_rect.top))
+        canvas_surface.fill((255, 240, 140), Rect(marker_screen_x - 2, marker_screen_y - 2, 5, 5))
+        canvas_control.invalidate()
 
     def _refresh_graphics_labels(self) -> None:
         if self.graphics_particle_label is not None:
@@ -1623,6 +1835,36 @@ class SystemsFeature(Feature):
         if self.graphics_layer_label is not None:
             self.graphics_layer_label.text = (
                 "ParticleLayer hosts an ambient release trail plus on-demand burst confetti preview."
+            )
+        if self.graphics_scene_graph_label is not None:
+            release_node = self._graphics_scene_graph.find("release_stage")
+            if release_node is None:
+                self.graphics_scene_graph_label.text = "SceneGraph2D has no release nodes."
+            else:
+                world_x, world_y, _, _ = release_node.world_transform()
+                screen_x, screen_y = self._graphics_camera.world_to_screen(world_x, world_y)
+                visible_nodes = len(self._graphics_scene_graph.find_all(visible_only=True))
+                self.graphics_scene_graph_label.text = (
+                    f"SceneGraph2D/Camera2D nodes={visible_nodes} release_stage_screen=({int(screen_x)}, {int(screen_y)}) "
+                    f"zoom={self._graphics_camera.zoom:.2f}"
+                )
+        if self.graphics_compositor_label is not None:
+            dirty_union = self._graphics_dirty_tracker.dirty_union()
+            dirty_text = f"{dirty_union.width}x{dirty_union.height}" if dirty_union is not None else "none"
+            self.graphics_compositor_label.text = (
+                f"SurfaceCompositor layers={self._graphics_compositor.layer_names()} dirty_union={dirty_text}"
+            )
+        if self.graphics_tile_map_label is not None:
+            col_start, col_end, row_start, row_end = self._graphics_tile_map.visible_range(self._graphics_tile_camera)
+            visible_tiles = max(0, col_end - col_start) * max(0, row_end - row_start)
+            sample_col, sample_row = self._graphics_tile_map.world_to_tile(
+                self._graphics_tile_camera.left + 24,
+                self._graphics_tile_camera.top + 24,
+            )
+            sample_tile = self._graphics_tile_map.tile_at(sample_col, sample_row)
+            self.graphics_tile_map_label.text = (
+                f"TileMap camera=({self._graphics_tile_camera.left},{self._graphics_tile_camera.top}) "
+                f"visible_tiles={visible_tiles} sample_tile={sample_tile}"
             )
 
     def _run_pipeline_demo(self) -> None:

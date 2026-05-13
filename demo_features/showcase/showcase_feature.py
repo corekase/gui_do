@@ -127,7 +127,12 @@ def category_for_row(row_index: int) -> str:
 # ---------------------------------------------------------------------------
 
 class ShowcaseFeature(Feature):
-    """Tabbed control gallery showcasing all gui_do controls."""
+    """Tabbed control gallery showcasing standalone gui_do controls.
+
+    Window/task-panel chrome is intentionally demonstrated in the main scene,
+    where host-managed window presentation and scene task panel behavior are
+    exercised with realistic toggle workflows.
+    """
 
     HOST_REQUIREMENTS = {
         "build": ("app", "scene_presentation", "control_showcase_root"),

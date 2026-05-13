@@ -1,5 +1,6 @@
 import unittest
 
+import pygame
 from pygame import Rect
 
 from demo_features.systems.systems_feature import SystemsFeature
@@ -11,6 +12,12 @@ class _HostStub:
 
 
 class TestSystemsFeature(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((1, 1))
+
     def _make_feature(self) -> SystemsFeature:
         feature = SystemsFeature()
         self.addCleanup(feature._task_scheduler.shutdown)
@@ -59,6 +66,61 @@ class TestSystemsFeature(unittest.TestCase):
 
         self.assertEqual(2, feature._particle_layer.particle_system.emitter_count)
         self.assertGreater(feature._particle_layer.particle_system.active_particle_count, 0)
+
+    def test_graphics_runtime_updates_tile_map_status(self):
+        feature = self._make_feature()
+        feature.build_graphics_panel(Rect(0, 0, 640, 420))
+
+        feature._advance_graphics_runtime()
+
+        self.assertIsNotNone(feature.graphics_tile_map_label)
+        self.assertIn("TileMap camera=", feature.graphics_tile_map_label.text)
+        self.assertIn("visible_tiles=", feature.graphics_tile_map_label.text)
+        self.assertIsNotNone(feature.graphics_tile_preview_canvas)
+        preview_surface = feature.graphics_tile_preview_canvas.get_canvas_surface()
+        sampled = preview_surface.get_at((4, 4))
+        self.assertNotEqual((0, 0, 0, 0), tuple(sampled))
+
+    def test_graphics_tile_preview_is_right_aligned_and_pans(self):
+        feature = self._make_feature()
+        panel = feature.build_graphics_panel(Rect(0, 0, 700, 420))
+
+        self.assertIsNotNone(feature.graphics_tile_preview_canvas)
+        preview_rect = feature.graphics_tile_preview_canvas.rect
+        self.assertGreaterEqual(preview_rect.left, panel.rect.width // 2)
+        self.assertLessEqual(preview_rect.right, panel.rect.width - feature.PANEL_PADDING_X)
+
+        start = feature._graphics_tile_camera.topleft
+        feature._pan_tile_camera(24, 24)
+        self.assertNotEqual(start, feature._graphics_tile_camera.topleft)
+
+        feature._pan_tile_camera(10_000, 10_000)
+        max_x = max(0, feature._graphics_tile_map.pixel_width - feature._graphics_tile_camera.width)
+        max_y = max(0, feature._graphics_tile_map.pixel_height - feature._graphics_tile_camera.height)
+        self.assertEqual((max_x, max_y), feature._graphics_tile_camera.topleft)
+
+        nav_ids = {
+            "systems_graphics_nav_left",
+            "systems_graphics_nav_up",
+            "systems_graphics_nav_down",
+            "systems_graphics_nav_right",
+        }
+        panel_child_ids = {child.control_id for child in panel.children}
+        self.assertIn("systems_graphics_tile_nav_cluster", panel_child_ids)
+
+        nav_cluster = next(child for child in panel.children if child.control_id == "systems_graphics_tile_nav_cluster")
+        nav_child_ids = {child.control_id for child in nav_cluster.children}
+        self.assertTrue(nav_ids.issubset(nav_child_ids))
+        self.assertGreaterEqual(nav_cluster.rect.left, panel.rect.left)
+        self.assertLessEqual(nav_cluster.rect.right, panel.rect.right)
+        self.assertLess(nav_cluster.rect.right, preview_rect.left)
+        for child in nav_cluster.children:
+            self.assertTrue(nav_cluster.rect.contains(child.rect))
+
+        start_x = feature._graphics_tile_camera.x
+        right_arrow = next(child for child in nav_cluster.children if child.control_id == "systems_graphics_nav_right")
+        right_arrow._invoke_click()
+        self.assertGreaterEqual(feature._graphics_tile_camera.x, start_x)
 
 
 if __name__ == "__main__":
