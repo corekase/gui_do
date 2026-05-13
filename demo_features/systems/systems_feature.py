@@ -1351,6 +1351,11 @@ class SystemsFeature(Feature):
             rect,
             0,
             [advance_button, batch_button, undo_button, redo_button],
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+            ),
         )
 
         self.history_current_label = LabelControl(
@@ -1373,7 +1378,7 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_label_stack(
             panel,
-            Rect(0, label_top + 8, max(1, rect.width), 100),
+            Rect(self.LABEL_INSET_X, label_top + 8, max(1, rect.width - self.LABEL_INSET_X), 100),
             [
                 self.history_current_label,
                 self.history_undo_label,
@@ -1382,8 +1387,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_history_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         return panel
 
     def build_theme_panel(self, rect: Rect) -> PanelControl:
@@ -1414,14 +1417,22 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_grid_sequence(
             panel,
-            Rect(0, 0, max(1, rect.width), 28),
+            Rect(self.LABEL_INSET_X, 0, max(1, rect.width - self.LABEL_INSET_X), 28),
             [
                 (theme_select_label, 28, 0),
             ],
         )
         self._place_row_controls(
             panel,
-            self._row_bounds(rect, 30),
+            self._row_bounds(
+                rect,
+                30,
+                left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+                width=max(
+                    1,
+                    rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+                ),
+            ),
             [self.theme_dropdown, toggle_scope],
         )
 
@@ -1445,7 +1456,7 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_label_stack(
             panel,
-            Rect(0, 92, max(1, rect.width), 100),
+            Rect(self.LABEL_INSET_X, 92, max(1, rect.width - self.LABEL_INSET_X), 100),
             [
                 self.theme_state_label,
                 self.theme_scope_label,
@@ -1454,8 +1465,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_theme_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         return panel
 
     def build_state_panel(self, rect: Rect) -> PanelControl:
@@ -1478,6 +1487,7 @@ class SystemsFeature(Feature):
         )
         self._place_compact_labeled_row(
             panel,
+            left=self.LABEL_INSET_X,
             top=0,
             label=context_title,
             field=self.state_context_dropdown,
@@ -1540,6 +1550,11 @@ class SystemsFeature(Feature):
                     style="round",
                 ),
             ],
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+            ),
         )
         state_label_top = self._add_single_column_button_row(
             panel,
@@ -1558,7 +1573,12 @@ class SystemsFeature(Feature):
         self.state_router_label = LabelControl("systems_state_router_status", Rect(0, 0, rect.width, 28), "", align="left")
         self._place_vertical_label_stack(
             panel,
-            Rect(0, state_label_top + 8, max(1, rect.width), 172),
+            Rect(
+                self.LABEL_INSET_X,
+                state_label_top + 8,
+                max(1, rect.width - self.LABEL_INSET_X),
+                172,
+            ),
             [
                 self.state_store_label,
                 self.state_readiness_label,
@@ -1569,8 +1589,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_state_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         self._force_button_left_alignment(
             panel,
             target_button_id="systems_state_route_cycle",
@@ -1668,6 +1686,11 @@ class SystemsFeature(Feature):
                     style="round",
                 ),
             ],
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+            ),
         )
         infrastructure_label_top = self._add_single_column_button_row(
             panel,
@@ -1708,7 +1731,12 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_label_stack(
             panel,
-            Rect(0, infrastructure_label_top + 8, max(1, rect.width), 344),
+            Rect(
+                self.LABEL_INSET_X,
+                infrastructure_label_top + 8,
+                max(1, rect.width - self.LABEL_INSET_X),
+                344,
+            ),
             [
                 self.infrastructure_pipeline_label,
                 self.infrastructure_interaction_label,
@@ -1723,8 +1751,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_infrastructure_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         self._force_button_left_alignment(
             panel,
             target_button_id="systems_infra_telemetry",
@@ -1773,6 +1799,11 @@ class SystemsFeature(Feature):
                     style="round",
                 ),
             ],
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+            ),
         )
         labels_top = self._add_single_column_button_row(
             panel,
@@ -1809,7 +1840,12 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_label_stack(
             panel,
-            Rect(0, labels_top + 8, max(1, rect.width), 136),
+            Rect(
+                self.LABEL_INSET_X,
+                labels_top + 8,
+                max(1, rect.width - self.LABEL_INSET_X),
+                136,
+            ),
             [
                 self.scheduling_task_label,
                 self.scheduling_rollout_label,
@@ -1819,8 +1855,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_scheduling_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         self._force_button_left_alignment(
             panel,
             target_button_id="systems_schedule_timers",
@@ -1845,7 +1879,7 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_grid_sequence(
             panel,
-            Rect(0, 0, max(1, rect.width), 28),
+            Rect(self.LABEL_INSET_X, 0, max(1, rect.width - self.LABEL_INSET_X), 28),
             [(self.motion_intro_label, 28, 0)],
         )
 
@@ -1892,6 +1926,11 @@ class SystemsFeature(Feature):
                 ),
             ],
             per_row=3,
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+            ),
         )
 
         motion_labels_top = motion_labels_anchor_top + 8
@@ -1915,7 +1954,12 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_label_stack(
             panel,
-            Rect(0, motion_labels_top, max(1, rect.width), 100),
+            Rect(
+                self.LABEL_INSET_X,
+                motion_labels_top,
+                max(1, rect.width - self.LABEL_INSET_X),
+                100,
+            ),
             [
                 self.scheduling_timeline_label,
                 self.scheduling_tween_label,
@@ -1924,8 +1968,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_motion_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         self._force_button_left_alignment(
             panel,
             target_button_id="systems_motion_timeline",
@@ -1969,6 +2011,11 @@ class SystemsFeature(Feature):
                     style="round",
                 ),
             ],
+            left=self.PANEL_PADDING_X + self.LEFT_SIDE_INSET_X,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - (self.LEFT_SIDE_INSET_X * 2),
+            ),
         )
         self.persistence_overview_label = LabelControl(
             "systems_persistence_overview",
@@ -1990,7 +2037,12 @@ class SystemsFeature(Feature):
         )
         self._place_vertical_label_stack(
             panel,
-            Rect(0, persistence_label_top + 8, max(1, rect.width), 128),
+            Rect(
+                self.LABEL_INSET_X,
+                persistence_label_top + 8,
+                max(1, rect.width - self.LABEL_INSET_X),
+                128,
+            ),
             [
                 self.persistence_overview_label,
                 self.persistence_settings_label,
@@ -1999,8 +2051,6 @@ class SystemsFeature(Feature):
             gap=8,
         )
         self._refresh_persistence_labels()
-        self._inset_left_side_children(panel)
-        self._inset_text_labels(panel)
         return panel
 
     def build_graphics_panel(self, rect: Rect) -> PanelControl:
@@ -2358,6 +2408,10 @@ class SystemsFeature(Feature):
                 ),
             ],
             per_row=3,
+            width=max(
+                1,
+                rect.width - (self.PANEL_PADDING_X * 2) - self.LEFT_SIDE_INSET_X,
+            ),
         )
 
         for child in panel.children:
