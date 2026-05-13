@@ -116,12 +116,47 @@ class GuiApplication:
         self.configure_first_frame_profiling(enabled=os.getenv("GUI_DO_PROFILE_FIRST_OPEN", "").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_scene_scheduler_activity(self._active_scene_name)
         self._dialogs: Optional[DialogManager] = None
+        self._startup_scene_prewarm_jobs: deque[tuple[str, bool]] = deque()
+        self._startup_scene_prewarm_job_keys: set[str] = set()
         self._scene_deferred_prewarm_jobs: dict[str, deque[tuple[str, Callable[[pygame.Surface, "ColorTheme"], None]]]] = {}
         self._scene_deferred_prewarm_job_keys: dict[str, set[str]] = {}
         # Wire the invalidation tracker into the initial active scene so that
         # per-control invalidate() calls register dirty rects immediately.
         self.invalidation.set_screen_size(self.surface.get_size())
         self.scene.set_invalidation_tracker(self.invalidation)
+
+    def _ensure_startup_prewarm_state(self) -> None:
+        if not hasattr(self, "_startup_scene_prewarm_jobs"):
+            self._startup_scene_prewarm_jobs = deque()
+        if not hasattr(self, "_startup_scene_prewarm_job_keys"):
+            self._startup_scene_prewarm_job_keys = set()
+
+    def queue_scene_prewarm(self, scene_name: Optional[str] = None, *, force: bool = False) -> bool:
+        target_scene = self._active_scene_name if scene_name is None else str(scene_name)
+        self._ensure_startup_prewarm_state()
+        if target_scene in self._startup_scene_prewarm_job_keys:
+            return False
+        self._startup_scene_prewarm_jobs.append((target_scene, bool(force)))
+        self._startup_scene_prewarm_job_keys.add(target_scene)
+        return True
+
+    def _run_startup_scene_prewarm_jobs(self, *, max_steps: Optional[int] = None) -> int:
+        self._ensure_startup_prewarm_state()
+        if not self._startup_scene_prewarm_jobs:
+            return 0
+
+        steps = 0
+        while self._startup_scene_prewarm_jobs:
+            if max_steps is not None and steps >= int(max_steps):
+                break
+            scene_name, force = self._startup_scene_prewarm_jobs.popleft()
+            try:
+                self.prewarm_scene(scene_name, force=force)
+            finally:
+                self._startup_scene_prewarm_job_keys.discard(scene_name)
+            steps += 1
+
+        return steps
 
     def _ensure_deferred_prewarm_state(self) -> None:
         if not hasattr(self, "_scene_deferred_prewarm_jobs"):
@@ -591,6 +626,8 @@ class GuiApplication:
                 self._screen_postamble()
             self.features.update_features()
             runtime = self._scenes[self._active_scene_name]
+            if self._startup_scene_prewarm_jobs:
+                self._run_startup_scene_prewarm_jobs(max_steps=1)
             if self._scene_deferred_prewarm_jobs.get(self._active_scene_name):
                 warm_surface = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
                 self._run_deferred_scene_prewarm_jobs(

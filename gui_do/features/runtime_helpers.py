@@ -77,8 +77,12 @@ def bind_runtime_scene_exit_keys(actions, runtime_scene_specs, *, key, action_na
 
 
 def prewarm_runtime_scenes(app, runtime_scene_specs) -> None:
-    """Prewarm runtime scenes that opt in via declarative scene specs."""
+    """Queue runtime scenes that opt in so prewarm work runs after entrypoint start."""
     for spec in runtime_scene_specs:
         if not spec.prewarm:
+            continue
+        queue_scene_prewarm = getattr(app, "queue_scene_prewarm", None)
+        if callable(queue_scene_prewarm):
+            queue_scene_prewarm(spec.scene_name)
             continue
         app.prewarm_scene(spec.scene_name)

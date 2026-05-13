@@ -1,4 +1,5 @@
 import unittest
+from collections import deque
 from types import MethodType
 
 import pygame
@@ -202,6 +203,44 @@ class TestGuiApplicationPrewarmScene(unittest.TestCase):
         self.assertEqual(["history", "state", "data"], tab_changes)
         self.assertEqual(2, hidden_window._content.draw_calls)
         self.assertEqual("data", hidden_window._tab.selected_key)
+
+    def test_queue_scene_prewarm_runs_after_entrypoint_drain(self):
+        app = GuiApplication.__new__(GuiApplication)
+        app._active_scene_name = "main"
+        app._startup_scene_prewarm_jobs = deque()
+        app._startup_scene_prewarm_job_keys = set()
+        calls = []
+
+        def _prewarm_scene(scene_name, *, force=False, host=None):
+            _ = force
+            _ = host
+            calls.append(str(scene_name))
+            return 1
+
+        app.prewarm_scene = _prewarm_scene
+
+        queued_main = app.queue_scene_prewarm("main")
+        queued_showcase = app.queue_scene_prewarm("control_showcase")
+        duplicate_main = app.queue_scene_prewarm("main")
+
+        self.assertTrue(queued_main)
+        self.assertTrue(queued_showcase)
+        self.assertFalse(duplicate_main)
+        self.assertEqual([], calls)
+        self.assertEqual(2, len(app._startup_scene_prewarm_jobs))
+
+        first_steps = app._run_startup_scene_prewarm_jobs(max_steps=1)
+
+        self.assertEqual(1, first_steps)
+        self.assertEqual(["main"], calls)
+        self.assertIn("control_showcase", app._startup_scene_prewarm_job_keys)
+
+        second_steps = app._run_startup_scene_prewarm_jobs(max_steps=2)
+
+        self.assertEqual(1, second_steps)
+        self.assertEqual(["main", "control_showcase"], calls)
+        self.assertEqual(set(), app._startup_scene_prewarm_job_keys)
+        self.assertEqual(0, len(app._startup_scene_prewarm_jobs))
 
 
 if __name__ == "__main__":
