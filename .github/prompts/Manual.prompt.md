@@ -81,6 +81,16 @@ After all assigned steps are done:
 - **pygame-ce cleanup.** Search `MANUAL.md` for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 - Report: steps executed, line count of final MANUAL.md, any sections that were skipped and why.
 
+## New Runtime Facilities Coverage Requirement
+
+Across the full manual pipeline, ensure explicit coverage of routed runtime facilities and lifecycle-safe teardown:
+
+- Runtime scope ownership model (`FeatureRuntimeScope`) and why setup/cleanup must pair across lifecycle phases.
+- Declarative service wiring (`ServiceBindingSpec`, `ServiceConsumerSpec`).
+- Declarative reactive wiring (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`).
+- Operation orchestration and resilience (`FeatureOperationSpec`, `FailurePolicySpec`, `FeatureOperationBus`).
+- Clear anti-pattern notes for leaks and partial teardown when `shutdown_runtime` does not unwind routed runtime resources.
+
 ---
 
 # Shared Specification

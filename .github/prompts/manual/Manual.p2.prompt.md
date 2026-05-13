@@ -181,6 +181,14 @@ Write comprehensive prose covering all of these points:
 
 ---
 
+### Runtime Facilities Addition (Required)
+
+Within Subsection 3, include explicit coverage of routed runtime facilities as part of lifecycle composition:
+
+- Declarative setup of services, reactive effects, and operations during `bind_runtime`
+- Runtime-scope ownership and teardown during `shutdown_runtime`
+- Why this model prevents subscription leaks and partial cleanup failures
+
 ## Replace Target
 
 Use `replace_string_in_file` to replace from the line containing:

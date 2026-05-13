@@ -10,6 +10,7 @@ from gui_do.features.data_driven_runtime import (
     bind_routed_feature_lifecycle,
     create_feature_presented_window,
     register_routed_feature_companions,
+    shutdown_routed_feature_lifecycle,
 )
 from .life_runtime_helpers import (
     life_reset as life_reset_helper,
@@ -79,6 +80,9 @@ class LifeFeature(RoutedFeature):
         """Bind scheduler/runtime services required after scene construction."""
         self.scheduler = bind_routed_feature_lifecycle(self, host, _LIFE_LIFECYCLE_SPEC)
         self._send_life_logic_command("snapshot")
+
+    def shutdown_runtime(self, host) -> None:
+        shutdown_routed_feature_lifecycle(self, host, _LIFE_LIFECYCLE_SPEC)
 
     def message_handlers(self):
         """Route lifecycle feature messages by canonical topic."""

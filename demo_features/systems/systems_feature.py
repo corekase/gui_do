@@ -101,6 +101,17 @@ from gui_do import (
     TransitionSpec,
     TweenManager,
 )
+from gui_do.features.data_driven_runtime import (
+    EventSubscriptionSpec,
+    FailurePolicySpec,
+    FeatureOperationSpec,
+    ObservableEffectSpec,
+    RoutedRuntimeSpec,
+    ServiceBindingSpec,
+    StoreSubscriptionSpec,
+    setup_routed_runtime,
+    shutdown_routed_runtime,
+)
 from gui_do.layout.constraint_layout import AnchorConstraint
 from .systems_data_helpers import (
     add_backlog_item as add_backlog_item_helper,
@@ -260,6 +271,15 @@ from .systems_specs import (
 from gui_do.controls.data.list_view_control import ListItem
 
 
+_SYSTEMS_FAILURE_TOPIC = "systems.runtime_operation.failed"
+_SYSTEMS_PERSISTENCE_POLICY = "systems.persistence"
+_SYSTEMS_OP_APPLY_REVIEW_PROFILE = "systems.apply_review_profile"
+_SYSTEMS_OP_APPLY_PRODUCTION_PROFILE = "systems.apply_production_profile"
+_SYSTEMS_OP_SAVE_WORKSPACE = "systems.save_workspace_state"
+_SYSTEMS_OP_RESTORE_WORKSPACE = "systems.restore_workspace_state"
+_SYSTEMS_OP_SNAPSHOT_MIGRATION = "systems.run_snapshot_migration"
+
+
 class SystemsFeature(Feature):
     """Tabbed main-scene systems window with practical demo integrations."""
 
@@ -279,6 +299,10 @@ class SystemsFeature(Feature):
     def __init__(self) -> None:
         super().__init__("systems_demo", scene_name="main")
         self._frame_timer = FrameTimer()
+        self._runtime_spec = None
+        self.runtime_scope = None
+        self.operation_bus = None
+        self.state_store = None
         self.active_tab_key = "data"
         self.demo = None
         self.window = None
@@ -563,6 +587,7 @@ class SystemsFeature(Feature):
         self._scope_stack = ScopeStack()
         self._service_key_api_base: ServiceKey[str] = ServiceKey("api_base")
         self._service_key_channel: ServiceKey[str] = ServiceKey("release_channel")
+        self._service_key_release_store: ServiceKey[AppStateStore] = ServiceKey("systems.release_store")
         self._scope_stack.root.bind(self._service_key_api_base, "https://deploy.internal")
         self._scope_stack.root.bind(self._service_key_channel, "canary")
         self._accessibility_tree = AccessibilityTree()
@@ -781,6 +806,24 @@ class SystemsFeature(Feature):
             spec=self._make_window_spec(host),
             window_control_cls=WindowControl,
         )
+
+    def bind_runtime(self, host) -> None:
+        self.demo = host
+        self._runtime_spec = self._build_runtime_spec(host)
+        setup_routed_runtime(self, host, self._runtime_spec)
+        if callable(self._backlog_unsub) and self.runtime_scope is not None:
+            self.runtime_scope.add_cleanup(self._backlog_unsub)
+        if self.runtime_scope is not None:
+            self.runtime_scope.add_cleanup(lambda: self._theme_invalidation_bus.unregister(self))
+
+    def shutdown_runtime(self, host) -> None:
+        if self._runtime_spec is not None:
+            shutdown_routed_runtime(self, host, self._runtime_spec)
+            self._runtime_spec = None
+        self._task_scheduler.shutdown()
+        self._sound_event_bus.stop_all()
+        self._backlog_unsub = None
+        self.state_store = None
 
     def on_update(self, host) -> None:
         if self.window is None or not self.window.visible:
@@ -1177,6 +1220,75 @@ class SystemsFeature(Feature):
     def _refresh_state_labels(self) -> None:
         refresh_state_labels_helper(self)
 
+    def _build_runtime_spec(self, _host) -> RoutedRuntimeSpec:
+        return RoutedRuntimeSpec(
+            scene_name="main",
+            service_bindings=(
+                ServiceBindingSpec(
+                    attr_name="state_store",
+                    key=self._service_key_release_store,
+                    factory=lambda _feature, _runtime_host, _runtime_scope: self._release_store,
+                    owned=False,
+                ),
+            ),
+            store_subscriptions=(
+                StoreSubscriptionSpec(
+                    state_key="status",
+                    handler=lambda _value: self._refresh_state_labels(),
+                    store_attr_name="state_store",
+                    invoke_immediately=True,
+                ),
+            ),
+            observable_effects=(
+                ObservableEffectSpec(
+                    handler=lambda _value: self._refresh_state_labels(),
+                    observable_attr_name="_release_readiness",
+                    invoke_immediately=True,
+                ),
+            ),
+            operation_bus_attr_name="operation_bus",
+            failure_policies=(
+                FailurePolicySpec(
+                    name=_SYSTEMS_PERSISTENCE_POLICY,
+                    retries=1,
+                    retry_delay_seconds=0.05,
+                    timeout_seconds=0.75,
+                    publish_topic=_SYSTEMS_FAILURE_TOPIC,
+                    publish_scope=self.name,
+                ),
+            ),
+            operations=(
+                FeatureOperationSpec(name=_SYSTEMS_OP_APPLY_REVIEW_PROFILE, handler=lambda _payload: apply_review_profile_helper(self)),
+                FeatureOperationSpec(name=_SYSTEMS_OP_APPLY_PRODUCTION_PROFILE, handler=lambda _payload: apply_production_profile_helper(self)),
+                FeatureOperationSpec(name=_SYSTEMS_OP_SAVE_WORKSPACE, handler=lambda _payload: save_workspace_state_helper(self), failure_policy=_SYSTEMS_PERSISTENCE_POLICY),
+                FeatureOperationSpec(name=_SYSTEMS_OP_RESTORE_WORKSPACE, handler=lambda _payload: restore_workspace_state_helper(self), failure_policy=_SYSTEMS_PERSISTENCE_POLICY),
+                FeatureOperationSpec(name=_SYSTEMS_OP_SNAPSHOT_MIGRATION, handler=lambda _payload: run_snapshot_migration_helper(self), failure_policy=_SYSTEMS_PERSISTENCE_POLICY),
+            ),
+            event_subscriptions=(
+                EventSubscriptionSpec(
+                    attr_name="_runtime_operation_failure_subscription",
+                    topic=_SYSTEMS_FAILURE_TOPIC,
+                    handler=lambda payload: self._on_runtime_operation_failed(payload),
+                    scope=self.name,
+                ),
+            ),
+        )
+
+    def _dispatch_runtime_operation(self, operation_name: str) -> bool:
+        if self.operation_bus is None:
+            return False
+        self.operation_bus.call(operation_name)
+        return True
+
+    def _on_runtime_operation_failed(self, payload) -> None:
+        if not isinstance(payload, dict):
+            return
+        operation_name = str(payload.get("operation_name", "operation"))
+        error_text = str(payload.get("error", "unknown error"))
+        self._persistence_last_status = f"Runtime operation failed: {operation_name} -> {error_text}"
+        if self.active_tab_key == "persistence":
+            self._refresh_persistence_labels()
+
     def _queue_background_job(self) -> None:
         queue_background_job_helper(self)
 
@@ -1235,18 +1347,26 @@ class SystemsFeature(Feature):
         on_timer_probe_complete_helper(self)
 
     def _apply_review_profile(self) -> None:
+        if self._dispatch_runtime_operation(_SYSTEMS_OP_APPLY_REVIEW_PROFILE):
+            return
         apply_review_profile_helper(self)
 
     def _apply_production_profile(self) -> None:
+        if self._dispatch_runtime_operation(_SYSTEMS_OP_APPLY_PRODUCTION_PROFILE):
+            return
         apply_production_profile_helper(self)
 
     def _build_workspace_state(self) -> WorkspaceState:
         return build_workspace_state_helper(self)
 
     def _save_workspace_state(self) -> None:
+        if self._dispatch_runtime_operation(_SYSTEMS_OP_SAVE_WORKSPACE):
+            return
         save_workspace_state_helper(self)
 
     def _restore_workspace_state(self) -> None:
+        if self._dispatch_runtime_operation(_SYSTEMS_OP_RESTORE_WORKSPACE):
+            return
         restore_workspace_state_helper(self)
 
     def _refresh_persistence_labels(self) -> None:
@@ -1292,6 +1412,8 @@ class SystemsFeature(Feature):
         toggle_schema_example_helper(self)
 
     def _run_snapshot_migration(self) -> None:
+        if self._dispatch_runtime_operation(_SYSTEMS_OP_SNAPSHOT_MIGRATION):
+            return
         run_snapshot_migration_helper(self)
 
     def _record_theme_invalidation(self) -> None:

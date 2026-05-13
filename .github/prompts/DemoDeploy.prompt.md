@@ -65,6 +65,13 @@ All additions must also follow the Demo Feature Layout Standard in `docs/demo_fe
    - If a new feature is required, create it as its own folder package with `__init__.py`, at least one `*_feature.py`, and at least one `*_specs.py`.
    - Keep the `demo_features/` root limited to bootstrap/shared files (for example `demo_config.py`, `data/`, and feature folders).
 
+7. **Adopt routed runtime facilities when integrating systems**:
+   - Prefer `RoutedRuntimeSpec` declarative wiring over ad hoc bind code when a feature needs subscriptions, service access, effects, or operation orchestration.
+   - Use `ServiceBindingSpec` and `ServiceConsumerSpec` for scene-local service publication/consumption.
+   - Use `StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, and `SignalEffectSpec` for reactive update wiring.
+   - Use `FeatureOperationSpec` and `FailurePolicySpec` for feature-level operations that need timeout/retry/failure reporting.
+   - Ensure `shutdown_runtime` invokes routed teardown so runtime scopes and operation buses are disposed.
+
 ## Quality Expectations
 
 - Keep examples consistent with established **feature-lifecycle** patterns and the **feature-lifecycle oriented architecture**.
@@ -80,3 +87,4 @@ All additions must also follow the Demo Feature Layout Standard in `docs/demo_fe
   - Persistence (workspace save/restore, scene snapshots).
   - Reactive data and dataflow (ObservableValue/List/Dict, async providers, collection views).
 - **Subscription safety**: Ensure all subscription setups in `bind_runtime` have corresponding cleanup in `shutdown_runtime` to prevent memory leaks.
+- **Runtime scope safety**: If runtime facilities are used, cleanup must occur via routed teardown and/or runtime scope disposal, not manual partial cleanup that leaves dangling handlers.

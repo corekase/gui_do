@@ -114,6 +114,9 @@ and drives the control tree. Wire them via `register_routed_feature_companions`.
 logic into non-`DirectFeature` types; failing to call `shutdown_routed_feature_lifecycle` when
 using `RoutedFeatureLifecycleSpec`.
 
+Add a short subsection or paragraph documenting runtime-scope teardown guarantees for routed
+service/effect/operation wiring and why partial/manual teardown is an anti-pattern.
+
 ---
 
 ## 8.3 — Events, Actions, Input Mapping, and Routing
@@ -209,6 +212,10 @@ many features; `StateTransaction` for atomic updates that should fire subscriber
 **Mistakes:** Polling `.value` in `on_update`; subscribing in `build` before controls exist;
 leaking subscriptions by forgetting `.dispose()`; using plain Python lists/dicts across
 features instead of `ObservableList`/`ObservableDict` (breaks the reactive contract).
+
+Also cover declarative reactive specs (`StoreSubscriptionSpec`, `StoreSelectorSpec`,
+`ObservableEffectSpec`, `SignalEffectSpec`) as the routed-runtime path for subscription
+registration and cleanup.
 
 ---
 

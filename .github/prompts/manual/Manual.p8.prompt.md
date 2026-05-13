@@ -64,6 +64,11 @@ Explain what each test file covers:
 Target areas: workspace load/save behavior, overlay/tooltip/cursor routing, layout and
 animation determinism, control runtime, accessibility specs.
 
+Also include runtime-facility test coverage expectations:
+- service/effect registration and cleanup behavior
+- operation retry/timeout/failure publication behavior
+- routed teardown disposal guarantees
+
 ### Debug and Trace Tools
 - `EventRecorder`/`EventPlayback` for reproducible input traces and regression reproduction.
 - `DebugOverlay` for visual control-tree state inspection.
@@ -142,6 +147,7 @@ add entries here when formal deprecations are introduced.
 - Check action/input/focus routing behavior in active scenes.
 - Validate workspace restore report for skipped/missing settings.
 - Re-run telemetry baseline scenarios and compare to previous baseline.
+- Verify prompts/docs/examples that describe routed runtime include current service/effect/operation/failure-policy terminology.
 
 `[Back to Table of Contents](#table-of-contents)`
 
@@ -210,6 +216,9 @@ Write a glossary with a paragraph-length entry for each term (not just one-line 
 - **Workspace state** — persisted runtime context (scene, feature states, settings) for session restore
 - **Contract test** — automated test that verifies framework-level behavioral guarantees
 - **Tier** — grouping of public API exports by abstraction level and recommended usage priority
+- **Runtime scope** — lifecycle-owned container for cleanup and scene-local service ownership
+- **Feature operation** — declarative operation handler bound through routed runtime specs
+- **Failure policy** — operation retry/timeout/publication rules applied declaratively
 
 ### Appendix B: Lifecycle and Event Routing Sequence
 

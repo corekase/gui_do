@@ -11,6 +11,7 @@ from gui_do.features.data_driven_runtime import (
     build_tab_builder_specs,
     create_task_panel_slot_layout,
     create_tab_control_from_specs,
+    shutdown_routed_runtime,
     setup_routed_runtime,
 )
 from gui_do.features.control_spec import ControlDefinition
@@ -243,6 +244,13 @@ class ShowcaseFeature(Feature):
         bind_global_key = getattr(app_actions, "bind_global_key", None)
         if callable(bind_global_key):
             bind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
+
+    def shutdown_runtime(self, host) -> None:
+        shutdown_routed_runtime(self, host, _CONTROLS_RUNTIME_SPEC)
+        app_actions = getattr(host.app, "actions", None)
+        unbind_global_key = getattr(app_actions, "unbind_global_key", None)
+        if callable(unbind_global_key):
+            unbind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
 
     def on_update(self, host) -> None:
         dt = self._frame_timer.tick()

@@ -59,6 +59,18 @@ Primary truth sources for architecture and API behavior:
 - `gui_do/overlays/` (especially `overlay_manager.py`, `shortcut_help_overlay.py`, `toast_manager.py`)
 - `demo_features/` as runnable reference patterns
 
+## New Runtime Facilities Coverage (Required)
+
+When generating or updating README.md and TUTORIAL.md, include current guidance for the routed runtime facilities:
+
+- Explain feature-owned runtime scope semantics and lifecycle pairing (`bind_runtime` setup, `shutdown_runtime` teardown).
+- Include at least one concise tutorial/example pattern that references declarative runtime wiring with:
+  - `ServiceBindingSpec` / `ServiceConsumerSpec`
+  - One reactive effect spec (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, or `SignalEffectSpec`)
+  - `FeatureOperationSpec` with `FailurePolicySpec` for operation-level retry/timeout behavior
+- Ensure wording distinguishes declarative wiring (specs) from imperative feature behavior.
+- Keep examples on public root imports only and verify names against `gui_do/__init__.py`.
+
 ## Demo Features Organizational Convention
 
 This convention must be reflected accurately in documentation:

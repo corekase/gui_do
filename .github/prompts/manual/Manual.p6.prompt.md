@@ -92,6 +92,9 @@ and `ScenePresentationModel.handle_window_toggle` wired to the scene menu strip.
 task panel button state with window visibility; creating windows in `bind_runtime` instead of
 `build` (window controls must exist when sibling features bind).
 
+Also include operation-bus usage guidance for scene-local window/task-panel actions that need
+retry/timeout/failure publication semantics.
+
 **Cross-links:** 8.2 (Feature lifecycle), 8.5 (Controls), 8.7 (Focus), 8.8 (Overlays)
 
 ---
@@ -156,6 +159,9 @@ confirmation, then continues a multi-step workflow — all within the frame budg
 with blocking I/O inside (use `DataflowPipeline` for that); not canceling tweens on scene exit
 (stale tweens apply mutations to dead controls).
 
+Add one focused subsection connecting timer-backed operation failure policies to scheduling
+semantics (timeouts/retries as first-class scheduled work).
+
 **Cross-links:** 8.2 (Feature lifecycle — `on_update`), 8.14 (Data pipeline), 8.16 (Telemetry)
 
 ---
@@ -208,6 +214,9 @@ report = host.app.load_workspace(path)
 if report and report.skipped_settings:
     host.toasts.show("Some settings could not be restored")
 ```
+
+Include persistence-operation guidance showing how save/restore actions can be modeled as
+declarative feature operations with failure policies.
 
 **Minimal example:** Full save/load cycle with restore report inspection.
 

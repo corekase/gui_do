@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Sequence, Mapping
+import inspect
 
 import pygame
 from pygame import Rect
@@ -16,6 +17,7 @@ from ..controls.input.button_control import ButtonControl
 from ..controls.display.label_control import LabelControl
 from ..layout.flex_layout import FlexLayout
 from ..text.localization import LocaleRegistry
+from ..app.service_scope import ServiceScope
 from .feature_lifecycle import (
     FeatureWindowPresentationModel,
     SceneSetupSpec,
@@ -44,6 +46,7 @@ from .runtime_models import (
     TelemetryConfig,
     build_notification_center,
 )
+from .runtime_facilities import FeatureOperationBus, FeatureRuntimeScope
 from .runtime_registration_helpers import (
     instantiate_features_from_specs as _instantiate_features_from_specs,
     register_features_from_specs as _register_features_from_specs,
@@ -404,6 +407,92 @@ class EventSubscriptionSpec:
 
 
 @dataclass(frozen=True)
+class ServiceBindingSpec:
+    """Declarative descriptor for a service published into a feature runtime scope."""
+
+    attr_name: str
+    key: object
+    factory: Callable[..., object]
+    owned: bool = True
+
+
+@dataclass(frozen=True)
+class ServiceConsumerSpec:
+    """Declarative descriptor for a service resolved from a feature runtime scope."""
+
+    attr_name: str
+    key: object
+    required: bool = True
+
+
+@dataclass(frozen=True)
+class StoreSubscriptionSpec:
+    """Declarative descriptor for subscribing to one AppStateStore key."""
+
+    state_key: str
+    handler: Callable[[object], object]
+    store_attr_name: str = "state_store"
+    service_key: object | None = None
+    invoke_immediately: bool = False
+
+
+@dataclass(frozen=True)
+class StoreSelectorSpec:
+    """Declarative descriptor for selector-backed AppStateStore observation."""
+
+    selector: Callable[[Mapping[str, object]], object]
+    handler: Callable[[object], object]
+    store_attr_name: str = "state_store"
+    service_key: object | None = None
+    depends_on: Sequence[str] = field(default_factory=tuple)
+    invoke_immediately: bool = False
+    attr_name: str | None = None
+
+
+@dataclass(frozen=True)
+class ObservableEffectSpec:
+    """Declarative descriptor for subscribing to any observable value."""
+
+    handler: Callable[[object], object]
+    observable_attr_name: str | None = None
+    service_key: object | None = None
+    observable_factory: Callable[..., object] | None = None
+    invoke_immediately: bool = False
+
+
+@dataclass(frozen=True)
+class SignalEffectSpec:
+    """Declarative descriptor for connecting one signal-like source."""
+
+    handler: Callable[[object], object]
+    signal_attr_name: str | None = None
+    service_key: object | None = None
+    signal_factory: Callable[..., object] | None = None
+    once: bool = False
+
+
+@dataclass(frozen=True)
+class FailurePolicySpec:
+    """Declarative descriptor for operation retry and timeout policy."""
+
+    name: str
+    retries: int = 0
+    retry_delay_seconds: float = 0.0
+    timeout_seconds: float | None = None
+    publish_topic: str | None = None
+    publish_scope: str | None = None
+
+
+@dataclass(frozen=True)
+class FeatureOperationSpec:
+    """Declarative descriptor for one registered operation-bus handler."""
+
+    name: str
+    handler: Callable[..., object]
+    failure_policy: str | None = None
+
+
+@dataclass(frozen=True)
 class ShortcutOverlaySpec:
     """Declarative descriptor for a feature-owned ShortcutHelpOverlay."""
 
@@ -440,7 +529,18 @@ class RoutedRuntimeSpec:
     scene_name: str = "main"
     scheduler_attr_name: str = "scheduler"
     scheduler_dispatch_limit: int | None = None
+    runtime_scope_attr_name: str = "runtime_scope"
     logic_bindings: Sequence[LogicBindingSpec] = field(default_factory=tuple)
+    service_bindings: Sequence[ServiceBindingSpec] = field(default_factory=tuple)
+    service_consumers: Sequence[ServiceConsumerSpec] = field(default_factory=tuple)
+    store_subscriptions: Sequence[StoreSubscriptionSpec] = field(default_factory=tuple)
+    store_selectors: Sequence[StoreSelectorSpec] = field(default_factory=tuple)
+    observable_effects: Sequence[ObservableEffectSpec] = field(default_factory=tuple)
+    signal_effects: Sequence[SignalEffectSpec] = field(default_factory=tuple)
+    operation_bus_attr_name: str | None = None
+    operation_service_key: object | None = None
+    failure_policies: Sequence[FailurePolicySpec] = field(default_factory=tuple)
+    operations: Sequence[FeatureOperationSpec] = field(default_factory=tuple)
     action_hotkeys: Sequence[ActionHotkeySpec] = field(default_factory=tuple)
     control_key_bindings: Sequence[ControlKeyBindingSpec] = field(default_factory=tuple)
     event_subscriptions: Sequence[EventSubscriptionSpec] = field(default_factory=tuple)
@@ -1597,6 +1697,202 @@ def unbind_feature_event_subscription(feature, app_events, *, attr_name: str) ->
     return True
 
 
+def _resolve_parent_runtime_service_scope(host) -> ServiceScope | None:
+    runtime_scope = getattr(host, "runtime_scope", None)
+    scope = getattr(runtime_scope, "service_scope", None)
+    if isinstance(scope, ServiceScope):
+        return scope
+    app = getattr(host, "app", None)
+    app_scope = getattr(app, "service_scope", None)
+    if isinstance(app_scope, ServiceScope):
+        return app_scope
+    return None
+
+
+def _invoke_runtime_factory(factory: Callable[..., object], feature, host, runtime_scope: FeatureRuntimeScope):
+    try:
+        signature = inspect.signature(factory)
+    except (TypeError, ValueError):
+        return factory(feature, host, runtime_scope)
+    parameters = tuple(signature.parameters.values())
+    if any(parameter.kind is inspect.Parameter.VAR_POSITIONAL for parameter in parameters):
+        return factory(feature, host, runtime_scope)
+    positional = [
+        parameter
+        for parameter in parameters
+        if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    argc = len(positional)
+    if argc <= 0:
+        return factory()
+    if argc == 1:
+        return factory(feature)
+    if argc == 2:
+        return factory(feature, host)
+    return factory(feature, host, runtime_scope)
+
+
+def create_feature_runtime_scope(feature, host, spec: RoutedRuntimeSpec) -> FeatureRuntimeScope:
+    """Create and attach a lifecycle-owned runtime scope for a feature."""
+    scope = FeatureRuntimeScope(parent_scope=_resolve_parent_runtime_service_scope(host))
+    attr_name = str(getattr(spec, "runtime_scope_attr_name", "runtime_scope") or "")
+    if attr_name:
+        setattr(feature, attr_name, scope)
+    return scope
+
+
+def bind_feature_runtime_services(
+    feature,
+    host,
+    runtime_scope: FeatureRuntimeScope,
+    bindings: Sequence[ServiceBindingSpec],
+) -> None:
+    """Instantiate and publish feature-owned runtime services."""
+    for binding in bindings:
+        instance = _invoke_runtime_factory(binding.factory, feature, host, runtime_scope)
+        runtime_scope.bind_service(binding.key, instance, owned=bool(binding.owned))
+        attr_name = str(binding.attr_name)
+        if attr_name:
+            setattr(feature, attr_name, instance)
+
+
+def resolve_feature_runtime_services(
+    feature,
+    runtime_scope: FeatureRuntimeScope,
+    consumers: Sequence[ServiceConsumerSpec],
+) -> None:
+    """Resolve runtime services into feature attributes."""
+    for consumer in consumers:
+        attr_name = str(consumer.attr_name)
+        if bool(consumer.required):
+            instance = runtime_scope.get_service(consumer.key)
+        else:
+            instance = runtime_scope.get_optional_service(consumer.key)
+        setattr(feature, attr_name, instance)
+
+
+def _resolve_runtime_store(feature, runtime_scope: FeatureRuntimeScope, *, store_attr_name: str, service_key: object | None):
+    if service_key is not None:
+        return runtime_scope.get_service(service_key)
+    return getattr(feature, str(store_attr_name))
+
+
+def _resolve_runtime_observable(feature, runtime_scope: FeatureRuntimeScope, spec: ObservableEffectSpec):
+    if spec.observable_attr_name:
+        return getattr(feature, str(spec.observable_attr_name))
+    if spec.service_key is not None:
+        return runtime_scope.get_service(spec.service_key)
+    if spec.observable_factory is not None:
+        return _invoke_runtime_factory(spec.observable_factory, feature, None, runtime_scope)
+    raise ValueError("ObservableEffectSpec requires observable_attr_name, service_key, or observable_factory")
+
+
+def _resolve_runtime_signal(feature, runtime_scope: FeatureRuntimeScope, spec: SignalEffectSpec):
+    if spec.signal_attr_name:
+        return getattr(feature, str(spec.signal_attr_name))
+    if spec.service_key is not None:
+        return runtime_scope.get_service(spec.service_key)
+    if spec.signal_factory is not None:
+        return _invoke_runtime_factory(spec.signal_factory, feature, None, runtime_scope)
+    raise ValueError("SignalEffectSpec requires signal_attr_name, service_key, or signal_factory")
+
+
+def bind_store_subscriptions(feature, runtime_scope: FeatureRuntimeScope, subscriptions: Sequence[StoreSubscriptionSpec]) -> None:
+    """Bind AppStateStore key subscriptions into the runtime scope."""
+    for spec in subscriptions:
+        store = _resolve_runtime_store(
+            feature,
+            runtime_scope,
+            store_attr_name=str(spec.store_attr_name),
+            service_key=spec.service_key,
+        )
+        unsubscribe = store.subscribe(str(spec.state_key), spec.handler)
+        runtime_scope.add_cleanup(unsubscribe)
+        if spec.invoke_immediately:
+            spec.handler(store.get(str(spec.state_key)))
+
+
+def bind_store_selectors(feature, runtime_scope: FeatureRuntimeScope, selectors: Sequence[StoreSelectorSpec]) -> None:
+    """Bind selector-backed AppStateStore effects into the runtime scope."""
+    for spec in selectors:
+        store = _resolve_runtime_store(
+            feature,
+            runtime_scope,
+            store_attr_name=str(spec.store_attr_name),
+            service_key=spec.service_key,
+        )
+        selector = store.select(
+            spec.selector,
+            depends_on=(set(spec.depends_on) if spec.depends_on else None),
+        )
+        if spec.attr_name:
+            setattr(feature, str(spec.attr_name), selector)
+        runtime_scope.add_cleanup(selector.subscribe(spec.handler))
+        if spec.invoke_immediately:
+            spec.handler(selector.value)
+
+
+def bind_observable_effects(feature, host, runtime_scope: FeatureRuntimeScope, effects: Sequence[ObservableEffectSpec]) -> None:
+    """Bind observable subscriptions into the runtime scope."""
+    for spec in effects:
+        if spec.observable_factory is not None:
+            observable = _invoke_runtime_factory(spec.observable_factory, feature, host, runtime_scope)
+        else:
+            observable = _resolve_runtime_observable(feature, runtime_scope, spec)
+        runtime_scope.add_cleanup(observable.subscribe(spec.handler))
+        if spec.invoke_immediately and hasattr(observable, "value"):
+            spec.handler(observable.value)
+
+
+def bind_signal_effects(feature, host, runtime_scope: FeatureRuntimeScope, effects: Sequence[SignalEffectSpec]) -> None:
+    """Bind signal connections into the runtime scope."""
+    for spec in effects:
+        if spec.signal_factory is not None:
+            signal = _invoke_runtime_factory(spec.signal_factory, feature, host, runtime_scope)
+        else:
+            signal = _resolve_runtime_signal(feature, runtime_scope, spec)
+        connection = signal.connect_once(spec.handler) if spec.once else signal.connect(spec.handler)
+        runtime_scope.own_connection(connection)
+
+
+def create_feature_operation_bus(feature, host, runtime_scope: FeatureRuntimeScope, spec: RoutedRuntimeSpec) -> FeatureOperationBus | None:
+    """Create and configure a feature-scoped operation bus when requested."""
+    needs_bus = bool(spec.operations or spec.failure_policies or spec.operation_service_key is not None or spec.operation_bus_attr_name)
+    if not needs_bus:
+        return None
+    app = getattr(host, "app", None)
+    bus = FeatureOperationBus(
+        feature=feature,
+        host=host,
+        runtime_scope=runtime_scope,
+        timers=getattr(app, "timers", None),
+        event_bus=getattr(app, "events", None),
+    )
+    runtime_scope.own_disposable(bus)
+    if spec.operation_bus_attr_name:
+        setattr(feature, str(spec.operation_bus_attr_name), bus)
+    if spec.operation_service_key is not None:
+        runtime_scope.bind_service(spec.operation_service_key, bus, owned=False)
+    for policy in spec.failure_policies:
+        bus.register_failure_policy(
+            str(policy.name),
+            retries=int(policy.retries),
+            retry_delay_seconds=float(policy.retry_delay_seconds),
+            timeout_seconds=policy.timeout_seconds,
+            publish_topic=policy.publish_topic,
+            publish_scope=policy.publish_scope,
+        )
+    for operation in spec.operations:
+        runtime_scope.add_cleanup(
+            bus.register(
+                str(operation.name),
+                operation.handler,
+                failure_policy=operation.failure_policy,
+            )
+        )
+    return bus
+
+
 def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
     """Apply standard routed-feature runtime wiring from a declarative spec.
 
@@ -1611,6 +1907,30 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
         scheduler_dispatch_limit=spec.scheduler_dispatch_limit,
         logic_bindings=tuple(spec.logic_bindings),
     )
+    runtime_scope = create_feature_runtime_scope(feature, host, spec)
+
+    if spec.service_bindings:
+        bind_feature_runtime_services(feature, host, runtime_scope, tuple(spec.service_bindings))
+
+    operation_bus = create_feature_operation_bus(feature, host, runtime_scope, spec)
+
+    if spec.service_consumers:
+        resolve_feature_runtime_services(feature, runtime_scope, tuple(spec.service_consumers))
+
+    if operation_bus is not None and spec.operation_service_key is not None and spec.service_consumers:
+        resolve_feature_runtime_services(feature, runtime_scope, tuple(spec.service_consumers))
+
+    if spec.store_subscriptions:
+        bind_store_subscriptions(feature, runtime_scope, tuple(spec.store_subscriptions))
+
+    if spec.store_selectors:
+        bind_store_selectors(feature, runtime_scope, tuple(spec.store_selectors))
+
+    if spec.observable_effects:
+        bind_observable_effects(feature, host, runtime_scope, tuple(spec.observable_effects))
+
+    if spec.signal_effects:
+        bind_signal_effects(feature, host, runtime_scope, tuple(spec.signal_effects))
 
     app = getattr(host, "app", None)
     app_actions = getattr(app, "actions", None)
@@ -1682,6 +2002,14 @@ def shutdown_routed_runtime(feature, host, spec: RoutedRuntimeSpec) -> None:
     if spec.event_subscriptions and app_events is not None:
         for subscription in spec.event_subscriptions:
             unbind_feature_event_subscription(feature, app_events, attr_name=subscription.attr_name)
+    attr_name = str(getattr(spec, "runtime_scope_attr_name", "runtime_scope") or "")
+    runtime_scope = getattr(feature, attr_name, None) if attr_name else None
+    if runtime_scope is not None and hasattr(runtime_scope, "dispose"):
+        runtime_scope.dispose()
+    if attr_name:
+        setattr(feature, attr_name, None)
+    if spec.operation_bus_attr_name:
+        setattr(feature, str(spec.operation_bus_attr_name), None)
 
 
 def _resolve_routed_feature_runtime_spec(feature, host, lifecycle_spec: RoutedFeatureLifecycleSpec) -> RoutedRuntimeSpec:

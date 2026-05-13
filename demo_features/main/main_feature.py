@@ -9,6 +9,7 @@ from gui_do import (
     ShortcutHelpOverlay,
 )
 from gui_do.features.data_driven_runtime import (
+    shutdown_routed_runtime,
     setup_routed_runtime,
 )
 
@@ -46,6 +47,13 @@ class MainFeature(Feature):
         bind_global_key = getattr(app_actions, "bind_global_key", None)
         if callable(bind_global_key):
             bind_global_key(pygame.K_ESCAPE, "exit", scene="main")
+
+    def shutdown_runtime(self, host) -> None:
+        shutdown_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
+        app_actions = getattr(host.app, "actions", None)
+        unbind_global_key = getattr(app_actions, "unbind_global_key", None)
+        if callable(unbind_global_key):
+            unbind_global_key(pygame.K_ESCAPE, "exit", scene="main")
 
     def _toggle_help_overlay(self) -> None:
         toggle_help_overlay_helper(self)

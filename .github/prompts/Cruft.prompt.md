@@ -32,6 +32,21 @@ You are performing a cruft-removal pass on this package. Your job is to find and
 - Symbols listed in `gui_do.__all__` — those are public API and must not be removed without an explicit API-change decision.
 - Lifecycle hook methods (`on_added_to_gui`, `on_enabled_changed`, `_on_window_visibility_changed`, etc.) that appear unread but are called indirectly through parent dispatch or callback chains. Confirm with a cross-file reference search before deleting any hook.
 - `__init__.py` re-exports that are part of the declared package surface.
+- New routed runtime facilities and their spec types unless truly unreachable and not exported:
+	- `FeatureRuntimeScope`, `FeatureOperationBus`, `FeatureOperationHandle`, `FeatureOperationContext`
+	- `ServiceBindingSpec`, `ServiceConsumerSpec`
+	- `StoreSubscriptionSpec`, `StoreSelectorSpec`
+	- `ObservableEffectSpec`, `SignalEffectSpec`
+	- `FeatureOperationSpec`, `FailurePolicySpec`
+
+## New Runtime Facilities Cleanup Rules
+
+When auditing for dead code and shims, treat runtime-facility wiring as first-class architecture.
+
+- Preserve lifecycle ownership semantics: `bind_runtime` setup must pair with `shutdown_runtime` disposal.
+- Do not collapse or remove `runtime_scope_attr_name` / `operation_bus_attr_name` paths as "unused" if they are part of `RoutedRuntimeSpec` composition.
+- Do not remove operation failure publication paths solely because they are scene-scoped or callback-driven; verify no tests or demo features consume those topics first.
+- If removing a feature subscription/helper, verify equivalent cleanup still occurs through runtime scope disposal.
 
 ## Process
 

@@ -14,8 +14,16 @@ This step must:
 2. Add and maintain an appendix section named:
    - `### Appendix F: Specifications and Option Reference`
 3. Add links from specification-heavy sections to Appendix F entries.
-4. Normalize markdown display for double-underscore identifiers so names like `__init__.py`, `__version__`, and `__demo__` are not misparsed as emphasis.
+4. Keep entries concise and practical; avoid repeating long chapter prose.
+5. Normalize markdown display for double-underscore identifiers so names like `__init__.py`, `__version__`, and `__demo__` are not misparsed as emphasis.
 
+Appendix F must include dedicated entries for the newer routed runtime families:
+- `ServiceBindingSpec` / `ServiceConsumerSpec`
+- `StoreSubscriptionSpec` / `StoreSelectorSpec`
+- `ObservableEffectSpec` / `SignalEffectSpec`
+- `FeatureOperationSpec` / `FailurePolicySpec`
+- `FeatureRuntimeScope` and `FeatureOperationBus` as runtime counterparts
+6. Appendix F links from specification-heavy sections include the routed runtime facilities above.
 Do not rewrite the whole manual. Use targeted updates only.
 
 ## Run Mode Guard

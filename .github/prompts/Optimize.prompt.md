@@ -40,6 +40,12 @@ Based on current architecture analysis, these areas are candidates for meaningfu
 - **Event batching** (`events/`, `actions/`): Analyze hotpaths where multiple events are processed per frame. Consider batching strategies to reduce per-event overhead (callback invocation, intermediate object creation, dispatch routing).
 - **Collection view incremental updates** (`data/collection_view.py`, `data/sort_filter_proxy.py`): Optimize incremental list diff calculations and proxy transformations; profile whether diffs are being computed unnecessarily on static data. Look for opportunities to cache filter/sort results when inputs haven't changed.
 
+- **Routed runtime facilities hotpaths** (`features/data_driven_runtime.py`, `features/runtime_facilities.py`):
+	- Minimize per-operation overhead in `FeatureOperationBus` dispatch/retry/timeout paths.
+	- Avoid unnecessary allocations in runtime-scope cleanup and effect-binding loops.
+	- Validate timer-id and subscription bookkeeping stays O(1) under high operation volume.
+	- Preserve deterministic cleanup behavior while optimizing.
+
 ## Structural Changes
 
 If an opportunity is classified `structural`, do not inline it into the main pass. Instead:
@@ -58,3 +64,11 @@ If an opportunity is classified `structural`, do not inline it into the main pas
 - Do not add OS-specific code, platform guards, or non-portable native extensions.
 - If a structure appears unoptimized but exists for a documented reason (e.g., a deque used as a bounded history buffer, not as a set), note it in the plan as a deliberate design choice and skip it.
 - Apply best patterns and practices for the relevant domain (Python data structures, pygame surface management, event routing, scheduler design) throughout. If you encounter a structure that violates domain best practices independently of performance, correct it as part of the same pass.
+
+## Runtime Facilities Safety Guard
+
+Do not optimize away lifecycle or safety semantics in routed runtime facilities.
+
+- Keep teardown guarantees for runtime scopes, effect subscriptions, and operation timers.
+- Preserve failure-policy behavior (retry/timeout/publication) while optimizing internal mechanics.
+- Avoid introducing speculative concurrency into feature operation handling; keep behavior scene-portable and deterministic.

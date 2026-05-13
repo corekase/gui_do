@@ -53,6 +53,16 @@ using this exact pattern so later sub-prompts can find and replace it:
 
 Use the chapter's actual name in place of `[chapter name]`.
 
+## New Runtime Facilities Skeleton Note (Required)
+
+When writing placeholders and TOC structure, ensure downstream chapters have clear room to document:
+
+- `FeatureRuntimeScope` lifecycle ownership
+- Declarative service/effect specs in routed runtime
+- Operation orchestration with failure policies
+
+Do not add placeholder chapter names for these; integrate them into existing architecture/system chapters.
+
 ## Table of Contents
 
 Write a complete, working TOC with links to all sections and subsections as defined in

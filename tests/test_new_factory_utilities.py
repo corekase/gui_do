@@ -734,6 +734,184 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         spec = RoutedRuntimeSpec()
         self.assertEqual(len(spec.task_panel_focus_toggles), 0)
 
+    def test_setup_routed_runtime_creates_runtime_scope_and_binds_services(self):
+        from gui_do import FeatureRuntimeScope, RoutedRuntimeSpec, ServiceBindingSpec, ServiceConsumerSpec, setup_routed_runtime
+
+        feature = MagicMock()
+        host = MagicMock()
+        service_key = object()
+        service_instance = MagicMock()
+        runtime_spec = RoutedRuntimeSpec(
+            service_bindings=(
+                ServiceBindingSpec(attr_name="status_service", key=service_key, factory=lambda _f, _h, _s: service_instance),
+            ),
+            service_consumers=(
+                ServiceConsumerSpec(attr_name="resolved_status_service", key=service_key),
+            ),
+        )
+
+        with unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            return_value=object(),
+        ):
+            setup_routed_runtime(feature, host, runtime_spec)
+
+        self.assertIsInstance(feature.runtime_scope, FeatureRuntimeScope)
+        self.assertIs(feature.status_service, service_instance)
+        self.assertIs(feature.resolved_status_service, service_instance)
+
+    def test_shutdown_routed_runtime_disposes_runtime_scope(self):
+        from gui_do import RoutedRuntimeSpec, shutdown_routed_runtime
+
+        feature = MagicMock()
+        host = MagicMock()
+        runtime_scope = MagicMock()
+        feature.runtime_scope = runtime_scope
+        runtime_spec = RoutedRuntimeSpec()
+
+        shutdown_routed_runtime(feature, host, runtime_spec)
+
+        runtime_scope.dispose.assert_called_once_with()
+        self.assertIsNone(feature.runtime_scope)
+
+    def test_setup_routed_runtime_binds_store_and_observable_effects(self):
+        from gui_do import ObservableEffectSpec, ObservableValue, RoutedRuntimeSpec, StoreSelectorSpec, StoreSubscriptionSpec, setup_routed_runtime
+
+        feature = MagicMock()
+        feature.state_store = __import__("gui_do").AppStateStore({"status": "idle", "count": 1})
+        feature.observable = ObservableValue("cold")
+        host = MagicMock()
+        status_handler = MagicMock()
+        selector_handler = MagicMock()
+        observable_handler = MagicMock()
+        runtime_spec = RoutedRuntimeSpec(
+            store_subscriptions=(
+                StoreSubscriptionSpec(state_key="status", handler=status_handler, store_attr_name="state_store", invoke_immediately=True),
+            ),
+            store_selectors=(
+                StoreSelectorSpec(
+                    selector=lambda state: int(state.get("count", 0)) * 2,
+                    handler=selector_handler,
+                    store_attr_name="state_store",
+                    depends_on=("count",),
+                    invoke_immediately=True,
+                    attr_name="_count_selector",
+                ),
+            ),
+            observable_effects=(
+                ObservableEffectSpec(handler=observable_handler, observable_attr_name="observable", invoke_immediately=True),
+            ),
+        )
+
+        with unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            return_value=object(),
+        ):
+            setup_routed_runtime(feature, host, runtime_spec)
+
+        status_handler.assert_called_with("idle")
+        selector_handler.assert_called_with(2)
+        observable_handler.assert_called_with("cold")
+        feature.state_store.dispatch({"status": "running", "count": 3})
+        feature.observable.value = "warm"
+        status_handler.assert_called_with("running")
+        selector_handler.assert_called_with(6)
+        observable_handler.assert_called_with("warm")
+
+    def test_setup_routed_runtime_registers_operation_bus_handlers(self):
+        from gui_do import FeatureOperationSpec, RoutedRuntimeSpec, setup_routed_runtime
+
+        feature = MagicMock()
+        host = MagicMock()
+        runtime_spec = RoutedRuntimeSpec(
+            operation_bus_attr_name="operation_bus",
+            operations=(FeatureOperationSpec(name="ping", handler=lambda payload: int(payload["value"]) + 1),),
+        )
+
+        with unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            return_value=object(),
+        ):
+            setup_routed_runtime(feature, host, runtime_spec)
+
+        handle = feature.operation_bus.call("ping", {"value": 2})
+        self.assertTrue(handle.is_complete)
+        self.assertEqual(handle.result, 3)
+
+    def test_operation_failure_policy_retries_with_timers(self):
+        from gui_do import FailurePolicySpec, FeatureOperationSpec, RoutedRuntimeSpec, setup_routed_runtime
+        from gui_do.scheduling.timers import Timers
+
+        feature = MagicMock()
+        host = MagicMock()
+        host.app = MagicMock()
+        host.app.timers = Timers()
+        host.app.events = None
+        attempts = {"count": 0}
+
+        def _fragile(_payload):
+            attempts["count"] += 1
+            if attempts["count"] == 1:
+                raise RuntimeError("boom")
+            return "ok"
+
+        runtime_spec = RoutedRuntimeSpec(
+            operation_bus_attr_name="operation_bus",
+            failure_policies=(
+                FailurePolicySpec(name="retry_once", retries=1, retry_delay_seconds=0.01),
+            ),
+            operations=(
+                FeatureOperationSpec(name="fragile", handler=_fragile, failure_policy="retry_once"),
+            ),
+        )
+
+        with unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            return_value=object(),
+        ):
+            setup_routed_runtime(feature, host, runtime_spec)
+
+        handle = feature.operation_bus.call("fragile")
+        self.assertTrue(handle.is_pending)
+        host.app.timers.update(0.02)
+        self.assertTrue(handle.is_complete)
+        self.assertEqual(handle.result, "ok")
+        self.assertEqual(attempts["count"], 2)
+
+    def test_operation_failure_policy_times_out_deferred_handler(self):
+        from gui_do import FailurePolicySpec, FeatureOperationSpec, RoutedRuntimeSpec, setup_routed_runtime
+        from gui_do.scheduling.timers import Timers
+
+        feature = MagicMock()
+        host = MagicMock()
+        host.app = MagicMock()
+        host.app.timers = Timers()
+        host.app.events = None
+
+        def _deferred(_payload, context):
+            context.defer()
+
+        runtime_spec = RoutedRuntimeSpec(
+            operation_bus_attr_name="operation_bus",
+            failure_policies=(
+                FailurePolicySpec(name="timeout", timeout_seconds=0.01),
+            ),
+            operations=(
+                FeatureOperationSpec(name="slow", handler=_deferred, failure_policy="timeout"),
+            ),
+        )
+
+        with unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            return_value=object(),
+        ):
+            setup_routed_runtime(feature, host, runtime_spec)
+
+        handle = feature.operation_bus.call("slow")
+        self.assertTrue(handle.is_pending)
+        host.app.timers.update(0.02)
+        self.assertTrue(handle.is_timed_out)
+
     def test_setup_routed_runtime_registers_overlay_toggle_action_and_key(self):
         from gui_do import RoutedRuntimeSpec, ShortcutOverlaySpec, setup_routed_runtime
 

@@ -20,6 +20,10 @@ Produce a prioritized roadmap of the best next generalized systems to implement,
 - Identify dependencies between candidates so foundational systems come first.
 - **Architectural patterns to preserve and extend**: All recommendations must align with (1) feature lifecycle phases (`build` → `bind_runtime` → `on_update` → `draw` → `shutdown_runtime`), (2) reactive state and subscription lifecycle, (3) declarative spec-driven composition, and (4) scene-local isolation with shared app managers.
 - **Feature types to promote**: Emphasize how new systems integrate with `Feature`, `DirectFeature`, `LogicFeature`, and `RoutedFeature`. Highlight `RoutedFeature` + `RoutedRuntimeSpec` patterns as the preferred extension mechanism for event-driven and scheduler-managed behavior.
+- **Current baseline to account for**: Treat the following as already-implemented framework capabilities and build recommendations on top of them rather than re-proposing them as net-new:
+	- `FeatureRuntimeScope`
+	- Declarative service/effect specs (`ServiceBindingSpec`, `ServiceConsumerSpec`, `StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`)
+	- Operation and failure-policy specs (`FeatureOperationSpec`, `FailurePolicySpec`) backed by `FeatureOperationBus`
 
 ## Hard Constraint
 
@@ -38,3 +42,11 @@ Produce a prioritized roadmap of the best next generalized systems to implement,
 3. Recommended implementation sequence with dependency notes.
 4. Brief rationale for what was intentionally deferred and why.
 5. Summary of architectural patterns demonstrated by the proposal (what existing pattern does it extend or build upon?).
+
+## Evaluation Lens for New Recommendations
+
+For each candidate system, explicitly describe how it composes with the current routed runtime facilities:
+
+- Does it register through `RoutedRuntimeSpec` or a sibling declarative spec?
+- Does it rely on runtime-scope ownership for cleanup?
+- If asynchronous or effect-driven, how it interoperates with operation bus/failure policy semantics.

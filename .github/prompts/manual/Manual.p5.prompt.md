@@ -204,6 +204,9 @@ tree.root.add_child(node)
 missing semantic roles on custom `CanvasControl` widgets; building accessibility nodes before
 the tree is initialized.
 
+Include one anti-pattern about registering focus/accessibility-related subscriptions without
+runtime-scope ownership and explain the proper teardown path.
+
 **Cross-links:** 8.3 (Events), 8.5 (Controls), 8.8 (Overlays — modal focus capture), 8.9 (Window)
 
 ---
@@ -217,6 +220,9 @@ a distinct surface kind with the correct dismissal contract.
 **Mental model:** Overlays sit on top of the main control tree. The overlay manager processes
 events first; if an overlay consumes an event, the main tree never sees it. Each overlay type
 has its own manager so concerns stay separated.
+
+Include a short note on pairing overlay/event subscriptions with routed runtime disposal
+when overlay behavior is wired through declarative runtime specs.
 
 **APIs (Tier 9 from `gui_do/__init__.py`):**
 Use all names from the TIER 9 section discovered in the inventory step. This tier covers

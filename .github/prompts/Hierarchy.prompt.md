@@ -37,6 +37,18 @@ Transform the gui_do library to:
 - File layout: restructuring, combining, splitting, creating, and removing modules.
 - Consistency checks and corrections (docstring headers, comment style, blank line conventions).
 
+## New Runtime Facilities Constraints
+
+While restructuring, preserve and properly place the new routed runtime facilities and their ownership model.
+
+- Keep runtime-facility primitives in coherent feature-runtime modules; do not scatter across unrelated subsystems.
+- Preserve spec-to-runtime mapping paths in `data_driven_runtime` for:
+  - service bindings/consumers
+  - store/observable/signal effects
+  - operation bus and failure policy registration
+- Preserve teardown guarantees: any reorganization must keep `shutdown_runtime` disposal paths intact for runtime scope and operation bus resources.
+- If renaming or moving facility symbols, update root exports and all prompt/document references in the same pass.
+
 ### Out of Scope
 - Changes to `tests/` structure (tests follow the modules they test; reorganize after module organization is stable).
 - Changes to external imports (dependencies on `pygame`, `numpy`, etc. are kept as-is).

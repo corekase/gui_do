@@ -41,6 +41,15 @@ Every system chapter: What/why · Mental model · Primary APIs · Typical usage 
 Minimal example · Advanced pattern · Common mistakes · Cross-links ·
 `[Back to Table of Contents](#table-of-contents)`
 
+For 8.16 specifically, include telemetry/diagnostic implications of routed operation failures
+and runtime-scope-managed teardown (what to instrument and what to watch for).
+
+In `## Integration Patterns and Composition Recipes`, include at least one recipe that composes:
+- service binding/consumption
+- reactive effect spec
+- operation spec with failure policy
+- lifecycle-safe routed teardown
+
 ---
 
 ## 8.13 — Text, Input, Forms, and Validation Systems
@@ -160,6 +169,9 @@ a fresh generation.
 **Mistakes:** Full-list redraws without `ListDiffCalculator`; forgetting to cancel stale
 `DataflowPipeline` generations; holding large datasets in memory without `DataCache` expiry;
 using `ObjectPool` incorrectly (returning objects that are still referenced elsewhere).
+
+Add explicit guidance for when dataflow tasks should be exposed via feature operation specs
+instead of ad hoc callbacks, and how failure policies surface operational errors.
 
 **Cross-links:** 8.4 (Observables), 8.5 (Controls — ListView/DataGrid/TreeControl),
 8.10 (Scheduling — CooperativeScheduler for async work), 8.16 (Telemetry for pipeline metrics)

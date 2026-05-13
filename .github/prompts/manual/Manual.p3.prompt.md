@@ -47,6 +47,10 @@ Show a minimal `Feature` subclass with `__init__`, `build`, `bind_runtime`, and 
 methods. The feature should create an `ObservableValue`, a `LabelControl`, and wire them with a
 subscription.
 
+Also include one concise note or snippet showing the routed declarative equivalent using runtime
+effect specs (for example `StoreSubscriptionSpec` or `ObservableEffectSpec`) and mention that
+teardown is handled via routed runtime shutdown.
+
 ### Step 4: Add an Action and Runtime Scene Policy
 Show adding an `ActionSpec` and `RuntimeSceneSpec` to the config. Include `bind_escape_to_exit`.
 
@@ -152,6 +156,11 @@ Explain `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec` — when they reduc
 - Event subscriptions with auto-cleanup
 
 Include a prose explanation of `bind_routed_feature_lifecycle` and `shutdown_routed_feature_lifecycle`.
+
+Explicitly include the newer routed runtime facilities:
+- service publication/consumption specs
+- reactive effect specs
+- operation/failure-policy specs and operation bus behavior
 
 ---
 
