@@ -841,6 +841,54 @@ class SystemsFeature(Feature):
         for control in controls:
             panel.add_at(control, control.rect.left, control.rect.top)
 
+    def _place_vertical_grid_sequence(
+        self,
+        panel: PanelControl,
+        bounds: Rect,
+        items: list[tuple[object, int, int]],
+    ) -> None:
+        """Place controls in one column with per-item spacer rows using GridLayout."""
+        if not items:
+            return
+        row_tracks: list[int] = []
+        placements: list[tuple[int, object, int]] = []
+        for control, row_height, after_gap in items:
+            target_height = max(1, int(row_height))
+            row_index = len(row_tracks)
+            row_tracks.append(target_height)
+            placements.append((row_index, control, target_height))
+            gap_height = max(0, int(after_gap))
+            if gap_height > 0:
+                row_tracks.append(gap_height)
+
+        layout = GridLayout(row_tracks=row_tracks, col_tracks=["1fr"], gap=0, padding=0)
+        for row_index, control, target_height in placements:
+            control.rect = Rect(0, 0, max(1, bounds.width), target_height)
+            layout.place(control, GridPlacement(row=row_index, col=0))
+        layout.apply(bounds)
+        for _row_index, control, _target_height in placements:
+            panel.add_at(control, control.rect.left, control.rect.top)
+
+    def _place_vertical_label_stack(
+        self,
+        panel: PanelControl,
+        bounds: Rect,
+        labels: list[LabelControl],
+        *,
+        gap: int = 8,
+    ) -> None:
+        """Stack status labels vertically with FlexLayout for consistent spacing."""
+        if not labels:
+            return
+        layout = FlexLayout(direction="column", gap=max(0, int(gap)), padding=0)
+        for label in labels:
+            target_height = max(1, int(label.rect.height))
+            label.rect = Rect(0, 0, max(1, bounds.width), target_height)
+            layout.add(label, grow=0, basis=target_height)
+        layout.apply(bounds)
+        for label in labels:
+            panel.add_at(label, label.rect.left, label.rect.top)
+
     def _inset_left_side_children(self, panel: PanelControl, *, inset_x: int | None = None) -> None:
         shift_x = self.LEFT_SIDE_INSET_X if inset_x is None else int(inset_x)
         if shift_x <= 0:
@@ -1045,7 +1093,7 @@ class SystemsFeature(Feature):
 
     def build_validation_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_validation_panel", Rect(rect), draw_background=False)
-        panel.add_at(LabelControl("systems_validation_name_label", Rect(0, 0, 180, 28), "Pipeline Name", align="left"), 0, 0)
+        name_label = LabelControl("systems_validation_name_label", Rect(0, 0, 180, 28), "Pipeline Name", align="left")
         self.validation_name_input = TextInputControl(
             "systems_validation_name",
             Rect(0, 0, min(320, rect.width - 16), 32),
@@ -1053,9 +1101,7 @@ class SystemsFeature(Feature):
             placeholder="nightly-gui",
             on_change=self._on_deployment_name_changed,
         )
-        panel.add_at(self.validation_name_input, 0, 30)
-
-        panel.add_at(LabelControl("systems_validation_env_label", Rect(0, 0, 180, 28), "Target Environment", align="left"), 0, 82)
+        env_label = LabelControl("systems_validation_env_label", Rect(0, 0, 180, 28), "Target Environment", align="left")
         self.validation_environment_dropdown = DropdownControl(
             "systems_validation_environment",
             Rect(0, 0, 220, 32),
@@ -1067,7 +1113,17 @@ class SystemsFeature(Feature):
             selected_index=0,
             on_change=lambda value, _index: self._on_environment_changed(value),
         )
-        panel.add_at(self.validation_environment_dropdown, 0, 112)
+        fields_bounds = Rect(0, 0, max(1, rect.width), 144)
+        self._place_vertical_grid_sequence(
+            panel,
+            fields_bounds,
+            [
+                (name_label, 28, 2),
+                (self.validation_name_input, 32, 20),
+                (env_label, 28, 2),
+                (self.validation_environment_dropdown, 32, 0),
+            ],
+        )
 
         run_checks = ButtonControl(
             "systems_validation_run_checks",
@@ -1103,9 +1159,17 @@ class SystemsFeature(Feature):
             "Async availability check pending.",
             align="left",
         )
-        panel.add_at(self.validation_state_label, 0, 216)
-        panel.add_at(self.validation_local_label, 0, 252)
-        panel.add_at(self.validation_async_label, 0, 288)
+        status_bounds = Rect(0, 216, max(1, rect.width), 100)
+        self._place_vertical_label_stack(
+            panel,
+            status_bounds,
+            [
+                self.validation_state_label,
+                self.validation_local_label,
+                self.validation_async_label,
+            ],
+            gap=8,
+        )
         self._refresh_validation_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -1166,9 +1230,16 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        panel.add_at(self.history_current_label, 0, label_top + 8)
-        panel.add_at(self.history_undo_label, 0, label_top + 44)
-        panel.add_at(self.history_redo_label, 0, label_top + 80)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, label_top + 8, max(1, rect.width), 100),
+            [
+                self.history_current_label,
+                self.history_undo_label,
+                self.history_redo_label,
+            ],
+            gap=8,
+        )
         self._refresh_history_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -1176,7 +1247,12 @@ class SystemsFeature(Feature):
 
     def build_theme_panel(self, rect: Rect) -> PanelControl:
         panel = PanelControl("systems_theme_panel", Rect(rect), draw_background=False)
-        panel.add_at(LabelControl("systems_theme_select_label", Rect(0, 0, 128, 28), "Theme", align="left"), 0, 0)
+        theme_select_label = LabelControl(
+            "systems_theme_select_label",
+            Rect(0, 0, 128, 28),
+            "Theme",
+            align="left",
+        )
         self.theme_dropdown = DropdownControl(
             "systems_theme_picker",
             Rect(0, 0, 180, 32),
@@ -1194,6 +1270,13 @@ class SystemsFeature(Feature):
             "Toggle Review Scope",
             self._toggle_review_scope,
             style="round",
+        )
+        self._place_vertical_grid_sequence(
+            panel,
+            Rect(0, 0, max(1, rect.width), 28),
+            [
+                (theme_select_label, 28, 0),
+            ],
         )
         self._place_row_controls(
             panel,
@@ -1219,9 +1302,16 @@ class SystemsFeature(Feature):
             "",
             align="left",
         )
-        panel.add_at(self.theme_state_label, 0, 92)
-        panel.add_at(self.theme_scope_label, 0, 128)
-        panel.add_at(self.theme_resolved_label, 0, 164)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, 92, max(1, rect.width), 100),
+            [
+                self.theme_state_label,
+                self.theme_scope_label,
+                self.theme_resolved_label,
+            ],
+            gap=8,
+        )
         self._refresh_theme_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
@@ -1313,11 +1403,18 @@ class SystemsFeature(Feature):
         self.state_context_label = LabelControl("systems_state_context_status", Rect(0, 0, rect.width, 28), "", align="left")
         self.state_machine_label = LabelControl("systems_state_machine_status", Rect(0, 0, rect.width, 28), "", align="left")
         self.state_router_label = LabelControl("systems_state_router_status", Rect(0, 0, rect.width, 28), "", align="left")
-        panel.add_at(self.state_store_label, 0, state_label_top + 8)
-        panel.add_at(self.state_readiness_label, 0, state_label_top + 44)
-        panel.add_at(self.state_context_label, 0, state_label_top + 80)
-        panel.add_at(self.state_machine_label, 0, state_label_top + 116)
-        panel.add_at(self.state_router_label, 0, state_label_top + 152)
+        self._place_vertical_label_stack(
+            panel,
+            Rect(0, state_label_top + 8, max(1, rect.width), 172),
+            [
+                self.state_store_label,
+                self.state_readiness_label,
+                self.state_context_label,
+                self.state_machine_label,
+                self.state_router_label,
+            ],
+            gap=8,
+        )
         self._refresh_state_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
