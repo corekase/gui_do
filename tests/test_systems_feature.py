@@ -193,6 +193,61 @@ class TestSystemsFeature(unittest.TestCase):
         self.assertIsNotNone(feature.text_search_match_label)
         self.assertIn("TextSearcher", feature.text_search_match_label.text)
 
+    def test_text_panel_mode_toggles_update_searcher_flags(self):
+        feature = self._make_feature()
+        feature.build_text_panel(Rect(0, 0, 640, 360))
+
+        self.assertFalse(feature._text_searcher.case_sensitive)
+        self.assertFalse(feature._text_searcher.whole_word)
+        self.assertFalse(feature._text_searcher.use_regex)
+
+        feature._toggle_text_case_sensitive()
+        feature._toggle_text_whole_word()
+        feature._toggle_text_regex()
+
+        self.assertTrue(feature._text_searcher.case_sensitive)
+        self.assertTrue(feature._text_searcher.whole_word)
+        self.assertTrue(feature._text_searcher.use_regex)
+        self.assertIsNotNone(feature.text_mode_case_button)
+        self.assertEqual("Case: On", feature.text_mode_case_button.text)
+        self.assertIsNotNone(feature.text_mode_whole_word_button)
+        self.assertEqual("Whole Word: On", feature.text_mode_whole_word_button.text)
+        self.assertIsNotNone(feature.text_mode_regex_button)
+        self.assertEqual("Regex: On", feature.text_mode_regex_button.text)
+
+    def test_text_panel_regex_preset_sets_query_and_enables_regex(self):
+        feature = self._make_feature()
+        panel = feature.build_text_panel(Rect(0, 0, 640, 360))
+
+        panel_child_ids = {child.control_id for child in panel.children}
+        self.assertIn("systems_text_regex_preset", panel_child_ids)
+
+        feature._text_use_regex = False
+        feature._rebuild_text_searcher()
+        feature._apply_text_regex_preset()
+
+        self.assertEqual(r"\b(?:release|rollout|checks?)\w*\b", feature._text_search_query)
+        self.assertTrue(feature._text_searcher.use_regex)
+        self.assertIn("regex preset", feature._text_last_action.lower())
+
+    def test_text_panel_locale_regex_preset_targets_multilingual_tokens(self):
+        feature = self._make_feature()
+        panel = feature.build_text_panel(Rect(0, 0, 640, 360))
+
+        panel_child_ids = {child.control_id for child in panel.children}
+        self.assertIn("systems_text_locale_regex_preset", panel_child_ids)
+
+        feature._text_use_regex = False
+        feature._rebuild_text_searcher()
+        feature._apply_text_locale_regex_preset()
+
+        self.assertEqual(
+            r"\b(?:release|rollout|checks?|lanzamiento|despliegue|pruebas|version|deploiement)\w*\b",
+            feature._text_search_query,
+        )
+        self.assertTrue(feature._text_searcher.use_regex)
+        self.assertIn("en/es/fr", feature._text_last_action.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

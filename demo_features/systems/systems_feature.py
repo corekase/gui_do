@@ -749,8 +749,19 @@ class SystemsFeature(Feature):
         self._text_search_query = "release"
         self._text_search_cursor = 0
         self._text_last_action = "Text systems ready."
-        self._text_searcher = TextSearcher("", case_sensitive=False, whole_word=False, use_regex=False)
+        self._text_case_sensitive = False
+        self._text_whole_word = False
+        self._text_use_regex = False
+        self._text_searcher = TextSearcher(
+            "",
+            case_sensitive=self._text_case_sensitive,
+            whole_word=self._text_whole_word,
+            use_regex=self._text_use_regex,
+        )
         self._text_flow = TextFlow(width=480, line_spacing=3)
+        self.text_mode_case_button = None
+        self.text_mode_whole_word_button = None
+        self.text_mode_regex_button = None
         self.text_locale_dropdown = None
         self.text_query_input = None
         self.text_search_status_label = None
@@ -1666,6 +1677,11 @@ class SystemsFeature(Feature):
         self._refresh_motion_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
+        self._force_button_left_alignment(
+            panel,
+            target_button_id="systems_motion_timeline",
+            reference_button_id="systems_motion_transition",
+        )
         return panel
 
     def build_persistence_panel(self, rect: Rect) -> PanelControl:
@@ -2000,9 +2016,52 @@ class SystemsFeature(Feature):
                     self._replace_first_text_match,
                     style="round",
                 ),
+                ButtonControl(
+                    "systems_text_mode_case",
+                    Rect(0, 0, 140, 32),
+                    "Case: Off",
+                    self._toggle_text_case_sensitive,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_text_mode_whole",
+                    Rect(0, 0, 170, 32),
+                    "Whole Word: Off",
+                    self._toggle_text_whole_word,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_text_mode_regex",
+                    Rect(0, 0, 140, 32),
+                    "Regex: Off",
+                    self._toggle_text_regex,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_text_regex_preset",
+                    Rect(0, 0, 174, 32),
+                    "Regex Preset",
+                    self._apply_text_regex_preset,
+                    style="round",
+                ),
+                ButtonControl(
+                    "systems_text_locale_regex_preset",
+                    Rect(0, 0, 204, 32),
+                    "Locale Regex Preset",
+                    self._apply_text_locale_regex_preset,
+                    style="round",
+                ),
             ],
             per_row=3,
         )
+
+        for child in panel.children:
+            if child.control_id == "systems_text_mode_case":
+                self.text_mode_case_button = child
+            elif child.control_id == "systems_text_mode_whole":
+                self.text_mode_whole_word_button = child
+            elif child.control_id == "systems_text_mode_regex":
+                self.text_mode_regex_button = child
 
         self.text_search_status_label = LabelControl(
             "systems_text_status",
@@ -2029,6 +2088,16 @@ class SystemsFeature(Feature):
         self._refresh_text_labels()
         self._inset_left_side_children(panel)
         self._inset_text_labels(panel)
+        self._force_button_left_alignment(
+            panel,
+            target_button_id="systems_text_search",
+            reference_button_id="systems_text_regex_preset",
+        )
+        self._force_button_left_alignment(
+            panel,
+            target_button_id="systems_text_mode_case",
+            reference_button_id="systems_text_regex_preset",
+        )
         return panel
 
     def _make_window_spec(self, host) -> AnchoredWindowSpec:
@@ -2050,6 +2119,15 @@ class SystemsFeature(Feature):
         hint = self._locale_registry.t("systems.text.hint", fallback="Search for release.")
         self._text_searcher.text = f"{title}\n{summary}\n{actions}\n{hint}"
 
+    def _rebuild_text_searcher(self) -> None:
+        source_text = self._text_searcher.text
+        self._text_searcher = TextSearcher(
+            source_text,
+            case_sensitive=self._text_case_sensitive,
+            whole_word=self._text_whole_word,
+            use_regex=self._text_use_regex,
+        )
+
     def _on_text_locale_changed(self, value: str) -> None:
         self._locale_registry.set_locale(str(value))
         self._text_search_cursor = 0
@@ -2063,6 +2141,57 @@ class SystemsFeature(Feature):
     def _run_text_search(self) -> None:
         self._text_search_cursor = 0
         self._text_last_action = "Search refreshed for current localized note."
+        self._refresh_text_labels()
+
+    def _toggle_text_case_sensitive(self) -> None:
+        self._text_case_sensitive = not self._text_case_sensitive
+        self._text_search_cursor = 0
+        self._rebuild_text_searcher()
+        self._text_last_action = (
+            f"Case-sensitive mode {'enabled' if self._text_case_sensitive else 'disabled'}."
+        )
+        self._refresh_text_labels()
+
+    def _toggle_text_whole_word(self) -> None:
+        self._text_whole_word = not self._text_whole_word
+        self._text_search_cursor = 0
+        self._rebuild_text_searcher()
+        self._text_last_action = (
+            f"Whole-word mode {'enabled' if self._text_whole_word else 'disabled'}."
+        )
+        self._refresh_text_labels()
+
+    def _toggle_text_regex(self) -> None:
+        self._text_use_regex = not self._text_use_regex
+        self._text_search_cursor = 0
+        self._rebuild_text_searcher()
+        self._text_last_action = f"Regex mode {'enabled' if self._text_use_regex else 'disabled'}."
+        self._refresh_text_labels()
+
+    def _apply_text_regex_preset(self) -> None:
+        # Practical release-note token scanner: capture terms around release/deploy/check keywords.
+        preset = r"\b(?:release|rollout|checks?)\w*\b"
+        self._text_search_query = preset
+        if self.text_query_input is not None:
+            self.text_query_input.set_value(preset)
+        if not self._text_use_regex:
+            self._text_use_regex = True
+            self._rebuild_text_searcher()
+        self._text_search_cursor = 0
+        self._text_last_action = "Applied regex preset for release-note keyword scanning."
+        self._refresh_text_labels()
+
+    def _apply_text_locale_regex_preset(self) -> None:
+        # Locale-aware token scanner for EN/ES/FR release terminology.
+        preset = r"\b(?:release|rollout|checks?|lanzamiento|despliegue|pruebas|version|deploiement)\w*\b"
+        self._text_search_query = preset
+        if self.text_query_input is not None:
+            self.text_query_input.set_value(preset)
+        if not self._text_use_regex:
+            self._text_use_regex = True
+            self._rebuild_text_searcher()
+        self._text_search_cursor = 0
+        self._text_last_action = "Applied locale regex preset for EN/ES/FR release terms."
         self._refresh_text_labels()
 
     def _next_text_match(self) -> None:
@@ -2163,12 +2292,18 @@ class SystemsFeature(Feature):
         query = self._text_search_query.strip()
         matches = self._text_searcher.find_all(query)
         active_index = min(self._text_search_cursor, max(0, len(matches) - 1)) if matches else -1
+        if self.text_mode_case_button is not None:
+            self.text_mode_case_button.text = f"Case: {'On' if self._text_case_sensitive else 'Off'}"
+        if self.text_mode_whole_word_button is not None:
+            self.text_mode_whole_word_button.text = f"Whole Word: {'On' if self._text_whole_word else 'Off'}"
+        if self.text_mode_regex_button is not None:
+            self.text_mode_regex_button.text = f"Regex: {'On' if self._text_use_regex else 'Off'}"
         if self.text_search_status_label is not None:
             locale = self._locale_registry.active_locale.upper()
             translated_title = self._locale_registry.t("systems.text.title", fallback="Release Notes")
             self.text_search_status_label.text = (
                 f"LocaleRegistry active={locale} locales={self._locale_registry.registered_locales} | "
-                f"StringTable title='{translated_title}'"
+                f"StringTable title='{translated_title}' | modes(case={self._text_case_sensitive}, whole={self._text_whole_word}, regex={self._text_use_regex})"
             )
         if self.text_search_match_label is not None:
             if not query:
