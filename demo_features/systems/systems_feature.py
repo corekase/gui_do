@@ -102,10 +102,20 @@ from gui_do import (
     TweenManager,
 )
 from gui_do.features.data_driven_runtime import (
+    CapabilityProviderSpec,
+    CapabilityRequirementSpec,
+    DurableOperationBindingSpec,
+    DurableOperationQueueSpec,
+    EffectBindingSpec,
     EventSubscriptionSpec,
+    EventPipelineSpec,
+    EventPipelineStageSpec,
     FailurePolicySpec,
     FeatureOperationSpec,
     ObservableEffectSpec,
+    ProjectionNodeSpec,
+    ProjectionSpec,
+    RuntimePolicySpec,
     RoutedRuntimeSpec,
     ServiceBindingSpec,
     StoreSubscriptionSpec,
@@ -278,6 +288,8 @@ _SYSTEMS_OP_APPLY_PRODUCTION_PROFILE = "systems.apply_production_profile"
 _SYSTEMS_OP_SAVE_WORKSPACE = "systems.save_workspace_state"
 _SYSTEMS_OP_RESTORE_WORKSPACE = "systems.restore_workspace_state"
 _SYSTEMS_OP_SNAPSHOT_MIGRATION = "systems.run_snapshot_migration"
+_SYSTEMS_EVENT_PIPELINE_FAILURES = "systems.runtime.failures"
+_SYSTEMS_EVENT_PIPELINE_BURST = "systems.runtime.burst"
 
 
 class SystemsFeature(Feature):
@@ -302,6 +314,12 @@ class SystemsFeature(Feature):
         self._runtime_spec = None
         self.runtime_scope = None
         self.operation_bus = None
+        self.runtime_policy = None
+        self.runtime_effects = None
+        self.runtime_event_pipelines = None
+        self.runtime_durable_queue = None
+        self.runtime_capabilities = None
+        self.runtime_projection = None
         self.state_store = None
         self.active_tab_key = "data"
         self.demo = None
@@ -788,6 +806,7 @@ class SystemsFeature(Feature):
             use_regex=self._text_use_regex,
         )
         self._text_flow = TextFlow(width=480, line_spacing=3)
+        self._projected_release_score = 0
         self.text_mode_case_button = None
         self.text_mode_whole_word_button = None
         self.text_mode_regex_button = None
@@ -838,6 +857,8 @@ class SystemsFeature(Feature):
         if self.active_tab_key == "validation":
             self._form_validator.update(dt)
             self._refresh_validation_labels()
+        elif self.active_tab_key == "infrastructure":
+            self._refresh_infrastructure_labels()
         elif self.active_tab_key == "scheduling":
             self._refresh_scheduling_labels()
         elif self.active_tab_key == "graphics":
@@ -1223,6 +1244,80 @@ class SystemsFeature(Feature):
     def _build_runtime_spec(self, _host) -> RoutedRuntimeSpec:
         return RoutedRuntimeSpec(
             scene_name="main",
+            policy_specs=(
+                RuntimePolicySpec(name="systems_allow_workflow", target="workflow", action="allow", priority=5),
+                RuntimePolicySpec(name="systems_limit_pipeline", target="event_pipeline", action="limit", max_units=1, priority=4),
+                RuntimePolicySpec(name="systems_allow_projection", target="projection", action="allow", priority=3),
+                RuntimePolicySpec(name="systems_allow_queue", target="durable_queue", action="allow", priority=2),
+            ),
+            policy_attr_name="runtime_policy",
+            effect_bindings=(
+                EffectBindingSpec(
+                    name="release_readiness_effect",
+                    group="state",
+                    factory=lambda: self._release_readiness.subscribe(lambda _value: self._refresh_state_labels()),
+                ),
+            ),
+            effects_attr_name="runtime_effects",
+            event_pipelines=(
+                EventPipelineSpec(
+                    name=_SYSTEMS_EVENT_PIPELINE_FAILURES,
+                    handler=lambda payload, *_args: self._on_runtime_failure_pipeline(payload),
+                    stages=(
+                        EventPipelineStageSpec(kind="filter", predicate=lambda payload: isinstance(payload, dict)),
+                        EventPipelineStageSpec(kind="map", mapper=lambda payload: dict(payload)),
+                    ),
+                ),
+                EventPipelineSpec(
+                    name=_SYSTEMS_EVENT_PIPELINE_BURST,
+                    handler=lambda payload, *_args: self._on_burst_pipeline(payload),
+                    stages=(
+                        EventPipelineStageSpec(kind="filter", predicate=lambda payload: isinstance(payload, int)),
+                        EventPipelineStageSpec(kind="throttle", interval_updates=1),
+                        EventPipelineStageSpec(kind="window", window_size=3),
+                    ),
+                ),
+            ),
+            event_pipeline_attr_name="runtime_event_pipelines",
+            durable_queue_spec=DurableOperationQueueSpec(
+                queue_name="systems_operations",
+                max_inflight=1,
+                bindings=(
+                    DurableOperationBindingSpec(queue_operation=_SYSTEMS_OP_APPLY_REVIEW_PROFILE, operation_name=_SYSTEMS_OP_APPLY_REVIEW_PROFILE),
+                    DurableOperationBindingSpec(queue_operation=_SYSTEMS_OP_APPLY_PRODUCTION_PROFILE, operation_name=_SYSTEMS_OP_APPLY_PRODUCTION_PROFILE),
+                    DurableOperationBindingSpec(queue_operation=_SYSTEMS_OP_SAVE_WORKSPACE, operation_name=_SYSTEMS_OP_SAVE_WORKSPACE),
+                    DurableOperationBindingSpec(queue_operation=_SYSTEMS_OP_RESTORE_WORKSPACE, operation_name=_SYSTEMS_OP_RESTORE_WORKSPACE),
+                    DurableOperationBindingSpec(queue_operation=_SYSTEMS_OP_SNAPSHOT_MIGRATION, operation_name=_SYSTEMS_OP_SNAPSHOT_MIGRATION),
+                ),
+            ),
+            durable_queue_attr_name="runtime_durable_queue",
+            capability_providers=(
+                CapabilityProviderSpec(
+                    capability="release_store",
+                    version="1.0",
+                    value_factory=lambda: self._release_store,
+                ),
+            ),
+            capability_requirements=(
+                CapabilityRequirementSpec(
+                    capability="release_store",
+                    min_version="1.0",
+                    optional=False,
+                    attr_name="state_store",
+                ),
+            ),
+            capability_attr_name="runtime_capabilities",
+            projection_spec=ProjectionSpec(
+                nodes=(
+                    ProjectionNodeSpec(
+                        name="release_readiness_score",
+                        compute=lambda: int(getattr(self._release_readiness, "value", 0)),
+                        target_attr_name="_projected_release_score",
+                    ),
+                ),
+                max_nodes_per_update=1,
+            ),
+            projection_attr_name="runtime_projection",
             service_bindings=(
                 ServiceBindingSpec(
                     attr_name="state_store",
@@ -1275,14 +1370,45 @@ class SystemsFeature(Feature):
         )
 
     def _dispatch_runtime_operation(self, operation_name: str) -> bool:
+        if self.runtime_durable_queue is not None:
+            try:
+                self.runtime_durable_queue.enqueue(str(operation_name), {"source": "systems_feature"})
+                return True
+            except KeyError:
+                pass
         if self.operation_bus is None:
             return False
         self.operation_bus.call(operation_name)
         return True
 
+    def _publish_pipeline_event(self, pipeline_name: str, payload: object) -> None:
+        pipeline = self.runtime_event_pipelines
+        if pipeline is None:
+            return
+        try:
+            pipeline.publish(str(pipeline_name), payload)
+        except Exception:
+            return
+
+    def _on_runtime_failure_pipeline(self, payload) -> None:
+        if not isinstance(payload, dict):
+            return
+        operation_name = str(payload.get("operation_name", "operation"))
+        self._persistence_last_status = f"Failure pipeline observed: {operation_name}"
+        if self.active_tab_key == "persistence":
+            self._refresh_persistence_labels()
+
+    def _on_burst_pipeline(self, payload) -> None:
+        if not isinstance(payload, (tuple, list)):
+            return
+        self._scheduling_last_action = f"Burst pipeline window: {len(payload)} samples"
+        if self.active_tab_key == "scheduling":
+            self._refresh_scheduling_labels()
+
     def _on_runtime_operation_failed(self, payload) -> None:
         if not isinstance(payload, dict):
             return
+        self._publish_pipeline_event(_SYSTEMS_EVENT_PIPELINE_FAILURES, payload)
         operation_name = str(payload.get("operation_name", "operation"))
         error_text = str(payload.get("error", "unknown error"))
         self._persistence_last_status = f"Runtime operation failed: {operation_name} -> {error_text}"
@@ -1335,9 +1461,11 @@ class SystemsFeature(Feature):
         simulate_rate_limited_input_helper(self)
 
     def _on_throttled_burst_input(self, value: int) -> None:
+        self._publish_pipeline_event(_SYSTEMS_EVENT_PIPELINE_BURST, int(value))
         on_throttled_burst_input_helper(self, value)
 
     def _on_debounced_burst_commit(self, value: str) -> None:
+        self._publish_pipeline_event(_SYSTEMS_EVENT_PIPELINE_BURST, len(str(value)))
         on_debounced_burst_commit_helper(self, value)
 
     def _on_timer_probe_tick(self) -> None:

@@ -71,6 +71,12 @@ When generating or updating README.md and TUTORIAL.md, include current guidance 
   - One reactive effect spec (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, or `SignalEffectSpec`)
   - `FeatureOperationSpec` with `FailurePolicySpec` for operation-level retry/timeout behavior
 - Include guidance for higher-level runtime faculties and where they fit:
+  - runtime policy/admission control (`RuntimePolicySpec`, `PolicyDecision`, `RuntimePolicyEngine`)
+  - effect lifetime ownership (`EffectBindingSpec`, `EffectLifetimeOrchestrator`)
+  - routed event stream pipelines (`EventPipelineStageSpec`, `EventPipelineSpec`, `EventPipelineRuntime`)
+  - durable operation queue/recovery (`DurableOperationBindingSpec`, `DurableOperationQueueSpec`, `DurableQueueRecord`, `DurableOperationQueueRuntime`)
+  - capability contracts/negotiation (`CapabilityProviderSpec`, `CapabilityRequirementSpec`, `CapabilityContractRuntime`)
+  - incremental projections (`ProjectionNodeSpec`, `ProjectionSpec`, `ProjectionRuntime`)
   - dependency validation (`FeatureDependencySpec`)
   - workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`)
   - recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`)
@@ -81,6 +87,7 @@ When generating or updating README.md and TUTORIAL.md, include current guidance 
 - Ensure wording distinguishes declarative wiring (specs) from imperative feature behavior.
 - Keep examples on public root imports only and verify names against `gui_do/__init__.py`.
 - Prefer linking to relevant MANUAL.md chapter/appendix targets instead of duplicating long explanation blocks.
+- Because `Manual.prompt.md` always runs first, treat MANUAL.md as current for faculty details: keep README/TUTORIAL faculty explanations concise and link frequently to MANUAL.md theory and system chapters.
 
 ## Demo Features Organizational Convention
 
@@ -379,9 +386,8 @@ A concise reference section (not a tutorial — link to MANUAL.md for full detai
 - **`SceneBundleBindingSpec`** — declares a named scene with transition style and escape behavior
 - **`ActionSpec` + `ActionHotkeySpec`** — declares a named action with optional keyboard binding
 - **`ShortcutOverlaySpec`** — configures the shortcut discovery overlay
-- **`RoutedRuntimeSpec` + `RoutedFeatureLifecycleSpec`** — declarative bundle of runtime wiring for a `RoutedFeature`
 - **`RoutedRuntimeSpec` + `RoutedFeatureLifecycleSpec`** — declarative bundle of runtime wiring for a `RoutedFeature`, including higher-level runtime faculties
-- **Higher-level runtime faculties** — concise references for dependency/workflow/recompute/QoS/health/replay/hot-swap specs and managers
+- **Higher-level runtime faculties** — concise references for policy/effects/pipelines/durable-queue/capability/projection plus dependency/workflow/recompute/QoS/health/replay/hot-swap specs and managers
 - **`ToastManager`** — brief note on how to show a toast notification from a feature (via `host.toasts.show(...)`)
 - Link each to the corresponding section in MANUAL.md
 

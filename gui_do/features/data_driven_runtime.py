@@ -49,6 +49,18 @@ from .runtime_models import (
 from .runtime_facilities import FeatureOperationBus, FeatureRuntimeScope
 from .runtime_systems import (
     FeatureDependencySpec,
+    RuntimePolicySpec,
+    EffectBindingSpec,
+    EventPipelineStageSpec,
+    EventPipelineSpec,
+    DurableOperationBindingSpec,
+    DurableOperationQueueSpec,
+    DurableQueueRecord,
+    CapabilityProviderSpec,
+    CapabilityRequirementSpec,
+    ProjectionNodeSpec,
+    ProjectionSpec,
+    PolicyDecision,
     WorkflowStepSpec,
     WorkflowSpec,
     RecomputeNodeSpec,
@@ -57,6 +69,12 @@ from .runtime_systems import (
     ReplaySpec,
     ReplacePolicySpec,
     WorkflowCoordinator,
+    RuntimePolicyEngine,
+    EffectLifetimeOrchestrator,
+    EventPipelineRuntime,
+    DurableOperationQueueRuntime,
+    CapabilityContractRuntime,
+    ProjectionRuntime,
     RecomputeOrchestrator,
     QoSPolicyRuntime,
     FeatureHealthRuntime,
@@ -564,6 +582,19 @@ class RoutedRuntimeSpec:
     shortcut_overlays: Sequence[ShortcutOverlaySpec] = field(default_factory=tuple)
     task_panel_focus_toggles: Sequence[TaskPanelFocusToggleSpec] = field(default_factory=tuple)
     feature_dependencies: Sequence[FeatureDependencySpec] = field(default_factory=tuple)
+    policy_specs: Sequence[RuntimePolicySpec] = field(default_factory=tuple)
+    policy_attr_name: str | None = None
+    effect_bindings: Sequence[EffectBindingSpec] = field(default_factory=tuple)
+    effects_attr_name: str | None = None
+    event_pipelines: Sequence[EventPipelineSpec] = field(default_factory=tuple)
+    event_pipeline_attr_name: str | None = None
+    durable_queue_spec: DurableOperationQueueSpec | None = None
+    durable_queue_attr_name: str | None = None
+    capability_providers: Sequence[CapabilityProviderSpec] = field(default_factory=tuple)
+    capability_requirements: Sequence[CapabilityRequirementSpec] = field(default_factory=tuple)
+    capability_attr_name: str | None = None
+    projection_spec: ProjectionSpec | None = None
+    projection_attr_name: str | None = None
     workflow_specs: Sequence[WorkflowSpec] = field(default_factory=tuple)
     workflow_attr_name: str | None = None
     recompute_nodes: Sequence[RecomputeNodeSpec] = field(default_factory=tuple)
@@ -1965,8 +1996,16 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
     runtime_systems = build_routed_runtime_systems(
         feature,
         host,
+        runtime_scope=runtime_scope,
         operation_bus=operation_bus,
         dependency_specs=tuple(spec.feature_dependencies),
+        policy_specs=tuple(spec.policy_specs),
+        effect_bindings=tuple(spec.effect_bindings),
+        event_pipeline_specs=tuple(spec.event_pipelines),
+        durable_queue_spec=spec.durable_queue_spec,
+        capability_providers=tuple(spec.capability_providers),
+        capability_requirements=tuple(spec.capability_requirements),
+        projection_spec=spec.projection_spec,
         workflow_specs=tuple(spec.workflow_specs),
         recompute_nodes=tuple(spec.recompute_nodes),
         qos_policies=tuple(spec.qos_policies),
@@ -1977,6 +2016,18 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
         runtime_scope.own_disposable(runtime_systems)
         setattr(feature, "_routed_runtime_on_update", runtime_systems.on_update)
         runtime_scope.add_cleanup(lambda: setattr(feature, "_routed_runtime_on_update", None))
+        if spec.policy_attr_name:
+            setattr(feature, str(spec.policy_attr_name), runtime_systems.policy_engine)
+        if spec.effects_attr_name:
+            setattr(feature, str(spec.effects_attr_name), runtime_systems.effects)
+        if spec.event_pipeline_attr_name:
+            setattr(feature, str(spec.event_pipeline_attr_name), runtime_systems.event_pipelines)
+        if spec.durable_queue_attr_name:
+            setattr(feature, str(spec.durable_queue_attr_name), runtime_systems.durable_queue)
+        if spec.capability_attr_name:
+            setattr(feature, str(spec.capability_attr_name), runtime_systems.capability_contracts)
+        if spec.projection_attr_name:
+            setattr(feature, str(spec.projection_attr_name), runtime_systems.projection)
         if spec.workflow_attr_name:
             setattr(feature, str(spec.workflow_attr_name), runtime_systems.workflow_coordinator)
         if spec.recompute_attr_name:
@@ -2072,6 +2123,18 @@ def shutdown_routed_runtime(feature, host, spec: RoutedRuntimeSpec) -> None:
         setattr(feature, attr_name, None)
     if spec.operation_bus_attr_name:
         setattr(feature, str(spec.operation_bus_attr_name), None)
+    if spec.policy_attr_name:
+        setattr(feature, str(spec.policy_attr_name), None)
+    if spec.effects_attr_name:
+        setattr(feature, str(spec.effects_attr_name), None)
+    if spec.event_pipeline_attr_name:
+        setattr(feature, str(spec.event_pipeline_attr_name), None)
+    if spec.durable_queue_attr_name:
+        setattr(feature, str(spec.durable_queue_attr_name), None)
+    if spec.capability_attr_name:
+        setattr(feature, str(spec.capability_attr_name), None)
+    if spec.projection_attr_name:
+        setattr(feature, str(spec.projection_attr_name), None)
     if spec.workflow_attr_name:
         setattr(feature, str(spec.workflow_attr_name), None)
     if spec.recompute_attr_name:

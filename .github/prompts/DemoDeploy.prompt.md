@@ -71,6 +71,12 @@ All additions must also follow the Demo Feature Layout Standard in `docs/demo_fe
    - Use `StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, and `SignalEffectSpec` for reactive update wiring.
    - Use `FeatureOperationSpec` and `FailurePolicySpec` for feature-level operations that need timeout/retry/failure reporting.
     - For advanced integrations, use higher-level runtime faculties where they improve clarity and lifecycle safety:
+       - `RuntimePolicySpec` / `PolicyDecision` / `RuntimePolicyEngine` for feature-local admission and update-time control.
+       - `EffectBindingSpec` / `EffectLifetimeOrchestrator` for lifecycle-owned effect registration and cancellation.
+       - `EventPipelineStageSpec` / `EventPipelineSpec` / `EventPipelineRuntime` for declarative event stream shaping.
+       - `DurableOperationBindingSpec` / `DurableOperationQueueSpec` / `DurableQueueRecord` / `DurableOperationQueueRuntime` for queue-backed operation orchestration.
+       - `CapabilityProviderSpec` / `CapabilityRequirementSpec` / `CapabilityContractRuntime` for contract-checked cross-feature/service capabilities.
+       - `ProjectionNodeSpec` / `ProjectionSpec` / `ProjectionRuntime` for incremental derived-state projection graphs.
        - `FeatureDependencySpec` for explicit dependencies.
        - `WorkflowStepSpec` / `WorkflowSpec` for multi-step behavior.
        - `RecomputeNodeSpec` for derived-state recompute ordering.

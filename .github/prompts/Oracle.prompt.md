@@ -1,11 +1,11 @@
 ---
 name: Oracle
-description: Analyze and prioritize the next generalized systems/features to implement beyond the current routed runtime baseline
+description: Analyze and prioritize the next generalized systems/features or extension gaps beyond the current routed runtime faculties baseline
 ---
 
 <!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
 
-Perform a comprehensive package analysis and recommend which generalized systems should be implemented next.
+Perform a comprehensive package analysis and recommend which generalized systems or extension gaps should be implemented next.
 
 Focus on **platform-portable, architecture-level systems** that naturally extend the existing framework and improve flexibility, composability, or runtime behavior.
 
@@ -25,6 +25,12 @@ Produce a prioritized roadmap of the best next generalized systems to implement,
 	- Declarative service/effect specs (`ServiceBindingSpec`, `ServiceConsumerSpec`, `StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`)
 	- Operation and failure-policy specs (`FeatureOperationSpec`, `FailurePolicySpec`) backed by `FeatureOperationBus`
 	- Higher-level runtime faculties:
+	  - `RuntimePolicySpec` / `PolicyDecision` / `RuntimePolicyEngine`
+	  - `EffectBindingSpec` / `EffectLifetimeOrchestrator`
+	  - `EventPipelineStageSpec` / `EventPipelineSpec` / `EventPipelineRuntime`
+	  - `DurableOperationBindingSpec` / `DurableOperationQueueSpec` / `DurableQueueRecord` / `DurableOperationQueueRuntime`
+	  - `CapabilityProviderSpec` / `CapabilityRequirementSpec` / `CapabilityContractRuntime`
+	  - `ProjectionNodeSpec` / `ProjectionSpec` / `ProjectionRuntime`
 	  - `FeatureDependencySpec`
 	  - `WorkflowStepSpec` / `WorkflowSpec` / `WorkflowCoordinator`
 	  - `RecomputeNodeSpec` / `RecomputeOrchestrator`

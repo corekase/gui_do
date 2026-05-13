@@ -324,12 +324,54 @@ def refresh_infrastructure_labels(feature: SystemsFeature) -> None:
             f"channel={feature._scope_stack.root.get(feature._service_key_channel)}"
         )
     if feature.infrastructure_runtime_label is not None:
+        policy_runtime = getattr(feature, "runtime_policy", None)
+        policy_count = len(getattr(policy_runtime, "_policies", ())) if policy_runtime is not None else 0
+
+        effects_runtime = getattr(feature, "runtime_effects", None)
+        effect_group_count = len(getattr(effects_runtime, "_groups", {})) if effects_runtime is not None else 0
+
+        pipeline_runtime = getattr(feature, "runtime_event_pipelines", None)
+        pipeline_count = len(getattr(pipeline_runtime, "_pipelines", {})) if pipeline_runtime is not None else 0
+
+        queue_runtime = getattr(feature, "runtime_durable_queue", None)
+        queue_total = 0
+        queue_pending = 0
+        queue_running = 0
+        queue_completed = 0
+        queue_failed = 0
+        if queue_runtime is not None and hasattr(queue_runtime, "records"):
+            try:
+                queue_records = tuple(queue_runtime.records())
+                queue_total = len(queue_records)
+                queue_pending = sum(1 for record in queue_records if str(getattr(record, "status", "")) == "pending")
+                queue_running = sum(1 for record in queue_records if str(getattr(record, "status", "")) == "running")
+                queue_completed = sum(1 for record in queue_records if str(getattr(record, "status", "")) == "completed")
+                queue_failed = sum(1 for record in queue_records if str(getattr(record, "status", "")) == "failed")
+            except Exception:
+                pass
+
+        capabilities_runtime = getattr(feature, "runtime_capabilities", None)
+        capability_count = 0
+        if capabilities_runtime is not None and hasattr(capabilities_runtime, "snapshot"):
+            try:
+                capability_count = len(capabilities_runtime.snapshot())
+            except Exception:
+                capability_count = 0
+
+        projection_score = int(getattr(feature, "_projected_release_score", 0))
+
         feature.infrastructure_runtime_label.text = (
             " | ".join(
                 (
                     f"AccessibilityTree nodes={len(feature._accessibility_tree)} last='{feature._accessibility_last_announcement}'",
                     f"SoundEventBus events={feature._sound_event_bus.registered_event_names()} muted={feature._sound_demo_muted} played={feature._sound_last_emit_ok}",
                     f"TelemetryCollector samples={feature._telemetry_sample_count}",
+                    (
+                        "RuntimeSystems "
+                        f"policy={policy_count} effects={effect_group_count} pipelines={pipeline_count} "
+                        f"queue={queue_total} (p={queue_pending} r={queue_running} c={queue_completed} f={queue_failed}) "
+                        f"caps={capability_count} projection={projection_score}"
+                    ),
                 )
             )
         )

@@ -2,21 +2,39 @@ import unittest
 
 from gui_do.features.feature_lifecycle import Feature, FeatureManager
 from gui_do.features.runtime_systems import (
+    CapabilityContractRuntime,
+    CapabilityProviderSpec,
+    CapabilityRequirementSpec,
     DependencyValidationError,
+    DurableOperationBindingSpec,
+    DurableOperationQueueRuntime,
+    DurableOperationQueueSpec,
+    EffectBindingSpec,
+    EffectLifetimeOrchestrator,
+    EventPipelineRuntime,
+    EventPipelineSpec,
+    EventPipelineStageSpec,
     FeatureDependencySpec,
     FeatureHealthRuntime,
     FeatureHotSwapManager,
     HealthProbeSpec,
+    PolicyDecision,
+    ProjectionNodeSpec,
+    ProjectionRuntime,
+    ProjectionSpec,
     QoSPolicyRuntime,
     QoSPolicySpec,
     RecomputeNodeSpec,
     RecomputeOrchestrator,
     ReplaySpec,
     ReplacePolicySpec,
+    RuntimePolicyEngine,
+    RuntimePolicySpec,
     RuntimeReplayHarness,
     WorkflowCoordinator,
     WorkflowSpec,
     WorkflowStepSpec,
+    build_routed_runtime_systems,
     validate_feature_dependencies,
 )
 
@@ -197,6 +215,212 @@ class TestFeatureHotSwapManager(unittest.TestCase):
         self.assertTrue(replaced.bound)
         self.assertEqual(42, replaced.value)
         self.assertEqual(1, current.shutdowns)
+
+
+class TestRuntimePolicyEngine(unittest.TestCase):
+    def test_policy_engine_denies_target(self):
+        engine = RuntimePolicyEngine(
+            (
+                RuntimePolicySpec(name="deny_pipeline", target="event_pipeline", action="deny", priority=10),
+            )
+        )
+        engine.begin_update()
+
+        decision = engine.evaluate("event_pipeline", units=1)
+
+        self.assertIsInstance(decision, PolicyDecision)
+        self.assertFalse(decision.allowed)
+        self.assertEqual(0, decision.units)
+
+
+class TestEffectLifetimeOrchestrator(unittest.TestCase):
+    def test_register_and_cancel_group(self):
+        class _Scope:
+            def __init__(self):
+                self.cleanups = []
+
+            def add_cleanup(self, cleanup):
+                self.cleanups.append(cleanup)
+
+        class _Disposable:
+            def __init__(self):
+                self.disposed = 0
+
+            def dispose(self):
+                self.disposed += 1
+
+        scope = _Scope()
+        feature = _BaseFeature("effects")
+        orchestrator = EffectLifetimeOrchestrator(feature, scope)
+        disposable = _Disposable()
+
+        orchestrator.register(
+            EffectBindingSpec(name="main", group="g1", factory=lambda *_args: disposable),
+            host=None,
+        )
+        orchestrator.cancel_group("g1")
+
+        self.assertEqual(1, disposable.disposed)
+
+
+class TestEventPipelineRuntime(unittest.TestCase):
+    def test_pipeline_filter_map_window(self):
+        seen = []
+        runtime = EventPipelineRuntime(
+            feature=_BaseFeature("pipeline"),
+            specs=(
+                EventPipelineSpec(
+                    name="events",
+                    handler=lambda payload, *_args: seen.append(payload),
+                    stages=(
+                        EventPipelineStageSpec(kind="filter", predicate=lambda value: int(value) % 2 == 0),
+                        EventPipelineStageSpec(kind="map", mapper=lambda value: int(value) * 10),
+                        EventPipelineStageSpec(kind="window", window_size=2),
+                    ),
+                ),
+            ),
+        )
+
+        runtime.publish("events", 1)
+        runtime.publish("events", 2)
+        runtime.publish("events", 4)
+        runtime.on_update()
+
+        self.assertEqual([(20, 40)], seen)
+
+
+class _ImmediateOperationBus:
+    class _Handle:
+        def __init__(self, result=None, error=None):
+            self.result = result
+            self.error = error
+            self.is_pending = False
+            self.is_complete = error is None
+            self.is_failed = error is not None
+            self.is_cancelled = False
+            self.is_timed_out = False
+
+        def cancel(self):
+            self.is_cancelled = True
+
+    def __init__(self):
+        self.calls = []
+
+    def call(self, operation_name, payload):
+        self.calls.append((operation_name, payload))
+        return self._Handle(result={"ok": True, "payload": payload})
+
+
+class TestDurableOperationQueueRuntime(unittest.TestCase):
+    def test_enqueue_and_pump(self):
+        bus = _ImmediateOperationBus()
+        runtime = DurableOperationQueueRuntime(
+            DurableOperationQueueSpec(
+                queue_name="jobs",
+                bindings=(
+                    DurableOperationBindingSpec(queue_operation="import", operation_name="run_import"),
+                ),
+            ),
+            operation_bus=bus,
+        )
+        record = runtime.enqueue("import", {"path": "demo.csv"})
+        runtime.pump()
+
+        self.assertEqual("completed", record.status)
+        self.assertEqual(1, len(bus.calls))
+
+
+class TestCapabilityContractRuntime(unittest.TestCase):
+    def test_provider_registration_and_requirements(self):
+        feature = _BaseFeature("caps")
+        runtime = CapabilityContractRuntime(feature, runtime_scope=None)
+        runtime.register_providers(
+            (
+                CapabilityProviderSpec(capability="storage", version="2.1", value_factory=lambda *_args: {"name": "store"}),
+            ),
+            host=None,
+        )
+        runtime.validate_requirements(
+            (
+                CapabilityRequirementSpec(capability="storage", min_version="2.0", attr_name="storage_capability"),
+            ),
+            target=feature,
+        )
+
+        self.assertEqual({"name": "store"}, feature.storage_capability)
+
+
+class TestProjectionRuntime(unittest.TestCase):
+    def test_projection_order_and_assignment(self):
+        feature = _BaseFeature("projection")
+        feature.base_value = 3
+        runtime = ProjectionRuntime(
+            feature,
+            ProjectionSpec(
+                nodes=(
+                    ProjectionNodeSpec(
+                        name="a",
+                        compute=lambda f, _p: int(f.base_value) + 1,
+                        target_attr_name="a_value",
+                    ),
+                    ProjectionNodeSpec(
+                        name="b",
+                        depends_on=("a",),
+                        compute=lambda _f, p: int(p.value("a")) * 2,
+                        target_attr_name="b_value",
+                    ),
+                )
+            ),
+        )
+
+        runtime.pump()
+
+        self.assertEqual(4, feature.a_value)
+        self.assertEqual(8, feature.b_value)
+
+
+class TestRoutedRuntimeSystemsIntegration(unittest.TestCase):
+    def test_build_routed_runtime_systems_with_new_specs(self):
+        feature = _BaseFeature("integrated")
+        host = _Host(_App())
+
+        class _Scope:
+            def add_cleanup(self, _cleanup):
+                return None
+
+            def get_optional_service(self, _key):
+                return None
+
+        systems = build_routed_runtime_systems(
+            feature,
+            host,
+            runtime_scope=_Scope(),
+            policy_specs=(RuntimePolicySpec(name="allow_all", target="*", action="allow"),),
+            effect_bindings=(EffectBindingSpec(name="x", factory=lambda *_args: lambda: None),),
+            event_pipeline_specs=(
+                EventPipelineSpec(name="events", handler=lambda *_args: None),
+            ),
+            durable_queue_spec=DurableOperationQueueSpec(
+                bindings=(DurableOperationBindingSpec(queue_operation="q", operation_name="q_op"),)
+            ),
+            capability_providers=(
+                CapabilityProviderSpec(capability="storage", version="1.0", value_factory=lambda *_args: object()),
+            ),
+            capability_requirements=(
+                CapabilityRequirementSpec(capability="storage", min_version="1.0", optional=False),
+            ),
+            projection_spec=ProjectionSpec(
+                nodes=(ProjectionNodeSpec(name="p", compute=lambda *_args: 1, target_attr_name="proj"),)
+            ),
+        )
+
+        self.assertIsNotNone(systems)
+        self.assertIsNotNone(systems.policy_engine)
+        self.assertIsNotNone(systems.effects)
+        self.assertIsNotNone(systems.event_pipelines)
+        self.assertIsNotNone(systems.durable_queue)
+        self.assertIsNotNone(systems.capability_contracts)
+        self.assertIsNotNone(systems.projection)
 
 
 if __name__ == "__main__":

@@ -46,6 +46,12 @@ Based on current architecture analysis, these areas are candidates for meaningfu
 	- Validate timer-id and subscription bookkeeping stays O(1) under high operation volume.
 	- Preserve deterministic cleanup behavior while optimizing.
 	- Include `features/runtime_systems.py` in profiling/optimization passes:
+	  - policy engine decision overhead (`RuntimePolicyEngine`)
+	  - effect registration/cancellation costs (`EffectLifetimeOrchestrator`)
+	  - pipeline queue/stage overhead (`EventPipelineRuntime`)
+	  - durable queue pump and status transitions (`DurableOperationQueueRuntime`)
+	  - capability snapshot/validation overhead (`CapabilityContractRuntime`)
+	  - projection graph dirty/pump overhead (`ProjectionRuntime`)
 	  - workflow pump throughput (`WorkflowCoordinator`)
 	  - recompute graph pump ordering/overhead (`RecomputeOrchestrator`)
 	  - policy checks (`QoSPolicyRuntime`) and health probe cadence (`FeatureHealthRuntime`)
@@ -78,3 +84,4 @@ Do not optimize away lifecycle or safety semantics in routed runtime facilities.
 - Preserve failure-policy behavior (retry/timeout/publication) while optimizing internal mechanics.
 - Avoid introducing speculative concurrency into feature operation handling; keep behavior scene-portable and deterministic.
 - Preserve semantics of dependency validation, workflow progression, recompute ordering, QoS budget enforcement, health state transitions, replay bounded buffers, and hot-swap safety checks.
+- Preserve semantics of policy admission decisions, effect lifetime ownership, event pipeline stage behavior, durable queue idempotency/status transitions, capability requirement validation, and projection dependency ordering.

@@ -91,6 +91,12 @@ Across the full manual pipeline, ensure explicit coverage of routed runtime faci
 - Operation orchestration and resilience (`FeatureOperationSpec`, `FailurePolicySpec`, `FeatureOperationBus`).
 - Higher-level routed runtime faculties implemented as sibling declarative specs and runtime managers:
   - Dependency validation (`FeatureDependencySpec`).
+  - Runtime policy/admission control (`RuntimePolicySpec`, `PolicyDecision`, `RuntimePolicyEngine`).
+  - Effect lifetime ownership (`EffectBindingSpec`, `EffectLifetimeOrchestrator`).
+  - Routed event stream pipelines (`EventPipelineStageSpec`, `EventPipelineSpec`, `EventPipelineRuntime`).
+  - Durable operation queue/recovery (`DurableOperationBindingSpec`, `DurableOperationQueueSpec`, `DurableQueueRecord`, `DurableOperationQueueRuntime`).
+  - Capability contracts/negotiation (`CapabilityProviderSpec`, `CapabilityRequirementSpec`, `CapabilityContractRuntime`).
+  - Incremental projections (`ProjectionNodeSpec`, `ProjectionSpec`, `ProjectionRuntime`).
   - Workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`).
   - Derived-state recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`).
   - Runtime QoS/backpressure policy (`QoSPolicySpec`, `QoSPolicyRuntime`).
@@ -98,6 +104,7 @@ Across the full manual pipeline, ensure explicit coverage of routed runtime faci
   - Replay and diagnostics capture (`ReplaySpec`, `RuntimeReplayHarness`).
   - Hot-swap/rebind policy (`ReplacePolicySpec`, `FeatureHotSwapManager`).
 - Clear anti-pattern notes for leaks and partial teardown when `shutdown_runtime` does not unwind routed runtime resources.
+- In Section 4 (Conceptual Foundations / Theory), include these higher-level routed runtime faculties as a significant architectural pillar (not a footnote), including why they exist as declarative control-plane/runtime-plane composition.
 
 ---
 
