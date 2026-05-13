@@ -101,7 +101,7 @@ README.md is **not** a tutorial, reference manual, or API listing. Those live in
 
 Write README.md with exactly these top-level sections, in this order:
 
-#### 1. Project Header
+#### 1. Overview
 
 - Unittest badge (first line, before the project heading).
 - Project name (`gui_do`) heading, followed by the latest demo video block (see Media Block spec below).
