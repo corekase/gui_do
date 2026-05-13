@@ -23,8 +23,6 @@ from gui_do import (
     AsyncFormValidator,
     ArrowBoxControl,
     ButtonControl,
-    ConstraintAttr,
-    ConstraintSet,
     Camera2D,
     CanvasControl,
     CollectionView,
@@ -48,7 +46,6 @@ from gui_do import (
     GridPlacement,
     InteractionContext,
     InteractionStateMachine,
-    LayoutConstraint,
     LabelControl,
     ListViewControl,
     LocaleRegistry,
@@ -111,7 +108,7 @@ from gui_do import (
     TransitionSpec,
     TweenManager,
 )
-from gui_do.layout.adaptive_constraint_layout import ConstraintLayoutEngine
+from gui_do.layout.constraint_layout import AnchorConstraint
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.controls.data.list_view_control import ListItem
 
@@ -537,8 +534,12 @@ class SystemsFeature(Feature):
         self._virtual_pool = RecyclePool(_VirtualCell, reset_fn=lambda cell: setattr(cell, "index", -1))
         self._virtual_core = VirtualizationCore(self._virtual_window, self._virtual_pool, self._bind_virtual_cell)
         self._virtual_scroll_offset = 0
-        self._constraint_engine = ConstraintLayoutEngine()
-        self._constraint_engine.set_initial_rect("call_to_action", Rect(0, 0, 220, 34))
+        self._call_to_action_constraint = AnchorConstraint(
+            left_frac=0.1,
+            top=84,
+            min_width=320,
+            max_width=320,
+        )
         self._scope_stack = ScopeStack()
         self._service_key_api_base: ServiceKey[str] = ServiceKey("api_base")
         self._service_key_channel: ServiceKey[str] = ServiceKey("release_channel")
@@ -3117,15 +3118,10 @@ class SystemsFeature(Feature):
         self._refresh_infrastructure_labels()
 
     def _solve_constraint_layout(self) -> None:
-        constraints = ConstraintSet()
-        constraints.add(LayoutConstraint("call_to_action", ConstraintAttr.LEFT, 0.1, is_fraction=True))
-        constraints.add(LayoutConstraint("call_to_action", ConstraintAttr.TOP, 84))
-        constraints.add(LayoutConstraint("call_to_action", ConstraintAttr.WIDTH, 320))
-        solved = self._constraint_engine.solve(constraints, Rect(0, 0, 960, 540))
-        resolved = solved["call_to_action"]
+        resolved = self._call_to_action_constraint.apply(Rect(0, 0, 220, 34), Rect(0, 0, 960, 540))
         if self.infrastructure_layout_label is not None:
             self.infrastructure_layout_label.text = (
-                f"ConstraintLayoutEngine call_to_action -> x={resolved.left} y={resolved.top} w={resolved.width} h={resolved.height}"
+                f"ConstraintLayout call_to_action -> x={resolved.left} y={resolved.top} w={resolved.width} h={resolved.height}"
             )
 
     def _push_scope_demo(self) -> None:
@@ -3202,7 +3198,7 @@ class SystemsFeature(Feature):
                 f"VirtualizationCore visible range [{first}, {last}] at scroll={self._virtual_scroll_offset}; pool={self._virtual_pool.pool_size}"
             )
         if self.infrastructure_layout_label is not None and not self.infrastructure_layout_label.text:
-            self.infrastructure_layout_label.text = "ConstraintLayoutEngine ready with container-relative constraints"
+            self.infrastructure_layout_label.text = "ConstraintLayout ready with container-relative constraints"
         if self.infrastructure_scope_label is not None and not self.infrastructure_scope_label.text:
             self.infrastructure_scope_label.text = (
                 f"ScopeStack root api={self._scope_stack.root.get(self._service_key_api_base)} "

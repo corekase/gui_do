@@ -427,7 +427,6 @@ from .features.feature_lifecycle import (
     toggle_window_visibility,
     create_anchored_feature_window,
     add_window_scene_menu_strip,
-    split_slot_bounds,
     place_control,
     place_control_unlabeled,
     register_placed_control,
@@ -437,6 +436,7 @@ from .features.feature_lifecycle import (
     apply_category_visibility,
     ControlRegistry,
 )
+from .features.layout_geometry import split_slot_bounds
 from .features.data_driven_runtime import (
     build_tools_menu_entries,
     add_standard_scene_menu_strip,
