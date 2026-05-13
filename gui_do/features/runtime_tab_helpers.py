@@ -93,6 +93,8 @@ def setup_feature_presenter_tabs(
         tab_content_rect,
         tab_specs,
     )
+    # Activate the initial selected tab to show its content
+    tab_manager.activate(selected_key)
     return tab_control
 
 

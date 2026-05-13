@@ -10,6 +10,15 @@ class _MockControl:
         self.visible = True
 
 
+class _MockDirtyControl(_MockControl):
+    def __init__(self, name):
+        super().__init__(name)
+        self.clear_dirty_calls = 0
+
+    def clear_dirty(self):
+        self.clear_dirty_calls += 1
+
+
 # ===========================================================================
 # TabPanelManager — initial state
 # ===========================================================================
@@ -58,6 +67,13 @@ class TestTabPanelManagerRegister(unittest.TestCase):
         ctrl = _MockControl("x")
         mgr.register("t", [ctrl])
         self.assertEqual([ctrl], mgr.controls_for("t"))
+
+    def test_register_after_activate_keeps_active_panel_visible(self):
+        mgr = TabPanelManager()
+        mgr.activate("tab1")
+        ctrl = _MockControl("a")
+        mgr.register("tab1", [ctrl])
+        self.assertTrue(ctrl.visible)
 
 
 # ===========================================================================
@@ -117,6 +133,35 @@ class TestTabPanelManagerActivate(unittest.TestCase):
         mgr.on_activate("tab1", lambda: called.append("b"))
         mgr.activate("tab1")
         self.assertEqual(["a", "b"], called)
+
+    def test_activate_coerces_key_to_string(self):
+        mgr = TabPanelManager()
+        ctrl = _MockControl("a")
+        mgr.register("1", [ctrl])
+        mgr.activate(1)
+        self.assertEqual("1", mgr.active_key)
+        self.assertTrue(ctrl.visible)
+
+    def test_activate_does_not_clear_dirty_state_on_show(self):
+        mgr = TabPanelManager()
+        ctrl = _MockDirtyControl("a")
+        mgr.register("tab1", [ctrl])
+        mgr.activate("tab1")
+        self.assertEqual(0, ctrl.clear_dirty_calls)
+
+    def test_activate_unknown_key_keeps_existing_visibility(self):
+        mgr = TabPanelManager()
+        a = _MockControl("a")
+        b = _MockControl("b")
+        mgr.register("tab1", [a])
+        mgr.register("tab2", [b])
+        mgr.activate("tab1")
+
+        mgr.activate("missing")
+
+        self.assertEqual("tab1", mgr.active_key)
+        self.assertTrue(a.visible)
+        self.assertFalse(b.visible)
 
 
 # ===========================================================================

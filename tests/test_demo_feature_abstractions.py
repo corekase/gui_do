@@ -1281,9 +1281,13 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         class _TabManager:
             def __init__(self):
                 self.calls = []
+                self.activated = None
 
             def register(self, key, controls):
                 self.calls.append((str(key), list(controls)))
+
+            def activate(self, key):
+                self.activated = key
 
         presenter = _StubPresenter()
         feature = _Feature()
@@ -1305,6 +1309,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
 
         self.assertIs(tab, presenter.controls[0])
         self.assertEqual([("filter", ["filter"])], tab_manager.calls)
+        self.assertEqual("filter", tab_manager.activated)
 
     def test_compute_tabbed_window_layout_returns_expected_body_and_content_rects(self):
         content = Rect(10, 20, 300, 200)
@@ -1404,16 +1409,16 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         presentation = _StubWindowPresentationRegistrar()
         specs = [
             _StubWindowSpec(
-                key="systems",
-                feature_attribute_name="systems_demo",
-                toggle_attribute_name="systems_toggle",
-                action_name="toggle_systems",
-                action_label="Toggle Systems",
-                task_panel_toggle_button_id="systems_btn",
-                task_panel_label="Systems",
+                key="extra",
+                feature_attribute_name="extra_demo",
+                toggle_attribute_name="extra_toggle",
+                action_name="toggle_extra",
+                action_label="Toggle Extra",
+                task_panel_toggle_button_id="extra_btn",
+                task_panel_label="Extra",
                 task_panel_style="toggle",
                 task_panel_slot_index=1,
-                accessibility_label="Systems Window",
+                accessibility_label="Extra Window",
             )
         ]
 
@@ -1421,16 +1426,16 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
 
         self.assertEqual(1, len(presentation.calls))
         key, kwargs = presentation.calls[0]
-        self.assertEqual("systems", key)
-        self.assertEqual("systems_demo", kwargs["feature_attribute_name"])
-        self.assertEqual("systems_toggle", kwargs["toggle_attribute_name"])
-        self.assertEqual("toggle_systems", kwargs["action_name"])
-        self.assertEqual("Toggle Systems", kwargs["action_label"])
-        self.assertEqual("systems_btn", kwargs["task_panel_toggle_button_id"])
-        self.assertEqual("Systems", kwargs["task_panel_label"])
+        self.assertEqual("extra", key)
+        self.assertEqual("extra_demo", kwargs["feature_attribute_name"])
+        self.assertEqual("extra_toggle", kwargs["toggle_attribute_name"])
+        self.assertEqual("toggle_extra", kwargs["action_name"])
+        self.assertEqual("Toggle Extra", kwargs["action_label"])
+        self.assertEqual("extra_btn", kwargs["task_panel_toggle_button_id"])
+        self.assertEqual("Extra", kwargs["task_panel_label"])
         self.assertEqual("toggle", kwargs["task_panel_style"])
         self.assertEqual(1, kwargs["task_panel_slot_index"])
-        self.assertEqual("Systems Window", kwargs["accessibility_label"])
+        self.assertEqual("Extra Window", kwargs["accessibility_label"])
 
     # ------------------------------------------------------------------
     # TabLayoutContext

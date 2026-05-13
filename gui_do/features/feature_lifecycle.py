@@ -493,10 +493,12 @@ class TabPanelManager:
         Controls are hidden immediately upon registration (they will be shown
         when :meth:`activate` is called for their key).
         """
+        key = str(key)
         lst = list(controls) if not isinstance(controls, list) else controls
         self._panels[key] = lst
+        should_be_visible = self._active == key if self._active is not None else False
         for ctrl in lst:
-            ctrl.visible = False
+            ctrl.visible = should_be_visible
 
     def on_activate(self, key: str, callback: Callable[[], None]) -> None:
         """Register *callback* to be called when tab *key* is activated."""
@@ -509,11 +511,28 @@ class TabPanelManager:
     def activate(self, key: str) -> None:
         """Show controls for *key*, hide controls for all other tabs, and fire
         any registered callbacks for *key*."""
+        key = str(key)
+        if key not in self._panels:
+            # Preserve pre-registration selection semantics.
+            if not self._panels:
+                self._active = key
+            return
         self._active = key
+        parents_by_id = {}
         for tab_key, controls in self._panels.items():
             visible = tab_key == key
             for ctrl in controls:
                 ctrl.visible = visible
+                parent = getattr(ctrl, "parent", None)
+                if parent is not None:
+                    parents_by_id[id(parent)] = parent
+        # Force redraw on the panel parent even when controls were already dirty.
+        for parent in parents_by_id.values():
+            tracker = getattr(parent, "_invalidation_tracker", None)
+            if tracker is not None:
+                tracker.invalidate_rect(parent.rect)
+            elif hasattr(parent, "invalidate"):
+                parent.invalidate()
         for cb in self._callbacks.get(key, []):
             cb()
 

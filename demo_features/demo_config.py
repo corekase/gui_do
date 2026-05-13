@@ -3,7 +3,6 @@ from demo_features.showcase import ShowcaseFeature
 from demo_features.life import LifeFeature
 from demo_features.main import MainFeature
 from demo_features.mandelbrot import MandelbrotFeature
-from demo_features.system import SystemFeature
 
 from gui_do import (
     ActionBindingSpec,
@@ -64,13 +63,6 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
             ("_controls_feature", ShowcaseFeature),
         ),
         feature_window_bundle_entries=(
-            FeatureWindowBundleBindingSpec(
-                "_systems_feature",
-                SystemFeature,
-                "systems",
-                task_panel_label="System",
-                task_panel_style="round",
-            ),
             FeatureWindowBundleBindingSpec(
                 "_life_feature",
                 LifeFeature,

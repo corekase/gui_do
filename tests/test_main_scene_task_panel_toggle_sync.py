@@ -34,10 +34,10 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         demo.app = _StubApp()
         demo._life_feature = _StubFeature("life_window")
         demo._mandel_feature = _StubFeature("mandelbrot_window")
-        demo._systems_feature = _StubFeature("systems_window")
+        demo._extra_feature = _StubFeature("extra_window")
         demo.life_toggle_window = _StubToggle(False)
         demo.mandel_toggle_window = _StubToggle(False)
-        demo.systems_toggle_window = _StubToggle(False)
+        demo.extra_toggle_window = _StubToggle(False)
         demo.window_presentation = FeatureWindowPresentationModel(demo, tile_windows=demo.app.tile_windows)
         demo.window_presentation.register_feature_window(
             "life",
@@ -50,9 +50,9 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
             toggle_attribute_name="mandel_toggle_window",
         )
         demo.window_presentation.register_feature_window(
-            "systems",
-            feature_attribute_name="_systems_feature",
-            toggle_attribute_name="systems_toggle_window",
+            "extra",
+            feature_attribute_name="_extra_feature",
+            toggle_attribute_name="extra_toggle_window",
         )
         return demo
 
@@ -61,14 +61,14 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
 
         demo.window_presentation.set_visible("life", True)
         demo.window_presentation.set_visible("mandel", True)
-        demo.window_presentation.set_visible("systems", True)
+        demo.window_presentation.set_visible("extra", True)
 
         self.assertTrue(demo._life_feature.window.visible)
         self.assertTrue(demo._mandel_feature.window.visible)
-        self.assertTrue(demo._systems_feature.window.visible)
+        self.assertTrue(demo._extra_feature.window.visible)
         self.assertTrue(demo.life_toggle_window.pushed)
         self.assertTrue(demo.mandel_toggle_window.pushed)
-        self.assertTrue(demo.systems_toggle_window.pushed)
+        self.assertTrue(demo.extra_toggle_window.pushed)
         self.assertEqual(3, demo.app.tile_windows_calls)
 
     def test_from_toggle_path_does_not_overwrite_toggle_state(self):
@@ -83,11 +83,11 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
     def test_menu_toggle_routes_by_window_control_id(self):
         demo = self._make_demo()
 
-        handled = demo.window_presentation.handle_window_toggle(demo._systems_feature.window, True)
+        handled = demo.window_presentation.handle_window_toggle(demo._extra_feature.window, True)
 
         self.assertTrue(handled)
-        self.assertTrue(demo._systems_feature.window.visible)
-        self.assertTrue(demo.systems_toggle_window.pushed)
+        self.assertTrue(demo._extra_feature.window.visible)
+        self.assertTrue(demo.extra_toggle_window.pushed)
 
 
 if __name__ == "__main__":
