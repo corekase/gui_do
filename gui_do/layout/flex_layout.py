@@ -191,7 +191,9 @@ class FlexLayout:
                         sizes[i] = new_s
 
         # Distribute justify offsets
-        total_actual = sum(sizes) + total_gap
+        total_sizes = sum(sizes)
+        total_actual = total_sizes + total_gap
+        remaining_main = max(0, available - total_sizes)
         justify_offset = 0
         between_extra = 0
         around_extra = 0
@@ -200,9 +202,9 @@ class FlexLayout:
         elif self.justify is FlexJustify.END:
             justify_offset = available - total_actual + total_gap
         elif self.justify is FlexJustify.SPACE_BETWEEN and n > 1:
-            between_extra = max(0, (available - sum(sizes))) // (n - 1)
+            between_extra = remaining_main // (n - 1)
         elif self.justify is FlexJustify.SPACE_AROUND and n > 0:
-            around_extra = max(0, (available - sum(sizes))) // n
+            around_extra = remaining_main // n
             justify_offset = around_extra // 2
 
         # Assign rects

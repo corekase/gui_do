@@ -22,7 +22,12 @@ class Renderer:
                 target_size = surface.get_size()
                 bitmap = theme.background_bitmap
                 cache = self._bg_cache
-                if cache is None or cache[0] is not bitmap or cache[1] != target_size:
+                if cache is None:
+                    cached_bitmap = None
+                    cached_size = None
+                else:
+                    cached_bitmap, cached_size, _cached_scaled = cache
+                if cached_bitmap is not bitmap or cached_size != target_size:
                     scaled = pygame.transform.smoothscale(bitmap, target_size)
                     self._bg_cache = (bitmap, target_size, scaled)
                     cache = self._bg_cache
@@ -41,9 +46,7 @@ class Renderer:
             app.invalidation.end_frame()
             return None if is_full_redraw else dirty_rects
         cursor_surface, hotspot = cursor_asset
-        anchor = app.lock_point_pos if app.mouse_point_locked else None
-        if anchor is None:
-            anchor = app.logical_pointer_pos
+        anchor = app.lock_point_pos if app.mouse_point_locked else app.logical_pointer_pos
         ax, ay = anchor
         hx, hy = hotspot
         surface.blit(cursor_surface, (ax - hx, ay - hy))

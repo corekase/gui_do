@@ -101,6 +101,8 @@ class ObservableList(Generic[T]):
     def __init__(self, initial: Optional[Iterable[T]] = None) -> None:
         self._items: List[T] = list(initial) if initial is not None else []
         self._listeners: List[ChangeListener] = []
+        self._listeners_snapshot: tuple[ChangeListener, ...] = ()
+        self._listeners_dirty: bool = False
 
     # ------------------------------------------------------------------
     # Subscription
@@ -111,10 +113,12 @@ class ObservableList(Generic[T]):
         if not callable(listener):
             raise ValueError("listener must be callable")
         self._listeners.append(listener)
+        self._listeners_dirty = True
 
         def _unsub() -> None:
             if listener in self._listeners:
                 self._listeners.remove(listener)
+                self._listeners_dirty = True
 
         return _unsub
 
@@ -130,7 +134,13 @@ class ObservableList(Generic[T]):
         listeners = self._listeners
         if not listeners:
             return
-        snapshot = listeners if len(listeners) == 1 else tuple(listeners)
+        if len(listeners) == 1:
+            snapshot = listeners
+        else:
+            if self._listeners_dirty:
+                self._listeners_snapshot = tuple(listeners)
+                self._listeners_dirty = False
+            snapshot = self._listeners_snapshot
         for listener in snapshot:
             listener(change)
 
@@ -213,8 +223,37 @@ class ObservableList(Generic[T]):
 
     def extend(self, items: Iterable[T]) -> None:
         """Append all items from *items*, firing one ADDED event per item."""
+        if not self._listeners:
+            self._items.extend(items)
+            return
         for item in items:
             self.append(item)
+
+    def extend_batched(self, items: Iterable[T]) -> None:
+        """Append all items from *items* and fire a single ADDED event.
+
+        The emitted event uses:
+        - ``kind=ChangeKind.ADDED``
+        - ``index`` as the first appended index
+        - ``new_index`` as the final appended index
+        - ``new_value`` as the list of appended items
+
+        This is intended for bulk population paths where listeners can refresh
+        from :meth:`snapshot` and do not require one callback per item.
+        """
+        appended = list(items)
+        if not appended:
+            return
+        start_index = len(self._items)
+        self._items.extend(appended)
+        self._notify(
+            CollectionChange(
+                kind=ChangeKind.ADDED,
+                index=start_index,
+                new_index=start_index + len(appended) - 1,
+                new_value=appended,
+            )
+        )
 
     def clear(self) -> None:
         """Remove all items and fire a single CLEARED event."""
@@ -285,6 +324,8 @@ class ObservableDict(Generic[K, V]):
     def __init__(self, initial: Optional[Dict[K, V]] = None) -> None:
         self._data: Dict[K, V] = dict(initial) if initial is not None else {}
         self._listeners: List[ChangeListener] = []
+        self._listeners_snapshot: tuple[ChangeListener, ...] = ()
+        self._listeners_dirty: bool = False
 
     # ------------------------------------------------------------------
     # Subscription
@@ -295,10 +336,12 @@ class ObservableDict(Generic[K, V]):
         if not callable(listener):
             raise ValueError("listener must be callable")
         self._listeners.append(listener)
+        self._listeners_dirty = True
 
         def _unsub() -> None:
             try:
                 self._listeners.remove(listener)
+                self._listeners_dirty = True
             except ValueError:
                 pass
 
@@ -316,7 +359,13 @@ class ObservableDict(Generic[K, V]):
         listeners = self._listeners
         if not listeners:
             return
-        snapshot = listeners if len(listeners) == 1 else tuple(listeners)
+        if len(listeners) == 1:
+            snapshot = listeners
+        else:
+            if self._listeners_dirty:
+                self._listeners_snapshot = tuple(listeners)
+                self._listeners_dirty = False
+            snapshot = self._listeners_snapshot
         for listener in snapshot:
             listener(change)
 

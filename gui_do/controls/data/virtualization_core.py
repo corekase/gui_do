@@ -264,9 +264,9 @@ class VirtualizationCore(Generic[T]):
 
         active = self._active
         # Release cells no longer needed
-        for idx in tuple(active.keys()):
-            if idx < first or idx > last:
-                self._pool.release(active.pop(idx))
+        stale_indices = [idx for idx in active if idx < first or idx > last]
+        for idx in stale_indices:
+            self._pool.release(active.pop(idx))
 
         # Acquire cells for newly visible indices
         for idx in range(first, last + 1):

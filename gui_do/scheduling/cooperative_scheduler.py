@@ -240,7 +240,7 @@ class CooperativeScheduler:
 
     def cancel_all(self) -> None:
         """Cancel all running coroutines."""
-        for h in list(self._handles):
+        for h in self._handles:
             h.cancel()
         self._handles.clear()
 

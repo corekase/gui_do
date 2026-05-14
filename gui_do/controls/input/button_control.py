@@ -50,10 +50,12 @@ class ButtonControl(_TextButtonControlBase):
             return False
 
         raw = event.pos
-        if isinstance(raw, tuple) and len(raw) == 2:
-            self.hovered = self.rect.collidepoint(raw)
+        has_pointer = isinstance(raw, tuple) and len(raw) == 2
+        is_hover = bool(has_pointer and self.rect.collidepoint(raw))
+        if has_pointer:
+            self.hovered = is_hover
         if event.is_mouse_down(1):
-            if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
+            if is_hover:
                 self.pressed = True
                 return True
         if event.is_mouse_up(1):

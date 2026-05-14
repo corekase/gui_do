@@ -98,21 +98,24 @@ class NumericFormatter:
             value = float(raw)
         except (ValueError, TypeError):
             return raw
-        if self._decimals == 0:
+        decimals = self._decimals
+        sep = self._sep
+        if decimals == 0:
             formatted = str(int(round(value)))
         else:
-            formatted = f"{value:.{self._decimals}f}"
-        if self._sep:
-            # Apply thousands separator to integer part.
-            parts = formatted.split(".")
-            sign = "-" if parts[0].startswith("-") else ""
-            integer_digits = parts[0].lstrip("-")
-            groups: list[str] = []
-            while integer_digits:
-                groups.append(integer_digits[-3:])
-                integer_digits = integer_digits[:-3]
-            grouped = self._sep.join(reversed(groups))
-            formatted = sign + grouped + ("." + parts[1] if len(parts) > 1 else "")
+            formatted = f"{value:.{decimals}f}"
+        if not sep:
+            return formatted
+        # Apply thousands separator to integer part.
+        integer_part, dot, fractional = formatted.partition(".")
+        sign = "-" if integer_part.startswith("-") else ""
+        integer_digits = integer_part.lstrip("-")
+        groups: list[str] = []
+        while integer_digits:
+            groups.append(integer_digits[-3:])
+            integer_digits = integer_digits[:-3]
+        grouped = sep.join(reversed(groups))
+        formatted = sign + grouped + (dot + fractional if dot else "")
         return formatted
 
     def parse(self, display: str) -> str:

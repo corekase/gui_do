@@ -46,6 +46,7 @@ class OverlayManager:
     def __init__(self) -> None:
         self._records: List[OverlayRecord] = []
         self._record_by_owner: dict[str, OverlayRecord] = {}
+        self._index_by_owner: dict[str, int] = {}
 
     def show(
         self,
@@ -73,30 +74,37 @@ class OverlayManager:
         )
         self._records.append(record)
         self._record_by_owner[owner_id] = record
+        self._index_by_owner[owner_id] = len(self._records) - 1
         return OverlayHandle(owner_id, self)
 
     def hide(self, owner_id: str) -> bool:
         """Dismiss an overlay by id. Returns True if it was open."""
-        if owner_id not in self._record_by_owner:
+        record = self._record_by_owner.pop(owner_id, None)
+        idx = self._index_by_owner.pop(owner_id, None)
+        if record is None or idx is None:
+            # Keep maps consistent in pathological partial-state scenarios.
+            self._record_by_owner.pop(owner_id, None)
+            self._index_by_owner.pop(owner_id, None)
             return False
-        self._record_by_owner.pop(owner_id)
-        for i, rec in enumerate(self._records):
-            if rec.owner_id == owner_id:
-                self._records.pop(i)
-                if rec.on_dismiss is not None:
-                    try:
-                        rec.on_dismiss()
-                    except Exception:
-                        pass
-                return True
-        return False
+
+        self._records.pop(idx)
+        for i in range(idx, len(self._records)):
+            self._index_by_owner[self._records[i].owner_id] = i
+
+        if record.on_dismiss is not None:
+            try:
+                record.on_dismiss()
+            except Exception:
+                pass
+        return True
 
     def hide_all(self) -> int:
         """Dismiss all overlays. Returns count dismissed."""
         count = len(self._records)
-        records = list(self._records)
-        self._records.clear()
+        records = self._records
+        self._records = []
         self._record_by_owner.clear()
+        self._index_by_owner.clear()
         for rec in records:
             if rec.on_dismiss is not None:
                 try:

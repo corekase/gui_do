@@ -109,10 +109,7 @@ class DirtyRegionTracker:
             return self._full_dirty_rect
         if not self._dirty:
             return None
-        union = Rect(self._dirty[0])
-        for r in self._dirty[1:]:
-            union.union_ip(r)
-        return union
+        return Rect(self._dirty_union) if self._dirty_union is not None else None
 
     # ------------------------------------------------------------------
     # Helpers

@@ -127,11 +127,17 @@ class DrawContext:
         that scroll-container children cannot draw outside their viewport.
         """
         clipped = self.clip_rect.clip(rect)
+        next_opacity = opacity if opacity is not None else self.opacity
+        if (
+            clipped == self.clip_rect
+            and next_opacity == self.opacity
+        ):
+            return self
         return DrawContext(
             self.surface,
             clipped,
             phase=self.phase,
-            opacity=opacity if opacity is not None else self.opacity,
+            opacity=next_opacity,
             local_offset=self.local_offset,
         )
 
@@ -142,6 +148,8 @@ class DrawContext:
         scroll displacement so coordinate transforms remain correct.
         """
         ox, oy = self.local_offset
+        if dx == 0 and dy == 0:
+            return self
         return DrawContext(
             self.surface,
             self.clip_rect,
@@ -152,6 +160,8 @@ class DrawContext:
 
     def with_phase(self, phase: DrawPhase) -> "DrawContext":
         """Return a copy of this context with a different *phase*."""
+        if phase == self.phase:
+            return self
         return DrawContext(
             self.surface,
             self.clip_rect,
@@ -162,11 +172,14 @@ class DrawContext:
 
     def with_opacity(self, opacity: float) -> "DrawContext":
         """Return a copy of this context with a new *opacity* (clamped 0-1)."""
+        clamped = max(0.0, min(1.0, float(opacity)))
+        if clamped == self.opacity:
+            return self
         return DrawContext(
             self.surface,
             self.clip_rect,
             phase=self.phase,
-            opacity=opacity,
+            opacity=clamped,
             local_offset=self.local_offset,
         )
 

@@ -22,12 +22,17 @@ class CollectionViewQuery:
 class CollectionView:
     """Materialized collection pipeline used by list/tree/grid style consumers."""
 
+    _IMMUTABLE_SOURCE_TYPES = (tuple, range, frozenset, str, bytes)
+
     def __init__(self, source: Iterable[Any] | Callable[[], Iterable[Any]], *, query: CollectionViewQuery | None = None) -> None:
         self._source = source
         self._query = query or CollectionViewQuery()
         self._items: List[Any] = []
         self._refresh_subscribers: Dict[int, RefreshCallback] = {}
         self._next_sub_id: int = 0
+        self._last_source_obj: Any = None
+        self._last_query_signature: Optional[tuple[Any, ...]] = None
+        self._has_materialized: bool = False
         self._refresh_initial()
 
     @property
@@ -59,8 +64,30 @@ class CollectionView:
         """Internal: materialize items without notifying subscribers (used in __init__)."""
         self._materialize()
 
+    def _query_signature(self) -> tuple[Any, ...]:
+        filters = self._query.filters
+        return (
+            tuple(id(predicate) for predicate in filters),
+            self._query.sort_key,
+            self._query.reverse,
+            self._query.projector,
+        )
+
     def _materialize(self) -> None:
-        items = list(self._source() if callable(self._source) else self._source)
+        source_obj = self._source() if callable(self._source) else self._source
+        query_signature = self._query_signature()
+
+        # Safe fast path: only reuse when the source object is immutable and
+        # both source identity and query transform chain are unchanged.
+        if (
+            self._has_materialized
+            and isinstance(source_obj, self._IMMUTABLE_SOURCE_TYPES)
+            and source_obj is self._last_source_obj
+            and query_signature == self._last_query_signature
+        ):
+            return
+
+        items = list(source_obj)
         filters = self._query.filters
         if filters:
             if len(filters) == 1:
@@ -79,6 +106,9 @@ class CollectionView:
         if self._query.projector is not None:
             items = [self._query.projector(item) for item in items]
         self._items = items
+        self._last_source_obj = source_obj
+        self._last_query_signature = query_signature
+        self._has_materialized = True
 
     def refresh(self) -> List[Any]:
         self._materialize()

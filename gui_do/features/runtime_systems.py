@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 from uuid import uuid4
 
 from .runtime_facilities import FeatureOperationHandle

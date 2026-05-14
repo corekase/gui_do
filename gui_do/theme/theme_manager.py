@@ -75,7 +75,8 @@ class DesignTokens:
         fallback: Tuple[int, int, int] = (128, 128, 128),
     ) -> Tuple[int, int, int]:
         """Resolve *token* to an sRGB tuple, returning *fallback* if unknown."""
-        result = self._tokens.get(str(token))
+        token_name = token if isinstance(token, str) else str(token)
+        result = self._tokens.get(token_name)
         return result if result is not None else fallback
 
     def set(self, token: str, color: Tuple[int, int, int]) -> None:
@@ -191,7 +192,8 @@ class ThemeManager:
         fallback: Tuple[int, int, int] = (128, 128, 128),
     ) -> Tuple[int, int, int]:
         """Resolve a design token from the currently active theme."""
-        return self.active_tokens.value.get(str(name), fallback)
+        token_name = name if isinstance(name, str) else str(name)
+        return self.active_tokens.value.get(token_name, fallback)
 
     # ------------------------------------------------------------------
     # Inspection

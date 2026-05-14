@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable
-from typing import Any
 from uuid import uuid4
 
 from ..app.error_handling import report_nonfatal_error

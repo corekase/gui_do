@@ -509,10 +509,12 @@ class TaskScheduler:
     def _dispatch_messages(self) -> None:
         collector = telemetry_collector()
         dispatch_start = perf_counter()
+        now = perf_counter
         dispatched_count = 0
         decremented_counts: Dict[Hashable, int] = {}
+        dispatch_batch: List[_TaskMessage] = []
         while True:
-            dispatch_batch: List[_TaskMessage] = []
+            dispatch_batch.clear()
             with self._lock:
                 if not self._task_messages:
                     break
@@ -521,7 +523,7 @@ class TaskScheduler:
                 if (
                     self._message_dispatch_time_budget_ms is not None
                     and dispatched_count > 0
-                    and ((perf_counter() - dispatch_start) * 1000.0) >= self._message_dispatch_time_budget_ms
+                    and ((now() - dispatch_start) * 1000.0) >= self._message_dispatch_time_budget_ms
                 ):
                     break
                 # When a time budget is active, dispatch one message at a time so the
