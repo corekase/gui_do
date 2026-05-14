@@ -216,6 +216,7 @@ def advanced_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
             290,
             100,
             _make_primary_column_panel,
+            labeled=False,
         ),
         ControlDefinition(
             "advanced_secondary_column",
@@ -223,6 +224,7 @@ def advanced_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
             278,
             101,
             _make_secondary_column_panel,
+            labeled=False,
         ),
         ControlDefinition(
             "advanced_tertiary_column",
@@ -230,6 +232,7 @@ def advanced_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
             238,
             102,
             _make_tertiary_column_panel,
+            labeled=False,
         ),
     ]
 

@@ -56,10 +56,11 @@ SHOWCASE_TASK_PANEL_BUTTON_TOP_OFFSET = 10
 SHOWCASE_TASK_PANEL_SLOT_SPACING = 10
 
 SHOWCASE_CATEGORY_TABS = (
-    ("basics", "Basics"),
-    ("data", "Data"),
-    ("advanced", "Advanced"),
-    ("extended", "Extended"),
+    ("input", "Input"),
+    ("display", "Display"),
+    ("chrome", "Chrome"),
+    ("composite", "Composite"),
+    ("data_bound", "Data-Bound"),
 )
 
 SHOWCASE_BASICS_COLUMNS = 4
@@ -67,10 +68,15 @@ SHOWCASE_DATA_COLUMNS = 3
 SHOWCASE_ADVANCED_COLUMNS = 2
 SHOWCASE_EXTENDED_COLUMNS = 1
 
-SHOWCASE_CATEGORY_ROUTING_ROWS = {
-    "basics_max": 60,
-    "data_max": 100,
-    "advanced_max": 140,
+SHOWCASE_CATEGORY_ROW_GROUPS = {
+    "display": frozenset((10, 11, 14, 15, 16, 17, 18)),
+    "chrome": frozenset((140, 141, 142, 143)),
+}
+
+SHOWCASE_CATEGORY_ROW_RANGES = {
+    "input": ((1, 9), (12, 12)),
+    "data_bound": ((60, 99),),
+    "composite": ((100, 139),),
 }
 
 SHOWCASE_MENU_BAR_HEIGHT = 28
@@ -83,7 +89,8 @@ __all__ = [
     "SHOWCASE_BASICS_COL_GAP",
     "SHOWCASE_BASICS_COLUMNS",
     "SHOWCASE_BASICS_INNER_GAP",
-    "SHOWCASE_CATEGORY_ROUTING_ROWS",
+    "SHOWCASE_CATEGORY_ROW_GROUPS",
+    "SHOWCASE_CATEGORY_ROW_RANGES",
     "SHOWCASE_CATEGORY_TAB_STRIP_GAP",
     "SHOWCASE_CATEGORY_TAB_STRIP_HEIGHT",
     "SHOWCASE_CATEGORY_TABS",

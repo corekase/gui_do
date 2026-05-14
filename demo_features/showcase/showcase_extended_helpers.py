@@ -131,10 +131,11 @@ def extended_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
         _add_cell(panel, "expander", sc2_x, sc2_w, "Expander", expander)
         return panel
 
-    row3_h = label_h + label_gap + 32
+    row3_h = (label_h + label_gap + 32) + row_gap + (label_h + label_gap + 32)
 
     def _make_row3_panel() -> PanelControl:
         panel = PanelControl("control_ext_row3", Rect(0, 0, col_w, row3_h), draw_background=False)
+        first_row_h = label_h + label_gap + 32
         scene_menu = SceneMenuStripControl(
             "control_scene_menu_strip",
             Rect(0, 0, sc0_w, 30),
@@ -152,23 +153,40 @@ def extended_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
             ],
         )
         _add_cell(panel, "scene_menu_strip", sc0_x, sc0_w, "Scene Menu Strip", scene_menu)
+
         date_picker = DatePickerControl("control_date_picker", Rect(0, 0, sc1_w, 32))
         _add_cell(panel, "date_picker", sc1_x, sc1_w, "Date Picker", date_picker)
-        time_picker = TimePickerControl("control_time_picker", Rect(0, 0, sc2_w, 32), hour=9, minute=30)
-        _add_cell(panel, "time_picker", sc2_x, sc2_w, "Time Picker", time_picker)
+
+        time_picker = TimePickerControl("control_time_picker", Rect(0, 0, sc0_w, 32), hour=9, minute=30)
+        time_label = LabelControl(
+            "label_time_picker_ext_row2",
+            Rect(0, 0, sc0_w, label_h),
+            "Time Picker",
+            align="left",
+        )
+        time_layout = GridLayout(
+            row_tracks=[label_h, label_gap, 32],
+            col_tracks=[max(1, int(sc0_w))],
+            gap=0,
+            padding=0,
+        )
+        time_layout.place(time_label, GridPlacement(row=0, col=0))
+        time_layout.place(time_picker, GridPlacement(row=2, col=0))
+        time_layout.apply(Rect(sc0_x, first_row_h + row_gap, sc0_w, label_h + label_gap + 32))
+        panel.add_at(time_label, time_label.rect.left, time_label.rect.top)
+        panel.add_at(time_picker, time_picker.rect.left, time_picker.rect.top)
         return panel
 
     row4_h = label_h + label_gap + 160
 
     def _make_row4_panel() -> PanelControl:
         panel = PanelControl("control_ext_row4", Rect(0, 0, col_w, row4_h), draw_background=False)
-        color_picker = ColorPickerControl("control_color_picker", Rect(0, 0, sc0_w, 160))
-        _add_cell(panel, "color_picker", sc0_x, sc0_w, "Color Picker", color_picker)
-        boundary_child = PanelControl("control_error_boundary_child", Rect(0, 0, sc1_w, 90), draw_background=True)
+        # Move Error Boundary to leftmost column, align label with Time Picker
+        boundary_child = PanelControl("control_error_boundary_child", Rect(0, 0, sc0_w, 90), draw_background=True)
         boundary_child.add_at(
             LabelControl(
                 "control_error_boundary_label",
-                Rect(0, 0, sc1_w - 16, 24),
+                Rect(0, 0, sc0_w - 16, 24),
                 "Protected preview surface",
                 align="left",
             ),
@@ -179,7 +197,7 @@ def extended_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
             boundary_child,
             error_text="Preview unavailable",
         )
-        _add_cell(panel, "error_boundary", sc1_x, sc1_w, "Error Boundary", error_boundary)
+        _add_cell(panel, "error_boundary", sc0_x, sc0_w, "Error Boundary", error_boundary)
         return panel
 
     return [

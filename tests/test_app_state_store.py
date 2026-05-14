@@ -1,6 +1,7 @@
 """Tests for gui_do.state.app_state_store."""
 from __future__ import annotations
 
+import threading
 import unittest
 
 from gui_do.state.app_state_store import (
@@ -123,6 +124,30 @@ class TestStateSelector(unittest.TestCase):
         store.dispatch({"x": 2})
         self.assertEqual(sel_x.value, 2)
         self.assertEqual(sel_y.value, 10)
+
+    def test_selector_callback_can_read_store_without_deadlock(self):
+        store = AppStateStore({"pending": 1, "approved": 0})
+        sel = store.select(lambda s: int(s.get("approved", 0)) - int(s.get("pending", 0)))
+        observed = []
+
+        def _callback(_value):
+            # Regression guard: callback reads from the same store while dispatch lock is held.
+            observed.append((store.get("pending", -1), store.get("approved", -1)))
+
+        sel.subscribe(_callback)
+
+        done = threading.Event()
+
+        def _dispatch():
+            store.dispatch({"pending": 0, "approved": 1})
+            done.set()
+
+        t = threading.Thread(target=_dispatch, daemon=True)
+        t.start()
+        self.assertTrue(done.wait(1.0), "dispatch deadlocked during selector callback")
+        t.join(timeout=1.0)
+        self.assertTrue(observed)
+        self.assertEqual((0, 1), observed[-1])
 
 
 class TestStateTransaction(unittest.TestCase):

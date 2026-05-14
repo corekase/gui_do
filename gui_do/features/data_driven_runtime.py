@@ -49,6 +49,19 @@ from .runtime_models import (
 from .runtime_facilities import FeatureOperationBus, FeatureRuntimeScope
 from .runtime_systems import (
     FeatureDependencySpec,
+    ExecutionContextSpec,
+    WorkloadBudgetClassSpec,
+    WorkloadBudgetSpec,
+    CheckpointDomainSpec,
+    CheckpointSpec,
+    SagaStepSpec,
+    SagaSpec,
+    ReactiveSourceSpec,
+    ReactiveNodeSpec,
+    ReactiveGraphSpec,
+    MigrationStepSpec,
+    MigrationTargetSpec,
+    ContractMigrationSpec,
     RuntimePolicySpec,
     EffectBindingSpec,
     EventPipelineStageSpec,
@@ -80,6 +93,12 @@ from .runtime_systems import (
     FeatureHealthRuntime,
     RuntimeReplayHarness,
     FeatureHotSwapManager,
+    ExecutionContextRuntime,
+    WorkloadBudgetBrokerRuntime,
+    CheckpointRecoveryRuntime,
+    SagaCompensationRuntime,
+    ReactiveDependencyGraphRuntime,
+    ContractMigrationRuntime,
     build_routed_runtime_systems,
 )
 from .runtime_registration_helpers import (
@@ -582,6 +601,18 @@ class RoutedRuntimeSpec:
     shortcut_overlays: Sequence[ShortcutOverlaySpec] = field(default_factory=tuple)
     task_panel_focus_toggles: Sequence[TaskPanelFocusToggleSpec] = field(default_factory=tuple)
     feature_dependencies: Sequence[FeatureDependencySpec] = field(default_factory=tuple)
+    execution_context_spec: ExecutionContextSpec | None = None
+    execution_context_attr_name: str | None = None
+    budget_spec: WorkloadBudgetSpec | None = None
+    budget_attr_name: str | None = None
+    checkpoint_spec: CheckpointSpec | None = None
+    checkpoint_attr_name: str | None = None
+    saga_specs: Sequence[SagaSpec] = field(default_factory=tuple)
+    saga_attr_name: str | None = None
+    reactive_graph_spec: ReactiveGraphSpec | None = None
+    reactive_graph_attr_name: str | None = None
+    migration_spec: ContractMigrationSpec | None = None
+    migration_attr_name: str | None = None
     policy_specs: Sequence[RuntimePolicySpec] = field(default_factory=tuple)
     policy_attr_name: str | None = None
     effect_bindings: Sequence[EffectBindingSpec] = field(default_factory=tuple)
@@ -1998,6 +2029,12 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
         host,
         runtime_scope=runtime_scope,
         operation_bus=operation_bus,
+        execution_context_spec=spec.execution_context_spec,
+        budget_spec=spec.budget_spec,
+        checkpoint_spec=spec.checkpoint_spec,
+        saga_specs=tuple(spec.saga_specs),
+        reactive_graph_spec=spec.reactive_graph_spec,
+        migration_spec=spec.migration_spec,
         dependency_specs=tuple(spec.feature_dependencies),
         policy_specs=tuple(spec.policy_specs),
         effect_bindings=tuple(spec.effect_bindings),
@@ -2016,6 +2053,18 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
         runtime_scope.own_disposable(runtime_systems)
         setattr(feature, "_routed_runtime_on_update", runtime_systems.on_update)
         runtime_scope.add_cleanup(lambda: setattr(feature, "_routed_runtime_on_update", None))
+        if spec.execution_context_attr_name:
+            setattr(feature, str(spec.execution_context_attr_name), runtime_systems.execution_context)
+        if spec.budget_attr_name:
+            setattr(feature, str(spec.budget_attr_name), runtime_systems.budget_broker)
+        if spec.checkpoint_attr_name:
+            setattr(feature, str(spec.checkpoint_attr_name), runtime_systems.checkpoint)
+        if spec.saga_attr_name:
+            setattr(feature, str(spec.saga_attr_name), runtime_systems.saga)
+        if spec.reactive_graph_attr_name:
+            setattr(feature, str(spec.reactive_graph_attr_name), runtime_systems.reactive_graph)
+        if spec.migration_attr_name:
+            setattr(feature, str(spec.migration_attr_name), runtime_systems.migration)
         if spec.policy_attr_name:
             setattr(feature, str(spec.policy_attr_name), runtime_systems.policy_engine)
         if spec.effects_attr_name:
@@ -2123,6 +2172,18 @@ def shutdown_routed_runtime(feature, host, spec: RoutedRuntimeSpec) -> None:
         setattr(feature, attr_name, None)
     if spec.operation_bus_attr_name:
         setattr(feature, str(spec.operation_bus_attr_name), None)
+    if spec.execution_context_attr_name:
+        setattr(feature, str(spec.execution_context_attr_name), None)
+    if spec.budget_attr_name:
+        setattr(feature, str(spec.budget_attr_name), None)
+    if spec.checkpoint_attr_name:
+        setattr(feature, str(spec.checkpoint_attr_name), None)
+    if spec.saga_attr_name:
+        setattr(feature, str(spec.saga_attr_name), None)
+    if spec.reactive_graph_attr_name:
+        setattr(feature, str(spec.reactive_graph_attr_name), None)
+    if spec.migration_attr_name:
+        setattr(feature, str(spec.migration_attr_name), None)
     if spec.policy_attr_name:
         setattr(feature, str(spec.policy_attr_name), None)
     if spec.effects_attr_name:

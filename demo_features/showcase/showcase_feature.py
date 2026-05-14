@@ -5,6 +5,8 @@ import pygame
 from gui_do import *
 from pygame import Rect
 from gui_do.features.data_driven_runtime import (
+    ObservableEffectSpec,
+    RoutedRuntimeSpec,
     SceneMenuStripSpec,
     TaskPanelSlotLayoutSpec,
     add_scene_menu_strip_from_spec,
@@ -138,11 +140,14 @@ class ShowcaseFeature(Feature):
 
         self._registry: ControlRegistry | None = None
         self._category_tabs: TabControl | None = None
-        self._active_category_key: str = "basics"
+        self._active_category_key: str = "input"
         self._showcase_root = None
         self._showcase_notification_center: NotificationCenter | None = None
         self._indeterminate_bar: ProgressBarControl | None = None
         self._showcase_anim_ctrl: AnimatedImageControl | None = None
+        self._live_slider_value = ObservableValue(float(self.SLIDER_DEFAULT_VALUE))
+        self._live_slider_label: LabelControl | None = None
+        self._runtime_spec: RoutedRuntimeSpec | None = None
         self._frame_timer = FrameTimer()
         self._initial_focus_control = None
         self._pending_initial_focus = False
@@ -239,14 +244,28 @@ class ShowcaseFeature(Feature):
         self._pending_initial_focus = True
 
     def bind_runtime(self, host) -> None:
-        setup_routed_runtime(self, host, _CONTROLS_RUNTIME_SPEC)
+        self._runtime_spec = RoutedRuntimeSpec(
+            scene_name=_CONTROLS_RUNTIME_SPEC.scene_name,
+            task_panel_focus_toggles=tuple(_CONTROLS_RUNTIME_SPEC.task_panel_focus_toggles),
+            command_palette=_CONTROLS_RUNTIME_SPEC.command_palette,
+            observable_effects=(
+                ObservableEffectSpec(
+                    handler=self._on_live_slider_value,
+                    observable_attr_name="_live_slider_value",
+                    invoke_immediately=True,
+                ),
+            ),
+        )
+        setup_routed_runtime(self, host, self._runtime_spec)
         app_actions = getattr(host.app, "actions", None)
         bind_global_key = getattr(app_actions, "bind_global_key", None)
         if callable(bind_global_key):
             bind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
 
     def shutdown_runtime(self, host) -> None:
-        shutdown_routed_runtime(self, host, _CONTROLS_RUNTIME_SPEC)
+        if self._runtime_spec is not None:
+            shutdown_routed_runtime(self, host, self._runtime_spec)
+            self._runtime_spec = None
         app_actions = getattr(host.app, "actions", None)
         unbind_global_key = getattr(app_actions, "unbind_global_key", None)
         if callable(unbind_global_key):
@@ -277,6 +296,15 @@ class ShowcaseFeature(Feature):
 
     def _build_scene_task_panel(self, host) -> None:
         build_scene_task_panel_helper(self, host)
+
+    def _on_live_slider_value(self, value: object) -> None:
+        if self._live_slider_label is None:
+            return
+        try:
+            numeric = float(value)
+        except Exception:
+            numeric = float(self.SLIDER_DEFAULT_VALUE)
+        self._live_slider_label.text = f"Slider observable value: {numeric:.1f}"
 
     # ------------------------------------------------------------------
     # Control definition builders (one method per category)

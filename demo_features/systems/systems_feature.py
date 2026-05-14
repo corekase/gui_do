@@ -102,6 +102,10 @@ from gui_do import (
     TweenManager,
 )
 from gui_do.features.data_driven_runtime import (
+    CheckpointDomainSpec,
+    CheckpointSpec,
+    ContractMigrationSpec,
+    ExecutionContextSpec,
     CapabilityProviderSpec,
     CapabilityRequirementSpec,
     DurableOperationBindingSpec,
@@ -112,13 +116,22 @@ from gui_do.features.data_driven_runtime import (
     EventPipelineStageSpec,
     FailurePolicySpec,
     FeatureOperationSpec,
+    MigrationStepSpec,
+    MigrationTargetSpec,
     ObservableEffectSpec,
     ProjectionNodeSpec,
     ProjectionSpec,
+    ReactiveGraphSpec,
+    ReactiveNodeSpec,
+    ReactiveSourceSpec,
     RuntimePolicySpec,
     RoutedRuntimeSpec,
+    SagaSpec,
+    SagaStepSpec,
     ServiceBindingSpec,
     StoreSubscriptionSpec,
+    WorkloadBudgetClassSpec,
+    WorkloadBudgetSpec,
     setup_routed_runtime,
     shutdown_routed_runtime,
 )
@@ -145,6 +158,7 @@ from .systems_history_helpers import (
     undo_history_stage as undo_history_stage_helper,
 )
 from .systems_infrastructure_helpers import (
+    apply_runtime_contract_migration as apply_runtime_contract_migration_helper,
     advance_interaction_state as advance_interaction_state_helper,
     bind_virtual_cell as bind_virtual_cell_helper,
     build_infrastructure_panel as build_infrastructure_panel_helper,
@@ -152,6 +166,8 @@ from .systems_infrastructure_helpers import (
     record_theme_invalidation as record_theme_invalidation_helper,
     refresh_infrastructure_labels as refresh_infrastructure_labels_helper,
     refresh_virtualization_demo as refresh_virtualization_demo_helper,
+    run_runtime_checkpoint as run_runtime_checkpoint_helper,
+    run_runtime_saga as run_runtime_saga_helper,
     run_accessibility_demo as run_accessibility_demo_helper,
     run_audio_demo as run_audio_demo_helper,
     run_pipeline_demo as run_pipeline_demo_helper,
@@ -314,6 +330,12 @@ class SystemsFeature(Feature):
         self._runtime_spec = None
         self.runtime_scope = None
         self.operation_bus = None
+        self.runtime_execution_context = None
+        self.runtime_budget = None
+        self.runtime_checkpoint = None
+        self.runtime_saga = None
+        self.runtime_reactive_graph = None
+        self.runtime_migration = None
         self.runtime_policy = None
         self.runtime_effects = None
         self.runtime_event_pipelines = None
@@ -646,7 +668,19 @@ class SystemsFeature(Feature):
         self.infrastructure_virtualization_label = None
         self.infrastructure_layout_label = None
         self.infrastructure_scope_label = None
+        self.infrastructure_checkpoint_label = None
+        self.infrastructure_saga_label = None
         self.infrastructure_runtime_label = None
+        self._runtime_checkpoint_status = "Runtime checkpoint ready: click capture to persist scoped demo state."
+        self._runtime_saga_status = "Runtime saga idle: start the rollout saga to orchestrate profile + persistence operations."
+        self._runtime_migration_status = "Runtime migration ready: contract payload starts at v1.0 and upgrades to v2.0."
+        self._runtime_contract_payload_version = "1.0"
+        self._runtime_contract_payload = {
+            "queue_depth": "2",
+            "profile": "review",
+            "region": "us-central",
+        }
+        self._runtime_reactive_release_score = 0
 
         self._task_scheduler = TaskScheduler(max_workers=1)
         self._task_job_index = 0
@@ -1244,6 +1278,107 @@ class SystemsFeature(Feature):
     def _build_runtime_spec(self, _host) -> RoutedRuntimeSpec:
         return RoutedRuntimeSpec(
             scene_name="main",
+            execution_context_spec=ExecutionContextSpec(
+                enabled=True,
+                default_priority=2,
+                default_deadline_updates=2,
+                propagate_cancellation=True,
+            ),
+            execution_context_attr_name="runtime_execution_context",
+            budget_spec=WorkloadBudgetSpec(
+                classes=(
+                    WorkloadBudgetClassSpec(name="event_pipeline", max_units_per_update=4, reserve_units=1),
+                    WorkloadBudgetClassSpec(name="workflow", max_units_per_update=3, reserve_units=1),
+                    WorkloadBudgetClassSpec(name="durable_queue", max_units_per_update=2, reserve_units=1),
+                    WorkloadBudgetClassSpec(name="saga", max_units_per_update=2, reserve_units=1),
+                    WorkloadBudgetClassSpec(name="reactive_graph", max_units_per_update=2, reserve_units=1),
+                ),
+                default_max_units_per_update=2,
+            ),
+            budget_attr_name="runtime_budget",
+            checkpoint_spec=CheckpointSpec(
+                enabled=True,
+                interval_updates=180,
+                max_snapshots=6,
+                domains=(
+                    CheckpointDomainSpec(
+                        name="release_store",
+                        capture=lambda _feature: dict(self._release_store.snapshot()),
+                        restore=lambda payload, _feature: self._release_store.dispatch(dict(payload or {})),
+                    ),
+                    CheckpointDomainSpec(
+                        name="runtime_contract",
+                        capture=lambda _feature: {
+                            "version": self._runtime_contract_payload_version,
+                            "payload": dict(self._runtime_contract_payload),
+                        },
+                        restore=lambda payload, _feature: self._restore_runtime_contract_checkpoint(payload),
+                    ),
+                ),
+            ),
+            checkpoint_attr_name="runtime_checkpoint",
+            saga_specs=(
+                SagaSpec(
+                    name="systems_release_rollout",
+                    steps=(
+                        SagaStepSpec(
+                            name="stage_profile",
+                            handler=lambda payload, _feature, _run: self._runtime_saga_stage_profile(payload),
+                            compensate=lambda payload, _feature, _run: self._runtime_saga_compensate(payload),
+                        ),
+                        SagaStepSpec(
+                            name="save_workspace",
+                            handler=lambda payload, _feature, _run: self._runtime_saga_stage_save_workspace(payload),
+                            compensate=lambda payload, _feature, _run: self._runtime_saga_compensate(payload),
+                        ),
+                    ),
+                ),
+            ),
+            saga_attr_name="runtime_saga",
+            reactive_graph_spec=ReactiveGraphSpec(
+                sources=(
+                    ReactiveSourceSpec(
+                        name="release_readiness_source",
+                        subscribe=lambda callback, *_args: self._release_readiness.subscribe(lambda value: callback(value)),
+                        invalidates=("runtime_release_projection",),
+                    ),
+                ),
+                nodes=(
+                    ReactiveNodeSpec(
+                        name="runtime_release_projection",
+                        compute=lambda _feature, _runtime: int(getattr(self._release_readiness, "value", 0)),
+                        target_attr_name="_runtime_reactive_release_score",
+                    ),
+                ),
+                max_nodes_per_update=1,
+            ),
+            reactive_graph_attr_name="runtime_reactive_graph",
+            migration_spec=ContractMigrationSpec(
+                steps=(
+                    MigrationStepSpec(
+                        contract="systems_runtime_contract",
+                        from_version="1.0",
+                        to_version="2.0",
+                        migrate=lambda payload, _feature: {
+                            "queue_depth": int(dict(payload or {}).get("queue_depth", 0)),
+                            "profile": str(dict(payload or {}).get("profile", "review")),
+                            "region": str(dict(payload or {}).get("region", "us-central")),
+                            "migrated": True,
+                        },
+                    ),
+                ),
+                targets=(
+                    MigrationTargetSpec(
+                        name="systems_runtime_contract_payload",
+                        contract="systems_runtime_contract",
+                        version_attr="_runtime_contract_payload_version",
+                        payload_attr="_runtime_contract_payload",
+                        target_version="2.0",
+                    ),
+                ),
+                strict=True,
+            ),
+            migration_attr_name="runtime_migration",
             policy_specs=(
                 RuntimePolicySpec(name="systems_allow_workflow", target="workflow", action="allow", priority=5),
                 RuntimePolicySpec(name="systems_limit_pipeline", target="event_pipeline", action="limit", max_units=1, priority=4),
@@ -1368,6 +1503,29 @@ class SystemsFeature(Feature):
                 ),
             ),
         )
+
+    def _restore_runtime_contract_checkpoint(self, payload: dict | None) -> None:
+        data = dict(payload or {})
+        self._runtime_contract_payload_version = str(data.get("version", self._runtime_contract_payload_version))
+        payload_data = data.get("payload")
+        if isinstance(payload_data, dict):
+            self._runtime_contract_payload = dict(payload_data)
+
+    def _runtime_saga_stage_profile(self, payload: dict | None) -> dict:
+        self._runtime_saga_status = "Runtime saga stage_profile: applying review profile"
+        apply_review_profile_helper(self)
+        return dict(payload or {})
+
+    def _runtime_saga_stage_save_workspace(self, payload: dict | None):
+        self._runtime_saga_status = "Runtime saga stage_save_workspace: dispatching save workspace operation"
+        if self.operation_bus is not None:
+            return self.operation_bus.call(_SYSTEMS_OP_SAVE_WORKSPACE)
+        save_workspace_state_helper(self)
+        return dict(payload or {})
+
+    def _runtime_saga_compensate(self, _payload: dict | None) -> None:
+        self._runtime_saga_status = "Runtime saga compensation: reverting to review profile"
+        apply_review_profile_helper(self)
 
     def _dispatch_runtime_operation(self, operation_name: str) -> bool:
         if self.runtime_durable_queue is not None:
@@ -1543,6 +1701,15 @@ class SystemsFeature(Feature):
         if self._dispatch_runtime_operation(_SYSTEMS_OP_SNAPSHOT_MIGRATION):
             return
         run_snapshot_migration_helper(self)
+
+    def _run_runtime_checkpoint(self) -> None:
+        run_runtime_checkpoint_helper(self)
+
+    def _run_runtime_saga(self) -> None:
+        run_runtime_saga_helper(self)
+
+    def _apply_runtime_contract_migration(self) -> None:
+        apply_runtime_contract_migration_helper(self)
 
     def _record_theme_invalidation(self) -> None:
         record_theme_invalidation_helper(self)

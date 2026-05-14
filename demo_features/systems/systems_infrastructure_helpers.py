@@ -57,6 +57,27 @@ def build_infrastructure_panel(feature: SystemsFeature, rect: Rect) -> PanelCont
                 style="round",
             ),
             ButtonControl(
+                "systems_infra_runtime_checkpoint",
+                Rect(0, 0, 210, 32),
+                "Capture Runtime Checkpoint",
+                feature._run_runtime_checkpoint,
+                style="round",
+            ),
+            ButtonControl(
+                "systems_infra_runtime_saga",
+                Rect(0, 0, 184, 32),
+                "Start Runtime Saga",
+                feature._run_runtime_saga,
+                style="round",
+            ),
+            ButtonControl(
+                "systems_infra_runtime_migration",
+                Rect(0, 0, 196, 32),
+                "Apply Runtime Migration",
+                feature._apply_runtime_contract_migration,
+                style="round",
+            ),
+            ButtonControl(
                 "systems_infra_theme_bus",
                 Rect(0, 0, 194, 32),
                 "Trigger Theme Invalidation",
@@ -141,6 +162,12 @@ def build_infrastructure_panel(feature: SystemsFeature, rect: Rect) -> PanelCont
     feature.infrastructure_scope_label = LabelControl(
         "systems_infra_scope_status", Rect(0, 0, rect.width, 28), "", align="left"
     )
+    feature.infrastructure_checkpoint_label = LabelControl(
+        "systems_infra_checkpoint_status", Rect(0, 0, rect.width, 28), "", align="left"
+    )
+    feature.infrastructure_saga_label = LabelControl(
+        "systems_infra_saga_status", Rect(0, 0, rect.width, 28), "", align="left"
+    )
     feature.infrastructure_runtime_label = LabelControl(
         "systems_infra_runtime_status", Rect(0, 0, rect.width, 56), "", align="left"
     )
@@ -161,6 +188,8 @@ def build_infrastructure_panel(feature: SystemsFeature, rect: Rect) -> PanelCont
             feature.infrastructure_virtualization_label,
             feature.infrastructure_layout_label,
             feature.infrastructure_scope_label,
+            feature.infrastructure_checkpoint_label,
+            feature.infrastructure_saga_label,
             feature.infrastructure_runtime_label,
         ],
         gap=8,
@@ -211,6 +240,56 @@ def run_snapshot_migration(feature: SystemsFeature) -> None:
         feature.infrastructure_migration_label.text = (
             f"SnapshotMigrator {snapshot['schema_version']} -> {migrated['schema_version']} data keys={sorted(migrated['data'].keys())}"
         )
+
+
+def run_runtime_checkpoint(feature: SystemsFeature) -> None:
+    checkpoint_runtime = getattr(feature, "runtime_checkpoint", None)
+    if checkpoint_runtime is None:
+        feature._runtime_checkpoint_status = "Runtime checkpoint unavailable: bind routed runtime first."
+        feature._refresh_infrastructure_labels()
+        return
+    snapshot = checkpoint_runtime.capture_now(reason="infrastructure_button")
+    domains = snapshot.get("domains", {}) if isinstance(snapshot, dict) else {}
+    feature._runtime_checkpoint_status = (
+        f"Runtime checkpoint captured tick={snapshot.get('tick', 0)} domains={sorted(domains.keys())}"
+    )
+    feature._refresh_infrastructure_labels()
+
+
+def run_runtime_saga(feature: SystemsFeature) -> None:
+    saga_runtime = getattr(feature, "runtime_saga", None)
+    if saga_runtime is None:
+        feature._runtime_saga_status = "Runtime saga unavailable: bind routed runtime first."
+        feature._refresh_infrastructure_labels()
+        return
+    try:
+        run = saga_runtime.start(
+            "systems_release_rollout",
+            {
+                "requested_by": "infrastructure_tab",
+                "profile": feature._settings_registry.get("systems", "profile"),
+            },
+        )
+        feature._runtime_saga_status = f"Runtime saga started run_id={run.run_id} status={run.status}"
+    except Exception as exc:
+        feature._runtime_saga_status = f"Runtime saga start failed: {exc}"
+    feature._refresh_infrastructure_labels()
+
+
+def apply_runtime_contract_migration(feature: SystemsFeature) -> None:
+    migration_runtime = getattr(feature, "runtime_migration", None)
+    if migration_runtime is None:
+        feature._runtime_migration_status = "Runtime migration unavailable: bind routed runtime first."
+        feature._refresh_infrastructure_labels()
+        return
+    try:
+        reports = migration_runtime.apply()
+        status = reports[0]["status"] if reports else "no-targets"
+        version = str(getattr(feature, "_runtime_contract_payload_version", "unknown"))
+        feature._runtime_migration_status = f"Runtime migration applied status={status} version={version}"
+    except Exception as exc:
+        feature._runtime_migration_status = f"Runtime migration failed: {exc}"
+    feature._refresh_infrastructure_labels()
 
 
 def record_theme_invalidation(feature: SystemsFeature) -> None:
@@ -323,6 +402,12 @@ def refresh_infrastructure_labels(feature: SystemsFeature) -> None:
             f"ScopeStack root api={feature._scope_stack.root.get(feature._service_key_api_base)} "
             f"channel={feature._scope_stack.root.get(feature._service_key_channel)}"
         )
+    if feature.infrastructure_checkpoint_label is not None:
+        feature.infrastructure_checkpoint_label.text = feature._runtime_checkpoint_status
+    if feature.infrastructure_saga_label is not None:
+        feature.infrastructure_saga_label.text = (
+            f"{feature._runtime_saga_status} | {feature._runtime_migration_status}"
+        )
     if feature.infrastructure_runtime_label is not None:
         policy_runtime = getattr(feature, "runtime_policy", None)
         policy_count = len(getattr(policy_runtime, "_policies", ())) if policy_runtime is not None else 0
@@ -360,6 +445,30 @@ def refresh_infrastructure_labels(feature: SystemsFeature) -> None:
 
         projection_score = int(getattr(feature, "_projected_release_score", 0))
 
+        execution_context_runtime = getattr(feature, "runtime_execution_context", None)
+        execution_context_id = "none"
+        if execution_context_runtime is not None and hasattr(execution_context_runtime, "current"):
+            try:
+                execution_context_id = str(getattr(execution_context_runtime.current, "context_id", "none"))
+            except Exception:
+                execution_context_id = "error"
+
+        budget_runtime = getattr(feature, "runtime_budget", None)
+        budget_remaining = "none"
+        if budget_runtime is not None and hasattr(budget_runtime, "remaining"):
+            try:
+                budget_remaining = str(budget_runtime.remaining("event_pipeline"))
+            except Exception:
+                budget_remaining = "error"
+
+        reactive_runtime = getattr(feature, "runtime_reactive_graph", None)
+        reactive_nodes = 0
+        if reactive_runtime is not None:
+            reactive_nodes = len(getattr(reactive_runtime, "_nodes", {}))
+
+        migration_runtime = getattr(feature, "runtime_migration", None)
+        migration_targets = len(getattr(migration_runtime, "_reports", ())) if migration_runtime is not None else 0
+
         feature.infrastructure_runtime_label.text = (
             " | ".join(
                 (
@@ -370,7 +479,9 @@ def refresh_infrastructure_labels(feature: SystemsFeature) -> None:
                         "RuntimeSystems "
                         f"policy={policy_count} effects={effect_group_count} pipelines={pipeline_count} "
                         f"queue={queue_total} (p={queue_pending} r={queue_running} c={queue_completed} f={queue_failed}) "
-                        f"caps={capability_count} projection={projection_score}"
+                        f"caps={capability_count} projection={projection_score} "
+                        f"ctx={execution_context_id} budget.event_pipeline.remaining={budget_remaining} "
+                        f"reactive.nodes={reactive_nodes} migration.reports={migration_targets}"
                     ),
                 )
             )
@@ -385,6 +496,9 @@ __all__ = [
     "record_theme_invalidation",
     "refresh_infrastructure_labels",
     "refresh_virtualization_demo",
+    "run_runtime_checkpoint",
+    "run_runtime_saga",
+    "apply_runtime_contract_migration",
     "run_accessibility_demo",
     "run_audio_demo",
     "run_pipeline_demo",

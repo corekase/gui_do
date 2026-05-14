@@ -128,14 +128,15 @@ class AppStateStore:
 
     Thread Safety
     -------------
-    Dispatch and snapshot are protected by an internal :class:`threading.Lock`.
-    Subscriber callbacks are invoked *while the lock is held* — keep them
-    short and non-blocking.
+    Dispatch and snapshot are protected by an internal :class:`threading.RLock`.
+    Subscriber callbacks are invoked *while the lock is held*; re-entrant
+    store reads from callbacks are allowed, but callbacks should remain short
+    and non-blocking.
     """
 
     def __init__(self, initial_state: Optional[Dict[str, Any]] = None) -> None:
         self._state: Dict[str, Any] = dict(initial_state or {})
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._key_subs: Dict[str, List[Callable[[Any], None]]] = {}
         self._selectors: List[StateSelector] = []
         self._pending_patches: Optional[List[StatePatch]] = None  # set during tx

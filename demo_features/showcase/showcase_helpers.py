@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from .showcase_specs import SHOWCASE_CATEGORY_ROUTING_ROWS
+from .showcase_specs import SHOWCASE_CATEGORY_ROW_GROUPS, SHOWCASE_CATEGORY_ROW_RANGES
 
 
 def category_for_row(row_index: int) -> str:
     """Return the category key for the given placement row index."""
-    if row_index < SHOWCASE_CATEGORY_ROUTING_ROWS["basics_max"]:
-        return "basics"
-    if row_index < SHOWCASE_CATEGORY_ROUTING_ROWS["data_max"]:
-        return "data"
-    if row_index < SHOWCASE_CATEGORY_ROUTING_ROWS["advanced_max"]:
-        return "advanced"
-    return "extended"
+    idx = int(row_index)
+    for key, rows in SHOWCASE_CATEGORY_ROW_GROUPS.items():
+        if idx in rows:
+            return key
+    for key, ranges in SHOWCASE_CATEGORY_ROW_RANGES.items():
+        for start, end in ranges:
+            if start <= idx <= end:
+                return key
+    return "display"
 
 
 __all__ = [

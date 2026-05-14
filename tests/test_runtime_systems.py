@@ -5,6 +5,11 @@ from gui_do.features.runtime_systems import (
     CapabilityContractRuntime,
     CapabilityProviderSpec,
     CapabilityRequirementSpec,
+    CheckpointDomainSpec,
+    CheckpointRecoveryRuntime,
+    CheckpointSpec,
+    ContractMigrationRuntime,
+    ContractMigrationSpec,
     DependencyValidationError,
     DurableOperationBindingSpec,
     DurableOperationQueueRuntime,
@@ -17,7 +22,11 @@ from gui_do.features.runtime_systems import (
     FeatureDependencySpec,
     FeatureHealthRuntime,
     FeatureHotSwapManager,
+    ExecutionContextRuntime,
+    ExecutionContextSpec,
     HealthProbeSpec,
+    MigrationStepSpec,
+    MigrationTargetSpec,
     PolicyDecision,
     ProjectionNodeSpec,
     ProjectionRuntime,
@@ -26,11 +35,21 @@ from gui_do.features.runtime_systems import (
     QoSPolicySpec,
     RecomputeNodeSpec,
     RecomputeOrchestrator,
+    ReactiveDependencyGraphRuntime,
+    ReactiveGraphSpec,
+    ReactiveNodeSpec,
+    ReactiveSourceSpec,
     ReplaySpec,
     ReplacePolicySpec,
     RuntimePolicyEngine,
     RuntimePolicySpec,
     RuntimeReplayHarness,
+    SagaCompensationRuntime,
+    SagaSpec,
+    SagaStepSpec,
+    WorkloadBudgetBrokerRuntime,
+    WorkloadBudgetClassSpec,
+    WorkloadBudgetSpec,
     WorkflowCoordinator,
     WorkflowSpec,
     WorkflowStepSpec,
@@ -421,6 +440,201 @@ class TestRoutedRuntimeSystemsIntegration(unittest.TestCase):
         self.assertIsNotNone(systems.durable_queue)
         self.assertIsNotNone(systems.capability_contracts)
         self.assertIsNotNone(systems.projection)
+
+
+class TestExecutionContextRuntime(unittest.TestCase):
+    def test_context_creation_cancellation_and_expiry(self):
+        runtime = ExecutionContextRuntime(
+            ExecutionContextSpec(enabled=True, default_priority=2, default_deadline_updates=1)
+        )
+        runtime.begin_update()
+        parent = runtime.current
+        child = runtime.create_context(metadata={"source": "test"})
+        self.assertEqual(parent.context_id, child.parent_context_id)
+        self.assertEqual(2, child.priority)
+        runtime.cancel(child)
+        self.assertTrue(child.cancelled)
+        runtime.begin_update()
+        self.assertTrue(runtime.is_expired(child))
+
+
+class TestWorkloadBudgetBrokerRuntime(unittest.TestCase):
+    def test_budget_enforces_caps(self):
+        runtime = WorkloadBudgetBrokerRuntime(
+            WorkloadBudgetSpec(
+                classes=(
+                    WorkloadBudgetClassSpec(name="workflow", max_units_per_update=2),
+                )
+            )
+        )
+        runtime.begin_update()
+        self.assertTrue(runtime.acquire("workflow"))
+        self.assertTrue(runtime.acquire("workflow"))
+        self.assertFalse(runtime.acquire("workflow"))
+
+
+class TestCheckpointRecoveryRuntime(unittest.TestCase):
+    def test_checkpoint_capture_and_restore(self):
+        feature = _BaseFeature("checkpoint")
+        feature.value = 5
+
+        runtime = CheckpointRecoveryRuntime(
+            feature,
+            CheckpointSpec(
+                enabled=True,
+                interval_updates=100,
+                domains=(CheckpointDomainSpec(name="value", capture=lambda f: f.value, restore=lambda payload, f: setattr(f, "value", int(payload))),),
+            ),
+        )
+        runtime.capture_now(reason="manual")
+        feature.value = 99
+        restored = runtime.restore_latest()
+        self.assertTrue(restored)
+        self.assertEqual(5, feature.value)
+
+
+class TestSagaCompensationRuntime(unittest.TestCase):
+    def test_saga_compensates_on_failure(self):
+        feature = _BaseFeature("saga")
+        feature.events = []
+        runtime = SagaCompensationRuntime(
+            feature,
+            (
+                SagaSpec(
+                    name="demo",
+                    steps=(
+                        SagaStepSpec(
+                            name="one",
+                            handler=lambda payload, f, _run: (f.events.append("one") or {"v": 1}),
+                            compensate=lambda payload, f, _run: f.events.append("undo_one"),
+                        ),
+                        SagaStepSpec(name="two", handler=lambda *_args: (_ for _ in ()).throw(RuntimeError("boom"))),
+                    ),
+                ),
+            ),
+        )
+        run = runtime.start("demo", {})
+        runtime.pump()
+        runtime.pump()
+        self.assertEqual("failed", run.status)
+        self.assertEqual(["one", "undo_one"], feature.events)
+
+
+class TestReactiveDependencyGraphRuntime(unittest.TestCase):
+    def test_reactive_graph_marks_dirty_from_source(self):
+        feature = _BaseFeature("reactive")
+        feature.base = 2
+        callback_holder = {"fn": None}
+
+        def _subscribe(callback, *_args):
+            callback_holder["fn"] = callback
+
+            class _Connection:
+                def disconnect(self):
+                    return None
+
+            return _Connection()
+
+        runtime = ReactiveDependencyGraphRuntime(
+            feature,
+            ReactiveGraphSpec(
+                sources=(ReactiveSourceSpec(name="src", subscribe=_subscribe, invalidates=("n1",)),),
+                nodes=(
+                    ReactiveNodeSpec(name="n1", compute=lambda f, _r: int(f.base) + 1, target_attr_name="n1"),
+                    ReactiveNodeSpec(name="n2", depends_on=("n1",), compute=lambda _f, r: int(r.value("n1")) * 2, target_attr_name="n2"),
+                ),
+            ),
+        )
+
+        class _Scope:
+            def add_cleanup(self, _cleanup):
+                return None
+
+        runtime.bind_sources(_Scope(), host=None)
+        runtime.pump()
+        self.assertEqual(3, feature.n1)
+        self.assertEqual(6, feature.n2)
+        feature.base = 4
+        callback_holder["fn"]()
+        runtime.pump()
+        self.assertEqual(5, feature.n1)
+        self.assertEqual(10, feature.n2)
+
+
+class TestContractMigrationRuntime(unittest.TestCase):
+    def test_applies_migration_chain(self):
+        feature = _BaseFeature("migration")
+        feature.payload = {"count": "2"}
+        feature.payload_version = "1.0"
+
+        runtime = ContractMigrationRuntime(
+            feature,
+            ContractMigrationSpec(
+                steps=(
+                    MigrationStepSpec(
+                        contract="payload",
+                        from_version="1.0",
+                        to_version="2.0",
+                        migrate=lambda payload, _feature: {"count": int(payload.get("count", 0))},
+                    ),
+                ),
+                targets=(
+                    MigrationTargetSpec(
+                        name="payload_main",
+                        contract="payload",
+                        version_attr="payload_version",
+                        payload_attr="payload",
+                        target_version="2.0",
+                    ),
+                ),
+                strict=True,
+            ),
+        )
+
+        reports = runtime.apply()
+        self.assertEqual("2.0", feature.payload_version)
+        self.assertEqual(2, feature.payload["count"])
+        self.assertEqual("migrated", reports[0]["status"])
+
+
+class TestNewRuntimeSystemsIntegration(unittest.TestCase):
+    def test_build_routed_runtime_systems_builds_all_new_systems(self):
+        feature = _BaseFeature("integrated_new")
+        host = _Host(_App())
+
+        class _Scope:
+            def add_cleanup(self, _cleanup):
+                return None
+
+            def get_optional_service(self, _key):
+                return None
+
+        feature.contract_payload = {"value": "7"}
+        feature.contract_payload_version = "1.0"
+
+        systems = build_routed_runtime_systems(
+            feature,
+            host,
+            runtime_scope=_Scope(),
+            execution_context_spec=ExecutionContextSpec(enabled=True),
+            budget_spec=WorkloadBudgetSpec(classes=(WorkloadBudgetClassSpec(name="event_pipeline", max_units_per_update=1),)),
+            checkpoint_spec=CheckpointSpec(enabled=True, interval_updates=100),
+            saga_specs=(SagaSpec(name="sg", steps=(SagaStepSpec(name="s1", handler=lambda payload, *_args: payload),)),),
+            reactive_graph_spec=ReactiveGraphSpec(nodes=(ReactiveNodeSpec(name="r1", compute=lambda *_args: 1, target_attr_name="r1"),)),
+            migration_spec=ContractMigrationSpec(
+                steps=(MigrationStepSpec(contract="contract_payload", from_version="1.0", to_version="2.0", migrate=lambda payload, _feature: {"value": int(payload["value"])}),),
+                targets=(MigrationTargetSpec(name="payload", contract="contract_payload", version_attr="contract_payload_version", payload_attr="contract_payload", target_version="2.0"),),
+            ),
+        )
+
+        self.assertIsNotNone(systems)
+        self.assertIsNotNone(systems.execution_context)
+        self.assertIsNotNone(systems.budget_broker)
+        self.assertIsNotNone(systems.checkpoint)
+        self.assertIsNotNone(systems.saga)
+        self.assertIsNotNone(systems.reactive_graph)
+        self.assertIsNotNone(systems.migration)
+        self.assertEqual("2.0", feature.contract_payload_version)
 
 
 if __name__ == "__main__":

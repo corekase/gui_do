@@ -12,6 +12,7 @@ from gui_do import (
     ButtonControl,
     ButtonGroupControl,
     CanvasControl,
+    ColorPickerControl,
     DataGridControl,
     DropdownControl,
     DropdownOption,
@@ -53,7 +54,13 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
     row_gap = int(feature.ROW_GAP)
     inner_gap = int(feature.BASICS_INNER_GAP)
 
-    stack, _, _, _ = column_stack_from_anchor(
+    display_stack, _, _, _ = column_stack_from_anchor(
+        anchor=bounds,
+        content_bottom=bounds.bottom,
+        preferred_width=bounds.width,
+        item_gap_y=row_gap,
+    )
+    input_stack, _, _, _ = column_stack_from_anchor(
         anchor=bounds,
         content_bottom=bounds.bottom,
         preferred_width=bounds.width,
@@ -62,10 +69,11 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
 
     def make_arrow_boxes(w: int, h: int):
         panel = PanelControl("control_arrow_boxes_cell", Rect(0, 0, w, h), draw_background=False)
-        area_w, area_h = min(60, w), min(60, h)
-        area = Rect((w - area_w) // 2, (h - area_h) // 2, area_w, area_h)
-        cell_w = max(10, (area_w - inner_gap) // 2)
-        cell_h = max(10, (area_h - inner_gap) // 2)
+        # Only the grid, left-justified, no manual label
+        cluster_w = min(60, w)
+        cluster_h = min(60, h)
+        cell_w = max(10, (cluster_w - inner_gap) // 2)
+        cell_h = max(10, (cluster_h - inner_gap) // 2)
         arrows = [
             ArrowBoxControl("control_arrow_up", Rect(0, 0, cell_w, cell_h), 90),
             ArrowBoxControl("control_arrow_down", Rect(0, 0, cell_w, cell_h), 270),
@@ -82,7 +90,8 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
         layout.place(arrows[1], GridPlacement(row=0, col=1))
         layout.place(arrows[2], GridPlacement(row=1, col=0))
         layout.place(arrows[3], GridPlacement(row=1, col=1))
-        layout.apply(area)
+        # Left-justify the grid under the label
+        layout.apply(Rect(0, 0, cluster_w, cluster_h))
         for control in arrows:
             panel.add_at(control, control.rect.left, control.rect.top)
         return panel
@@ -177,17 +186,29 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
             feature.SLIDER_MAXIMUM,
             feature.SLIDER_DEFAULT_VALUE,
         )
+        slider.set_on_change_callback(
+            lambda value, *_args: setattr(feature._live_slider_value, "value", float(value))
+        )
+        value_label = LabelControl(
+            "control_horizontal_slider_value",
+            Rect(0, 0, max(1, w), 18),
+            "Slider observable value: 0.0",
+            align="left",
+        )
+        feature._live_slider_label = value_label
         layout = GridLayout(
-            row_tracks=[24, 24],
+            row_tracks=[24, row_gap, 24, row_gap, 18],
             col_tracks=["1fr"],
-            gap=row_gap,
+            gap=0,
             padding=0,
         )
         layout.place(scrollbar, GridPlacement(row=0, col=0))
-        layout.place(slider, GridPlacement(row=1, col=0))
+        layout.place(slider, GridPlacement(row=2, col=0))
+        layout.place(value_label, GridPlacement(row=4, col=0))
         layout.apply(Rect(0, 0, max(1, w), max(1, h)))
         panel.add_at(scrollbar, scrollbar.rect.left, scrollbar.rect.top)
         panel.add_at(slider, slider.rect.left, slider.rect.top)
+        panel.add_at(value_label, value_label.rect.left, value_label.rect.top)
         return panel
 
     def make_vert_pair(w: int, h: int):
@@ -307,11 +328,106 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
         panel.add_at(dg, dg.rect.left, dg.rect.top)
         return panel
 
-    kw = dict(stack=stack, label_height=label_h, label_gap=label_gap, overflow_gap=row_gap)
+    display_kw = dict(
+        stack=display_stack,
+        label_height=label_h,
+        label_gap=label_gap,
+        overflow_gap=row_gap,
+    )
+    input_kw = dict(
+        stack=input_stack,
+        label_height=label_h,
+        label_gap=label_gap,
+        overflow_gap=row_gap,
+    )
 
-    row1 = build_horizontal_row_specs(
+    display_row1 = build_horizontal_row_specs(
         [
-            RowCellSpec("arrow_boxes", "Arrow Boxes", 80, 0, make_arrow_boxes, natural_width=110),
+            RowCellSpec(
+                "notification_panel",
+                "Notification Panel",
+                120,
+                10,
+                lambda w, h: NotificationPanelControl("control_notification_panel", Rect(0, 0, w, h), nc),
+            ),
+            RowCellSpec(
+                "canvas",
+                "Canvas",
+                120,
+                16,
+                lambda w, h: CanvasControl("control_canvas_basics", Rect(0, 0, w, h), max_events=64),
+                accessibility_role="img",
+                accessibility_label="Canvas drawing surface",
+            ),
+            RowCellSpec(
+                "frame",
+                "Frame",
+                120,
+                14,
+                lambda w, h: FrameControl("control_frame_basics", Rect(0, 0, w, h), border_width=2),
+                accessibility_role="group",
+                accessibility_label="Framed section",
+            ),
+        ],
+        col_gap=6,
+        **display_kw,
+    )
+
+    display_row2 = build_horizontal_row_specs(
+        [
+            RowCellSpec(
+                "display_color_picker",
+                "Color Picker",
+                120,
+                17,
+                lambda w, h: ColorPickerControl("control_display_color_picker", Rect(0, 0, w, h)),
+                accessibility_role="group",
+                accessibility_label="Color picker",
+            ),
+            RowCellSpec(
+                "image",
+                "Image",
+                120,
+                11,
+                lambda w, h: ImageControl("control_image", Rect(0, 0, h, h), image_path, scale=True),
+                target_width=160,
+                target_align="left",
+            ),
+            RowCellSpec(
+                "rich_label",
+                "Rich Label",
+                120,
+                15,
+                lambda w, h: RichLabelControl(
+                    "control_rich_label_basics",
+                    Rect(0, 0, w, h),
+                    text="**Deploy** notes: _review_ pending checks, then promote to **stable**.",
+                ),
+                accessibility_role="status",
+                accessibility_label="Formatted deployment notes",
+            ),
+        ],
+        col_gap=feature.BASICS_COL_GAP,
+        **display_kw,
+    )
+
+    display_row3 = build_horizontal_row_specs(
+        [
+            RowCellSpec(
+                "arrow_boxes",
+                "Arrow Boxes",
+                120,
+                18,
+                make_arrow_boxes,
+                natural_width=110,
+            ),
+        ],
+        col_gap=feature.BASICS_COL_GAP,
+        **display_kw,
+    )
+
+    input_row1 = build_horizontal_row_specs(
+        [
             RowCellSpec("buttons_cell", "Buttons", 80, 1, make_vertical_buttons, natural_width=100),
             RowCellSpec(
                 "button_group_a_cell",
@@ -380,10 +496,10 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
             ),
         ],
         col_gap=6,
-        **kw,
+        **input_kw,
     )
 
-    row2 = build_horizontal_row_specs(
+    input_row2 = build_horizontal_row_specs(
         [
             RowCellSpec(
                 "text_area",
@@ -414,42 +530,19 @@ def build_basics_specs(feature: ShowcaseFeature, bounds: Rect) -> tuple[ControlP
             ),
         ],
         col_gap=feature.BASICS_COL_GAP,
-        **kw,
+        **input_kw,
     )
 
-    row3 = build_horizontal_row_specs(
+    input_row3 = build_horizontal_row_specs(
         [
             RowCellSpec("horizontal_pair", "Horizontal Scrollbar and Slider", 56, 8, make_horiz_pair),
             RowCellSpec("vertical_pair", "Vertical Scrollbar and Slider", 140, 9, make_vert_pair),
         ],
         col_gap=16,
-        **kw,
+        **input_kw,
     )
 
-    row4 = build_horizontal_row_specs(
-        [
-            RowCellSpec(
-                "notification_panel",
-                "Notification Panel",
-                160,
-                10,
-                lambda w, h: NotificationPanelControl("control_notification_panel", Rect(0, 0, w, h), nc),
-            ),
-            RowCellSpec(
-                "image",
-                "Image",
-                160,
-                11,
-                lambda w, h: ImageControl("control_image", Rect(0, 0, h, h), image_path, scale=True),
-                target_width=160,
-                target_align="left",
-            ),
-        ],
-        col_gap=6,
-        **kw,
-    )
-
-    return row1 + row2 + row3 + row4
+    return display_row1 + display_row2 + display_row3 + input_row1 + input_row2 + input_row3
 
 
 __all__ = ["build_basics_specs"]
