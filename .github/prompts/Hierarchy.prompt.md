@@ -37,11 +37,12 @@ Transform the gui_do library to:
 - File layout: restructuring, combining, splitting, creating, and removing modules.
 - Consistency checks and corrections (docstring headers, comment style, blank line conventions).
 
-## New Runtime Facilities Constraints
 
-While restructuring, preserve and properly place the new routed runtime facilities and their ownership model.
+## New Runtime Faculties Constraints
 
-- Keep runtime-facility primitives in coherent feature-runtime modules; do not scatter across unrelated subsystems.
+While restructuring, preserve and properly place all higher-level runtime faculties (see MANUAL.md for the current list) and their ownership model. These are baseline and must not be removed or treated as new additions.
+
+- Keep runtime-faculty primitives in coherent feature-runtime modules; do not scatter across unrelated subsystems.
 - Preserve spec-to-runtime mapping paths in `data_driven_runtime` for:
   - service bindings/consumers
   - store/observable/signal effects
@@ -49,7 +50,7 @@ While restructuring, preserve and properly place the new routed runtime faciliti
   - dependency/workflow/recompute/QoS/health/replay/hot-swap spec families
 - Preserve teardown guarantees: any reorganization must keep `shutdown_runtime` disposal paths intact for runtime scope and operation bus resources.
 - Preserve routed update-hook semantics for runtime systems (`_routed_runtime_on_update`) and manager attachment/cleanup attribute paths.
-- If renaming or moving facility symbols, update root exports and all prompt/document references in the same pass.
+- If renaming or moving faculty symbols, update root exports and all prompt/document references in the same pass.
 
 ### Out of Scope
 - Changes to `tests/` structure (tests follow the modules they test; reorganize after module organization is stable).

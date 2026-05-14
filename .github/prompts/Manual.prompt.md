@@ -47,6 +47,7 @@ Before executing any step:
 
 ---
 
+
 ## Step-by-Step Execution
 
 For each step:
@@ -54,6 +55,20 @@ For each step:
 2. Follow every instruction in that sub-prompt exactly as if it were your direct instruction.
 3. Verify the target section of `MANUAL.md` was written (non-empty, no placeholder remaining).
 4. Only then proceed to the next step.
+
+---
+
+## Theory Section Update (Required)
+
+The Conceptual Foundations (Theory) section must now cover the new higher-level runtime faculties as a major aspect. These include:
+- Runtime policy/admission control (`RuntimePolicySpec`, `PolicyDecision`, `RuntimePolicyEngine`)
+- Effect lifetime ownership (`EffectBindingSpec`, `EffectLifetimeOrchestrator`)
+- Routed event stream pipelines (`EventPipelineStageSpec`, `EventPipelineSpec`, `EventPipelineRuntime`)
+- Durable operation queue/recovery (`DurableOperationBindingSpec`, `DurableOperationQueueSpec`, `DurableQueueRecord`, `DurableOperationQueueRuntime`)
+- Capability contracts/negotiation (`CapabilityProviderSpec`, `CapabilityRequirementSpec`, `CapabilityContractRuntime`)
+- Incremental projections (`ProjectionNodeSpec`, `ProjectionSpec`, `ProjectionRuntime`)
+- Dependency validation (`FeatureDependencySpec`)
+Describe their role, how they fit into the overall architecture, and how they are composed declaratively and managed through the feature lifecycle. Remove any outdated references to prior runtime facility patterns.
 
 | Step | Sub-prompt file | Scope |
 |------|----------------|-------|

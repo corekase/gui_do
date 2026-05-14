@@ -61,16 +61,17 @@ Primary truth sources for architecture and API behavior:
 - `gui_do/overlays/` (especially `overlay_manager.py`, `shortcut_help_overlay.py`, `toast_manager.py`)
 - `demo_features/` as runnable reference patterns
 
-## New Runtime Facilities Coverage (Required)
 
-When generating or updating README.md and TUTORIAL.md, include current guidance for the routed runtime facilities:
+## New Runtime Faculties Coverage (Required)
+
+When generating or updating README.md and TUTORIAL.md, include current guidance for the routed runtime facilities and all higher-level runtime faculties (see MANUAL.md for the current list and details):
 
 - Explain feature-owned runtime scope semantics and lifecycle pairing (`bind_runtime` setup, `shutdown_runtime` teardown).
 - Include at least one concise tutorial/example pattern that references declarative runtime wiring with:
   - `ServiceBindingSpec` / `ServiceConsumerSpec`
   - One reactive effect spec (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, or `SignalEffectSpec`)
   - `FeatureOperationSpec` with `FailurePolicySpec` for operation-level retry/timeout behavior
-- Include guidance for higher-level runtime faculties and where they fit:
+- Include guidance for all higher-level runtime faculties and where they fit:
   - runtime policy/admission control (`RuntimePolicySpec`, `PolicyDecision`, `RuntimePolicyEngine`)
   - effect lifetime ownership (`EffectBindingSpec`, `EffectLifetimeOrchestrator`)
   - routed event stream pipelines (`EventPipelineStageSpec`, `EventPipelineSpec`, `EventPipelineRuntime`)
@@ -78,6 +79,8 @@ When generating or updating README.md and TUTORIAL.md, include current guidance 
   - capability contracts/negotiation (`CapabilityProviderSpec`, `CapabilityRequirementSpec`, `CapabilityContractRuntime`)
   - incremental projections (`ProjectionNodeSpec`, `ProjectionSpec`, `ProjectionRuntime`)
   - dependency validation (`FeatureDependencySpec`)
+
+**Manual-first policy:** MANUAL.md is always current for these topics. Link to MANUAL.md for all faculty/system details and do not duplicate full explanations here.
   - workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`)
   - recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`)
   - QoS/backpressure (`QoSPolicySpec`, `QoSPolicyRuntime`)

@@ -25,9 +25,14 @@ complete, verbose chapter. This chapter is the theoretical backbone of the manua
 Use only names found in the actual files. Do not copy names from prior MANUAL.md content
 without verifying they still exist in `gui_do/__init__.py`.
 
+
 ## Four Required Subsections
 
 Write these four subsections in order, each with its own `[Back to Table of Contents]` link.
+
+---
+
+**Update:** The Theory section must now include a dedicated discussion of the new higher-level runtime faculties (see Manual.prompt.md for the current list). Explain their purpose, how they are composed declaratively, and their role in the feature lifecycle and runtime architecture.
 
 ---
 
