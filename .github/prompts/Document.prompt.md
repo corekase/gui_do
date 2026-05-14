@@ -1,26 +1,25 @@
 ---
 name: Document
-description: Rebuild README.md and TUTORIAL.md from the current codebase. The MANUAL.md is separate (Manual.prompt.md pipeline).
+description: Generate or update README.md and TUTORIAL.md, always code-driven and discovery-based. MANUAL.md is separate (Manual.prompt.md pipeline).
 ---
+
 
 ## Execution Order Requirement
 
-All work in this prompt must run sequentially and never concurrently.
+All work in this prompt must run strictly sequentially and never concurrently. Every step, including autodiscovery, generation, enrichment, and compliance, must be completed in order. Do not parallelize any operation.
 
-- Perform generation and any sub-generation in strict order.
-- Do not parallelize reads, drafting, rewrites, compliance checks, or enrichment steps.
-- Finish each step fully before starting the next step.
 
 ## Scope
 
-This prompt generates two files only:
+This prompt always generates or updates two files, strictly code-driven and discovery-based:
 
-1. **README.md** — a high-level project overview that sells gui_do and links to TUTORIAL.md and MANUAL.md as the primary learning resources.
-2. **TUTORIAL.md** — a complete step-by-step project tutorial that teaches the full gui_do programming model from zero.
+1. **README.md** — a high-level, motivating project overview, always code-driven, linking to TUTORIAL.md and MANUAL.md as the primary learning resources. All API names, examples, and patterns must be verified from the current codebase at the time of generation.
+2. **TUTORIAL.md** — a comprehensive, verbose, from-scratch, step-by-step tutorial that covers all major concepts and systems, with every how-and-why explained, focused code samples, "so-far" listings at major sections, and a final complete listing. All code and API names must be verified from the current codebase.
 
 MANUAL.md is produced by a separate prompt pipeline (`Manual.prompt.md`). Do not regenerate or modify MANUAL.md from this prompt.
 
-Manual-first execution policy: treat `MANUAL.md` as already refreshed by the preceding Manual prompt run. For this prompt, consider `MANUAL.md` the current reference surface and link to it frequently for deeper system and specification details.
+Manual-first execution policy: treat `MANUAL.md` as already refreshed by the preceding Manual prompt run. For this prompt, consider `MANUAL.md` the current reference surface and link to it frequently for deeper system and specification details. All major concepts and runtime faculties must be referenced to MANUAL.md for details, not duplicated.
+
 
 ### File Presence Modes (Required)
 
@@ -34,7 +33,8 @@ Apply this two-mode behavior for `README.md` and `TUTORIAL.md`:
 
 ---
 
-## Autodiscovery Requirement
+
+## Autodiscovery Requirement (Code-Driven)
 
 Before writing either file, autodiscover the current state of the codebase:
 
@@ -45,11 +45,13 @@ Before writing either file, autodiscover the current state of the codebase:
 5. **Read `MANUAL.md`** title and TOC only (first ~80 lines) to extract the exact section headings to link to.
 6. **Read `TUTORIAL.md`** if it exists, to determine whether to generate from scratch or update.
 
-Use this discovered data exclusively. Every API name in examples must be verified present in `gui_do/__init__.py`.
+
+Use this discovered data exclusively. Every API name in examples must be verified present in `gui_do/__init__.py`. All documentation is code-driven and discovery-based — never assume, always verify.
 
 ---
 
-## Documentation Principles
+
+## Documentation Principles (Code-Driven)
 
 gui_do is a data-driven, feature-lifecycle-oriented GUI framework built on pygame.
 
@@ -62,35 +64,19 @@ Primary truth sources for architecture and API behavior:
 - `demo_features/` as runnable reference patterns
 
 
-## New Runtime Faculties Coverage (Required)
 
-When generating or updating README.md and TUTORIAL.md, include current guidance for the routed runtime facilities and all higher-level runtime faculties (see MANUAL.md for the current list and details):
 
-- Explain feature-owned runtime scope semantics and lifecycle pairing (`bind_runtime` setup, `shutdown_runtime` teardown).
-- Include at least one concise tutorial/example pattern that references declarative runtime wiring with:
-  - `ServiceBindingSpec` / `ServiceConsumerSpec`
-  - One reactive effect spec (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, or `SignalEffectSpec`)
-  - `FeatureOperationSpec` with `FailurePolicySpec` for operation-level retry/timeout behavior
-- Include guidance for all higher-level runtime faculties and where they fit:
-  - runtime policy/admission control (`RuntimePolicySpec`, `PolicyDecision`, `RuntimePolicyEngine`)
-  - effect lifetime ownership (`EffectBindingSpec`, `EffectLifetimeOrchestrator`)
-  - routed event stream pipelines (`EventPipelineStageSpec`, `EventPipelineSpec`, `EventPipelineRuntime`)
-  - durable operation queue/recovery (`DurableOperationBindingSpec`, `DurableOperationQueueSpec`, `DurableQueueRecord`, `DurableOperationQueueRuntime`)
-  - capability contracts/negotiation (`CapabilityProviderSpec`, `CapabilityRequirementSpec`, `CapabilityContractRuntime`)
-  - incremental projections (`ProjectionNodeSpec`, `ProjectionSpec`, `ProjectionRuntime`)
-  - dependency validation (`FeatureDependencySpec`)
+## Major Systems and Runtime Faculties (Code-Driven)
 
-**Manual-first policy:** MANUAL.md is always current for these topics. Link to MANUAL.md for all faculty/system details and do not duplicate full explanations here.
-  - workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`)
-  - recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`)
-  - QoS/backpressure (`QoSPolicySpec`, `QoSPolicyRuntime`)
-  - health/degradation probes (`HealthProbeSpec`, `FeatureHealthRuntime`)
-  - replay capture (`ReplaySpec`, `RuntimeReplayHarness`)
-  - hot-swap policy (`ReplacePolicySpec`, `FeatureHotSwapManager`)
-- Ensure wording distinguishes declarative wiring (specs) from imperative feature behavior.
-- Keep examples on public root imports only and verify names against `gui_do/__init__.py`.
-- Prefer linking to relevant MANUAL.md chapter/appendix targets instead of duplicating long explanation blocks.
-- Because `Manual.prompt.md` always runs first, treat MANUAL.md as current for faculty details: keep README/TUTORIAL faculty explanations concise and link frequently to MANUAL.md theory and system chapters.
+When generating or updating README.md and TUTORIAL.md, always include coverage of all major systems and runtime faculties present in the current codebase. This list must be determined by code-discovery at generation time:
+
+- Autodiscover all "big systems" (major runtime faculties, core subsystems, and architectural pillars) by reading `gui_do/__init__.py`, tier headers, and all exported API names. Do not assume or hardcode the list; always verify from the codebase.
+- For each discovered major system or runtime faculty, provide concise guidance or a reference pattern in the documentation, and always link to the corresponding MANUAL.md theory or system section for details.
+- Examples of major systems include (but are not limited to): event routing, runtime policy/admission control, effect lifetime management, routed pipelines, durable operation queues, capability contracts, projections, dependency validation, workflow orchestration, recompute orchestration, QoS/backpressure, health/degradation probes, replay capture, hot-swap policy, and any other core architectural system present in the codebase.
+- For each, explain the distinction between declarative wiring (specs/config) and imperative feature behavior.
+- All examples must use only public root imports, with API names verified against `gui_do/__init__.py`.
+- Always link to the relevant MANUAL.md theory or system chapter for each major system, not duplicating full explanations.
+- Because `Manual.prompt.md` always runs first, treat MANUAL.md as current and authoritative for all theory and system details.
 
 ## Demo Features Organizational Convention
 
@@ -112,14 +98,17 @@ Documentation must present this folder+`__init__.py` model as the established pa
 
 ---
 
-## README.md Generation
 
-### Generate vs Update Behavior
+## README.md Generation (Code-Driven)
+
+
+### Generate vs Update Behavior (Code-Driven)
 
 - If README.md does not exist: generate from scratch using all required sections below, constructing the header from the Media Block spec and the badge URL verbatim.
 - If README.md exists: read it fully, then update sections that are stale, incomplete, or missing newer patterns. Preserve sections that are accurate and match the required structure. Do not silently omit required sections. Always carry forward the preserved header elements (heading, demonstration block, badge) exactly as specified under **Preserved README Header Elements**.
 
-### Purpose
+
+### Purpose (Code-Driven)
 
 README.md is a high-level project overview. Its job is to:
 - Explain what gui_do is in plain English
@@ -130,7 +119,8 @@ README.md is a high-level project overview. Its job is to:
 
 README.md is **not** a tutorial, reference manual, or API listing. Those live in TUTORIAL.md and MANUAL.md respectively. The README should leave the reader wanting to explore those documents.
 
-### Required Section Order
+
+### Required Section Order (Strict, Code-Driven)
 
 Write README.md with exactly these top-level sections, in this order:
 
@@ -227,7 +217,8 @@ The ordering of these three elements must remain:
 2. `# gui_do` (line 2, immediately adjacent to line 1 with no intervening blank line)
 3. `### Latest Demonstration` block (with `---` dividers)
 
-### Media Block Spec
+
+### Media Block Spec (Code-Driven)
 
 Read `gui_do/_version.py` for `__demo__`. Use its value as `URLPART`.
 
@@ -244,7 +235,8 @@ Exact format:
 ---
 ```
 
-### Content Rules for README.md
+
+### Content Rules for README.md (Code-Driven)
 
 **DO:**
 - Keep it high-level and motivating — not a reference
@@ -260,22 +252,27 @@ Exact format:
 
 ---
 
-## TUTORIAL.md Generation
 
-### Purpose
+## TUTORIAL.md Generation (Code-Driven)
+
+
+### Purpose (Code-Driven)
 
 TUTORIAL.md is a complete, standalone, beginning-to-end tutorial that teaches gui_do by building a real project. It must explain both **how** to do things and **why** you are doing them at every step. A reader who finishes the tutorial should understand the gui_do programming model well enough to build their own feature-complete application.
 
-### Generate vs Update Behavior
+
+### Generate vs Update Behavior (Code-Driven)
 
 - If TUTORIAL.md does not exist: generate from scratch using all required sections below.
 - If TUTORIAL.md exists: read it fully, then update sections that are stale, incomplete, or missing newer patterns. Preserve sections that are accurate. Do not silently omit required sections.
 
-### Audience
+
+### Audience (Explicit)
 
 Developers with working Python knowledge who are new to gui_do. They may be new to GUI frameworks entirely. No assumed knowledge of pygame internals.
 
-### The Project
+
+### The Project (Comprehensive, Code-Driven)
 
 The tutorial builds a single complete project from scratch — a **multi-feature interactive application** that the reader constructs step by step. Choose a project that demonstrates the full programming model naturally:
 
@@ -289,7 +286,8 @@ Good example projects: a note-taking tool, a simple dashboard with a counter and
 
 State the chosen project clearly at the start of the tutorial and keep the narrative focused on building it throughout.
 
-### Autodiscovery for Tutorial
+
+### Autodiscovery for Tutorial (Code-Driven)
 
 Before writing tutorial content:
 1. Read `gui_do/__init__.py` fully to verify every API name used in examples.
@@ -298,18 +296,21 @@ Before writing tutorial content:
 
 Every API name in the tutorial must be verified present in `gui_do/__init__.py`. Do not use names from memory.
 
-### Required Tutorial Structure
+
+### Required Tutorial Structure (Comprehensive, Code-Driven)
 
 Write TUTORIAL.md with exactly these sections, in this order. Each section must include both explanatory prose and runnable code snippets. The narrative thread of building the project must run continuously through all sections.
 
-#### 1. Introduction
+
+#### 1. Introduction (Verbose, Code-Driven)
 
 - What gui_do is (2–3 plain-English sentences)
 - What we will build: state the project, name its features, describe the end result
 - Prerequisites: Python, pip, pygame, numpy; no GUI framework experience required
 - Link to MANUAL.md for deeper reference on any topic covered here
 
-#### 2. Core Concepts
+
+#### 2. Core Concepts (Verbose, Code-Driven)
 
 Introduce the three core ideas before any code:
 
@@ -319,7 +320,8 @@ Introduce the three core ideas before any code:
 
 **Feature lifecycle.** Explain the runtime phases (`build`, `bind_runtime`, `handle_event`, `on_update`, `draw`, `shutdown_runtime`) and the intent of each. Reflect current signatures in prose/examples (`on_update(host)`, `draw(host, surface, theme)`). Explain that all features in a scene complete `build` before any `bind_runtime` runs — this is a framework guarantee, not a coincidence. Explain that subscriptions are set up in `bind_runtime` and torn down in `shutdown_runtime`.
 
-#### 3. Installation and Setup
+
+#### 3. Installation and Setup (Code-Driven)
 
 - Install command: `python -m pip install -e . --no-deps` (local editable install, no binary dependency compilation)
 - Dependencies: requires `pygame` and `numpy` (numpy is used internally for pixel buffer operations via `PixelArray`)
@@ -327,7 +329,8 @@ Introduce the three core ideas before any code:
 - Minimal imports needed to start: `from gui_do import HostApplicationBindingSpec, build_host_application_config, bootstrap_host_application, Feature`
 - Clarify the two startup paths: declarative bootstrap (recommended, covered in this tutorial) vs manual `GuiApplication` construction (advanced, see MANUAL.md)
 
-#### 4. Your First Feature
+
+#### 4. Your First Feature (Step-by-Step, Code-Driven)
 
 *Narrative: build the first piece of the project.*
 
@@ -339,7 +342,8 @@ Step by step, with a numbered sequence and a code snippet after each step:
 4. **Bootstrap and run.** Show `bootstrap_host_application(config)` and `host.app.run_entrypoint(target_fps=60)`. Explain what `bootstrap_host_application` does (reads specs, initializes all systems, returns the host object). Explain `run_entrypoint` (starts the frame loop).
 5. **Show the full listing.** Combine all steps into a single runnable file. The reader should be able to run it and see a window.
 
-#### 5. Reactive State: Making the UI Respond
+
+#### 5. Reactive State: Making the UI Respond (Step-by-Step, Code-Driven)
 
 *Narrative: add the project's first interactive element.*
 
@@ -349,7 +353,8 @@ Step by step, with a numbered sequence and a code snippet after each step:
 4. **Unsubscribe in `shutdown_runtime`.** Show `if self._sub: self._sub(); self._sub = None`. Explain why: subscriptions hold references; failing to unsubscribe causes memory leaks and callbacks firing after the feature is gone.
 5. **Run the updated listing.** Show the full file for this step.
 
-#### 6. Feature Types
+
+#### 6. Feature Types (Comprehensive, Code-Driven)
 
 Explain when to use each type. Use the project as context:
 
@@ -359,7 +364,8 @@ Explain when to use each type. Use the project as context:
 - **`LogicFeature`** — no draw or control tree; use for background computation, cross-feature coordination, or data pipeline management.
 - **`RoutedFeature`** — extends `Feature` with topic-based message dispatch; use when declaring hotkeys, shortcut overlays, and event subscriptions via `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec`.
 
-#### 7. A Second Feature and Feature Communication
+
+#### 7. A Second Feature and Feature Communication (Step-by-Step, Code-Driven)
 
 *Narrative: add the project's second feature.*
 
@@ -370,7 +376,8 @@ Explain when to use each type. Use the project as context:
 3. **Feature messaging.** Show a concrete `FeatureMessage` subclass, publishing it from one feature, and receiving it in another. Explain when to use messaging (when features should not hold direct references to each other).
 4. **Updated full listing** showing both features working together.
 
-#### 8. Actions and Keyboard Shortcuts
+
+#### 8. Actions and Keyboard Shortcuts (Step-by-Step, Code-Driven)
 
 *Narrative: wire a keyboard shortcut to the project's primary action.*
 
@@ -380,7 +387,8 @@ Explain when to use each type. Use the project as context:
 4. **Shortcut help overlay.** Show adding `ShortcutOverlaySpec` to `RoutedRuntimeSpec` so users can discover keyboard shortcuts by pressing a configurable toggle key.
 5. **Updated listing** showing the action wired and triggering behavior in the project.
 
-#### 9. Spec Reference for Builders
+
+#### 9. Spec Reference for Builders (Concise, Code-Driven)
 
 A concise reference section (not a tutorial — link to MANUAL.md for full detail). Include one short paragraph + minimal snippet for each:
 
@@ -394,7 +402,8 @@ A concise reference section (not a tutorial — link to MANUAL.md for full detai
 - **`ToastManager`** — brief note on how to show a toast notification from a feature (via `host.toasts.show(...)`)
 - Link each to the corresponding section in MANUAL.md
 
-#### 10. Complete Project Listing
+
+#### 10. Complete Project Listing (Comprehensive, Code-Driven)
 
 The full, runnable, end-to-end listing of the project built throughout the tutorial. Requirements:
 
@@ -408,14 +417,16 @@ The full, runnable, end-to-end listing of the project built throughout the tutor
 
 This listing must run as-is. All imports must be from `gui_do` root. All API names verified in `gui_do/__init__.py`.
 
-#### 11. Next Steps
+
+#### 11. Next Steps (Explicit, Code-Driven)
 
 - What to read next: MANUAL.md (link directly), then `demo_features/` as living examples
 - What to explore: overlays, persistence, scene navigation, telemetry, graphics
 - The MANUAL.md sections most relevant to common next steps: system chapters 8.1 (bootstrap), 8.2 (features), 8.3 (events/actions), 8.4 (state/observables)
 - Encouragement: `data_driven_runtime.py` and `feature_lifecycle.py` are readable and well-commented; reading them will demystify bootstrap entirely
 
-### Content Rules for TUTORIAL.md
+
+### Content Rules for TUTORIAL.md (Code-Driven)
 
 **DO:**
 - Explain **why** before showing how at every step
@@ -433,7 +444,8 @@ This listing must run as-is. All imports must be from `gui_do` root. All API nam
 
 ---
 
-## Post-Generation Compliance Pass
+
+## Post-Generation Compliance Pass (Strict, Code-Driven)
 
 After generating both files, run a compliance pass:
 

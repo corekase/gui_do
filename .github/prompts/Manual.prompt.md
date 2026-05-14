@@ -4,57 +4,66 @@ description: Generate or update MANUAL.md — invoke this file directly to run t
 agent: agent
 ---
 
-# gui_do Manual — Pipeline Orchestrator
 
-You are an agent. Execute the steps below **sequentially in a single session**. Complete each
-step fully — file written and verified — before reading the next sub-prompt. Do not skip steps.
-Do not batch them. This file is the only entry point; do not ask the user to run sub-prompts
-manually.
+# gui_do Manual — Discovery-Based Pipeline Orchestrator
 
-## Global Execution Command
+You are an agent. Execute the following steps **strictly sequentially** in a single session. Each step must:
+- Perform a discovery pass of the current codebase, tests, demo features, and docs before writing.
+- Generate documentation that is fully discovery-based: all API names, specs, and examples must be verified from the current source code at the time of invocation. Never assume or copy from prior content.
+- Write or update only the section(s) owned by the current subprompt, using precise replace targets. Never update sections outside your scope.
+- Remove obsolete information and add new information as discovered. If MANUAL.md exists, update only changed or placeholder sections; if not, generate a new manual from scratch.
+- Require a complete, navigable Table of Contents with working links and back-to-top anchors for every major section.
+- Require a full, up-to-date Specifications appendix, with all fields and options for each spec, and links from relevant sections.
+- Require that all code examples are verified against the current API.
+- Require that the enrichment pass (final step) fills in missing details and adds code examples wherever possible, with all code validated.
+- Enforce that the pipeline always runs sequentially, never in parallel, and that each subprompt only updates the section(s) it owns.
+- Enforce that all navigation, coverage, and accuracy gates are met, and that double-underscore identifiers are always formatted to avoid markdown misparsing.
 
-All required sub-prompt execution must be strictly sequential and never concurrent. Do not
-evaluate, run, or validate sub-prompts in parallel. This sequential rule applies both to
-top-level step order and to all operations inside every sub-prompt.
+## Execution Model
 
-Run non-interactively. Do not ask follow-up confirmation questions during planning or execution.
-Mode selection is deterministic from filesystem state and must not require confirmation.
+1. Check if `MANUAL.md` exists at the repository root.
+2. If it does not exist, run all subprompts in sequence to generate a new manual from scratch.
+3. If it exists, update only changed or placeholder sections, removing obsolete information and adding new discoveries. If the user specifies changed chapters, run only those subprompts.
+4. Each subprompt must:
+   - Read the relevant code, tests, and docs before writing.
+   - Replace only the section(s) it owns, using precise replace targets.
+   - Add or update code examples, usage flows, and advanced patterns, all verified.
+   - Add links to the specifications appendix where relevant.
+   - Enforce navigation and completeness rules (ToC, back-to-top links, etc.).
+   - Remove or update obsolete content as needed.
+5. After all steps, verify that MANUAL.md contains no placeholders, all navigation links work, all code examples are valid, and all specs are up to date.
 
-## Determine Run Mode First
+## Subprompt Structure
 
-Before executing any step:
+The manual is split into 9 subprompts, each owning a distinct, manageable section or set of sections:
+1. Full skeleton, preamble, and ToC
+2. Conceptual Foundations (Theory)
+3. Quickstart Path, Architecture, Core Workflow
+4. Main Systems Reference (Systems 8.1–8.4)
+5. Main Systems Reference (Systems 8.5–8.8)
+6. Main Systems Reference (Systems 8.9–8.12)
+7. Main Systems Reference (Systems 8.13–8.16), Integration Patterns, E2E Reference
+8. Testing, Diagnostics, Performance, Migration, FAQ, Appendices
+9. Enrichment pass: fill in missing details, add/verify code examples, update Specifications appendix
 
-1. Check whether `MANUAL.md` exists at the repository root.
-2. Choose mode strictly by file existence:
-   - If `MANUAL.md` exists: run in **Update Mode**.
-   - If `MANUAL.md` does not exist: run in **From-Scratch Rebuild Mode**.
+Each subprompt must be executed strictly sequentially. Never run subprompts in parallel or batch steps. Each subprompt must verify its section(s) are fully written and non-empty before proceeding.
 
-   **From-Scratch Rebuild Mode** (`MANUAL.md` missing):
-   - Execute all 9 steps in sequence.
-   - p1 creates the full skeleton; p2-p8 expand sections; p9 performs enrichment pass.
+## Quality Gates
 
-   **Update Run** (`MANUAL.md` exists):
-   - If the user specifies which chapters changed (e.g., “update the Controls chapter”):
-     run only the sub-prompts covering those chapters. Skip p1 unless the preamble or
-     TOC itself is explicitly mentioned.
-   - If any section still contains a `<!-- MANUAL_PLACEHOLDER: -->` comment:
-     run the sub-prompts that cover those stale sections. Skip p1 unless the preamble
-     placeholder is present.
-   - Otherwise (general request such as “update the manual” or “regenerate the manual”
-     with no specific section constraint): run all 9 steps in update mode.
+- All navigation, coverage, and accuracy gates must be met.
+- All code examples must be valid and verified against the current API.
+- All specification-heavy sections must link to the Specifications appendix.
+- All obsolete information must be removed, and new discoveries added.
+- Double-underscore identifiers must be formatted to avoid markdown misparsing.
 
-   Do not ask for mode confirmation.
+## Completion Check
 
----
-
-
-## Step-by-Step Execution
-
-For each step:
-1. Read the sub-prompt file listed below using `read_file`.
-2. Follow every instruction in that sub-prompt exactly as if it were your direct instruction.
-3. Verify the target section of `MANUAL.md` was written (non-empty, no placeholder remaining).
-4. Only then proceed to the next step.
+After all steps, verify:
+- MANUAL.md exists and contains no placeholders.
+- All navigation links work.
+- All code examples are valid.
+- All specs are up to date.
+- All obsolete information is removed.
 
 ---
 
