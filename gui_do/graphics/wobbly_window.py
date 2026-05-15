@@ -44,16 +44,21 @@ class WobblyWindowController:
         self.frequency = float(self.params.get("frequency", 0.055))
         self.phase_coupling = float(self.params.get("phase_coupling", 0.22))
         self.drag_coupling = float(self.params.get("drag_coupling", 0.55))
-        self.spring_k = float(self.params.get("spring_k", 42.0))
-        self.damping = float(self.params.get("damping", 0.68))
-        self.time_step = float(self.params.get("time_step", 1.0 / 60.0))
-        self.max_impulse = float(self.params.get("max_impulse", 74.0))
+        self.spring_k = float(self.params.get("spring_k", 62.0))
+        self.damping = float(self.params.get("damping", 0.60))
+        self.time_step = float(self.params.get("time_step", 1.0 / 120.0))
+        self.simulation_substeps = int(self.params.get("simulation_substeps", 2))
+        self.max_impulse = float(self.params.get("max_impulse", 92.0))
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 10.0))
-        self.max_distort_px = float(self.params.get("max_distort_px", 90.0))
+        self.max_distort_px = float(self.params.get("max_distort_px", 112.0))
         self.perp_strength = float(self.params.get("perp_strength", 0.9))
-        self.bend_gain = float(self.params.get("bend_gain", 4.2))
-        self.global_warp_gain = float(self.params.get("global_warp_gain", 2.6))
+        self.bend_gain = float(self.params.get("bend_gain", 5.6))
+        self.global_warp_gain = float(self.params.get("global_warp_gain", 3.2))
         self.distance_power = float(self.params.get("distance_power", 1.1))
+        self.corner_lead_gain = float(self.params.get("corner_lead_gain", 1.15))
+        self.corner_pull_gain = float(self.params.get("corner_pull_gain", 1.20))
+        self.corner_arc_couple = float(self.params.get("corner_arc_couple", 0.18))
+        self.corner_cohesion = float(self.params.get("corner_cohesion", 0.55))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
@@ -213,7 +218,11 @@ class WobblyWindowController:
         if self.buffer is None:
             return
 
-        self._step_settle()
+        substeps = max(1, self.simulation_substeps)
+        for _ in range(substeps):
+            self._step_settle()
+            if not self.active:
+                break
         if not self.active or self.buffer is None:
             # Transition frame: if settle just completed, draw the normal window now
             # so we don't emit a blank frame flash before WindowControl exits wobble mode.
@@ -259,6 +268,42 @@ class WobblyWindowController:
         max_dist_x = max(anchor_x, float(w) - anchor_x)
         max_dist_y = max(anchor_y, float(h) - anchor_y)
         max_anchor_dist = max(1.0, math.hypot(max_dist_x, max_dist_y))
+
+        # Corner warp model: lead corners move most, trailing corners are pulled
+        # in the drag direction, then bilinearly blended across the bitmap.
+        base_corner_mag = disp_mag * self.bend_gain * (0.45 + (0.55 * self._motion_strength))
+
+        def _corner_offset(corner_x: float, corner_y: float) -> tuple[float, float]:
+            vx = corner_x - anchor_x
+            vy = corner_y - anchor_y
+            vm = math.hypot(vx, vy)
+            if vm < 1e-6:
+                return (0.0, 0.0)
+            rvx = vx / vm
+            rvy = vy / vm
+            directional = (rvx * dir_x) + (rvy * dir_y)
+            lead = max(0.0, directional)
+            trail = max(0.0, -directional)
+
+            # Lead advances strongly; trailing follows toward lead direction.
+            corner_drive = (self.corner_lead_gain * lead) + (self.corner_pull_gain * trail)
+            along_amt = base_corner_mag * corner_drive * self._push_pull
+
+            # Small signed perpendicular coupling creates an arc-shaped bend.
+            side = (rvx * perp_x) + (rvy * perp_y)
+            perp_amt = along_amt * self.corner_arc_couple * side
+
+            return (
+                (along_amt * dir_x) + (perp_amt * perp_x),
+                (along_amt * dir_y) + (perp_amt * perp_y),
+            )
+
+        c_tl = _corner_offset(0.0, 0.0)
+        c_tr = _corner_offset(float(w), 0.0)
+        c_bl = _corner_offset(0.0, float(h))
+        c_br = _corner_offset(float(w), float(h))
+        avg_corner_x = (c_tl[0] + c_tr[0] + c_bl[0] + c_br[0]) * 0.25
+        avg_corner_y = (c_tl[1] + c_tr[1] + c_bl[1] + c_br[1]) * 0.25
 
         def _draw_tile_pass(x_start: int, y_start: int) -> None:
             for y in range(y_start, h, tile_h):
@@ -309,6 +354,32 @@ class WobblyWindowController:
 
                     off_x = (amount_along * dir_x) + (amount_perp * perp_x)
                     off_y = ((amount_along * self._vertical_push_sign) * dir_y) + (amount_perp * perp_y)
+
+                    # Bilinear blend of corner offsets across the full window.
+                    u = center_x / max(1.0, float(w))
+                    v = center_y / max(1.0, float(h))
+                    w_tl = (1.0 - u) * (1.0 - v)
+                    w_tr = u * (1.0 - v)
+                    w_bl = (1.0 - u) * v
+                    w_br = u * v
+                    corner_x = (
+                        (c_tl[0] * w_tl)
+                        + (c_tr[0] * w_tr)
+                        + (c_bl[0] * w_bl)
+                        + (c_br[0] * w_br)
+                    )
+                    corner_y = (
+                        (c_tl[1] * w_tl)
+                        + (c_tr[1] * w_tr)
+                        + (c_bl[1] * w_bl)
+                        + (c_br[1] * w_br)
+                    )
+                    # Cohesion blend: pull local corner influence toward shared corner motion
+                    # for a chunkier "jello block" response.
+                    corner_x = (corner_x * (1.0 - self.corner_cohesion)) + (avg_corner_x * self.corner_cohesion)
+                    corner_y = (corner_y * (1.0 - self.corner_cohesion)) + (avg_corner_y * self.corner_cohesion)
+                    off_x += corner_x
+                    off_y += corner_y
                     off_x = int(max(-safe_component_offset, min(safe_component_offset, off_x)))
                     off_y = int(max(-safe_component_offset, min(safe_component_offset, off_y)))
 
