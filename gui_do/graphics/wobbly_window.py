@@ -166,11 +166,14 @@ class WobblyWindowController:
         base_x, base_y = self.window.rect.topleft
         tile_h = max(2, self.band_height)
         tile_w = max(2, self.tile_width)
+        overlap_px = 4
 
         # Passive oscillation: advances even when pointer is stationary.
         self._phase += 0.18
 
-        disp_mag = min(self.max_distort_px, math.hypot(self._disp[0], self._disp[1]))
+        # Safety cap: keep deformation within tile-coverage limits to avoid holes at high speed.
+        safe_component_offset = max(3.0, (min(tile_w, tile_h) * 0.55) + overlap_px)
+        disp_mag = min(self.max_distort_px, safe_component_offset, math.hypot(self._disp[0], self._disp[1]))
         if disp_mag < 0.001:
             surface.blit(self.buffer, (base_x, base_y))
             return
@@ -218,17 +221,21 @@ class WobblyWindowController:
                         min(self.max_distort_px, amount * self.perp_strength * wave_perp),
                     )
 
-                    off_x = int((amount_along * dir_x) + (amount_perp * perp_x))
-                    off_y = int((amount_along * dir_y) + (amount_perp * perp_y))
+                    off_x = (amount_along * dir_x) + (amount_perp * perp_x)
+                    off_y = (amount_along * dir_y) + (amount_perp * perp_y)
+                    off_x = int(max(-safe_component_offset, min(safe_component_offset, off_x)))
+                    off_y = int(max(-safe_component_offset, min(safe_component_offset, off_y)))
 
-                    # 2px overlap around each tile hides inter-tile seam artifacts.
-                    sx = max(0, x - 2)
-                    sy = max(0, y - 2)
-                    ex = min(w, x + src_w + 2)
-                    ey = min(h, y + src_h + 2)
+                    # Extra overlap around each tile hides inter-tile seam artifacts.
+                    sx = max(0, x - overlap_px)
+                    sy = max(0, y - overlap_px)
+                    ex = min(w, x + src_w + overlap_px)
+                    ey = min(h, y + src_h + overlap_px)
                     src = pygame.Rect(sx, sy, ex - sx, ey - sy)
                     surface.blit(self.buffer, (base_x + sx + off_x, base_y + sy + off_y), src)
 
-        # Two staggered passes improve coverage and eliminate visible black seams.
+        # Four staggered passes improve coverage under rapid movement.
         _draw_tile_pass(0, 0)
+        _draw_tile_pass(tile_w // 2, 0)
+        _draw_tile_pass(0, tile_h // 2)
         _draw_tile_pass(tile_w // 2, tile_h // 2)
