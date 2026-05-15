@@ -71,7 +71,9 @@ class WobblyWindowController:
         self.overlap_px = int(self.params.get("overlap_px", 4))
         self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.22))
         self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.12))
-        self._settle_blend_seconds = max(1e-6, min(self.settle_timeout_seconds, self.settle_hard_limit_seconds))
+        self.release_blend_seconds = float(self.params.get("release_blend_seconds", 0.16))
+        self.release_hard_limit_seconds = float(self.params.get("release_hard_limit_seconds", 0.24))
+        self._settle_blend_seconds = max(1e-6, min(self.release_blend_seconds, self.release_hard_limit_seconds))
         self.settle_spring_boost = float(self.params.get("settle_spring_boost", 2.35))
         self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.74))
         self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
@@ -91,7 +93,7 @@ class WobblyWindowController:
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
         self._settle_max_steps = max(
             1,
-            int(round(max(self.settle_timeout_seconds, self.settle_hard_limit_seconds) * self.settle_target_fps * max(1, self.simulation_substeps))),
+            int(round(max(self.settle_timeout_seconds, self.release_hard_limit_seconds) * self.settle_target_fps * max(1, self.simulation_substeps))),
         )
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
@@ -282,7 +284,7 @@ class WobblyWindowController:
                 self._scratch = None
                 self._scratch_size = (0, 0)
                 return
-            if self._settle_elapsed >= self.settle_hard_limit_seconds:
+            if self._settle_elapsed >= self.release_hard_limit_seconds:
                 # Force a clean stop at the same position; geometry fade is already
                 # guaranteed to be near-zero by the matched release blend horizon.
                 self._disp[0] = 0.0
@@ -310,7 +312,11 @@ class WobblyWindowController:
         """
         self.dragging = False
         self._prev_mouse_pos = None
-        self._motion_strength = 0.0
+        # Keep more motion intensity so release transitions animate across more frames.
+        self._motion_strength *= 0.72
+        # Dampen, but retain enough velocity for a smoother visible release tail.
+        self._vel[0] *= 0.82
+        self._vel[1] *= 0.82
         self._settle_elapsed = 0.0
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
@@ -392,7 +398,9 @@ class WobblyWindowController:
         release_blend = 1.0
         if not self.dragging and self._settle_blend_seconds > 1e-6:
             release_t = min(1.0, max(0.0, self._settle_elapsed / self._settle_blend_seconds))
-            release_blend = 1.0 - release_t
+            # Smoothstep fade avoids abrupt tail cutoff while still converging cleanly.
+            smooth = (release_t * release_t) * (3.0 - (2.0 * release_t))
+            release_blend = 1.0 - smooth
         disp_mag *= release_blend
         if disp_mag < 0.001:
             surface.blit(self.buffer, (base_x, base_y))
@@ -413,6 +421,8 @@ class WobblyWindowController:
                 if idle_over > 0.0:
                     fade_tau = max(1e-6, self.drag_idle_quick_settle_seconds)
                     drag_idle_blend = math.exp(-(idle_over / fade_tau))
+            # Shear must fade with release to avoid drag-end snap.
+            shear_release_blend = release_blend
 
             for y in range(y_start, h, tile_h):
                 for x in range(x_start, w, tile_w):
@@ -478,6 +488,7 @@ class WobblyWindowController:
                         * horizontal_weight
                         * shear_sign_x
                         * (0.80 + (0.20 * self._render_motion_strength))
+                        * shear_release_blend
                         * drag_idle_blend
                         * anchor_gate
                     )
@@ -486,6 +497,7 @@ class WobblyWindowController:
                         * vertical_offset
                         * horizontal_weight
                         * shear_sign_x
+                        * shear_release_blend
                         * drag_idle_blend
                         * anchor_gate
                     )
