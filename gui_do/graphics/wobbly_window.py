@@ -35,6 +35,7 @@ class WobblyWindowController:
         self._motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
+        self._drag_idle_elapsed = 0.0
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
 
@@ -51,6 +52,8 @@ class WobblyWindowController:
         self.max_velocity = float(self.params.get("max_velocity", 220.0))
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 6.0))
         self.max_distort_px = float(self.params.get("max_distort_px", 144.0))
+        self.max_total_distort_px = float(self.params.get("max_total_distort_px", 58.0))
+        self.max_disp_mag = float(self.params.get("max_disp_mag", 82.0))
         self.arc_along_gain = float(self.params.get("arc_along_gain", self.params.get("bend_gain", 4.35)))
         self.arc_perp_gain = float(self.params.get("arc_perp_gain", self.params.get("sheet_cross_gain", 2.05)))
         self.arc_radius_scale = float(self.params.get("arc_radius_scale", 0.72))
@@ -63,6 +66,12 @@ class WobblyWindowController:
         self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.34))
         self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.24))
         self._settle_blend_seconds = max(1e-6, min(self.settle_timeout_seconds, self.settle_hard_limit_seconds))
+        self.settle_spring_boost = float(self.params.get("settle_spring_boost", 1.85))
+        self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.82))
+        self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 0.65))
+        self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.03))
+        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 1.55))
+        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.88))
         self.settle_target_fps = float(self.params.get("settle_target_fps", 60.0))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
         self._settle_max_steps = max(
@@ -86,6 +95,7 @@ class WobblyWindowController:
         self._motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
+        self._drag_idle_elapsed = 0.0
         self._disp[0] = 0.0
         self._disp[1] = 0.0
         self._vel[0] = 0.0
@@ -113,7 +123,8 @@ class WobblyWindowController:
             dx = float(mouse_pos[0] - self._prev_mouse_pos[0])
             dy = float(mouse_pos[1] - self._prev_mouse_pos[1])
             speed = math.hypot(dx, dy)
-            if speed > 0.001:
+            if speed > self.drag_idle_speed_threshold:
+                self._drag_idle_elapsed = 0.0
                 nx = dx / speed
                 ny = dy / speed
                 content_rect = None
@@ -161,24 +172,56 @@ class WobblyWindowController:
                     vel_scale = self.max_velocity / vel_mag
                     self._vel[0] *= vel_scale
                     self._vel[1] *= vel_scale
+                disp_mag = math.hypot(self._disp[0], self._disp[1])
+                if disp_mag > self.max_disp_mag > 1e-6:
+                    disp_scale = self.max_disp_mag / disp_mag
+                    self._disp[0] *= disp_scale
+                    self._disp[1] *= disp_scale
+                    self._vel[0] *= disp_scale
+                    self._vel[1] *= disp_scale
                 self._phase += speed * self.phase_coupling
             else:
+                self._drag_idle_elapsed += self.time_step
                 self._motion_strength *= 0.82
         self._prev_mouse_pos = mouse_pos
 
     def _step_settle(self) -> None:
         """Advance damped spring state and auto-disable when fully settled."""
-        self._vel[0] += (-self.spring_k * self._disp[0]) * self.time_step
-        self._vel[1] += (-self.spring_k * self._disp[1]) * self.time_step
-        self._vel[0] *= self.damping
-        self._vel[1] *= self.damping
+        spring_k = self.spring_k
+        damping = self.damping
+        if self.dragging:
+            self._drag_idle_elapsed += self.time_step
+
+        boost = 1.0
+        damping_scale = 1.0
+        if not self.dragging:
+            boost = max(boost, self.settle_spring_boost)
+            damping_scale = min(damping_scale, self.settle_damping_scale)
+        elif self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
+            boost = max(boost, self.drag_idle_spring_boost)
+            damping_scale = min(damping_scale, self.drag_idle_damping_scale)
+
+        spring_k *= boost
+        damping = max(0.0, min(1.0, damping * damping_scale))
+
+        self._vel[0] += (-spring_k * self._disp[0]) * self.time_step
+        self._vel[1] += (-spring_k * self._disp[1]) * self.time_step
+        self._vel[0] *= damping
+        self._vel[1] *= damping
         self._disp[0] += self._vel[0] * self.time_step
         self._disp[1] += self._vel[1] * self.time_step
+
+        disp_mag = math.hypot(self._disp[0], self._disp[1])
+        if disp_mag > self.max_disp_mag > 1e-6:
+            disp_scale = self.max_disp_mag / disp_mag
+            self._disp[0] *= disp_scale
+            self._disp[1] *= disp_scale
+            self._vel[0] *= disp_scale
+            self._vel[1] *= disp_scale
 
         if not self.dragging:
             self._settle_elapsed += self.time_step
             self._settle_steps += 1
-            disp_mag = math.hypot(self._disp[0], self._disp[1])
             vel_mag = math.hypot(self._vel[0], self._vel[1])
             if disp_mag < self.settle_epsilon and vel_mag < self.settle_epsilon:
                 self.active = False
@@ -217,6 +260,7 @@ class WobblyWindowController:
         self._motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
+        self._drag_idle_elapsed = 0.0
 
     def is_active(self) -> bool:
         return bool(self.active)
@@ -363,6 +407,16 @@ class WobblyWindowController:
 
                     off_x = (arc_along * dir_x) + (arc_perp * perp_x) + follow_x
                     off_y = (arc_along * dir_y) + (arc_perp * perp_y) + follow_y
+
+                    # Global geometry budget: clamp net tile displacement magnitude
+                    # so rapid direction changes cannot produce runaway distortion.
+                    off_mag = math.hypot(off_x, off_y)
+                    max_off_mag = min(self.max_total_distort_px, safe_component_offset)
+                    if off_mag > max_off_mag > 1e-6:
+                        off_scale = max_off_mag / off_mag
+                        off_x *= off_scale
+                        off_y *= off_scale
+
                     off_x = int(max(-safe_component_offset, min(safe_component_offset, off_x)))
                     off_y = int(max(-safe_component_offset, min(safe_component_offset, off_y)))
 
