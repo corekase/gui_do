@@ -51,7 +51,7 @@ class WobblyWindowController:
         self.spring_k = float(self.params.get("spring_k", 62.0))
         self.damping = float(self.params.get("damping", 0.60))
         self.time_step = float(self.params.get("time_step", 1.0 / 120.0))
-        self.simulation_substeps = int(self.params.get("simulation_substeps", 2))
+        self.simulation_substeps = int(self.params.get("simulation_substeps", 4))  # was 2, for smoother settle
         self.max_impulse = float(self.params.get("max_impulse", 128.0))
         self.max_velocity = float(self.params.get("max_velocity", 300.0))
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 6.0))
@@ -66,9 +66,9 @@ class WobblyWindowController:
         self.body_follow_gain = float(self.params.get("body_follow_gain", 0.46))
         self.arc_cross_exponent = float(self.params.get("arc_cross_exponent", 0.82))
         self.arc_along_taper = float(self.params.get("arc_along_taper", 0.16))
-        self.shear_gain = float(self.params.get("shear_gain", 1.80))
-        self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.35))
-        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 30.0))
+        self.shear_gain = float(self.params.get("shear_gain", 2.5))  # was 1.80, increased for more shear
+        self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.5))  # was 1.35
+        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 80.0))  # was 60.0, increased for more shear
         self.overlap_px = int(self.params.get("overlap_px", 4))
         self.performance_area_threshold_px = int(self.params.get("performance_area_threshold_px", 180000))
         self.large_window_refresh_interval_frames = int(self.params.get("large_window_refresh_interval_frames", 2))
@@ -94,8 +94,8 @@ class WobblyWindowController:
         self.horizontal_snap_velocity_keep = float(self.params.get("horizontal_snap_velocity_keep", 0.18))
         self.visual_dir_interp_rate = float(self.params.get("visual_dir_interp_rate", 20.0))
         self.visual_scalar_interp_rate = float(self.params.get("visual_scalar_interp_rate", 26.0))
-        self.settle_target_fps = float(self.params.get("settle_target_fps", 60.0))
-        self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
+        self.settle_target_fps = float(self.params.get("settle_target_fps", 120.0))  # was 60.0, for more settle steps
+        self.settle_epsilon = float(self.params.get("settle_epsilon", 0.12))  # was 0.18, for finer settle granularity
         self._settle_max_steps = max(
             1,
             int(round(max(self.settle_timeout_seconds, self.release_hard_limit_seconds) * self.settle_target_fps * max(1, self.simulation_substeps))),
@@ -140,6 +140,11 @@ class WobblyWindowController:
         Called on each drag update. Updates mesh simulation with new anchor position.
         :param mouse_pos: (x, y) tuple of current mouse position.
         """
+        # Always draw the last valid buffer until the animation is visually finished, even after deactivation.
+        if not self.active and self.buffer is not None:
+            base_x, base_y = self.window.rect.topleft
+            surface.blit(self.buffer, (base_x, base_y))
+            return
         if not self.active:
             return
         self.dragging = True
@@ -286,9 +291,7 @@ class WobblyWindowController:
             vel_mag = math.hypot(self._vel[0], self._vel[1])
             if disp_mag < self.settle_epsilon and vel_mag < self.settle_epsilon:
                 self.active = False
-                self.buffer = None
-                self._scratch = None
-                self._scratch_size = (0, 0)
+                # Do not clear buffer or scratch here; keep them until the next drag or explicit reset
                 return
             if self._settle_elapsed >= self.release_hard_limit_seconds:
                 # Force a clean stop at the same position; geometry fade is already
@@ -298,9 +301,7 @@ class WobblyWindowController:
                 self._vel[0] = 0.0
                 self._vel[1] = 0.0
                 self.active = False
-                self.buffer = None
-                self._scratch = None
-                self._scratch_size = (0, 0)
+                # Do not clear buffer or scratch here; keep them until the next drag or explicit reset
                 return
             if (
                 self._settle_steps > self._settle_max_steps
@@ -308,24 +309,41 @@ class WobblyWindowController:
                 self._settle_elapsed > self.settle_timeout_seconds
             ):
                 self.active = False
-                self.buffer = None
-                self._scratch = None
-                self._scratch_size = (0, 0)
+                # Do not clear buffer or scratch here; keep them until the next drag or explicit reset
 
     def end_drag(self):
         """
         Called when dragging ends. Releases anchor, animates mesh to rest.
+        Ensures the current deformation state is preserved as the starting state for settle.
         """
-        self.dragging = False
-        self._prev_mouse_pos = None
-        # Keep more motion intensity so release transitions animate across more frames.
-        self._motion_strength *= 0.72
-        # Dampen, but retain enough velocity for a smoother visible release tail.
-        self._vel[0] *= 0.82
-        self._vel[1] *= 0.82
-        self._settle_elapsed = 0.0
-        self._settle_steps = 0
-        self._drag_idle_elapsed = 0.0
+        # Preserve all visual and physical state for seamless settle
+        # Refresh buffer with the latest window state at drag end
+        surface = getattr(self.window, 'surface', None)
+        theme = getattr(self.window, 'theme', None)
+        draw_window_standard = getattr(self.window, '_draw_standard', None)
+        if surface is not None and draw_window_standard is not None:
+            try:
+                self._refresh_buffer(surface, theme, draw_window_standard)
+            except Exception:
+                pass
+            self.dragging = False
+            self._prev_mouse_pos = None
+            # No reset of _disp, _vel, _dir, _render_dir, _push_pull, _render_push_pull, _motion_strength, _render_motion_strength
+            # Only decay velocity and motion strength for a smooth tail
+            self._motion_strength *= 0.72
+            self._render_motion_strength = self._motion_strength
+            self._vel[0] *= 0.82
+            self._vel[1] *= 0.82
+            self._settle_elapsed = 0.0
+            self._settle_steps = 0
+            self._drag_idle_elapsed = 0.0
+            # Ensure render state matches current state for seamless transition
+            self._render_dir = self._dir
+            self._render_push_pull = self._push_pull
+            # Preserve the current render motion strength (shear) for settle
+            # This ensures the current shear amount is the starting deformation for settle
+            # (no interpolation to zero before settle)
+            # No-op: already set above, but explicitly not zeroed
 
     def is_active(self) -> bool:
         return bool(self.active)
@@ -391,13 +409,9 @@ class WobblyWindowController:
         substeps = max(1, self.simulation_substeps)
         for _ in range(substeps):
             self._step_settle()
-            if not self.active:
-                break
-        if not self.active or self.buffer is None:
-            # Transition frame: if settle just completed, draw the normal window now
-            # so we don't emit a blank frame flash before WindowControl exits wobble mode.
-            if draw_window_standard is not None and theme is not None:
-                draw_window_standard(surface, theme)
+            # Do not break or draw the normal window if settle just completed; always draw the last deformed buffer
+            # until the animation is visually finished. This prevents a frame in the undeformed state.
+        if self.buffer is None:
             return
 
         base_x, base_y = self.window.rect.topleft
@@ -458,7 +472,8 @@ class WobblyWindowController:
                     fade_tau = max(1e-6, self.drag_idle_quick_settle_seconds)
                     drag_idle_blend = math.exp(-(idle_over / fade_tau))
             # Shear must fade with release to avoid drag-end snap.
-            shear_release_blend = release_blend
+            # Fade out shear more gradually during release to reduce snap
+            shear_release_blend = math.sqrt(release_blend) if not self.dragging else 1.0
 
             for y in range(y_start, h, tile_h):
                 for x in range(x_start, w, tile_w):
