@@ -33,6 +33,7 @@ class WobblyWindowController:
         self._dir = (1.0, 0.0)
         self._push_pull = 1.0
         self._motion_strength = 0.0
+        self._vertical_push_sign = 1.0
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
 
@@ -69,6 +70,7 @@ class WobblyWindowController:
         self._dir = (1.0, 0.0)
         self._push_pull = 1.0
         self._motion_strength = 0.0
+        self._vertical_push_sign = 1.0
         self._disp[0] = 0.0
         self._disp[1] = 0.0
         self._vel[0] = 0.0
@@ -99,6 +101,11 @@ class WobblyWindowController:
             if speed > 0.001:
                 nx = dx / speed
                 ny = dy / speed
+                # Keep upward deformation as-is; reverse only downward deformation.
+                if dy < -0.5:
+                    self._vertical_push_sign = 1.0
+                elif dy > 0.5:
+                    self._vertical_push_sign = -1.0
                 content_rect = None
                 content_rect_fn = getattr(self.window, "content_rect", None)
                 if callable(content_rect_fn):
@@ -115,10 +122,14 @@ class WobblyWindowController:
                     tx = cx / to_content_mag
                     ty = cy / to_content_mag
                     toward = (nx * tx) + (ny * ty)
-                    self._push_pull = -1.0 if toward >= 0.0 else 1.0
+                    # Hysteresis near neutral avoids sign chatter and directional flicker.
+                    if toward >= 0.08:
+                        self._push_pull = 1.0
+                    elif toward <= -0.08:
+                        self._push_pull = -1.0
                     self._motion_strength = min(1.0, abs(toward))
                 else:
-                    self._push_pull = -1.0
+                    self._push_pull = 1.0
                     self._motion_strength = 0.0
                 # Smooth heading toward latest movement direction.
                 self._dir = (
@@ -238,9 +249,13 @@ class WobblyWindowController:
 
         dir_x, dir_y = self._dir
         perp_x, perp_y = -dir_y, dir_x
+        # Strongly suppress cross-axis deformation when motion is mostly horizontal,
+        # preventing left/right movement from producing vertical deformation.
+        cross_axis_scale = min(1.0, max(0.0, (abs(dir_y) ** 2) * 1.65))
         anchor_x, anchor_y = self.anchor if self.anchor is not None else (w * 0.5, h * 0.5)
-        sigma_perp = max(8.0, h * 0.32)
-        sigma_along = max(8.0, h * 0.40)
+        window_scale = max(float(w), float(h))
+        sigma_perp = max(16.0, window_scale * 0.95)
+        sigma_along = max(16.0, window_scale * 1.10)
         max_dist_x = max(anchor_x, float(w) - anchor_x)
         max_dist_y = max(anchor_y, float(h) - anchor_y)
         max_anchor_dist = max(1.0, math.hypot(max_dist_x, max_dist_y))
@@ -265,7 +280,9 @@ class WobblyWindowController:
                     if anchor_dist <= self.anchor_free_radius:
                         anchor_gate = 0.0
                     else:
-                        anchor_gate = min(1.0, (anchor_dist - self.anchor_free_radius) / max(1.0, h * 0.25))
+                        # Window-scale gate: radius spans the full window diagonal.
+                        gate_span = max(1.0, max_anchor_dist - self.anchor_free_radius)
+                        anchor_gate = min(1.0, (anchor_dist - self.anchor_free_radius) / gate_span)
 
                     # Strongest near movement axis; quickly decays away from it.
                     axis_falloff = math.exp(-(abs(perp) / sigma_perp))
@@ -287,11 +304,11 @@ class WobblyWindowController:
                     amount_along *= push_pull
                     amount_perp = max(
                         -self.max_distort_px,
-                        min(self.max_distort_px, amount * self.perp_strength * self.bend_gain * bend_curve),
+                        min(self.max_distort_px, amount * self.perp_strength * self.bend_gain * bend_curve * cross_axis_scale),
                     )
 
                     off_x = (amount_along * dir_x) + (amount_perp * perp_x)
-                    off_y = (amount_along * dir_y) + (amount_perp * perp_y)
+                    off_y = ((amount_along * self._vertical_push_sign) * dir_y) + (amount_perp * perp_y)
                     off_x = int(max(-safe_component_offset, min(safe_component_offset, off_x)))
                     off_y = int(max(-safe_component_offset, min(safe_component_offset, off_y)))
 
