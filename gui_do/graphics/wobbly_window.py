@@ -132,9 +132,18 @@ class WobblyWindowController:
         """Refresh the off-screen drag bitmap from the window's latest frame output."""
         scratch = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         draw_window_standard(scratch, theme)
-        rect = self.window.rect.clip(scratch.get_rect())
-        if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
-            self.buffer = scratch.subsurface(self.window.rect).copy()
+        window_rect = pygame.Rect(self.window.rect)
+        clip = window_rect.clip(scratch.get_rect())
+
+        # Always produce a fresh full-size buffer for this frame, even when clipped.
+        # This prevents stale source data from persisting under high-speed drag.
+        fresh = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+        if clip.width > 0 and clip.height > 0:
+            src = scratch.subsurface(clip)
+            dst_x = clip.left - window_rect.left
+            dst_y = clip.top - window_rect.top
+            fresh.blit(src, (dst_x, dst_y))
+        self.buffer = fresh
 
     def render(self, surface, theme=None, draw_window_standard=None):
         """
