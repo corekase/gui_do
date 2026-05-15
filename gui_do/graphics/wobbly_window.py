@@ -69,15 +69,18 @@ class WobblyWindowController:
         self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.35))
         self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 30.0))
         self.overlap_px = int(self.params.get("overlap_px", 4))
-        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.30))
-        self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.18))
+        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.22))
+        self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.12))
         self._settle_blend_seconds = max(1e-6, min(self.settle_timeout_seconds, self.settle_hard_limit_seconds))
         self.settle_spring_boost = float(self.params.get("settle_spring_boost", 2.35))
         self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.74))
-        self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 0.65))
+        self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
         self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.0))
-        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 2.85))
-        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.66))
+        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 5.0))
+        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.45))
+        self.drag_idle_quick_settle_seconds = float(self.params.get("drag_idle_quick_settle_seconds", 0.035))
+        self.drag_idle_quick_spring_boost = float(self.params.get("drag_idle_quick_spring_boost", 6.2))
+        self.drag_idle_quick_damping_scale = float(self.params.get("drag_idle_quick_damping_scale", 0.32))
         self.direction_change_dot_threshold = float(self.params.get("direction_change_dot_threshold", 0.45))
         self.direction_change_perp_keep = float(self.params.get("direction_change_perp_keep", 0.22))
         self.horizontal_snap_dot_threshold = float(self.params.get("horizontal_snap_dot_threshold", -0.15))
@@ -234,6 +237,10 @@ class WobblyWindowController:
         damping = self.damping
         if self.dragging:
             self._drag_idle_elapsed += self.time_step
+            # Mouse-idle fallback: even without new mouse events, gradually relax
+            # directional intensity so geometry can return to neutral while held.
+            if self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
+                self._motion_strength = max(0.0, self._motion_strength * 0.80)
 
         boost = 1.0
         damping_scale = 1.0
@@ -243,6 +250,9 @@ class WobblyWindowController:
         elif self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
             boost = max(boost, self.drag_idle_spring_boost)
             damping_scale = min(damping_scale, self.drag_idle_damping_scale)
+            if self._drag_idle_elapsed >= self.drag_idle_quick_settle_seconds:
+                boost = max(boost, self.drag_idle_quick_spring_boost)
+                damping_scale = min(damping_scale, self.drag_idle_quick_damping_scale)
 
         spring_k *= boost
         damping = max(0.0, min(1.0, damping * damping_scale))
@@ -397,6 +407,13 @@ class WobblyWindowController:
         arc_radius = max(24.0, max_anchor_dist * self.arc_radius_scale)
 
         def _draw_tile_pass(x_start: int, y_start: int) -> None:
+            drag_idle_blend = 1.0
+            if self.dragging:
+                idle_over = max(0.0, self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds)
+                if idle_over > 0.0:
+                    fade_tau = max(1e-6, self.drag_idle_quick_settle_seconds)
+                    drag_idle_blend = math.exp(-(idle_over / fade_tau))
+
             for y in range(y_start, h, tile_h):
                 for x in range(x_start, w, tile_w):
                     src_w = min(tile_w, w - x)
@@ -461,6 +478,7 @@ class WobblyWindowController:
                         * horizontal_weight
                         * shear_sign_x
                         * (0.80 + (0.20 * self._render_motion_strength))
+                        * drag_idle_blend
                         * anchor_gate
                     )
                     shear_x += (
@@ -468,6 +486,7 @@ class WobblyWindowController:
                         * vertical_offset
                         * horizontal_weight
                         * shear_sign_x
+                        * drag_idle_blend
                         * anchor_gate
                     )
 
