@@ -22,7 +22,6 @@ from gui_do import (
     MenuBarControl,
     MenuEntry,
     PanelControl,
-    RichLabelControl,
     ScrollViewControl,
     SplitterControl,
     TreeControl,
@@ -222,18 +221,6 @@ def data_defs(feature: ShowcaseFeature, col_w: int) -> list[ControlDefinition]:
             _make_canvas_viewport_panel,
             accessibility_role="group",
             accessibility_label="Canvas viewport transform sample",
-        ),
-        ControlDefinition(
-            "rich_label",
-            "Rich Label",
-            80,
-            66,
-            lambda: RichLabelControl(
-                "control_rich_label",
-                Rect(0, 0, col_w, 80),
-                text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, "
-                "run `deploy --env staging`, and **_ship_** after QA.",
-            ),
         ),
     ]
 
