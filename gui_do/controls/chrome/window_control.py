@@ -82,7 +82,7 @@ class WindowControl(UiNode):
         """
         if self.wobbly_active and self.wobbly_controller:
             self.wobbly_controller.end_drag()
-            self.wobbly_active = False
+            self.wobbly_active = self.wobbly_controller.is_active()
         # Existing drag end logic continues here
 
 
@@ -500,5 +500,6 @@ class WindowControl(UiNode):
         # If wobbly effect is active, render from a fresh per-frame snapshot.
         if self.wobbly_active and self.wobbly_controller:
             self.wobbly_controller.render(surface, theme, self._draw_standard)
+            self.wobbly_active = self.wobbly_controller.is_active()
             return
         self._draw_standard(surface, theme)
