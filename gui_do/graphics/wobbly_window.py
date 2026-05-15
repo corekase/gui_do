@@ -48,21 +48,26 @@ class WobblyWindowController:
         self.time_step = float(self.params.get("time_step", 1.0 / 120.0))
         self.simulation_substeps = int(self.params.get("simulation_substeps", 2))
         self.max_impulse = float(self.params.get("max_impulse", 92.0))
+        self.max_velocity = float(self.params.get("max_velocity", 220.0))
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 6.0))
-        self.max_distort_px = float(self.params.get("max_distort_px", 96.0))
-        self.arc_along_gain = float(self.params.get("arc_along_gain", self.params.get("bend_gain", 2.45)))
-        self.arc_perp_gain = float(self.params.get("arc_perp_gain", self.params.get("sheet_cross_gain", 1.10)))
-        self.arc_radius_scale = float(self.params.get("arc_radius_scale", 0.95))
-        self.edge_weight = float(self.params.get("edge_weight", 0.72))
+        self.max_distort_px = float(self.params.get("max_distort_px", 144.0))
+        self.arc_along_gain = float(self.params.get("arc_along_gain", self.params.get("bend_gain", 4.35)))
+        self.arc_perp_gain = float(self.params.get("arc_perp_gain", self.params.get("sheet_cross_gain", 2.05)))
+        self.arc_radius_scale = float(self.params.get("arc_radius_scale", 0.72))
+        self.edge_weight = float(self.params.get("edge_weight", 0.84))
         self.anchor_gate_floor = float(self.params.get("anchor_gate_floor", 0.28))
-        self.body_follow_gain = float(self.params.get("body_follow_gain", 0.22))
+        self.body_follow_gain = float(self.params.get("body_follow_gain", 0.30))
+        self.arc_cross_exponent = float(self.params.get("arc_cross_exponent", 0.82))
+        self.arc_along_taper = float(self.params.get("arc_along_taper", 0.16))
         self.overlap_px = int(self.params.get("overlap_px", 4))
-        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.45))
+        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.34))
+        self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.24))
+        self._settle_blend_seconds = max(1e-6, min(self.settle_timeout_seconds, self.settle_hard_limit_seconds))
         self.settle_target_fps = float(self.params.get("settle_target_fps", 60.0))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
         self._settle_max_steps = max(
             1,
-            int(round(self.settle_timeout_seconds * self.settle_target_fps * max(1, self.simulation_substeps))),
+            int(round(max(self.settle_timeout_seconds, self.settle_hard_limit_seconds) * self.settle_target_fps * max(1, self.simulation_substeps))),
         )
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
@@ -127,6 +132,10 @@ class WobblyWindowController:
                     tx = cx / to_content_mag
                     ty = cy / to_content_mag
                     toward = (nx * tx) + (ny * ty)
+                    # Reverse only left/right push-pull mapping while preserving
+                    # existing vertical motion behavior.
+                    if abs(nx) >= abs(ny):
+                        toward = -toward
                     # Hysteresis near neutral avoids sign chatter and directional flicker.
                     if toward >= 0.08:
                         self._push_pull = 1.0
@@ -147,6 +156,11 @@ class WobblyWindowController:
                 impulse = min(self.max_impulse, speed * self.drag_coupling)
                 self._vel[0] += self._dir[0] * impulse
                 self._vel[1] += self._dir[1] * impulse
+                vel_mag = math.hypot(self._vel[0], self._vel[1])
+                if vel_mag > self.max_velocity > 1e-6:
+                    vel_scale = self.max_velocity / vel_mag
+                    self._vel[0] *= vel_scale
+                    self._vel[1] *= vel_scale
                 self._phase += speed * self.phase_coupling
             else:
                 self._motion_strength *= 0.82
@@ -167,6 +181,18 @@ class WobblyWindowController:
             disp_mag = math.hypot(self._disp[0], self._disp[1])
             vel_mag = math.hypot(self._vel[0], self._vel[1])
             if disp_mag < self.settle_epsilon and vel_mag < self.settle_epsilon:
+                self.active = False
+                self.buffer = None
+                self._scratch = None
+                self._scratch_size = (0, 0)
+                return
+            if self._settle_elapsed >= self.settle_hard_limit_seconds:
+                # Force a clean stop at the same position; geometry fade is already
+                # guaranteed to be near-zero by the matched release blend horizon.
+                self._disp[0] = 0.0
+                self._disp[1] = 0.0
+                self._vel[0] = 0.0
+                self._vel[1] = 0.0
                 self.active = False
                 self.buffer = None
                 self._scratch = None
@@ -254,9 +280,10 @@ class WobblyWindowController:
         # Passive oscillation: advances even when pointer is stationary.
         self._phase += 0.18
 
+        # Allow more dramatic bends while still bounding per-tile offsets for coverage safety.
         safe_component_offset = min(
             self.max_distort_px,
-            max(10.0, (min(tile_w, tile_h) * 1.45) + 8.0),
+            max(18.0, (min(tile_w, tile_h) * 2.1) + 12.0, min(float(w), float(h)) * 0.22),
         )
         disp_mag = min(self.max_distort_px, safe_component_offset, math.hypot(self._disp[0], self._disp[1]))
         if disp_mag < 0.001:
@@ -266,8 +293,8 @@ class WobblyWindowController:
         # Fade deformation to zero across settle interval so timeout deactivation
         # matches the resting geometry and avoids a visible position snap.
         release_blend = 1.0
-        if not self.dragging and self.settle_timeout_seconds > 1e-6:
-            release_t = min(1.0, max(0.0, self._settle_elapsed / self.settle_timeout_seconds))
+        if not self.dragging and self._settle_blend_seconds > 1e-6:
+            release_t = min(1.0, max(0.0, self._settle_elapsed / self._settle_blend_seconds))
             release_blend = 1.0 - release_t
         disp_mag *= release_blend
         if disp_mag < 0.001:
@@ -312,8 +339,8 @@ class WobblyWindowController:
                     ny_win = (center_y / max(1.0, float(h))) * 2.0 - 1.0
                     along_win = (nx_win * dir_x) + (ny_win * dir_y)
                     perp_win = (nx_win * perp_x) + (ny_win * perp_y)
-                    side_curve = math.copysign(abs(perp_win) ** 1.25, perp_win)
-                    longitudinal_taper = 1.0 - (0.35 * abs(along_win))
+                    side_curve = math.copysign(abs(perp_win) ** self.arc_cross_exponent, perp_win)
+                    longitudinal_taper = 1.0 - (self.arc_along_taper * abs(along_win))
                     arc_strength = max(0.0, longitudinal_taper) * edge_emphasis * anchor_gate
 
                     arc_along = (
