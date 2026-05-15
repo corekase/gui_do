@@ -54,11 +54,11 @@ class WobblyWindowController:
         self.max_impulse = float(self.params.get("max_impulse", 92.0))
         self.max_velocity = float(self.params.get("max_velocity", 220.0))
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 6.0))
-        self.max_distort_px = float(self.params.get("max_distort_px", 144.0))
-        self.max_total_distort_px = float(self.params.get("max_total_distort_px", 58.0))
-        self.max_disp_mag = float(self.params.get("max_disp_mag", 82.0))
-        self.arc_along_gain = float(self.params.get("arc_along_gain", self.params.get("bend_gain", 4.35)))
-        self.arc_perp_gain = float(self.params.get("arc_perp_gain", self.params.get("sheet_cross_gain", 2.05)))
+        self.max_distort_px = float(self.params.get("max_distort_px", 184.0))
+        self.max_total_distort_px = float(self.params.get("max_total_distort_px", 84.0))
+        self.max_disp_mag = float(self.params.get("max_disp_mag", 108.0))
+        self.arc_along_gain = float(self.params.get("arc_along_gain", self.params.get("bend_gain", 5.35)))
+        self.arc_perp_gain = float(self.params.get("arc_perp_gain", self.params.get("sheet_cross_gain", 2.55)))
         self.arc_radius_scale = float(self.params.get("arc_radius_scale", 0.72))
         self.edge_weight = float(self.params.get("edge_weight", 0.84))
         self.anchor_gate_floor = float(self.params.get("anchor_gate_floor", 0.28))
@@ -66,17 +66,19 @@ class WobblyWindowController:
         self.arc_cross_exponent = float(self.params.get("arc_cross_exponent", 0.82))
         self.arc_along_taper = float(self.params.get("arc_along_taper", 0.16))
         self.overlap_px = int(self.params.get("overlap_px", 4))
-        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.34))
-        self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.24))
+        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.30))
+        self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.18))
         self._settle_blend_seconds = max(1e-6, min(self.settle_timeout_seconds, self.settle_hard_limit_seconds))
-        self.settle_spring_boost = float(self.params.get("settle_spring_boost", 1.85))
-        self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.82))
+        self.settle_spring_boost = float(self.params.get("settle_spring_boost", 2.35))
+        self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.74))
         self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 0.65))
-        self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.03))
-        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 1.55))
-        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.88))
+        self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.02))
+        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 2.05))
+        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.78))
         self.direction_change_dot_threshold = float(self.params.get("direction_change_dot_threshold", 0.45))
         self.direction_change_perp_keep = float(self.params.get("direction_change_perp_keep", 0.22))
+        self.horizontal_snap_dot_threshold = float(self.params.get("horizontal_snap_dot_threshold", -0.15))
+        self.horizontal_snap_velocity_keep = float(self.params.get("horizontal_snap_velocity_keep", 0.18))
         self.visual_dir_interp_rate = float(self.params.get("visual_dir_interp_rate", 20.0))
         self.visual_scalar_interp_rate = float(self.params.get("visual_scalar_interp_rate", 26.0))
         self.settle_target_fps = float(self.params.get("settle_target_fps", 60.0))
@@ -146,8 +148,10 @@ class WobblyWindowController:
                     vel_along = (self._vel[0] * nx) + (self._vel[1] * ny)
                     vel_perp_x = self._vel[0] - (vel_along * nx)
                     vel_perp_y = self._vel[1] - (vel_along * ny)
-                    self._vel[0] = (max(0.0, vel_along) * nx) + (vel_perp_x * self.direction_change_perp_keep)
-                    self._vel[1] = (max(0.0, vel_along) * ny) + (vel_perp_y * self.direction_change_perp_keep)
+                    # Keep only a small fraction of along/perpendicular carry-over.
+                    # This lets new heading influence the field immediately.
+                    self._vel[0] = (vel_along * self.horizontal_snap_velocity_keep * nx) + (vel_perp_x * self.direction_change_perp_keep)
+                    self._vel[1] = (vel_along * self.horizontal_snap_velocity_keep * ny) + (vel_perp_y * self.direction_change_perp_keep)
                 content_rect = None
                 content_rect_fn = getattr(self.window, "content_rect", None)
                 if callable(content_rect_fn):
@@ -173,6 +177,12 @@ class WobblyWindowController:
                         self._push_pull = 1.0
                     elif toward <= -0.08:
                         self._push_pull = -1.0
+                    # Strong horizontal reversals should visually switch direction now,
+                    # not after a long interpolation tail.
+                    if abs(nx) > abs(ny) and direction_dot <= self.horizontal_snap_dot_threshold:
+                        self._render_dir = (nx, ny)
+                        self._render_push_pull = self._push_pull
+                        self._render_motion_strength = self._motion_strength
                     self._motion_strength = min(1.0, abs(toward))
                 else:
                     self._push_pull = 1.0
