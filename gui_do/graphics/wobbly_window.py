@@ -25,6 +25,8 @@ class WobblyWindowController:
         self.active = False
         self.dragging = False
         self.buffer: Optional[pygame.Surface] = None
+        self._scratch: Optional[pygame.Surface] = None
+        self._scratch_size: tuple[int, int] = (0, 0)
         self.anchor = None  # local (x, y) in window space
         self._prev_mouse_pos = None
         self._phase = 0.0
@@ -66,6 +68,8 @@ class WobblyWindowController:
         self._vel[1] = 0.0
 
         self.buffer = None
+        self._scratch = None
+        self._scratch_size = (0, 0)
         if surface is not None:
             rect = self.window.rect.clip(surface.get_rect())
             if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
@@ -117,6 +121,8 @@ class WobblyWindowController:
             if disp_mag < self.settle_epsilon and vel_mag < self.settle_epsilon:
                 self.active = False
                 self.buffer = None
+                self._scratch = None
+                self._scratch_size = (0, 0)
 
     def end_drag(self):
         """
@@ -130,20 +136,29 @@ class WobblyWindowController:
 
     def _refresh_buffer(self, surface: pygame.Surface, theme, draw_window_standard) -> None:
         """Refresh the off-screen drag bitmap from the window's latest frame output."""
-        scratch = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        draw_window_standard(scratch, theme)
+        size = surface.get_size()
+        if self._scratch is None or self._scratch_size != size:
+            self._scratch = pygame.Surface(size, pygame.SRCALPHA)
+            self._scratch_size = size
+
+        scratch = self._scratch
         window_rect = pygame.Rect(self.window.rect)
+        # Clear just the current window area, not the whole scratch surface.
+        scratch.fill((0, 0, 0, 0), window_rect)
+        draw_window_standard(scratch, theme)
+
         clip = window_rect.clip(scratch.get_rect())
 
-        # Always produce a fresh full-size buffer for this frame, even when clipped.
-        # This prevents stale source data from persisting under high-speed drag.
-        fresh = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+        # Reuse window-sized buffer to avoid per-frame allocations.
+        if self.buffer is None or self.buffer.get_size() != window_rect.size:
+            self.buffer = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+        else:
+            self.buffer.fill((0, 0, 0, 0))
+
         if clip.width > 0 and clip.height > 0:
-            src = scratch.subsurface(clip)
             dst_x = clip.left - window_rect.left
             dst_y = clip.top - window_rect.top
-            fresh.blit(src, (dst_x, dst_y))
-        self.buffer = fresh
+            self.buffer.blit(scratch, (dst_x, dst_y), clip)
 
     def render(self, surface, theme=None, draw_window_standard=None):
         """
@@ -160,23 +175,37 @@ class WobblyWindowController:
 
         self._step_settle()
         if not self.active or self.buffer is None:
+            # Transition frame: if settle just completed, draw the normal window now
+            # so we don't emit a blank frame flash before WindowControl exits wobble mode.
+            if draw_window_standard is not None and theme is not None:
+                draw_window_standard(surface, theme)
             return
 
         w, h = self.window.rect.size
         base_x, base_y = self.window.rect.topleft
         tile_h = max(2, self.band_height)
         tile_w = max(2, self.tile_width)
-        overlap_px = 4
 
         # Passive oscillation: advances even when pointer is stationary.
         self._phase += 0.18
 
         # Safety cap: keep deformation within tile-coverage limits to avoid holes at high speed.
-        safe_component_offset = max(3.0, (min(tile_w, tile_h) * 0.55) + overlap_px)
+        safe_component_offset = max(3.0, (min(tile_w, tile_h) * 0.55) + 4.0)
         disp_mag = min(self.max_distort_px, safe_component_offset, math.hypot(self._disp[0], self._disp[1]))
         if disp_mag < 0.001:
             surface.blit(self.buffer, (base_x, base_y))
             return
+
+        intensity = disp_mag / max(1e-6, safe_component_offset)
+        if intensity < 0.35:
+            overlap_px = 2
+            pass_offsets = ((0, 0),)
+        elif intensity < 0.75:
+            overlap_px = 3
+            pass_offsets = ((0, 0), (tile_w // 2, tile_h // 2))
+        else:
+            overlap_px = 4
+            pass_offsets = ((0, 0), (tile_w // 2, 0), (0, tile_h // 2), (tile_w // 2, tile_h // 2))
 
         dir_x, dir_y = self._dir
         perp_x, perp_y = -dir_y, dir_x
@@ -234,8 +263,6 @@ class WobblyWindowController:
                     src = pygame.Rect(sx, sy, ex - sx, ey - sy)
                     surface.blit(self.buffer, (base_x + sx + off_x, base_y + sy + off_y), src)
 
-        # Four staggered passes improve coverage under rapid movement.
-        _draw_tile_pass(0, 0)
-        _draw_tile_pass(tile_w // 2, 0)
-        _draw_tile_pass(0, tile_h // 2)
-        _draw_tile_pass(tile_w // 2, tile_h // 2)
+        # Adaptive coverage: low distortion uses fewer passes; rapid motion uses full coverage.
+        for pass_x, pass_y in pass_offsets:
+            _draw_tile_pass(pass_x, pass_y)
