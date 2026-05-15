@@ -65,6 +65,9 @@ class WobblyWindowController:
         self.body_follow_gain = float(self.params.get("body_follow_gain", 0.46))
         self.arc_cross_exponent = float(self.params.get("arc_cross_exponent", 0.82))
         self.arc_along_taper = float(self.params.get("arc_along_taper", 0.16))
+        self.shear_gain = float(self.params.get("shear_gain", 1.80))
+        self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.35))
+        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 30.0))
         self.overlap_px = int(self.params.get("overlap_px", 4))
         self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.30))
         self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.18))
@@ -139,6 +142,7 @@ class WobblyWindowController:
                 self._drag_idle_elapsed = 0.0
                 nx = dx / speed
                 ny = dy / speed
+
                 previous_dir = self._dir
                 self._dir = (nx, ny)
                 direction_dot = (previous_dir[0] * nx) + (previous_dir[1] * ny)
@@ -444,7 +448,30 @@ class WobblyWindowController:
                     follow_x = self._disp[0] * self.body_follow_gain
                     follow_y = self._disp[1] * self.body_follow_gain
 
-                    off_x = (arc_along * dir_x) + (arc_perp * perp_x) + follow_x
+                    # Shear field (horizontal-only): rows farther from titlebar
+                    # grab point shift more in X, with sign following drag direction.
+                    vertical_offset = (center_y - float(anchor_y)) / max(1.0, float(h))
+                    horizontal_weight = min(1.0, abs(dir_x) * self.shear_horizontal_emphasis)
+                    # Reverse left-right shear response.
+                    shear_sign_x = -1.0 if dir_x >= 0.0 else 1.0
+                    shear_x = (
+                        disp_mag
+                        * self.shear_gain
+                        * vertical_offset
+                        * horizontal_weight
+                        * shear_sign_x
+                        * (0.80 + (0.20 * self._render_motion_strength))
+                        * anchor_gate
+                    )
+                    shear_x += (
+                        self.shear_distance_boost_px
+                        * vertical_offset
+                        * horizontal_weight
+                        * shear_sign_x
+                        * anchor_gate
+                    )
+
+                    off_x = (arc_along * dir_x) + (arc_perp * perp_x) + shear_x + follow_x
                     off_y = (arc_along * dir_y) + (arc_perp * perp_y) + follow_y
 
                     # Global geometry budget: clamp net tile displacement magnitude
