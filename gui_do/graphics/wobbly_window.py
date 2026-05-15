@@ -41,6 +41,7 @@ class WobblyWindowController:
         self._drag_idle_elapsed = 0.0
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
+        self._render_frame_index = 0
 
         # Tunables
         self.band_height = int(self.params.get("band_height", 10))
@@ -69,6 +70,10 @@ class WobblyWindowController:
         self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.35))
         self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 30.0))
         self.overlap_px = int(self.params.get("overlap_px", 4))
+        self.performance_area_threshold_px = int(self.params.get("performance_area_threshold_px", 180000))
+        self.large_window_refresh_interval_frames = int(self.params.get("large_window_refresh_interval_frames", 2))
+        self.large_window_tile_scale_max = float(self.params.get("large_window_tile_scale_max", 2.4))
+        self.settle_refresh_interval_frames = int(self.params.get("settle_refresh_interval_frames", 9999))
         self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.22))
         self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.12))
         self.release_blend_seconds = float(self.params.get("release_blend_seconds", 0.16))
@@ -116,6 +121,7 @@ class WobblyWindowController:
         self._settle_elapsed = 0.0
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
+        self._render_frame_index = 0
         self._disp[0] = 0.0
         self._disp[1] = 0.0
         self._vel[0] = 0.0
@@ -357,9 +363,28 @@ class WobblyWindowController:
         """
         if not self.active:
             return
+        self._render_frame_index += 1
+
+        w, h = self.window.rect.size
+        area_px = int(max(1, w) * max(1, h))
+
+        refresh_interval = 1
+        if area_px >= self.performance_area_threshold_px:
+            refresh_interval = max(1, self.large_window_refresh_interval_frames)
+        if not self.dragging:
+            # During release settle, reuse the last snapshot; it removes expensive
+            # redraw pressure and keeps settle animation smooth.
+            refresh_interval = max(refresh_interval, self.settle_refresh_interval_frames)
+
         if draw_window_standard is not None and theme is not None:
-            # Pull a fresh snapshot every frame so animated window content remains live while dragging.
-            self._refresh_buffer(surface, theme, draw_window_standard)
+            # Refresh lazily for large windows to keep drag FPS stable.
+            should_refresh = (
+                self.buffer is None
+                or (refresh_interval <= 1)
+                or (self._render_frame_index % refresh_interval == 0)
+            )
+            if should_refresh:
+                self._refresh_buffer(surface, theme, draw_window_standard)
         if self.buffer is None:
             return
 
@@ -375,10 +400,21 @@ class WobblyWindowController:
                 draw_window_standard(surface, theme)
             return
 
-        w, h = self.window.rect.size
         base_x, base_y = self.window.rect.topleft
         tile_h = max(2, self.band_height)
         tile_w = max(2, self.tile_width)
+
+        # Performance-first adaptive warp density for large windows:
+        # coarser tiles dramatically reduce blit count and CPU load.
+        if area_px > self.performance_area_threshold_px:
+            density_scale = min(
+                self.large_window_tile_scale_max,
+                max(1.0, math.sqrt(float(area_px) / float(self.performance_area_threshold_px))),
+            )
+            tile_w = max(tile_w, int(round(tile_w * density_scale)))
+            tile_h = max(tile_h, int(round(tile_h * density_scale)))
+
+        overlap_px = max(2, int(round(self.overlap_px * 0.65))) if area_px > self.performance_area_threshold_px else self.overlap_px
 
         # Passive oscillation: advances even when pointer is stationary.
         self._phase += 0.18
@@ -517,10 +553,10 @@ class WobblyWindowController:
                     off_x = int(max(-safe_component_offset, min(safe_component_offset, off_x)))
                     off_y = int(max(-safe_component_offset, min(safe_component_offset, off_y)))
 
-                    sx = max(0, x - self.overlap_px)
-                    sy = max(0, y - self.overlap_px)
-                    ex = min(w, x + src_w + self.overlap_px)
-                    ey = min(h, y + src_h + self.overlap_px)
+                    sx = max(0, x - overlap_px)
+                    sy = max(0, y - overlap_px)
+                    ex = min(w, x + src_w + overlap_px)
+                    ey = min(h, y + src_h + overlap_px)
                     src = pygame.Rect(sx, sy, ex - sx, ey - sy)
                     surface.blit(self.buffer, (base_x + sx + off_x, base_y + sy + off_y), src)
 
