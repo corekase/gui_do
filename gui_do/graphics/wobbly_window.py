@@ -48,9 +48,11 @@ class WobblyWindowController:
         self.time_step = float(self.params.get("time_step", 1.0 / 60.0))
         self.max_impulse = float(self.params.get("max_impulse", 74.0))
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 10.0))
-        self.max_distort_px = float(self.params.get("max_distort_px", 40.0))
+        self.max_distort_px = float(self.params.get("max_distort_px", 90.0))
         self.perp_strength = float(self.params.get("perp_strength", 0.9))
-        self.bend_gain = float(self.params.get("bend_gain", 1.75))
+        self.bend_gain = float(self.params.get("bend_gain", 4.2))
+        self.global_warp_gain = float(self.params.get("global_warp_gain", 2.6))
+        self.distance_power = float(self.params.get("distance_power", 1.1))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
@@ -113,10 +115,10 @@ class WobblyWindowController:
                     tx = cx / to_content_mag
                     ty = cy / to_content_mag
                     toward = (nx * tx) + (ny * ty)
-                    self._push_pull = 1.0 if toward >= 0.0 else -1.0
+                    self._push_pull = -1.0 if toward >= 0.0 else 1.0
                     self._motion_strength = min(1.0, abs(toward))
                 else:
-                    self._push_pull = 1.0
+                    self._push_pull = -1.0
                     self._motion_strength = 0.0
                 # Smooth heading toward latest movement direction.
                 self._dir = (
@@ -239,6 +241,9 @@ class WobblyWindowController:
         anchor_x, anchor_y = self.anchor if self.anchor is not None else (w * 0.5, h * 0.5)
         sigma_perp = max(8.0, h * 0.32)
         sigma_along = max(8.0, h * 0.40)
+        max_dist_x = max(anchor_x, float(w) - anchor_x)
+        max_dist_y = max(anchor_y, float(h) - anchor_y)
+        max_anchor_dist = max(1.0, math.hypot(max_dist_x, max_dist_y))
 
         def _draw_tile_pass(x_start: int, y_start: int) -> None:
             for y in range(y_start, h, tile_h):
@@ -270,15 +275,19 @@ class WobblyWindowController:
                     motion_bias = 0.75 + (0.35 * self._motion_strength)
                     push_pull = self._push_pull
 
-                    wave_along = math.sin((along * self.frequency) + self._phase)
-                    wave_perp = math.cos((perp * self.frequency * 0.95) - (self._phase * 1.3))
-                    amount = disp_mag * axis_falloff * trailing_bias * anchor_gate * motion_bias
-                    bend_curve = 0.55 + (0.45 * anchor_gate)
-                    amount_along = max(-self.max_distort_px, min(self.max_distort_px, amount * wave_along * self.bend_gain * bend_curve))
+                    # Global warp field: grows with distance from the drag reference,
+                    # so the whole window body, including corners, bends as one piece.
+                    distance_field = min(1.0, anchor_dist / max_anchor_dist)
+                    arc_field = 0.45 + (2.25 * (distance_field ** 0.55))
+                    unified_field = arc_field + (self.global_warp_gain * (distance_field ** self.distance_power))
+
+                    amount = disp_mag * axis_falloff * trailing_bias * anchor_gate * motion_bias * unified_field
+                    bend_curve = 0.85 + (2.25 * (distance_field ** 0.58))
+                    amount_along = max(-self.max_distort_px, min(self.max_distort_px, amount * self.bend_gain * bend_curve))
                     amount_along *= push_pull
                     amount_perp = max(
                         -self.max_distort_px,
-                        min(self.max_distort_px, amount * self.perp_strength * self.bend_gain * wave_perp * bend_curve),
+                        min(self.max_distort_px, amount * self.perp_strength * self.bend_gain * bend_curve),
                     )
 
                     off_x = (amount_along * dir_x) + (amount_perp * perp_x)
