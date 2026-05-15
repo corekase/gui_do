@@ -31,6 +31,8 @@ class WobblyWindowController:
         self._prev_mouse_pos = None
         self._phase = 0.0
         self._dir = (1.0, 0.0)
+        self._push_pull = 1.0
+        self._motion_strength = 0.0
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
 
@@ -48,6 +50,7 @@ class WobblyWindowController:
         self.anchor_free_radius = float(self.params.get("anchor_free_radius", 10.0))
         self.max_distort_px = float(self.params.get("max_distort_px", 40.0))
         self.perp_strength = float(self.params.get("perp_strength", 0.9))
+        self.bend_gain = float(self.params.get("bend_gain", 1.75))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
@@ -62,6 +65,8 @@ class WobblyWindowController:
         self.anchor = (int(mouse_pos[0] - wx), int(mouse_pos[1] - wy))
         self._phase = 0.0
         self._dir = (1.0, 0.0)
+        self._push_pull = 1.0
+        self._motion_strength = 0.0
         self._disp[0] = 0.0
         self._disp[1] = 0.0
         self._vel[0] = 0.0
@@ -92,6 +97,27 @@ class WobblyWindowController:
             if speed > 0.001:
                 nx = dx / speed
                 ny = dy / speed
+                content_rect = None
+                content_rect_fn = getattr(self.window, "content_rect", None)
+                if callable(content_rect_fn):
+                    try:
+                        content_rect = content_rect_fn()
+                    except Exception:
+                        content_rect = None
+                if content_rect is None:
+                    content_rect = self.window.rect
+                cx = float(content_rect.centerx - mouse_pos[0])
+                cy = float(content_rect.centery - mouse_pos[1])
+                to_content_mag = math.hypot(cx, cy)
+                if to_content_mag > 0.001:
+                    tx = cx / to_content_mag
+                    ty = cy / to_content_mag
+                    toward = (nx * tx) + (ny * ty)
+                    self._push_pull = 1.0 if toward >= 0.0 else -1.0
+                    self._motion_strength = min(1.0, abs(toward))
+                else:
+                    self._push_pull = 1.0
+                    self._motion_strength = 0.0
                 # Smooth heading toward latest movement direction.
                 self._dir = (
                     (self._dir[0] * 0.75) + (nx * 0.25),
@@ -130,6 +156,7 @@ class WobblyWindowController:
         """
         self.dragging = False
         self._prev_mouse_pos = None
+        self._motion_strength = 0.0
 
     def is_active(self) -> bool:
         return bool(self.active)
@@ -240,14 +267,18 @@ class WobblyWindowController:
 
                     # Trailing bias: deformation should mostly live opposite to motion.
                     trailing_bias = 1.0 if along <= 0.0 else math.exp(-(along / sigma_along)) * 0.55
+                    motion_bias = 0.75 + (0.35 * self._motion_strength)
+                    push_pull = self._push_pull
 
                     wave_along = math.sin((along * self.frequency) + self._phase)
                     wave_perp = math.cos((perp * self.frequency * 0.95) - (self._phase * 1.3))
-                    amount = disp_mag * axis_falloff * trailing_bias * anchor_gate
-                    amount_along = max(-self.max_distort_px, min(self.max_distort_px, amount * wave_along))
+                    amount = disp_mag * axis_falloff * trailing_bias * anchor_gate * motion_bias
+                    bend_curve = 0.55 + (0.45 * anchor_gate)
+                    amount_along = max(-self.max_distort_px, min(self.max_distort_px, amount * wave_along * self.bend_gain * bend_curve))
+                    amount_along *= push_pull
                     amount_perp = max(
                         -self.max_distort_px,
-                        min(self.max_distort_px, amount * self.perp_strength * wave_perp),
+                        min(self.max_distort_px, amount * self.perp_strength * self.bend_gain * wave_perp * bend_curve),
                     )
 
                     off_x = (amount_along * dir_x) + (amount_perp * perp_x)
