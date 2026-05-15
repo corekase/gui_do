@@ -120,6 +120,12 @@ class GuiApplication:
         self._startup_scene_prewarm_job_keys: set[str] = set()
         self._scene_deferred_prewarm_jobs: dict[str, deque[tuple[str, Callable[[pygame.Surface, "ColorTheme"], None]]]] = {}
         self._scene_deferred_prewarm_job_keys: dict[str, set[str]] = {}
+        self._startup_prewarm_overlay_armed = True
+        self._startup_prewarm_overlay_started = False
+        self._startup_prewarm_overlay_visible = False
+        self._startup_prewarm_completed_startup_steps = 0
+        self._startup_prewarm_completed_deferred_steps = 0
+        self._startup_prewarm_total_steps = 0
         self._scheduler_backlog_ema: float = 0.0
         # Wire the invalidation tracker into the initial active scene so that
         # per-control invalidate() calls register dirty rects immediately.
@@ -132,17 +138,104 @@ class GuiApplication:
         if not hasattr(self, "_startup_scene_prewarm_job_keys"):
             self._startup_scene_prewarm_job_keys = set()
 
+    def _ensure_startup_prewarm_overlay_state(self) -> None:
+        if not hasattr(self, "_startup_prewarm_overlay_armed"):
+            self._startup_prewarm_overlay_armed = True
+        if not hasattr(self, "_startup_prewarm_overlay_started"):
+            self._startup_prewarm_overlay_started = False
+        if not hasattr(self, "_startup_prewarm_overlay_visible"):
+            self._startup_prewarm_overlay_visible = False
+        if not hasattr(self, "_startup_prewarm_completed_startup_steps"):
+            self._startup_prewarm_completed_startup_steps = 0
+        if not hasattr(self, "_startup_prewarm_completed_deferred_steps"):
+            self._startup_prewarm_completed_deferred_steps = 0
+        if not hasattr(self, "_startup_prewarm_total_steps"):
+            self._startup_prewarm_total_steps = 0
+
+    def _startup_prewarm_overlay_pending(self) -> bool:
+        self._ensure_startup_prewarm_state()
+        self._ensure_deferred_prewarm_state()
+        startup_pending = bool(self._startup_scene_prewarm_jobs)
+        active_deferred_pending = bool(self._scene_deferred_prewarm_jobs.get(self._active_scene_name))
+        return startup_pending or active_deferred_pending
+
+    def _update_startup_prewarm_overlay_state(self, dt_seconds: float) -> None:
+        self._ensure_startup_prewarm_overlay_state()
+        if not self._startup_prewarm_overlay_armed:
+            self._startup_prewarm_overlay_visible = False
+            return
+
+        pending = self._startup_prewarm_overlay_pending()
+        if pending:
+            self._startup_prewarm_overlay_started = True
+            self._startup_prewarm_overlay_visible = True
+            _ = dt_seconds
+            return
+
+        self._startup_prewarm_overlay_visible = False
+        if self._startup_prewarm_overlay_started:
+            self._startup_prewarm_overlay_armed = False
+
+    def _draw_startup_prewarm_overlay(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        self._ensure_startup_prewarm_overlay_state()
+        if not self._startup_prewarm_overlay_visible:
+            return
+
+        width, height = surface.get_size()
+        dim = pygame.Surface((width, height), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 88))
+        surface.blit(dim, (0, 0))
+
+        frame_width = max(260, min(460, width - 48))
+        frame_height = 126
+        frame_rect = Rect(
+            (width - frame_width) // 2,
+            (height - frame_height) // 2,
+            frame_width,
+            frame_height,
+        )
+        pygame.draw.rect(surface, theme.dark, frame_rect, border_radius=10)
+        pygame.draw.rect(surface, theme.light, frame_rect, width=2, border_radius=10)
+
+        title_surface = None
+        try:
+            title_surface = theme.render_text("Prewarming", role="heading", size=22, shadow=False)
+        except Exception:
+            title_surface = None
+        if title_surface is None:
+            fallback_font = pygame.font.Font(None, 28)
+            title_surface = fallback_font.render("Prewarming", True, theme.text)
+
+        title_rect = title_surface.get_rect(midtop=(frame_rect.centerx, frame_rect.top + 14))
+        surface.blit(title_surface, title_rect)
+
+        track_rect = Rect(frame_rect.left + 22, frame_rect.top + 68, frame_rect.width - 44, 28)
+        pygame.draw.rect(surface, theme.background, track_rect, border_radius=7)
+        pygame.draw.rect(surface, theme.light, track_rect, width=1, border_radius=7)
+
+        known_total = max(1, int(self._startup_prewarm_total_steps))
+        completed = self._startup_prewarm_completed_startup_steps + self._startup_prewarm_completed_deferred_steps
+        progress_ratio = max(0.0, min(1.0, float(completed) / float(known_total)))
+        inner = track_rect.inflate(-6, -6)
+        fill_width = int(round(inner.width * progress_ratio))
+        if fill_width > 0:
+            fill_rect = Rect(inner.left, inner.top, fill_width, inner.height)
+            pygame.draw.rect(surface, theme.highlight, fill_rect, border_radius=5)
+
     def queue_scene_prewarm(self, scene_name: Optional[str] = None, *, force: bool = False) -> bool:
         target_scene = self._active_scene_name if scene_name is None else str(scene_name)
         self._ensure_startup_prewarm_state()
+        self._ensure_startup_prewarm_overlay_state()
         if target_scene in self._startup_scene_prewarm_job_keys:
             return False
         self._startup_scene_prewarm_jobs.append((target_scene, bool(force)))
         self._startup_scene_prewarm_job_keys.add(target_scene)
+        self._startup_prewarm_total_steps += 1
         return True
 
     def _run_startup_scene_prewarm_jobs(self, *, max_steps: Optional[int] = None) -> int:
         self._ensure_startup_prewarm_state()
+        self._ensure_startup_prewarm_overlay_state()
         if not self._startup_scene_prewarm_jobs:
             return 0
 
@@ -156,6 +249,7 @@ class GuiApplication:
             finally:
                 self._startup_scene_prewarm_job_keys.discard(scene_name)
             steps += 1
+            self._startup_prewarm_completed_startup_steps += 1
 
         return steps
 
@@ -172,6 +266,7 @@ class GuiApplication:
         job: Callable[[pygame.Surface, "ColorTheme"], None],
     ) -> bool:
         self._ensure_deferred_prewarm_state()
+        self._ensure_startup_prewarm_overlay_state()
         scene_key = str(scene_name)
         keys = self._scene_deferred_prewarm_job_keys.setdefault(scene_key, set())
         if key in keys:
@@ -179,6 +274,7 @@ class GuiApplication:
         queue = self._scene_deferred_prewarm_jobs.setdefault(scene_key, deque())
         queue.append((str(key), job))
         keys.add(str(key))
+        self._startup_prewarm_total_steps += 1
         return True
 
     def _run_deferred_scene_prewarm_jobs(
@@ -191,6 +287,7 @@ class GuiApplication:
         max_steps: Optional[int] = None,
     ) -> int:
         self._ensure_deferred_prewarm_state()
+        self._ensure_startup_prewarm_overlay_state()
         scene_key = str(scene_name)
         queue = self._scene_deferred_prewarm_jobs.get(scene_key)
         if not queue:
@@ -223,6 +320,7 @@ class GuiApplication:
                 if keys is not None:
                     keys.discard(key)
             steps += 1
+            self._startup_prewarm_completed_deferred_steps += 1
 
         if not queue:
             self._scene_deferred_prewarm_jobs.pop(scene_key, None)
@@ -627,6 +725,7 @@ class GuiApplication:
                 self._screen_postamble()
             self.features.update_features()
             runtime = self._scenes[self._active_scene_name]
+            self._update_startup_prewarm_overlay_state(dt_seconds)
             if self._startup_scene_prewarm_jobs:
                 self._run_startup_scene_prewarm_jobs(max_steps=1)
             if self._scene_deferred_prewarm_jobs.get(self._active_scene_name):
@@ -638,6 +737,7 @@ class GuiApplication:
                     budget_ms=self._compute_deferred_prewarm_budget_ms(dt_seconds),
                     max_steps=self._DEFERRED_PREWARM_MAX_STEPS_PER_FRAME,
                 )
+            self._update_startup_prewarm_overlay_state(dt_seconds)
 
     def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
         dt_ms = (dt_seconds if dt_seconds > 0.0 else 0.0) * 1000.0
@@ -1194,6 +1294,7 @@ class GuiApplication:
             transition_mgr = getattr(self, "_scene_transition_manager", None)
             if transition_mgr is not None:
                 transition_mgr.draw(self.surface)
+            self._draw_startup_prewarm_overlay(self.surface, runtime.theme)
             return dirty
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
