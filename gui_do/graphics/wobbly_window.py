@@ -83,11 +83,11 @@ class WobblyWindowController:
         self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.74))
         self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
         self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.0))
-        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 5.0))
-        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.45))
-        self.drag_idle_quick_settle_seconds = float(self.params.get("drag_idle_quick_settle_seconds", 0.035))
-        self.drag_idle_quick_spring_boost = float(self.params.get("drag_idle_quick_spring_boost", 6.2))
-        self.drag_idle_quick_damping_scale = float(self.params.get("drag_idle_quick_damping_scale", 0.32))
+        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 8.0))  # was 5.0
+        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.32))  # was 0.45
+        self.drag_idle_quick_settle_seconds = float(self.params.get("drag_idle_quick_settle_seconds", 0.018))  # was 0.035
+        self.drag_idle_quick_spring_boost = float(self.params.get("drag_idle_quick_spring_boost", 12.0))  # was 6.2
+        self.drag_idle_quick_damping_scale = float(self.params.get("drag_idle_quick_damping_scale", 0.18))  # was 0.32
         self.direction_change_dot_threshold = float(self.params.get("direction_change_dot_threshold", 0.45))
         self.direction_change_perp_keep = float(self.params.get("direction_change_perp_keep", 0.22))
         self.horizontal_snap_dot_threshold = float(self.params.get("horizontal_snap_dot_threshold", -0.15))
