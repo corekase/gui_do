@@ -400,6 +400,10 @@ class PanelControl(UiNode):
                         self._raise_window(window)
                         self._drag_window = window
                         self._drag_last_pos = raw
+                        if getattr(window, "wobbly_windows", True):
+                            focus_manager = getattr(app, "focus", None)
+                            if focus_manager is not None and hasattr(focus_manager, "clear_focus"):
+                                focus_manager.clear_focus()
                         if hasattr(window, "on_titlebar_drag_start"):
                             window.on_titlebar_drag_start(raw, app.surface)
                         app.pointer_capture.begin(window.control_id, app.surface.get_rect())

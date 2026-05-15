@@ -56,12 +56,6 @@ class WobblyWindowController:
             if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
                 self.buffer = surface.subsurface(self.window.rect).copy()
 
-        if self.buffer is None:
-            # Fallback: static backdrop if available.
-            pristine = getattr(self.window, "_pristine", None)
-            if isinstance(pristine, pygame.Surface):
-                self.buffer = pygame.transform.smoothscale(pristine, self.window.rect.size)
-
     def update_drag(self, mouse_pos):
         """
         Called on each drag update. Updates mesh simulation with new anchor position.
@@ -91,12 +85,25 @@ class WobblyWindowController:
         self._phase = 0.0
         self.buffer = None
 
-    def render(self, surface):
+    def _refresh_buffer(self, surface: pygame.Surface, theme, draw_window_standard) -> None:
+        """Refresh the off-screen drag bitmap from the window's latest frame output."""
+        scratch = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        draw_window_standard(scratch, theme)
+        rect = self.window.rect.clip(scratch.get_rect())
+        if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
+            self.buffer = scratch.subsurface(self.window.rect).copy()
+
+    def render(self, surface, theme=None, draw_window_standard=None):
         """
         Draw the warped buffer using the mesh onto the given surface.
         :param surface: The rendering surface/context.
         """
-        if not self.active or self.buffer is None:
+        if not self.active:
+            return
+        if draw_window_standard is not None and theme is not None:
+            # Pull a fresh snapshot every frame so animated window content remains live while dragging.
+            self._refresh_buffer(surface, theme, draw_window_standard)
+        if self.buffer is None:
             return
         w, h = self.window.rect.size
         base_x, base_y = self.window.rect.topleft

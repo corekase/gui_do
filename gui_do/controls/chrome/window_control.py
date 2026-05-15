@@ -439,11 +439,7 @@ class WindowControl(UiNode):
             return False
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
-    def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
-        # If wobbly effect is active, render via controller
-        if self.wobbly_active and self.wobbly_controller:
-            self.wobbly_controller.render(surface)
-            return
+    def _draw_standard(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         self._sync_content_host_rect()
         self._fit_titlebar_height_to_font(theme)
         factory = theme.graphics_factory
@@ -499,3 +495,10 @@ class WindowControl(UiNode):
                     child.draw(surface, theme)
         finally:
             surface.set_clip(previous_clip)
+
+    def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        # If wobbly effect is active, render from a fresh per-frame snapshot.
+        if self.wobbly_active and self.wobbly_controller:
+            self.wobbly_controller.render(surface, theme, self._draw_standard)
+            return
+        self._draw_standard(surface, theme)
