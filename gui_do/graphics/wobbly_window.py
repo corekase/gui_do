@@ -31,8 +31,11 @@ class WobblyWindowController:
         self._prev_mouse_pos = None
         self._phase = 0.0
         self._dir = (1.0, 0.0)
+        self._render_dir = (1.0, 0.0)
         self._push_pull = 1.0
+        self._render_push_pull = 1.0
         self._motion_strength = 0.0
+        self._render_motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
@@ -72,6 +75,10 @@ class WobblyWindowController:
         self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.03))
         self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 1.55))
         self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.88))
+        self.direction_change_dot_threshold = float(self.params.get("direction_change_dot_threshold", 0.45))
+        self.direction_change_perp_keep = float(self.params.get("direction_change_perp_keep", 0.22))
+        self.visual_dir_interp_rate = float(self.params.get("visual_dir_interp_rate", 20.0))
+        self.visual_scalar_interp_rate = float(self.params.get("visual_scalar_interp_rate", 26.0))
         self.settle_target_fps = float(self.params.get("settle_target_fps", 60.0))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
         self._settle_max_steps = max(
@@ -91,8 +98,11 @@ class WobblyWindowController:
         self.anchor = (int(mouse_pos[0] - wx), int(mouse_pos[1] - wy))
         self._phase = 0.0
         self._dir = (1.0, 0.0)
+        self._render_dir = (1.0, 0.0)
         self._push_pull = 1.0
+        self._render_push_pull = 1.0
         self._motion_strength = 0.0
+        self._render_motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
@@ -127,6 +137,17 @@ class WobblyWindowController:
                 self._drag_idle_elapsed = 0.0
                 nx = dx / speed
                 ny = dy / speed
+                previous_dir = self._dir
+                self._dir = (nx, ny)
+                direction_dot = (previous_dir[0] * nx) + (previous_dir[1] * ny)
+                if direction_dot < self.direction_change_dot_threshold:
+                    # Remove most residual velocity from the previous direction so
+                    # old drag heading stops driving the current deformation.
+                    vel_along = (self._vel[0] * nx) + (self._vel[1] * ny)
+                    vel_perp_x = self._vel[0] - (vel_along * nx)
+                    vel_perp_y = self._vel[1] - (vel_along * ny)
+                    self._vel[0] = (max(0.0, vel_along) * nx) + (vel_perp_x * self.direction_change_perp_keep)
+                    self._vel[1] = (max(0.0, vel_along) * ny) + (vel_perp_y * self.direction_change_perp_keep)
                 content_rect = None
                 content_rect_fn = getattr(self.window, "content_rect", None)
                 if callable(content_rect_fn):
@@ -156,13 +177,6 @@ class WobblyWindowController:
                 else:
                     self._push_pull = 1.0
                     self._motion_strength = 0.0
-                # Smooth heading toward latest movement direction.
-                self._dir = (
-                    (self._dir[0] * 0.75) + (nx * 0.25),
-                    (self._dir[1] * 0.75) + (ny * 0.25),
-                )
-                dir_mag = max(0.001, math.hypot(self._dir[0], self._dir[1]))
-                self._dir = (self._dir[0] / dir_mag, self._dir[1] / dir_mag)
 
                 impulse = min(self.max_impulse, speed * self.drag_coupling)
                 self._vel[0] += self._dir[0] * impulse
@@ -187,6 +201,21 @@ class WobblyWindowController:
 
     def _step_settle(self) -> None:
         """Advance damped spring state and auto-disable when fully settled."""
+        dir_alpha = 1.0 - math.exp(-self.visual_dir_interp_rate * self.time_step)
+        scalar_alpha = 1.0 - math.exp(-self.visual_scalar_interp_rate * self.time_step)
+        blended_x = (self._render_dir[0] * (1.0 - dir_alpha)) + (self._dir[0] * dir_alpha)
+        blended_y = (self._render_dir[1] * (1.0 - dir_alpha)) + (self._dir[1] * dir_alpha)
+        blended_mag = math.hypot(blended_x, blended_y)
+        if blended_mag > 1e-6:
+            self._render_dir = (blended_x / blended_mag, blended_y / blended_mag)
+        else:
+            self._render_dir = self._dir
+        self._render_push_pull = (self._render_push_pull * (1.0 - scalar_alpha)) + (self._push_pull * scalar_alpha)
+        self._render_motion_strength = (
+            (self._render_motion_strength * (1.0 - scalar_alpha))
+            + (self._motion_strength * scalar_alpha)
+        )
+
         spring_k = self.spring_k
         damping = self.damping
         if self.dragging:
@@ -345,7 +374,7 @@ class WobblyWindowController:
             surface.blit(self.buffer, (base_x, base_y))
             return
 
-        dir_x, dir_y = self._dir
+        dir_x, dir_y = self._render_dir
         perp_x, perp_y = -dir_y, dir_x
         anchor_x, anchor_y = self.anchor if self.anchor is not None else (w * 0.5, h * 0.5)
         max_dist_x = max(anchor_x, float(w) - anchor_x)
@@ -390,7 +419,7 @@ class WobblyWindowController:
                     arc_along = (
                         disp_mag
                         * self.arc_along_gain
-                        * self._push_pull
+                        * self._render_push_pull
                         * side_curve
                         * arc_strength
                     )
@@ -399,7 +428,7 @@ class WobblyWindowController:
                         * self.arc_perp_gain
                         * side_curve
                         * arc_strength
-                        * (0.85 + (0.15 * self._motion_strength))
+                        * (0.85 + (0.15 * self._render_motion_strength))
                     )
 
                     follow_x = self._disp[0] * self.body_follow_gain
