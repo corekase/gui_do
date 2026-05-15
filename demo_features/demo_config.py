@@ -71,6 +71,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 task_panel_label="Systems",
                 task_panel_style="round",
                 task_panel_slot_index=1,
+                wobble_params={"wobbly_windows": True},
             ),
             FeatureWindowBundleBindingSpec(
                 "_life_feature",
@@ -79,6 +80,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 task_panel_label="Life",
                 task_panel_style="round",
                 task_panel_slot_index=2,
+                wobble_params={"wobbly_windows": True},
             ),
             FeatureWindowBundleBindingSpec(
                 "_mandel_feature",
@@ -87,6 +89,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 task_panel_label="Mandelbrot",
                 task_panel_style="round",
                 task_panel_slot_index=3,
+                wobble_params={"wobbly_windows": True},
             ),
         ),
         action_entries=(

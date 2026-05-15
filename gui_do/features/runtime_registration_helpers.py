@@ -19,18 +19,22 @@ def register_features_from_specs(app, host, feature_specs) -> None:
 def register_window_presentation_specs(window_presentation, window_specs) -> None:
     """Register feature-window presentation bindings from declarative window specs."""
     for spec in window_specs:
-        window_presentation.register_feature_window(
-            spec.key,
-            feature_attribute_name=spec.feature_attribute_name,
-            toggle_attribute_name=spec.toggle_attribute_name,
-            action_name=spec.action_name,
-            action_label=spec.action_label,
-            task_panel_toggle_button_id=spec.task_panel_toggle_button_id,
-            task_panel_label=spec.task_panel_label,
-            task_panel_style=spec.task_panel_style,
-            task_panel_slot_index=spec.task_panel_slot_index,
-            accessibility_label=spec.accessibility_label,
-        )
+        kwargs = {
+            "feature_attribute_name": spec.feature_attribute_name,
+            "toggle_attribute_name": spec.toggle_attribute_name,
+            "action_name": spec.action_name,
+            "action_label": spec.action_label,
+            "task_panel_toggle_button_id": spec.task_panel_toggle_button_id,
+            "task_panel_label": spec.task_panel_label,
+            "task_panel_style": spec.task_panel_style,
+            "task_panel_slot_index": spec.task_panel_slot_index,
+            "accessibility_label": spec.accessibility_label,
+        }
+        if hasattr(spec, "wobbly_windows"):
+            kwargs["wobbly_windows"] = bool(spec.wobbly_windows)
+        if hasattr(spec, "wobble_params"):
+            kwargs["wobble_params"] = dict(spec.wobble_params or {})
+        window_presentation.register_feature_window(spec.key, **kwargs)
 
 
 def register_window_tab_builders(tab_manager, feature, host, rect, tab_specs) -> None:

@@ -50,6 +50,46 @@ class _WindowContentHost(UiNode):
 
 
 class WindowControl(UiNode):
+
+    # --- Wobbly windows drag event hooks ---
+    def on_titlebar_drag_start(self, mouse_pos, surface=None):
+        """
+        Called when the user starts dragging the window via the title bar.
+        If wobbly_windows is enabled, start the wobbly effect.
+        """
+        if getattr(self, 'wobbly_windows', True):
+            if self.wobbly_controller is None:
+                # Lazy import to avoid circular dependency
+                from ...graphics.wobbly_window import WobblyWindowController
+                self.wobbly_controller = WobblyWindowController(self, getattr(self, 'wobble_params', None))
+            self.wobbly_controller.start_drag(mouse_pos, surface)
+            self.wobbly_active = True
+        else:
+            self.wobbly_active = False
+        # Existing drag logic continues here
+
+    def on_titlebar_drag_update(self, mouse_pos):
+        """
+        Called on each drag update (mouse move) while dragging the title bar.
+        """
+        if self.wobbly_active and self.wobbly_controller:
+            self.wobbly_controller.update_drag(mouse_pos)
+        # Existing drag update logic continues here
+
+    def on_titlebar_drag_end(self):
+        """
+        Called when the user releases the drag on the title bar.
+        """
+        if self.wobbly_active and self.wobbly_controller:
+            self.wobbly_controller.end_drag()
+            self.wobbly_active = False
+        # Existing drag end logic continues here
+
+
+        # --- Wobbly windows effect integration ---
+        wobbly_controller = None  # type: Optional[object]
+        wobbly_active = False
+
     """Window container with title bar and child controls."""
 
     presenter: Optional[object] = None
@@ -102,6 +142,11 @@ class WindowControl(UiNode):
         self._content_host = _WindowContentHost(f"{self.control_id}__content", self.content_rect())
         self._content_host_rect_dirty = False
         super().add_child(self._content_host)
+
+        # Wobbly windows effect: initialize controller if enabled in spec (integration to be completed)
+        self.wobbly_controller = None
+        self.wobbly_active = False
+        # Actual instantiation and event hookup will be handled in drag logic
 
     def _mark_content_host_rect_dirty(self) -> None:
         self._content_host_rect_dirty = True
@@ -395,6 +440,10 @@ class WindowControl(UiNode):
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        # If wobbly effect is active, render via controller
+        if self.wobbly_active and self.wobbly_controller:
+            self.wobbly_controller.render(surface)
+            return
         self._sync_content_host_rect()
         self._fit_titlebar_height_to_font(theme)
         factory = theme.graphics_factory

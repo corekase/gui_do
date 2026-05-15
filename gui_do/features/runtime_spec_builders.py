@@ -43,6 +43,12 @@ def build_feature_window_bundle_specs(
                 task_panel_toggle_button_id=entry.task_panel_toggle_button_id,
                 toggle_attribute_name=entry.toggle_attribute_name,
                 accessibility_label=entry.accessibility_label,
+                wobbly_windows=(
+                    entry.wobble_params.get("wobbly_windows", True)
+                    if getattr(entry, "wobble_params", None)
+                    else True
+                ),
+                wobble_params=getattr(entry, "wobble_params", {}) or {},
             )
         )
     return tuple(feature_specs), tuple(window_specs)
