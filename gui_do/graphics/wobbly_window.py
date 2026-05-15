@@ -66,9 +66,9 @@ class WobblyWindowController:
         self.body_follow_gain = float(self.params.get("body_follow_gain", 0.46))
         self.arc_cross_exponent = float(self.params.get("arc_cross_exponent", 0.82))
         self.arc_along_taper = float(self.params.get("arc_along_taper", 0.16))
-        self.shear_gain = float(self.params.get("shear_gain", 2.5))  # was 1.80, increased for more shear
-        self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.5))  # was 1.35
-        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 80.0))  # was 60.0, increased for more shear
+        self.shear_gain = float(self.params.get("shear_gain", 3.5))  # was 2.5, increased for even more shear
+        self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.7))  # was 1.5
+        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 110.0))  # was 80.0, increased for even more shear
         self.overlap_px = int(self.params.get("overlap_px", 4))
         self.performance_area_threshold_px = int(self.params.get("performance_area_threshold_px", 180000))
         self.large_window_refresh_interval_frames = int(self.params.get("large_window_refresh_interval_frames", 2))

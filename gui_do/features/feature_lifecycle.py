@@ -640,8 +640,7 @@ class FeatureWindowBinding:
     task_panel_style: str = "round"
     task_panel_slot_index: int | None = None
     accessibility_label: str | None = None
-    wobbly_windows: bool = True
-    wobble_params: dict = field(default_factory=dict)
+    window_effects: dict = field(default_factory=dict)
 
 
 class FeatureWindowPresentationModel:
@@ -668,8 +667,7 @@ class FeatureWindowPresentationModel:
         task_panel_style: str = "round",
         task_panel_slot_index: int | None = None,
         accessibility_label: str | None = None,
-        wobbly_windows: bool = True,
-        wobble_params: dict | None = None,
+        window_effects: dict | None = None,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
             key=str(key),
@@ -682,8 +680,7 @@ class FeatureWindowPresentationModel:
             task_panel_style=str(task_panel_style),
             task_panel_slot_index=None if task_panel_slot_index is None else int(task_panel_slot_index),
             accessibility_label=None if accessibility_label is None else str(accessibility_label),
-            wobbly_windows=bool(wobbly_windows),
-            wobble_params=dict(wobble_params or {}),
+            window_effects=dict(window_effects or {}),
         )
         self._bindings[binding.key] = binding
         return binding
@@ -702,10 +699,9 @@ class FeatureWindowPresentationModel:
         window = getattr(feature, "window", None)
         if window is None:
             return None
-        # Keep per-window wobble settings synchronized from declarative binding metadata.
+        # Keep per-window effects synchronized from declarative binding metadata.
         try:
-            window.wobbly_windows = bool(binding.wobbly_windows)
-            window.wobble_params = dict(binding.wobble_params)
+            window.window_effects = dict(binding.window_effects)
         except Exception:
             pass
         previous_window = self._window_object_by_key.get(binding.key)

@@ -14,8 +14,7 @@ def make_window_toggle_spec(
     task_panel_toggle_button_id: str | None = None,
     toggle_attribute_name: str | None = None,
     accessibility_label: str | None = None,
-    wobbly_windows: bool = True,
-    wobble_params: dict | None = None,
+    window_effects: dict | None = None,
 ):
     """Build a WindowSpec-like object with conventional defaults for window toggles."""
     normalized_key = str(key)
@@ -31,8 +30,7 @@ def make_window_toggle_spec(
         task_panel_style=str(task_panel_style),
         task_panel_slot_index=(None if task_panel_slot_index is None else int(task_panel_slot_index)),
         accessibility_label=accessibility_label or f"Show {normalized_label} window",
-        wobbly_windows=bool(wobbly_windows),
-        wobble_params=wobble_params or {},
+        window_effects=window_effects or {},
     )
 
 

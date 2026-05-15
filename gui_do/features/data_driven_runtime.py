@@ -185,9 +185,7 @@ class WindowSpec:
     task_panel_style: str
     task_panel_slot_index: int | None
     accessibility_label: str
-    # Wobbly windows effect fields
-    wobbly_windows: bool = True
-    wobble_params: dict = field(default_factory=dict)
+    window_effects: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -679,7 +677,8 @@ class FeatureWindowBundleBindingSpec:
     task_panel_toggle_button_id: str | None = None
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
-    wobble_params: dict = field(default_factory=dict)
+    window_effects: dict = field(default_factory=dict)
+
 
 
 @dataclass(frozen=True)
@@ -696,6 +695,7 @@ class WindowToggleBindingSpec:
     task_panel_toggle_button_id: str | None = None
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
+    window_effects: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -2540,6 +2540,7 @@ class TabLayoutContext:
         return list(self._controls)
 
 
+
 def make_window_toggle_spec(
     key: str,
     feature_attribute_name: str,
@@ -2552,8 +2553,7 @@ def make_window_toggle_spec(
     task_panel_toggle_button_id: str | None = None,
     toggle_attribute_name: str | None = None,
     accessibility_label: str | None = None,
-    wobbly_windows: bool = True,
-    wobble_params: dict | None = None,
+    window_effects: dict | None = None,
 ) -> WindowSpec:
     """Build a WindowSpec with conventional defaults for demo/host window toggles."""
     return _make_window_toggle_spec(
@@ -2568,8 +2568,7 @@ def make_window_toggle_spec(
         task_panel_toggle_button_id=task_panel_toggle_button_id,
         toggle_attribute_name=toggle_attribute_name,
         accessibility_label=accessibility_label,
-        wobbly_windows=wobbly_windows,
-        wobble_params=wobble_params or {},
+        window_effects=window_effects or {},
     )
 
 

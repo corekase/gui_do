@@ -51,17 +51,17 @@ class _WindowContentHost(UiNode):
 
 class WindowControl(UiNode):
 
-    # --- Wobbly windows drag event hooks ---
+    # --- Shear window effects drag event hooks ---
     def on_titlebar_drag_start(self, mouse_pos, surface=None):
         """
         Called when the user starts dragging the window via the title bar.
-        If wobbly_windows is enabled, start the wobbly effect.
+        If shear_wobble_enabled is enabled, start the shear wobble effect.
         """
-        if getattr(self, 'wobbly_windows', True):
+        if getattr(self, 'window_effects', {}).get('shear_wobble_enabled', True):
             if self.wobbly_controller is None:
                 # Lazy import to avoid circular dependency
                 from ...graphics.wobbly_window import WobblyWindowController
-                self.wobbly_controller = WobblyWindowController(self, getattr(self, 'wobble_params', None))
+                self.wobbly_controller = WobblyWindowController(self, getattr(self, 'window_effects', None))
             self.wobbly_controller.start_drag(mouse_pos, surface)
             self.wobbly_active = True
         else:

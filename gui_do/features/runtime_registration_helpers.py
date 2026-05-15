@@ -30,10 +30,8 @@ def register_window_presentation_specs(window_presentation, window_specs) -> Non
             "task_panel_slot_index": spec.task_panel_slot_index,
             "accessibility_label": spec.accessibility_label,
         }
-        if hasattr(spec, "wobbly_windows"):
-            kwargs["wobbly_windows"] = bool(spec.wobbly_windows)
-        if hasattr(spec, "wobble_params"):
-            kwargs["wobble_params"] = dict(spec.wobble_params or {})
+        if hasattr(spec, "window_effects"):
+            kwargs["window_effects"] = dict(spec.window_effects or {})
         window_presentation.register_feature_window(spec.key, **kwargs)
 
 

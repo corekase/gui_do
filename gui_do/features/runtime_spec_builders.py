@@ -43,12 +43,7 @@ def build_feature_window_bundle_specs(
                 task_panel_toggle_button_id=entry.task_panel_toggle_button_id,
                 toggle_attribute_name=entry.toggle_attribute_name,
                 accessibility_label=entry.accessibility_label,
-                wobbly_windows=(
-                    entry.wobble_params.get("wobbly_windows", True)
-                    if getattr(entry, "wobble_params", None)
-                    else True
-                ),
-                wobble_params=getattr(entry, "wobble_params", {}) or {},
+                window_effects=getattr(entry, "window_effects", {}) or {},
             )
         )
     return tuple(feature_specs), tuple(window_specs)
@@ -73,6 +68,7 @@ def build_window_toggle_specs(bindings, *, window_spec_cls, make_window_toggle_s
                 task_panel_toggle_button_id=binding.task_panel_toggle_button_id,
                 toggle_attribute_name=binding.toggle_attribute_name,
                 accessibility_label=binding.accessibility_label,
+                window_effects=getattr(binding, "window_effects", {}) or {},
             )
         )
     return tuple(specs)
