@@ -25,6 +25,7 @@ class PanelControl(UiNode):
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
+        self._drag_offset = None
         self._active_window: Optional[UiNode] = None
         self._pending_capture_release_owner_id = None
         self._visual_size = None
@@ -108,6 +109,7 @@ class PanelControl(UiNode):
             self._pending_capture_release_owner_id = window.control_id
             self._drag_window = None
             self._drag_last_pos = None
+            self._drag_offset = None
         self._set_window_active_state(window, False)
         next_window = self._next_top_visible_window(excluding=window)
         if next_window is None:
@@ -123,6 +125,7 @@ class PanelControl(UiNode):
                 self._pending_capture_release_owner_id = window.control_id
                 self._drag_window = None
                 self._drag_last_pos = None
+                self._drag_offset = None
             self._set_window_active_state(window, False)
             return
         if not new_enabled:
@@ -131,6 +134,7 @@ class PanelControl(UiNode):
                 self._pending_capture_release_owner_id = window.control_id
                 self._drag_window = None
                 self._drag_last_pos = None
+                self._drag_offset = None
             self._set_window_active_state(window, False)
             if not was_active:
                 return
@@ -292,6 +296,7 @@ class PanelControl(UiNode):
             self._pending_capture_release_owner_id = child.control_id
             self._drag_window = None
             self._drag_last_pos = None
+            self._drag_offset = None
 
         if was_window:
             self._set_window_active_state(child, False)
@@ -343,24 +348,42 @@ class PanelControl(UiNode):
                     app.pointer_capture.end(self._drag_window.control_id)
                 self._drag_window = None
                 self._drag_last_pos = None
+                self._drag_offset = None
 
         raw = event.pos
 
         # --- Handle window chrome events before children ---
         # Mouse motion: dragging window
         if event.is_mouse_motion() and self._drag_window is not None:
-            rel = event.rel
-            if isinstance(rel, tuple) and len(rel) == 2:
-                dx, dy = int(rel[0]), int(rel[1])
-            elif isinstance(raw, tuple) and len(raw) == 2 and self._drag_last_pos is not None:
-                dx = int(raw[0] - self._drag_last_pos[0])
-                dy = int(raw[1] - self._drag_last_pos[1])
+            if isinstance(raw, tuple) and len(raw) == 2:
+                if self._drag_offset is None:
+                    self._drag_offset = (
+                        int(raw[0] - self._drag_window.rect.left),
+                        int(raw[1] - self._drag_window.rect.top),
+                    )
+                target_x = int(raw[0] - self._drag_offset[0])
+                target_y = int(raw[1] - self._drag_offset[1])
+                dx = int(target_x - self._drag_window.rect.left)
+                dy = int(target_y - self._drag_window.rect.top)
+                self._drag_window.move_by(dx, dy)
+                self._drag_last_pos = raw
             else:
-                return False
-            self._drag_window.move_by(dx, dy)
+                rel = event.rel
+                if isinstance(rel, tuple) and len(rel) == 2:
+                    dx, dy = int(rel[0]), int(rel[1])
+                elif self._drag_last_pos is not None:
+                    dx = int(raw[0] - self._drag_last_pos[0])
+                    dy = int(raw[1] - self._drag_last_pos[1])
+                else:
+                    return False
+                self._drag_window.move_by(dx, dy)
+                if self._drag_last_pos is not None:
+                    self._drag_last_pos = (
+                        int(self._drag_last_pos[0] + dx),
+                        int(self._drag_last_pos[1] + dy),
+                    )
             if hasattr(self._drag_window, "on_titlebar_drag_update"):
                 self._drag_window.on_titlebar_drag_update(raw)
-            self._drag_last_pos = raw
             event.prevent_default()
             event.stop_propagation()
             return True
@@ -372,6 +395,7 @@ class PanelControl(UiNode):
             app.pointer_capture.end(self._drag_window.control_id)
             self._drag_window = None
             self._drag_last_pos = None
+            self._drag_offset = None
             event.prevent_default()
             event.stop_propagation()
             return True
@@ -400,6 +424,10 @@ class PanelControl(UiNode):
                         self._raise_window(window)
                         self._drag_window = window
                         self._drag_last_pos = raw
+                        self._drag_offset = (
+                            int(raw[0] - window.rect.left),
+                            int(raw[1] - window.rect.top),
+                        )
                         if getattr(window, "wobbly_windows", True):
                             focus_manager = getattr(app, "focus", None)
                             if focus_manager is not None and hasattr(focus_manager, "clear_focus"):

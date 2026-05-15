@@ -1,9 +1,9 @@
 """Wobbly window drag renderer for pygame-backed windows.
 
-Implements a directional "jello" deformation driven by pointer velocity:
-- motion injects impulses along drag direction,
-- distortion decays quickly when pointer stops,
-- release keeps a brief settle tail, then auto-disables.
+Implements a simple directional push/pull arc deformation:
+- dragging injects spring velocity in the drag direction,
+- window geometry bends as one coherent sheet around the title-bar grab anchor,
+- when movement pauses or drag ends, spring damping settles back to identity.
 """
 
 from __future__ import annotations
@@ -33,15 +33,14 @@ class WobblyWindowController:
         self._dir = (1.0, 0.0)
         self._push_pull = 1.0
         self._motion_strength = 0.0
-        self._vertical_push_sign = 1.0
+        self._settle_elapsed = 0.0
+        self._settle_steps = 0
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
 
         # Tunables
-        self.band_height = int(self.params.get("band_height", 8))
-        self.tile_width = int(self.params.get("tile_width", 12))
-        self.base_amplitude = float(self.params.get("amplitude", 10.0))
-        self.frequency = float(self.params.get("frequency", 0.055))
+        self.band_height = int(self.params.get("band_height", 10))
+        self.tile_width = int(self.params.get("tile_width", 14))
         self.phase_coupling = float(self.params.get("phase_coupling", 0.22))
         self.drag_coupling = float(self.params.get("drag_coupling", 0.55))
         self.spring_k = float(self.params.get("spring_k", 62.0))
@@ -49,17 +48,22 @@ class WobblyWindowController:
         self.time_step = float(self.params.get("time_step", 1.0 / 120.0))
         self.simulation_substeps = int(self.params.get("simulation_substeps", 2))
         self.max_impulse = float(self.params.get("max_impulse", 92.0))
-        self.anchor_free_radius = float(self.params.get("anchor_free_radius", 10.0))
-        self.max_distort_px = float(self.params.get("max_distort_px", 112.0))
-        self.perp_strength = float(self.params.get("perp_strength", 0.9))
-        self.bend_gain = float(self.params.get("bend_gain", 5.6))
-        self.global_warp_gain = float(self.params.get("global_warp_gain", 3.2))
-        self.distance_power = float(self.params.get("distance_power", 1.1))
-        self.corner_lead_gain = float(self.params.get("corner_lead_gain", 1.15))
-        self.corner_pull_gain = float(self.params.get("corner_pull_gain", 1.20))
-        self.corner_arc_couple = float(self.params.get("corner_arc_couple", 0.18))
-        self.corner_cohesion = float(self.params.get("corner_cohesion", 0.55))
+        self.anchor_free_radius = float(self.params.get("anchor_free_radius", 6.0))
+        self.max_distort_px = float(self.params.get("max_distort_px", 96.0))
+        self.arc_along_gain = float(self.params.get("arc_along_gain", self.params.get("bend_gain", 2.45)))
+        self.arc_perp_gain = float(self.params.get("arc_perp_gain", self.params.get("sheet_cross_gain", 1.10)))
+        self.arc_radius_scale = float(self.params.get("arc_radius_scale", 0.95))
+        self.edge_weight = float(self.params.get("edge_weight", 0.72))
+        self.anchor_gate_floor = float(self.params.get("anchor_gate_floor", 0.28))
+        self.body_follow_gain = float(self.params.get("body_follow_gain", 0.22))
+        self.overlap_px = int(self.params.get("overlap_px", 4))
+        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.45))
+        self.settle_target_fps = float(self.params.get("settle_target_fps", 60.0))
         self.settle_epsilon = float(self.params.get("settle_epsilon", 0.18))
+        self._settle_max_steps = max(
+            1,
+            int(round(self.settle_timeout_seconds * self.settle_target_fps * max(1, self.simulation_substeps))),
+        )
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
         """
@@ -75,7 +79,8 @@ class WobblyWindowController:
         self._dir = (1.0, 0.0)
         self._push_pull = 1.0
         self._motion_strength = 0.0
-        self._vertical_push_sign = 1.0
+        self._settle_elapsed = 0.0
+        self._settle_steps = 0
         self._disp[0] = 0.0
         self._disp[1] = 0.0
         self._vel[0] = 0.0
@@ -106,11 +111,6 @@ class WobblyWindowController:
             if speed > 0.001:
                 nx = dx / speed
                 ny = dy / speed
-                # Keep upward deformation as-is; reverse only downward deformation.
-                if dy < -0.5:
-                    self._vertical_push_sign = 1.0
-                elif dy > 0.5:
-                    self._vertical_push_sign = -1.0
                 content_rect = None
                 content_rect_fn = getattr(self.window, "content_rect", None)
                 if callable(content_rect_fn):
@@ -148,6 +148,8 @@ class WobblyWindowController:
                 self._vel[0] += self._dir[0] * impulse
                 self._vel[1] += self._dir[1] * impulse
                 self._phase += speed * self.phase_coupling
+            else:
+                self._motion_strength *= 0.82
         self._prev_mouse_pos = mouse_pos
 
     def _step_settle(self) -> None:
@@ -160,9 +162,21 @@ class WobblyWindowController:
         self._disp[1] += self._vel[1] * self.time_step
 
         if not self.dragging:
+            self._settle_elapsed += self.time_step
+            self._settle_steps += 1
             disp_mag = math.hypot(self._disp[0], self._disp[1])
             vel_mag = math.hypot(self._vel[0], self._vel[1])
             if disp_mag < self.settle_epsilon and vel_mag < self.settle_epsilon:
+                self.active = False
+                self.buffer = None
+                self._scratch = None
+                self._scratch_size = (0, 0)
+                return
+            if (
+                self._settle_steps > self._settle_max_steps
+                or
+                self._settle_elapsed > self.settle_timeout_seconds
+            ):
                 self.active = False
                 self.buffer = None
                 self._scratch = None
@@ -175,6 +189,8 @@ class WobblyWindowController:
         self.dragging = False
         self._prev_mouse_pos = None
         self._motion_strength = 0.0
+        self._settle_elapsed = 0.0
+        self._settle_steps = 0
 
     def is_active(self) -> bool:
         return bool(self.active)
@@ -238,72 +254,33 @@ class WobblyWindowController:
         # Passive oscillation: advances even when pointer is stationary.
         self._phase += 0.18
 
-        # Safety cap: keep deformation within tile-coverage limits to avoid holes at high speed.
-        safe_component_offset = max(3.0, (min(tile_w, tile_h) * 0.55) + 4.0)
+        safe_component_offset = min(
+            self.max_distort_px,
+            max(10.0, (min(tile_w, tile_h) * 1.45) + 8.0),
+        )
         disp_mag = min(self.max_distort_px, safe_component_offset, math.hypot(self._disp[0], self._disp[1]))
         if disp_mag < 0.001:
             surface.blit(self.buffer, (base_x, base_y))
             return
 
-        intensity = disp_mag / max(1e-6, safe_component_offset)
-        if intensity < 0.35:
-            overlap_px = 2
-            pass_offsets = ((0, 0),)
-        elif intensity < 0.75:
-            overlap_px = 3
-            pass_offsets = ((0, 0), (tile_w // 2, tile_h // 2))
-        else:
-            overlap_px = 4
-            pass_offsets = ((0, 0), (tile_w // 2, 0), (0, tile_h // 2), (tile_w // 2, tile_h // 2))
+        # Fade deformation to zero across settle interval so timeout deactivation
+        # matches the resting geometry and avoids a visible position snap.
+        release_blend = 1.0
+        if not self.dragging and self.settle_timeout_seconds > 1e-6:
+            release_t = min(1.0, max(0.0, self._settle_elapsed / self.settle_timeout_seconds))
+            release_blend = 1.0 - release_t
+        disp_mag *= release_blend
+        if disp_mag < 0.001:
+            surface.blit(self.buffer, (base_x, base_y))
+            return
 
         dir_x, dir_y = self._dir
         perp_x, perp_y = -dir_y, dir_x
-        # Strongly suppress cross-axis deformation when motion is mostly horizontal,
-        # preventing left/right movement from producing vertical deformation.
-        cross_axis_scale = min(1.0, max(0.0, (abs(dir_y) ** 2) * 1.65))
         anchor_x, anchor_y = self.anchor if self.anchor is not None else (w * 0.5, h * 0.5)
-        window_scale = max(float(w), float(h))
-        sigma_perp = max(16.0, window_scale * 0.95)
-        sigma_along = max(16.0, window_scale * 1.10)
         max_dist_x = max(anchor_x, float(w) - anchor_x)
         max_dist_y = max(anchor_y, float(h) - anchor_y)
         max_anchor_dist = max(1.0, math.hypot(max_dist_x, max_dist_y))
-
-        # Corner warp model: lead corners move most, trailing corners are pulled
-        # in the drag direction, then bilinearly blended across the bitmap.
-        base_corner_mag = disp_mag * self.bend_gain * (0.45 + (0.55 * self._motion_strength))
-
-        def _corner_offset(corner_x: float, corner_y: float) -> tuple[float, float]:
-            vx = corner_x - anchor_x
-            vy = corner_y - anchor_y
-            vm = math.hypot(vx, vy)
-            if vm < 1e-6:
-                return (0.0, 0.0)
-            rvx = vx / vm
-            rvy = vy / vm
-            directional = (rvx * dir_x) + (rvy * dir_y)
-            lead = max(0.0, directional)
-            trail = max(0.0, -directional)
-
-            # Lead advances strongly; trailing follows toward lead direction.
-            corner_drive = (self.corner_lead_gain * lead) + (self.corner_pull_gain * trail)
-            along_amt = base_corner_mag * corner_drive * self._push_pull
-
-            # Small signed perpendicular coupling creates an arc-shaped bend.
-            side = (rvx * perp_x) + (rvy * perp_y)
-            perp_amt = along_amt * self.corner_arc_couple * side
-
-            return (
-                (along_amt * dir_x) + (perp_amt * perp_x),
-                (along_amt * dir_y) + (perp_amt * perp_y),
-            )
-
-        c_tl = _corner_offset(0.0, 0.0)
-        c_tr = _corner_offset(float(w), 0.0)
-        c_bl = _corner_offset(0.0, float(h))
-        c_br = _corner_offset(float(w), float(h))
-        avg_corner_x = (c_tl[0] + c_tr[0] + c_bl[0] + c_br[0]) * 0.25
-        avg_corner_y = (c_tl[1] + c_tr[1] + c_bl[1] + c_br[1]) * 0.25
+        arc_radius = max(24.0, max_anchor_dist * self.arc_radius_scale)
 
         def _draw_tile_pass(x_start: int, y_start: int) -> None:
             for y in range(y_start, h, tile_h):
@@ -320,77 +297,53 @@ class WobblyWindowController:
                     along = (rel_x * dir_x) + (rel_y * dir_y)
                     perp = (rel_x * perp_x) + (rel_y * perp_y)
 
-                    # Keep the exact grab region visually stable.
                     anchor_dist = math.hypot(rel_x, rel_y)
                     if anchor_dist <= self.anchor_free_radius:
-                        anchor_gate = 0.0
+                        anchor_gate = 1.0
                     else:
-                        # Window-scale gate: radius spans the full window diagonal.
-                        gate_span = max(1.0, max_anchor_dist - self.anchor_free_radius)
+                        gate_span = max(1.0, arc_radius - self.anchor_free_radius)
                         anchor_gate = min(1.0, (anchor_dist - self.anchor_free_radius) / gate_span)
+                        anchor_gate = self.anchor_gate_floor + ((1.0 - self.anchor_gate_floor) * anchor_gate)
 
-                    # Strongest near movement axis; quickly decays away from it.
-                    axis_falloff = math.exp(-(abs(perp) / sigma_perp))
+                    distance_field = min(1.0, anchor_dist / max(1.0, arc_radius))
+                    edge_emphasis = self.edge_weight + ((1.0 - self.edge_weight) * distance_field)
 
-                    # Trailing bias: deformation should mostly live opposite to motion.
-                    trailing_bias = 1.0 if along <= 0.0 else math.exp(-(along / sigma_along)) * 0.55
-                    motion_bias = 0.75 + (0.35 * self._motion_strength)
-                    push_pull = self._push_pull
+                    nx_win = (center_x / max(1.0, float(w))) * 2.0 - 1.0
+                    ny_win = (center_y / max(1.0, float(h))) * 2.0 - 1.0
+                    along_win = (nx_win * dir_x) + (ny_win * dir_y)
+                    perp_win = (nx_win * perp_x) + (ny_win * perp_y)
+                    side_curve = math.copysign(abs(perp_win) ** 1.25, perp_win)
+                    longitudinal_taper = 1.0 - (0.35 * abs(along_win))
+                    arc_strength = max(0.0, longitudinal_taper) * edge_emphasis * anchor_gate
 
-                    # Global warp field: grows with distance from the drag reference,
-                    # so the whole window body, including corners, bends as one piece.
-                    distance_field = min(1.0, anchor_dist / max_anchor_dist)
-                    arc_field = 0.45 + (2.25 * (distance_field ** 0.55))
-                    unified_field = arc_field + (self.global_warp_gain * (distance_field ** self.distance_power))
-
-                    amount = disp_mag * axis_falloff * trailing_bias * anchor_gate * motion_bias * unified_field
-                    bend_curve = 0.85 + (2.25 * (distance_field ** 0.58))
-                    amount_along = max(-self.max_distort_px, min(self.max_distort_px, amount * self.bend_gain * bend_curve))
-                    amount_along *= push_pull
-                    amount_perp = max(
-                        -self.max_distort_px,
-                        min(self.max_distort_px, amount * self.perp_strength * self.bend_gain * bend_curve * cross_axis_scale),
+                    arc_along = (
+                        disp_mag
+                        * self.arc_along_gain
+                        * self._push_pull
+                        * side_curve
+                        * arc_strength
+                    )
+                    arc_perp = (
+                        disp_mag
+                        * self.arc_perp_gain
+                        * side_curve
+                        * arc_strength
+                        * (0.85 + (0.15 * self._motion_strength))
                     )
 
-                    off_x = (amount_along * dir_x) + (amount_perp * perp_x)
-                    off_y = ((amount_along * self._vertical_push_sign) * dir_y) + (amount_perp * perp_y)
+                    follow_x = self._disp[0] * self.body_follow_gain
+                    follow_y = self._disp[1] * self.body_follow_gain
 
-                    # Bilinear blend of corner offsets across the full window.
-                    u = center_x / max(1.0, float(w))
-                    v = center_y / max(1.0, float(h))
-                    w_tl = (1.0 - u) * (1.0 - v)
-                    w_tr = u * (1.0 - v)
-                    w_bl = (1.0 - u) * v
-                    w_br = u * v
-                    corner_x = (
-                        (c_tl[0] * w_tl)
-                        + (c_tr[0] * w_tr)
-                        + (c_bl[0] * w_bl)
-                        + (c_br[0] * w_br)
-                    )
-                    corner_y = (
-                        (c_tl[1] * w_tl)
-                        + (c_tr[1] * w_tr)
-                        + (c_bl[1] * w_bl)
-                        + (c_br[1] * w_br)
-                    )
-                    # Cohesion blend: pull local corner influence toward shared corner motion
-                    # for a chunkier "jello block" response.
-                    corner_x = (corner_x * (1.0 - self.corner_cohesion)) + (avg_corner_x * self.corner_cohesion)
-                    corner_y = (corner_y * (1.0 - self.corner_cohesion)) + (avg_corner_y * self.corner_cohesion)
-                    off_x += corner_x
-                    off_y += corner_y
+                    off_x = (arc_along * dir_x) + (arc_perp * perp_x) + follow_x
+                    off_y = (arc_along * dir_y) + (arc_perp * perp_y) + follow_y
                     off_x = int(max(-safe_component_offset, min(safe_component_offset, off_x)))
                     off_y = int(max(-safe_component_offset, min(safe_component_offset, off_y)))
 
-                    # Extra overlap around each tile hides inter-tile seam artifacts.
-                    sx = max(0, x - overlap_px)
-                    sy = max(0, y - overlap_px)
-                    ex = min(w, x + src_w + overlap_px)
-                    ey = min(h, y + src_h + overlap_px)
+                    sx = max(0, x - self.overlap_px)
+                    sy = max(0, y - self.overlap_px)
+                    ex = min(w, x + src_w + self.overlap_px)
+                    ey = min(h, y + src_h + self.overlap_px)
                     src = pygame.Rect(sx, sy, ex - sx, ey - sy)
                     surface.blit(self.buffer, (base_x + sx + off_x, base_y + sy + off_y), src)
 
-        # Adaptive coverage: low distortion uses fewer passes; rapid motion uses full coverage.
-        for pass_x, pass_y in pass_offsets:
-            _draw_tile_pass(pass_x, pass_y)
+        _draw_tile_pass(0, 0)

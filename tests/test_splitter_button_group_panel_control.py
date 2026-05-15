@@ -7,6 +7,9 @@ from pygame import Rect
 from gui_do.controls.composite.splitter_control import SplitterControl
 from gui_do.controls.input.button_group_control import ButtonGroupControl
 from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.events.gui_event import GuiEvent, EventType
+from gui_do.events.pointer_capture import PointerCapture
 from gui_do.layout.layout_axis import LayoutAxis
 
 pygame.init()
@@ -308,6 +311,87 @@ class TestPanelControlWindowHelpers(unittest.TestCase):
         panel.children.extend([win1, win2])
         result = panel._next_top_visible_window(excluding=win2)
         self.assertIs(win1, result)
+
+
+class _StubFocusManager:
+    def __init__(self):
+        self.cleared = False
+
+    def clear_focus(self):
+        self.cleared = True
+
+
+class _StubWobblyController:
+    def __init__(self):
+        self.start_calls = []
+        self.update_calls = []
+        self.end_calls = 0
+
+    def start_drag(self, mouse_pos, surface=None):
+        self.start_calls.append((mouse_pos, surface))
+
+    def update_drag(self, mouse_pos):
+        self.update_calls.append(mouse_pos)
+
+    def end_drag(self):
+        self.end_calls += 1
+
+    def is_active(self):
+        return False
+
+
+class _StubApp:
+    def __init__(self):
+        self.surface = pygame.Surface((800, 600))
+        self.pointer_capture = PointerCapture()
+        self.focus = _StubFocusManager()
+
+
+class TestPanelControlWindowDrag(unittest.TestCase):
+    def test_titlebar_drag_uses_mouse_anchor_in_wobbly_mode(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(100, 80, 260, 180), "Window")
+        window.wobbly_windows = True
+        wobbly = _StubWobblyController()
+        window.wobbly_controller = wobbly
+        panel.add(window)
+
+        app = _StubApp()
+
+        down = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=0,
+            pos=(130, 90),
+            button=1,
+        )
+        consumed = panel.on_event_capture(down, app)
+        self.assertTrue(consumed)
+        self.assertTrue(app.pointer_capture.is_owned_by("win"))
+        self.assertEqual((130, 90), wobbly.start_calls[-1][0])
+
+        # A large rel delta should not yank the window; anchored absolute mouse
+        # positioning keeps it smooth and directly under the grab point.
+        motion = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(150, 110),
+            rel=(500, -250),
+        )
+        consumed = panel.on_event_capture(motion, app)
+        self.assertTrue(consumed)
+        self.assertEqual((120, 100), window.rect.topleft)
+        self.assertEqual((150, 110), wobbly.update_calls[-1])
+
+        up = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_UP,
+            type=0,
+            pos=(150, 110),
+            button=1,
+        )
+        consumed = panel.on_event_capture(up, app)
+        self.assertTrue(consumed)
+        self.assertFalse(app.pointer_capture.is_active)
+        self.assertEqual(1, wobbly.end_calls)
 
 
 if __name__ == "__main__":
