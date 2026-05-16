@@ -42,9 +42,13 @@ class ShearWindowController:
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = False
         self._release_drag_shear_blend = 1.0
+        self._release_idle_influence = 1.0
         self._last_drag_frame_valid = False
         self._last_drag_shear_dir_x = 1.0
         self._last_drag_shear_blend = 1.0
+        self._drag_speed_smoothed = 0.0
+        self._drag_idle_influence = 1.0
+        self._drag_is_idle = True
 
         # Shear + settle tunables
         self.band_height = int(self.params.get("band_height", 10))
@@ -66,6 +70,16 @@ class ShearWindowController:
         self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 40.0))
 
         self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
+        self.drag_idle_speed_enter = float(
+            self.params.get("drag_idle_speed_enter", self.drag_idle_speed_threshold)
+        )
+        self.drag_idle_speed_exit = float(
+            self.params.get("drag_idle_speed_exit", self.drag_idle_speed_enter * 1.35)
+        )
+        self.drag_speed_smoothing_seconds = float(self.params.get("drag_speed_smoothing_seconds", 0.050))
+        self.drag_idle_influence_smoothing_seconds = float(
+            self.params.get("drag_idle_influence_smoothing_seconds", 0.080)
+        )
         self.drag_direction_handover_seconds = float(self.params.get("drag_direction_handover_seconds", 0.06))
         self.drag_start_handover_seconds = float(self.params.get("drag_start_handover_seconds", 0.07))
         self.drag_idle_settle_delay_seconds = float(
@@ -122,9 +136,13 @@ class ShearWindowController:
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = False
         self._release_drag_shear_blend = 1.0
+        self._release_idle_influence = 1.0
         self._last_drag_frame_valid = False
         self._last_drag_shear_dir_x = self._shear_dir_x
         self._last_drag_shear_blend = 1.0
+        self._drag_speed_smoothed = 0.0
+        self._drag_idle_influence = 1.0
+        self._drag_is_idle = True
 
         self.buffer = None
         self._scratch = None
@@ -145,10 +163,13 @@ class ShearWindowController:
             dy = float(mouse_pos[1] - self._prev_mouse_pos[1])
             speed = math.hypot(dx, dy)
 
+            speed_tau = max(1e-6, self.drag_speed_smoothing_seconds)
+            speed_alpha = 1.0 - math.exp(-(self.time_step / speed_tau))
+            self._drag_speed_smoothed += (speed - self._drag_speed_smoothed) * speed_alpha
             if speed > 0.0:
                 self._drag_idle_elapsed = 0.0
 
-            if speed > self.drag_idle_speed_threshold:
+            if speed > 1e-6:
                 inv = 1.0 / speed
                 new_drag_dir = (dx * inv, dy * inv)
                 prev_shear_dir_x = self._shear_dir_x
@@ -174,7 +195,7 @@ class ShearWindowController:
                     self._drag_handover_end_x = new_dir_x
                 elif not self._drag_handover_active and abs(new_dir_x) > 1e-6:
                     self._shear_dir_x = new_dir_x
-                self._motion_strength = min(1.0, speed / 48.0)
+                self._motion_strength = max(self._motion_strength * 0.86, min(1.0, speed / 48.0))
 
                 impulse = min(self.max_impulse, speed * self.drag_coupling)
                 self._vel[0] += self._drag_dir[0] * impulse
@@ -239,6 +260,7 @@ class ShearWindowController:
         self._prev_mouse_pos = None
         self._settle_elapsed = 0.0
         self._settle_steps = 0
+        self._release_idle_influence = self._drag_idle_influence
 
         if self._last_drag_frame_valid:
             # Use the exact last rendered drag envelope to avoid release pops
@@ -246,11 +268,7 @@ class ShearWindowController:
             self._release_drag_shear_blend = self._last_drag_shear_blend
             self._shear_dir_x = self._last_drag_shear_dir_x
         else:
-            idle_blend = 1.0
-            if self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
-                idle_over = self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds
-                fade_tau = max(1e-6, self.release_blend_seconds)
-                idle_blend = math.exp(-(idle_over / fade_tau))
+            idle_blend = max(0.0, min(1.0, 1.0 - self._drag_idle_influence))
             start_blend = self._drag_start_blend if self._drag_motion_started else 1.0
             self._release_drag_shear_blend = max(0.0, min(1.0, idle_blend * start_blend))
 
@@ -261,6 +279,8 @@ class ShearWindowController:
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = True
         self._last_drag_frame_valid = False
+        self._drag_speed_smoothed = 0.0
+        self._drag_is_idle = True
         # Preserve exact shear state at mouse-up; release settle should begin
         # from the current deformation, then quickly relax to neutral.
 
@@ -335,23 +355,57 @@ class ShearWindowController:
 
         spring_k = self.spring_k
         damping = self.damping
-        idle_settling = False
+        drag_idle_influence = 0.0
+
+        def _smoothstep(edge0: float, edge1: float, value: float) -> float:
+            if edge1 <= edge0:
+                return 1.0 if value >= edge1 else 0.0
+            t = max(0.0, min(1.0, (value - edge0) / (edge1 - edge0)))
+            return t * t * (3.0 - (2.0 * t))
 
         if self.dragging:
             self._drag_idle_elapsed += self.time_step
-            if self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
-                idle_settling = True
+
+            # Continuously decay speed estimate when no fresh motion is sampled.
+            speed_tau = max(1e-6, self.drag_speed_smoothing_seconds)
+            speed_decay = math.exp(-(self.time_step / speed_tau))
+            self._drag_speed_smoothed *= speed_decay
+
+            enter = self.drag_idle_speed_enter
+            exit_speed = max(enter + 1e-6, self.drag_idle_speed_exit)
+            if self._drag_is_idle:
+                if self._drag_speed_smoothed > exit_speed:
+                    self._drag_is_idle = False
+            elif self._drag_speed_smoothed < enter:
+                self._drag_is_idle = True
+
+            moving_factor = _smoothstep(enter, exit_speed, self._drag_speed_smoothed)
+            target_idle = 1.0 - moving_factor
+            if self._drag_is_idle:
+                target_idle = max(target_idle, 0.60)
+
+            idle_tau = max(1e-6, self.drag_idle_influence_smoothing_seconds)
+            idle_alpha = 1.0 - math.exp(-(self.time_step / idle_tau))
+            self._drag_idle_influence += (target_idle - self._drag_idle_influence) * idle_alpha
+            self._drag_idle_influence = max(0.0, min(1.0, self._drag_idle_influence))
+            drag_idle_influence = self._drag_idle_influence
+
+            if self._drag_idle_influence > 0.92:
                 self._drag_motion_started = False
                 self._drag_start_handover_active = False
                 self._drag_start_handover_elapsed = 0.0
                 self._drag_start_blend = 0.0
-                self._motion_strength = max(0.0, self._motion_strength * 0.80)
+
+            self._motion_strength *= (0.96 - (0.10 * self._drag_idle_influence))
 
         boost = 1.0
         damping_scale = 1.0
-        if not self.dragging or idle_settling:
+        if not self.dragging:
             boost = max(boost, self.settle_spring_boost)
             damping_scale = min(damping_scale, self.settle_damping_scale)
+        else:
+            boost = 1.0 + ((self.settle_spring_boost - 1.0) * drag_idle_influence)
+            damping_scale = 1.0 + ((self.settle_damping_scale - 1.0) * drag_idle_influence)
 
         spring_k *= boost
         damping = max(0.0, min(1.0, damping * damping_scale))
@@ -433,13 +487,10 @@ class ShearWindowController:
             smooth = (release_t * release_t) * (3.0 - (2.0 * release_t))
             release_blend = 1.0 - smooth
 
-        drag_idle_settle_blend = 1.0
-        if self.dragging and self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
-            # A constant distance boost can keep shear visibly alive even while
-            # physics displacement settles. Fade it out once idle settle triggers.
-            idle_over = self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds
-            fade_tau = max(1e-6, self.release_blend_seconds)
-            drag_idle_settle_blend = math.exp(-(idle_over / fade_tau))
+        if self.dragging:
+            drag_idle_settle_blend = max(0.0, min(1.0, 1.0 - self._drag_idle_influence))
+        else:
+            drag_idle_settle_blend = max(0.0, min(1.0, 1.0 - self._release_idle_influence))
         if self.dragging:
             drag_start_blend = self._drag_start_blend
             drag_handover_blend = drag_start_blend * drag_idle_settle_blend
