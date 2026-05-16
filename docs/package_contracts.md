@@ -8,6 +8,7 @@ Import contract notes:
 
 - Supported usage is explicit named imports from `gui_do`.
 - Star-import behavior is not part of the package contract.
+- Scene menu strip, task panel, and command palette are opt-in facilities and only exist when user program specs declare them.
 
 Representative root-import contract (non-exhaustive):
 
@@ -68,6 +69,7 @@ from demo_features.mandelbrot.mandelbrot_status_event import MandelStatusEvent
 - `docs/architecture_boundary_spec.md`: package boundary rules and enforcement tests.
 - `docs/runtime_operating_contracts.md`: runtime guarantees, observability, stability policy, and budget contracts.
 - `docs/library_demo_separation_contract.md`: framework vs demo composition contract.
+- Optional-facility contract summary: scene menu strip, task panel, and command palette are spec-defined only and are not implicitly instantiated.
 
 ## Run Boundary Contract Tests
 

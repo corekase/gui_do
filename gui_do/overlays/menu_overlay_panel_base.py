@@ -183,10 +183,12 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         pygame.draw.rect(surface, border_col, self.rect, 1)
 
         rects = self._item_rects()
-        try:
-            pointer_pos = pygame.mouse.get_pos()
-        except pygame.error:
-            pointer_pos = None
+        pointer_pos = None
+        app = getattr(self, '_last_app', None)
+        if app is not None and hasattr(app, 'logical_pointer_pos'):
+            pointer_pos = app.logical_pointer_pos
+        else:
+            pointer_pos = (0, 0)
         pointer_hovered = self._hover_index_from_pointer(pointer_pos, rects)
         draw_hovered_index = pointer_hovered if pointer_hovered >= 0 else self._hovered_index
         for i, (item, r) in enumerate(zip(self._items, rects)):

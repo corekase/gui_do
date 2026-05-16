@@ -1,4 +1,5 @@
 ﻿import unittest
+from unittest.mock import patch
 
 from gui_do import declare_host_actions
 from demo_features.demo_config import ACTION_SPECS
@@ -54,6 +55,7 @@ class _StubHost:
         self.window_presentation = _StubWindowPresentation()
         self.scene_transitions = _StubSceneTransitions()
         self._palette_manager = _StubPaletteManager()
+        self._palette_spec = None
         self.app = _StubApp()
 
 
@@ -101,6 +103,30 @@ class TestDemoActionSpecs(unittest.TestCase):
 
         self.assertTrue(by_id["palette_open"]["handler"](None, None))
         self.assertEqual([host.app], host._palette_manager.show_calls)
+
+    def test_palette_open_handler_creates_palette_manager_lazily_when_missing(self):
+        host = self._make_host()
+        host._palette_manager = None
+        lazy_manager = _StubPaletteManager()
+
+        with patch("gui_do.features.data_driven_runtime._ensure_command_palette_manager", return_value=lazy_manager) as ensure_mock:
+            declare_host_actions(host, ACTION_SPECS)
+            by_id = self._declarations_by_id(host)
+            self.assertTrue(by_id["palette_open"]["handler"](None, None))
+
+        ensure_mock.assert_called_once_with(host, palette_requested=True)
+        self.assertEqual([host.app], lazy_manager.show_calls)
+
+    def test_palette_open_handler_returns_false_when_palette_unavailable(self):
+        host = self._make_host()
+        host._palette_manager = None
+
+        with patch("gui_do.features.data_driven_runtime._ensure_command_palette_manager", return_value=None) as ensure_mock:
+            declare_host_actions(host, ACTION_SPECS)
+            by_id = self._declarations_by_id(host)
+            self.assertFalse(by_id["palette_open"]["handler"](None, None))
+
+        ensure_mock.assert_called_once_with(host, palette_requested=True)
 
 
 if __name__ == "__main__":

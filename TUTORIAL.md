@@ -480,6 +480,8 @@ Narrative goal: wire keyboard-driven behavior for primary actions.
 
 Add an ActionSpec in HostApplicationBindingSpec action_entries. This gives a declarative action registration path and optional key binding.
 
+Command palette is optional: it is only available when your specs declare its action/runtime wiring.
+
 ```python
 from gui_do import ActionSpec
 

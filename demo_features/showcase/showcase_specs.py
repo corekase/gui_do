@@ -16,6 +16,7 @@ _CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
             key=pygame.K_F1,
         ),
     ),
+    # Ensure command_palette does not use F1 (should use F5 or another key)
     command_palette=SceneCommandPaletteSpec(
         key=pygame.K_F5,
         scene_name="control_showcase",

@@ -30,9 +30,20 @@ class KeyboardManager:
         )
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
+        def _end_drag_if_any() -> bool:
+            ended = False
+            for node in getattr(scene, "nodes", ()):
+                end_drag = getattr(node, "end_window_drag", None)
+                if callable(end_drag):
+                    ended = bool(end_drag(app)) or ended
+            return ended
+
         overlay = getattr(app, "overlay", None)
         has_overlay = getattr(overlay, "has_overlay", None)
         has_command_palette = callable(has_overlay) and has_overlay("__command_palette__")
+        # End window drag if command palette is open
+        if has_command_palette:
+            _end_drag_if_any()
         task_panel_focus = getattr(app, "task_panel_focus", None)
 
         # Global keys are tested first — before task-panel focus, accessibility keys,
@@ -76,6 +87,9 @@ class KeyboardManager:
             return True
 
         if self._is_accessibility_key_event(event):
+            # End window drag if window cycle (Ctrl+Tab or Ctrl+Shift+Tab)
+            if bool(event.mod & pygame.KMOD_CTRL) and event.key == pygame.K_TAB:
+                _end_drag_if_any()
             if has_command_palette:
                 event.prevent_default()
                 event.stop_propagation()
@@ -101,10 +115,7 @@ class KeyboardManager:
             else:
                 shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
                 focus_scope = scene.active_window()
-                try:
-                    pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
-                except pygame.error:
-                    pointer_pos = (0, 0)
+                pointer_pos = getattr(app, "logical_pointer_pos", (0, 0))
                 try:
                     app.focus.cycle_focus(
                         scene,

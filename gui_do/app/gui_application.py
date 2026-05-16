@@ -87,11 +87,7 @@ class GuiApplication:
         self.toasts = ToastManager(self.surface.get_rect())
         self.events.subscribe("toast", self.toasts.on_event_bus_message)
         self.running = True
-        self._logical_pointer_pos = (
-            tuple(map(int, pygame.mouse.get_pos()))
-            if pygame.display.get_init()
-            else (0, 0)
-        )
+        self._logical_pointer_pos = (0, 0)
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
         self._pending_warp_target = None
         self._pending_warp_ignore_budget = 0
@@ -804,12 +800,8 @@ class GuiApplication:
                         and self.pointer_capture.use_relative_motion
                     )
                 )
-                if can_sync_from_hardware:
-                    wheel_pos = pygame.mouse.get_pos()
-                    wheel_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
-                    self._logical_pointer_pos = wheel_pos
-                    self.input_state.pointer_pos = wheel_pos
-                    gui_event = replace(gui_event, pos=wheel_pos, raw_pos=wheel_pos)
+                # Always use logical pointer position for GUI logic
+                pass
             raw_pos = gui_event.pos
             normalized_raw_pos = None
             if isinstance(raw_pos, tuple) and len(raw_pos) == 2:

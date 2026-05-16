@@ -49,6 +49,8 @@ Additional root exports cover:
 
 `gui_do` provides three built-in facilities that any scene may optionally declare.  All three are per-scene, have no default items, and are enabled purely by what specs are declared.  The spec-driven approach is the expected and preferred pattern for user code.
 
+If user specs do not declare a facility, that facility is not created at runtime and does not participate in layout, focus, input routing, or window movement constraints.
+
 ### Task Panel
 
 Declare with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`.  No default items — every button must be added explicitly.  The optional **window toggle group** is declared with `TaskPanelWindowToggleGroupSpec(start_index=N)`, passed to `add_task_panel_window_toggle_group`, which automatically creates one toggle button per registered window.  Other controls may coexist before, after, or within the group's slot range.

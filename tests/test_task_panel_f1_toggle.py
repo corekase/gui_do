@@ -28,6 +28,8 @@ class _StubKeyEvent:
 
 
 class _StubActions:
+    def has_action(self, action_id: str) -> bool:
+        return str(action_id) in self._handlers
     def __init__(self):
         self._handlers = {}
         self._bound = {}
@@ -111,6 +113,9 @@ class _StubWindow:
 
 
 class _StubApp:
+    def chain_screen_fallthrough(self, event_handler, *, scene_name=None):
+        # No-op stub for test compatibility
+        return lambda: True
     def __init__(self, *, scene_name: str, task_panel_focus):
         self.active_scene_name = str(scene_name)
         self.scene = object()

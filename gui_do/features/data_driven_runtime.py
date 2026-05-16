@@ -926,7 +926,6 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     from ..app.display import create_display
     from ..app.gui_application import GuiApplication
     from ..actions.action_registry import ActionRegistry
-    from ..overlays.command_palette_manager import CommandPaletteManager
     from ..theme.font_role_registry import FontRoleRegistry
     from ..persistence.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
 
@@ -1001,18 +1000,15 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
 
     # 12 – Action registry + command palette
     host.action_registry = ActionRegistry()
-    host._palette_manager = CommandPaletteManager(host.app.overlay, host.app)
     palette_spec = getattr(config, "palette_spec", None)
-    if palette_spec is not None and palette_spec.enable_builtin_entries:
-        host._palette_manager.configure_builtin_entry_groups(
-            host.app,
-            on_scene_selected=host.scene_transitions.go,
-            window_presentation=host.window_presentation if palette_spec.connect_window_presentation else None,
-            include_scene_entries=bool(palette_spec.include_scene_entries),
-            include_window_entries=bool(palette_spec.include_window_entries),
-            group_order=tuple(palette_spec.group_order),
-            custom_entries_provider=palette_spec.custom_entries_provider,
-        )
+    host._palette_spec = palette_spec
+    host._palette_manager = None
+    wants_palette = bool(
+        palette_spec is not None
+        or any(str(getattr(spec, "kind", "")) == "palette_open" for spec in config.action_specs)
+    )
+    if wants_palette:
+        _ensure_command_palette_manager(host, palette_requested=True)
     declare_host_actions(host, config.action_specs)
 
     # 13 – Build features, sync visibility, pristine assets, standard actions
@@ -1071,8 +1067,52 @@ def _build_standard_action_handler(host, spec):
         target = str(spec.target)
         return lambda _ctx, _ev, _t=target: (host.scene_transitions.go(_t) or True)
     if spec.kind == "palette_open":
-        return lambda _ctx, _ev: (host._palette_manager.show(host.app) or True)
+        def _open_palette(_ctx, _ev):
+            palette_manager = _ensure_command_palette_manager(host, palette_requested=True)
+            if palette_manager is None:
+                return False
+            palette_manager.show(host.app)
+            return True
+
+        return _open_palette
     raise ValueError(f"Unsupported action kind: {spec.kind!r}")
+
+
+def _ensure_command_palette_manager(host, *, palette_requested: bool = False):
+    """Return a host palette manager, creating/configuring it lazily when needed."""
+    palette_manager = getattr(host, "_palette_manager", None)
+    if palette_manager is not None:
+        return palette_manager
+
+    if not bool(palette_requested):
+        return None
+
+    app = getattr(host, "app", None)
+    if app is None:
+        return None
+
+    from ..overlays.command_palette_manager import CommandPaletteManager
+
+    palette_manager = CommandPaletteManager(app.overlay, app)
+    setattr(host, "_palette_manager", palette_manager)
+
+    palette_spec = getattr(host, "_palette_spec", None)
+    if palette_spec is not None and bool(getattr(palette_spec, "enable_builtin_entries", False)):
+        scene_transitions = getattr(host, "scene_transitions", None)
+        on_scene_selected = getattr(scene_transitions, "go", None) if scene_transitions is not None else None
+        window_presentation = None
+        if bool(getattr(palette_spec, "connect_window_presentation", False)):
+            window_presentation = getattr(host, "window_presentation", None)
+        palette_manager.configure_builtin_entry_groups(
+            app,
+            on_scene_selected=on_scene_selected,
+            window_presentation=window_presentation,
+            include_scene_entries=bool(getattr(palette_spec, "include_scene_entries", True)),
+            include_window_entries=bool(getattr(palette_spec, "include_window_entries", True)),
+            group_order=tuple(getattr(palette_spec, "group_order", ("scenes", "windows", "custom"))),
+            custom_entries_provider=getattr(palette_spec, "custom_entries_provider", None),
+        )
+    return palette_manager
 
 
 def build_host_main_tab_order(host, window_toggle_controls) -> list:
@@ -2143,6 +2183,12 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
                     else:
                         app_actions.bind_key(int(overlay_spec.toggle_key), action_name)
 
+    # Register command palette first so task panel focus toggle can override if needed
+    if spec.command_palette is not None and app is not None:
+        palette_manager = _ensure_command_palette_manager(host, palette_requested=True)
+        if palette_manager is not None:
+            setup_scene_command_palette_key(app, palette_manager, spec.command_palette)
+
     if spec.task_panel_focus_toggles and app is not None and app_actions is not None:
         for tpft in spec.task_panel_focus_toggles:
             bind_task_panel_focus_toggle(
@@ -2152,11 +2198,6 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
                 scene_name=str(tpft.scene_name),
                 key=int(tpft.key),
             )
-
-    if spec.command_palette is not None and app is not None:
-        palette_manager = getattr(host, "_palette_manager", None)
-        if palette_manager is not None:
-            setup_scene_command_palette_key(app, palette_manager, spec.command_palette)
 
     return scheduler
 

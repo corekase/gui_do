@@ -12,6 +12,7 @@ The runtime guarantees these behaviors:
 - Scene-isolated update execution for scene-contained runtime systems.
 - Deterministic candidate ordering for window focus cycling.
 - Scheduler dispatch budget clamping with fixed min and max bounds.
+- Scene menu strip, task panel, and command palette are optional facilities: each exists only when declared by user program specs for a scene.
 
 ## 2. Cross-System Behavior Contracts
 
@@ -23,6 +24,7 @@ The runtime must preserve these system interactions:
 - GuiApplication.run_entrypoint tolerates workspace load/save failures without aborting shutdown sequencing.
 - GuiApplication.run_entrypoint reports runtime loop failures and exits with a non-zero code.
 - Missing settings keys are skipped without aborting restore.
+- When a scene omits optional facilities (scene menu strip, task panel, command palette), runtime behavior falls back to baseline screen/window behavior without implicit creation.
 
 ## 3. Determinism and Safety Rails
 

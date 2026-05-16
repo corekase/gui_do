@@ -855,6 +855,8 @@ Scene/window/task-panel presentation APIs coordinate what is visible, what is fo
 
 Scene and window topology is declared at bootstrap. Windows and presenters are created in feature build phases, then visibility/focus toggles are bound in runtime. Hidden windows should be removed from active focus traversal.
 
+Scene menu strip, task panel, and command palette are optional runtime facilities. They only exist when explicitly declared in your scene/runtime specs.
+
 #### Primary public APIs and key types
 
 Core model types: `ScenePresentationModel`, `WindowPresenter`, `WindowSpec`, `AnchoredWindowSpec`, `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelFocusToggleSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`, `TabbedPresenterSpec`, `TabBuilderSpec`.
@@ -1848,6 +1850,11 @@ This appendix summarizes the major spec families used across the manual. Each en
 
 - Purpose: task panel structure, button declarations, focus coupling, and slot layout.
 - Cross-links: 8.9, 8.7.
+
+`SceneMenuStripSpec` and `SceneCommandPaletteSpec`:
+
+- Purpose: optional scene menu and optional per-scene command palette activation.
+- Contract: if not declared in specs, these facilities are absent for that scene.
 
 `TabbedPresenterSpec` and `TabBuilderSpec`:
 

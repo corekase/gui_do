@@ -7,6 +7,8 @@ from pygame import Rect
 from gui_do.controls.composite.splitter_control import SplitterControl
 from gui_do.controls.input.button_group_control import ButtonGroupControl
 from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.menu_bar_control import MenuBarControl
+from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.chrome.window_control import WindowControl
 from gui_do.events.gui_event import GuiEvent, EventType
 from gui_do.events.pointer_capture import PointerCapture
@@ -341,10 +343,31 @@ class _StubShearController:
 
 
 class _StubApp:
+    def chain_screen_fallthrough(self, event_handler, *, scene_name=None):
+        # No-op stub for test compatibility
+        return lambda: True
     def __init__(self):
         self.surface = pygame.Surface((800, 600))
         self.pointer_capture = PointerCapture()
         self.focus = _StubFocusManager()
+        self._logical_pointer_pos = (0, 0)
+        self.sync_calls = []
+
+    @property
+    def logical_pointer_pos(self):
+        return self._logical_pointer_pos
+
+    def set_logical_pointer_position(self, pos, *, apply_constraints=True):
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return
+        self._logical_pointer_pos = (int(pos[0]), int(pos[1]))
+
+    def sync_pointer_to_logical_position(self, pos):
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return
+        logical = (int(pos[0]), int(pos[1]))
+        self._logical_pointer_pos = logical
+        self.sync_calls.append(logical)
 
 
 class TestPanelControlWindowDrag(unittest.TestCase):
@@ -393,6 +416,136 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         self.assertFalse(app.pointer_capture.is_active)
         self.assertEqual(1, shear.end_calls)
 
+    def test_drag_clamps_to_scene_menu_bar_boundary_and_preserves_title_anchor(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        menu = MenuBarControl("scene_menu", Rect(0, 0, 800, 28), entries=[])
+        window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
+        panel.add(menu)
+        panel.add(window)
+        app = _StubApp()
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 90), button=1)
+        self.assertTrue(panel.on_event_capture(down, app))
+
+        motion = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(150, 12),
+            raw_pos=(150, 12),
+            rel=(0, -78),
+            raw_rel=(0, -78),
+        )
+        self.assertTrue(panel.on_event_capture(motion, app))
+        self.assertEqual((120, 28), window.rect.topleft)
+        self.assertEqual((150, 38), app.logical_pointer_pos)
+
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 90), raw_pos=(150, 12), button=1)
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertEqual([(150, 38)], app.sync_calls)
+
+    def test_drag_clamps_at_task_panel_reserved_strip_and_preserves_title_anchor(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            dock_bottom=True,
+        )
+        window = WindowControl("win", Rect(140, 470, 220, 120), "Window")
+        panel.add(task_panel)
+        panel.add(window)
+        app = _StubApp()
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(170, 482), button=1)
+        self.assertTrue(panel.on_event_capture(down, app))
+
+        motion = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(170, 492),
+            raw_pos=(170, 492),
+            rel=(0, 10),
+            raw_rel=(0, 10),
+        )
+        self.assertTrue(panel.on_event_capture(motion, app))
+        self.assertEqual((140, 474), window.rect.topleft)
+        self.assertEqual((170, 486), app.logical_pointer_pos)
+
+    def test_drag_clamps_when_window_would_leave_left_or_right_screen_edge(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(10, 120, 260, 180), "Window")
+        panel.add(window)
+        app = _StubApp()
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(30, 132), button=1)
+        self.assertTrue(panel.on_event_capture(down, app))
+
+        motion_left = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(-20, 132),
+            raw_pos=(-20, 132),
+            rel=(-50, 0),
+            raw_rel=(-50, 0),
+        )
+        self.assertTrue(panel.on_event_capture(motion_left, app))
+        self.assertEqual((0, 120), window.rect.topleft)
+        self.assertEqual((20, 132), app.logical_pointer_pos)
+
+        window.set_pos(530, 120)
+        down_right = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(550, 132), button=1)
+        self.assertTrue(panel.on_event_capture(down_right, app))
+        motion_right = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(790, 132),
+            raw_pos=(790, 132),
+            rel=(240, 0),
+            raw_rel=(240, 0),
+        )
+        self.assertTrue(panel.on_event_capture(motion_right, app))
+        self.assertEqual((540, 120), window.rect.topleft)
+        self.assertEqual((560, 132), app.logical_pointer_pos)
+
+    def test_drag_without_scene_chrome_uses_top_and_bottom_screen_limits(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(120, 100, 260, 120), "Window")
+        panel.add(window)
+        app = _StubApp()
+
+        down_top = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 112), button=1)
+        self.assertTrue(panel.on_event_capture(down_top, app))
+        motion_top = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(150, -10),
+            raw_pos=(150, -10),
+            rel=(0, -122),
+            raw_rel=(0, -122),
+        )
+        self.assertTrue(panel.on_event_capture(motion_top, app))
+        self.assertEqual((120, 0), window.rect.topleft)
+        self.assertEqual((150, 12), app.logical_pointer_pos)
+
+        up_top = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 112), raw_pos=(150, -10), button=1)
+        self.assertTrue(panel.on_event_capture(up_top, app))
+
+        window.set_pos(120, 470)
+        down_bottom = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 482), button=1)
+        self.assertTrue(panel.on_event_capture(down_bottom, app))
+        motion_bottom = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=(150, 520),
+            raw_pos=(150, 520),
+            rel=(0, 38),
+            raw_rel=(0, 38),
+        )
+        self.assertTrue(panel.on_event_capture(motion_bottom, app))
+        self.assertEqual((120, 480), window.rect.topleft)
+        self.assertEqual((150, 492), app.logical_pointer_pos)
+
 
 class _StubFocusForDrawOrder:
     def __init__(self, focused_node=None):
@@ -405,6 +558,9 @@ class _StubFocusVisualizerForDrawOrder:
 
 
 class _StubAppForDrawOrder:
+    def chain_screen_fallthrough(self, event_handler, *, scene_name=None):
+        # No-op stub for test compatibility
+        return lambda: True
     def __init__(self, focused_node=None):
         self.focus = _StubFocusForDrawOrder(focused_node=focused_node)
         self.focus_visualizer = _StubFocusVisualizerForDrawOrder()

@@ -403,10 +403,12 @@ class MenuBarControl(UiNode):
         )
 
         er = self._entry_rects(theme)
-        try:
-            pointer_pos = pygame.mouse.get_pos()
-        except pygame.error:
-            pointer_pos = None
+        pointer_pos = None
+        app = self._last_app
+        if app is not None and hasattr(app, "logical_pointer_pos"):
+            pointer_pos = app.logical_pointer_pos
+        else:
+            pointer_pos = (0, 0)
         pointer_hovered = self._hover_index_from_pointer(pointer_pos, er)
         if pointer_hovered != self._hovered_index:
             self._hovered_index = pointer_hovered
