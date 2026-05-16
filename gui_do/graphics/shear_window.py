@@ -235,15 +235,6 @@ class ShearWindowController:
             wx, wy = self.window.rect.topleft
             self.anchor = (int(mouse_pos[0] - wx), int(mouse_pos[1] - wy))
 
-        surface = getattr(self.window, "surface", None)
-        theme = getattr(self.window, "theme", None)
-        draw_window_standard = getattr(self.window, "_draw_standard", None)
-        if surface is not None and draw_window_standard is not None:
-            try:
-                self._refresh_buffer(surface, theme, draw_window_standard)
-            except Exception:
-                pass
-
         self.dragging = False
         self._prev_mouse_pos = None
         self._settle_elapsed = 0.0
@@ -546,8 +537,9 @@ class ShearWindowController:
             return
 
         if draw_window_standard is not None and theme is not None:
-            if self.buffer is None or self.dragging:
-                self._refresh_buffer(surface, theme, draw_window_standard)
+            # Keep the source buffer live during settle so child content keeps
+            # updating and release work stays in the normal frame pass.
+            self._refresh_buffer(surface, theme, draw_window_standard)
         if self.buffer is None:
             return
 
