@@ -800,8 +800,16 @@ class GuiApplication:
                         and self.pointer_capture.use_relative_motion
                     )
                 )
-                # Always use logical pointer position for GUI logic
-                pass
+                # Wheel packets may omit a reliable pointer position. Refresh logical
+                # pointer from hardware cursor when not in lock/capture modes.
+                if can_sync_from_hardware:
+                    try:
+                        hardware_pos = pygame.mouse.get_pos()
+                    except Exception:
+                        hardware_pos = None
+                    if isinstance(hardware_pos, tuple) and len(hardware_pos) == 2:
+                        self.set_logical_pointer_position((int(hardware_pos[0]), int(hardware_pos[1])))
+                        gui_event = replace(gui_event, pos=self._logical_pointer_pos)
             raw_pos = gui_event.pos
             normalized_raw_pos = None
             if isinstance(raw_pos, tuple) and len(raw_pos) == 2:

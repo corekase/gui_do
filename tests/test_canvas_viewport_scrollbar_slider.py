@@ -7,6 +7,7 @@ from pygame import Rect
 from gui_do.controls.canvas.canvas_viewport import CanvasViewport
 from gui_do.controls.input.scrollbar_control import ScrollbarControl
 from gui_do.controls.input.slider_control import SliderControl
+from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.layout.layout_axis import LayoutAxis
 
 pygame.init()
@@ -242,6 +243,28 @@ class TestScrollbarControlSetOffset(unittest.TestCase):
         sb = self._make()
         sb.adjust_offset(-100)
         self.assertEqual(0, sb.offset)
+
+    def test_handle_event_wheel_fractional_delta_steps_once(self):
+        sb = self._make()
+        sb.set_offset(100)
+
+        class _StubCapture:
+            lock_rect = None
+            use_relative_motion = False
+
+            @staticmethod
+            def is_owned_by(_owner):
+                return False
+
+        class _StubApp:
+            logical_pointer_pos = (10, 10)
+            pointer_capture = _StubCapture()
+
+        ev = GuiEvent(kind=EventType.MOUSE_WHEEL, type=pygame.MOUSEWHEEL, pos=(10, 10), wheel_y=0.25)
+        changed = sb.handle_event(ev, _StubApp())
+
+        self.assertTrue(changed)
+        self.assertEqual(84, sb.offset)
 
 
 # ===========================================================================

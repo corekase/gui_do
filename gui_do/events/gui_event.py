@@ -52,8 +52,8 @@ class GuiEvent:
     raw_pos: Optional[Tuple[int, int]] = None
     raw_rel: Optional[Tuple[int, int]] = None
     button: Optional[int] = None
-    wheel_x: int = 0
-    wheel_y: int = 0
+    wheel_x: float = 0.0
+    wheel_y: float = 0.0
     mod: int = 0
     text: Optional[str] = None
     control_id: Optional[str] = None
@@ -143,8 +143,8 @@ class GuiEvent:
         return dataclasses.replace(self)
 
     @property
-    def wheel_delta(self) -> int:
-        return int(self.wheel_y)
+    def wheel_delta(self) -> float:
+        return float(self.wheel_y)
 
     def collides(self, rect) -> bool:
         return self.pos is not None and rect.collidepoint(self.pos)
@@ -181,8 +181,19 @@ class GuiEvent:
             button = int(button)
 
         is_mousewheel = event_type == pygame.MOUSEWHEEL
-        wheel_x = int(payload.get("x", 0)) if is_mousewheel else 0
-        wheel_y = int(payload.get("y", 0)) if is_mousewheel else 0
+        wheel_x = 0.0
+        wheel_y = 0.0
+        if is_mousewheel:
+            wheel_x = float(payload.get("x", 0.0) or 0.0)
+            wheel_y = float(payload.get("y", 0.0) or 0.0)
+            # pygame can expose high-resolution wheel deltas via precise_*.
+            # Use them whenever coarse x/y are missing or zero.
+            precise_x = payload.get("precise_x", None)
+            precise_y = payload.get("precise_y", None)
+            if precise_x is not None and wheel_x == 0.0:
+                wheel_x = float(precise_x)
+            if precise_y is not None and wheel_y == 0.0:
+                wheel_y = float(precise_y)
         text = payload.get("text")
 
         return cls(

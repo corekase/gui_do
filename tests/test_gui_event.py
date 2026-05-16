@@ -213,5 +213,24 @@ class TestGuiEventMutators(unittest.TestCase):
         self.assertIs(event, result)
 
 
+class TestGuiEventMouseWheelNormalization(unittest.TestCase):
+    def test_wheel_delta_preserves_fractional_value(self):
+        event = _event(EventType.MOUSE_WHEEL, wheel_y=0.5)
+        self.assertAlmostEqual(0.5, event.wheel_delta)
+
+    def test_from_pygame_mousewheel_uses_precise_y_when_y_zero(self):
+        pg = pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 0, "precise_y": 1.0})
+        event = GuiEvent.from_pygame(pg, pointer_pos=(12, 34))
+        self.assertEqual((12, 34), event.pos)
+        self.assertAlmostEqual(1.0, event.wheel_y)
+        self.assertAlmostEqual(1.0, event.wheel_delta)
+
+    def test_from_pygame_mousewheel_uses_precise_x_when_x_zero(self):
+        pg = pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": -1, "precise_x": 0.75})
+        event = GuiEvent.from_pygame(pg)
+        self.assertAlmostEqual(0.75, event.wheel_x)
+        self.assertAlmostEqual(-1.0, event.wheel_y)
+
+
 if __name__ == "__main__":
     unittest.main()

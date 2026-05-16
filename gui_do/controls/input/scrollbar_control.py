@@ -302,7 +302,13 @@ class ScrollbarControl(_AxisDragControlBase):
             and self.rect.collidepoint(logical_pointer)
         )
         if event.is_mouse_wheel() and wheel_hit:
-            return self._set_offset(self.offset - (int(event.wheel_delta) * self.step), reason=ValueChangeReason.WHEEL)
+            wheel_delta = float(event.wheel_delta)
+            if wheel_delta == 0.0:
+                return False
+            wheel_steps = int(wheel_delta)
+            if wheel_steps == 0:
+                wheel_steps = 1 if wheel_delta > 0.0 else -1
+            return self._set_offset(self.offset - (wheel_steps * self.step), reason=ValueChangeReason.WHEEL)
         return False
 
     def capture_state(self) -> dict:  # type: ignore[override]
