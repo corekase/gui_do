@@ -291,6 +291,11 @@ class Scene:
             focused_node = app.focus.focused_node
             if focused_node is not None and not self.contains(focused_node):
                 focused_node = None
+            # Scene-level reordering must only operate on scene-root nodes.
+            # Descendants are rendered by their owning root/container and must
+            # not be drawn again as top-level nodes.
+            elif focused_node is not None and focused_node not in self.nodes:
+                focused_node = None
 
         for node in self.nodes:
             if not node.visible:

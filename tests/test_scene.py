@@ -159,5 +159,71 @@ class TestSceneContains(unittest.TestCase):
         self.assertFalse(scene.contains(node))
 
 
+class _OrderTrackingNode(UiNode):
+    def __init__(self, control_id, order_log):
+        super().__init__(control_id, Rect(0, 0, 10, 10))
+        self._order_log = order_log
+
+    def draw_screen_phase(self, surface, theme, app=None):
+        self._order_log.append(f"{self.control_id}:screen")
+
+    def draw_window_phase(self, surface, theme, app=None):
+        self._order_log.append(f"{self.control_id}:window")
+
+
+class _StubFocus:
+    def __init__(self, focused_node):
+        self.focused_node = focused_node
+
+
+class _StubFocusVisualizer:
+    def draw_hint_for_scene_root(self, surface, theme, node):
+        return None
+
+    def draw_window_focus_hint(self, surface, theme):
+        return None
+
+
+class _StubApp:
+    def __init__(self, focused_node):
+        self.focus = _StubFocus(focused_node)
+        self.focus_visualizer = _StubFocusVisualizer()
+
+
+class TestSceneDrawOrder(unittest.TestCase):
+    def test_focused_descendant_not_drawn_as_scene_root(self):
+        scene = Scene()
+        draw_order = []
+        root = _OrderTrackingNode("root", draw_order)
+        focused_descendant = _OrderTrackingNode("child", draw_order)
+        root.add_child(focused_descendant)
+        scene.add(root)
+
+        surface = pygame.Surface((64, 64))
+        app = _StubApp(focused_descendant)
+
+        scene.draw(surface, theme=None, app=app)
+
+        self.assertEqual(["root:screen", "root:window"], draw_order)
+
+    def test_focused_scene_root_drawn_last(self):
+        scene = Scene()
+        draw_order = []
+        first = _OrderTrackingNode("first", draw_order)
+        focused_root = _OrderTrackingNode("focused", draw_order)
+        scene.add(first)
+        scene.add(focused_root)
+
+        surface = pygame.Surface((64, 64))
+        app = _StubApp(focused_root)
+
+        scene.draw(surface, theme=None, app=app)
+
+        self.assertEqual(
+            ["first:screen", "first:window", "focused:screen", "focused:window"],
+            draw_order,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
