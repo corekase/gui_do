@@ -72,7 +72,32 @@ class FocusVisualizer:
             return
         if self._find_ancestor_window(node) is not window_node:
             return
-        self._draw_dashed_rect(surface, node, theme=theme)
+        rect = self._resolve_focus_rect(node)
+        if rect is None:
+            return
+
+        controller = getattr(window_node, "shear_controller", None)
+        window_rect = getattr(window_node, "rect", None)
+        if (
+            bool(getattr(window_node, "shear_active", False))
+            and isinstance(window_rect, pygame.Rect)
+            and controller is not None
+            and callable(getattr(controller, "blit_sheared_overlay", None))
+            and window_rect.width > 0
+            and window_rect.height > 0
+        ):
+            # Draw hint in window-local coordinates, then shear-compose it with
+            # the exact same deformation pass used by the dragged window.
+            local_rect = rect.move(-window_rect.left, -window_rect.top)
+            overlay = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+            self._draw_dashed_rectangle(overlay, local_rect, theme.highlight)
+            try:
+                if controller.blit_sheared_overlay(surface, overlay):
+                    return
+            except Exception:
+                pass
+
+        self._draw_dashed_rectangle(surface, rect, theme.highlight)
 
     def draw_window_focus_hint(self, surface: "pygame.Surface", theme) -> None:
         """Draw the window-focus hint (Ctrl+Tab cycling) around the focused window.
@@ -121,12 +146,18 @@ class FocusVisualizer:
         during the scene's per-root draw pass, so any windows rendered
         afterward will naturally overdraw them via normal painter's-order.
         """
-        if not node.visible:
+        rect = self._resolve_focus_rect(node)
+        if rect is None:
             return
+        self._draw_dashed_rectangle(surface, rect, theme.highlight)
+
+    def _resolve_focus_rect(self, node):
+        if not node.visible:
+            return None
 
         rect = node.rect
         if rect.width < 2 or rect.height < 2:
-            return
+            return None
 
         scroll_view = self._find_ancestor_scroll_view(node)
         if scroll_view is not None and not scroll_view.rect.contains(rect):
@@ -134,8 +165,7 @@ class FocusVisualizer:
             # show the hint on the visible scroll view control bounds.
             rect = scroll_view.rect
 
-        focus_rect = rect.inflate(2 * self.PADDING, 2 * self.PADDING)
-        self._draw_dashed_rectangle(surface, focus_rect, theme.highlight)
+        return rect.inflate(2 * self.PADDING, 2 * self.PADDING)
 
     def _draw_dashed_rectangle(
         self,

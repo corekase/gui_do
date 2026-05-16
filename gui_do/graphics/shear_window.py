@@ -433,6 +433,114 @@ class ShearWindowController:
             ):
                 self.active = False
 
+    def _compute_drag_blends(self, dir_x: float, *, capture_drag_frame: bool) -> tuple[float, float]:
+        if self.dragging:
+            drag_idle_settle_blend = max(0.0, min(1.0, 1.0 - self._drag_idle_influence))
+            drag_start_blend = self._drag_start_blend
+            drag_handover_blend = max(0.0, min(1.0, drag_start_blend * drag_idle_settle_blend))
+            if capture_drag_frame:
+                self._last_drag_frame_valid = True
+                self._last_drag_shear_dir_x = dir_x
+                self._last_drag_shear_blend = drag_handover_blend
+            return drag_idle_settle_blend, drag_handover_blend
+
+        drag_idle_settle_blend = max(0.0, min(1.0, 1.0 - self._release_idle_influence))
+        drag_handover_blend = max(0.0, min(1.0, self._release_drag_shear_blend))
+        return drag_idle_settle_blend, drag_handover_blend
+
+    def _current_shear_factors(self, w: int, h: int, *, capture_drag_frame: bool) -> Optional[tuple[float, float, float, float, float, float, float]]:
+        disp_mag = min(self.max_distort_px, math.hypot(self._disp[0], self._disp[1]))
+        if disp_mag < 0.001:
+            return None
+
+        dir_x = self._shear_dir_x
+        anchor_y = float(self.anchor[1] if self.anchor is not None else (h * 0.5))
+        horizontal_weight = min(1.0, abs(dir_x) * self.shear_horizontal_emphasis)
+        shear_sign_x = -1.0 if dir_x >= 0.0 else 1.0
+
+        release_blend = 1.0
+        if not self.dragging and self._settle_blend_seconds > 1e-6:
+            release_t = min(1.0, max(0.0, self._settle_elapsed / self._settle_blend_seconds))
+            smooth = (release_t * release_t) * (3.0 - (2.0 * release_t))
+            release_blend = 1.0 - smooth
+        shear_release_blend = math.sqrt(release_blend) if not self.dragging else 1.0
+
+        drag_idle_settle_blend, drag_handover_blend = self._compute_drag_blends(
+            dir_x,
+            capture_drag_frame=capture_drag_frame,
+        )
+        return (
+            disp_mag,
+            anchor_y,
+            horizontal_weight,
+            shear_sign_x,
+            drag_idle_settle_blend,
+            shear_release_blend,
+            drag_handover_blend,
+        )
+
+    def _blit_sheared_source(
+        self,
+        surface: pygame.Surface,
+        source: pygame.Surface,
+        base_x: int,
+        base_y: int,
+        w: int,
+        h: int,
+        disp_mag: float,
+        anchor_y: float,
+        horizontal_weight: float,
+        shear_sign_x: float,
+        drag_idle_settle_blend: float,
+        shear_release_blend: float,
+        drag_handover_blend: float,
+    ) -> None:
+        tile_h = max(2, self.band_height)
+        tile_w = max(2, self.tile_width)
+        overlap_px = max(0, self.overlap_px)
+
+        for y in range(0, h, tile_h):
+            for x in range(0, w, tile_w):
+                src_w = min(tile_w, w - x)
+                src_h = min(tile_h, h - y)
+                if src_w <= 0 or src_h <= 0:
+                    continue
+
+                center_y = float(y + (src_h * 0.5))
+                vertical_offset = (center_y - anchor_y) / max(1.0, float(h))
+                shear_distance_boost = self.shear_distance_boost_px * drag_idle_settle_blend
+                shear_x = (
+                    (disp_mag * self.shear_gain) + shear_distance_boost
+                ) * vertical_offset * horizontal_weight * shear_sign_x * (0.80 + (0.20 * self._motion_strength))
+                shear_x *= shear_release_blend * drag_handover_blend
+                off_x = int(max(-self.max_distort_px, min(self.max_distort_px, shear_x)))
+
+                sx = max(0, x - overlap_px)
+                sy = max(0, y - overlap_px)
+                ex = min(w, x + src_w + overlap_px)
+                ey = min(h, y + src_h + overlap_px)
+                src = pygame.Rect(sx, sy, ex - sx, ey - sy)
+                surface.blit(source, (base_x + sx + off_x, base_y + sy), src)
+
+    def blit_sheared_overlay(self, surface: pygame.Surface, overlay: pygame.Surface) -> bool:
+        if not self.active:
+            return False
+
+        base_x, base_y = self.window.rect.topleft
+        w, h = self.window.rect.size
+        if w <= 0 or h <= 0:
+            return False
+        if overlay.get_size() != (w, h):
+            return False
+
+        factors = self._current_shear_factors(w, h, capture_drag_frame=False)
+        if factors is None:
+            surface.blit(overlay, (base_x, base_y))
+            return True
+
+        self._blit_sheared_source(surface, overlay, base_x, base_y, w, h, *factors)
+        return True
+
     def render(self, surface, theme=None, draw_window_standard=None):
         if not self.active:
             return
@@ -456,58 +564,9 @@ class ShearWindowController:
         if w <= 0 or h <= 0:
             return
 
-        disp_mag = min(self.max_distort_px, math.hypot(self._disp[0], self._disp[1]))
-
-        if disp_mag < 0.001:
+        factors = self._current_shear_factors(w, h, capture_drag_frame=True)
+        if factors is None:
             surface.blit(self.buffer, (base_x, base_y))
             return
 
-        tile_h = max(2, self.band_height)
-        tile_w = max(2, self.tile_width)
-        overlap_px = max(0, self.overlap_px)
-        dir_x = self._shear_dir_x
-        anchor_y = float(self.anchor[1] if self.anchor is not None else (h * 0.5))
-        horizontal_weight = min(1.0, abs(dir_x) * self.shear_horizontal_emphasis)
-        shear_sign_x = -1.0 if dir_x >= 0.0 else 1.0
-        release_blend = 1.0
-        if not self.dragging and self._settle_blend_seconds > 1e-6:
-            release_t = min(1.0, max(0.0, self._settle_elapsed / self._settle_blend_seconds))
-            smooth = (release_t * release_t) * (3.0 - (2.0 * release_t))
-            release_blend = 1.0 - smooth
-
-        if self.dragging:
-            drag_idle_settle_blend = max(0.0, min(1.0, 1.0 - self._drag_idle_influence))
-        else:
-            drag_idle_settle_blend = max(0.0, min(1.0, 1.0 - self._release_idle_influence))
-        if self.dragging:
-            drag_start_blend = self._drag_start_blend
-            drag_handover_blend = drag_start_blend * drag_idle_settle_blend
-            self._last_drag_frame_valid = True
-            self._last_drag_shear_dir_x = dir_x
-            self._last_drag_shear_blend = max(0.0, min(1.0, drag_handover_blend))
-        else:
-            drag_handover_blend = self._release_drag_shear_blend
-        shear_release_blend = math.sqrt(release_blend) if not self.dragging else 1.0
-
-        for y in range(0, h, tile_h):
-            for x in range(0, w, tile_w):
-                src_w = min(tile_w, w - x)
-                src_h = min(tile_h, h - y)
-                if src_w <= 0 or src_h <= 0:
-                    continue
-
-                center_y = float(y + (src_h * 0.5))
-                vertical_offset = (center_y - anchor_y) / max(1.0, float(h))
-                shear_distance_boost = self.shear_distance_boost_px * drag_idle_settle_blend
-                shear_x = (
-                    (disp_mag * self.shear_gain) + shear_distance_boost
-                ) * vertical_offset * horizontal_weight * shear_sign_x * (0.80 + (0.20 * self._motion_strength))
-                shear_x *= shear_release_blend * drag_handover_blend
-                off_x = int(max(-self.max_distort_px, min(self.max_distort_px, shear_x)))
-
-                sx = max(0, x - overlap_px)
-                sy = max(0, y - overlap_px)
-                ex = min(w, x + src_w + overlap_px)
-                ey = min(h, y + src_h + overlap_px)
-                src = pygame.Rect(sx, sy, ex - sx, ey - sy)
-                surface.blit(self.buffer, (base_x + sx + off_x, base_y + sy), src)
+        self._blit_sheared_source(surface, self.buffer, base_x, base_y, w, h, *factors)
