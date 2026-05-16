@@ -41,6 +41,10 @@ class ShearWindowController:
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = False
+        self._release_drag_shear_blend = 1.0
+        self._last_drag_frame_valid = False
+        self._last_drag_shear_dir_x = 1.0
+        self._last_drag_shear_blend = 1.0
 
         # Shear + settle tunables
         self.band_height = int(self.params.get("band_height", 10))
@@ -117,6 +121,10 @@ class ShearWindowController:
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = False
+        self._release_drag_shear_blend = 1.0
+        self._last_drag_frame_valid = False
+        self._last_drag_shear_dir_x = self._shear_dir_x
+        self._last_drag_shear_blend = 1.0
 
         self.buffer = None
         self._scratch = None
@@ -231,34 +239,90 @@ class ShearWindowController:
         self._prev_mouse_pos = None
         self._settle_elapsed = 0.0
         self._settle_steps = 0
+
+        if self._last_drag_frame_valid:
+            # Use the exact last rendered drag envelope to avoid release pops
+            # caused by event timing differences between mouse move/up.
+            self._release_drag_shear_blend = self._last_drag_shear_blend
+            self._shear_dir_x = self._last_drag_shear_dir_x
+        else:
+            idle_blend = 1.0
+            if self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
+                idle_over = self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds
+                fade_tau = max(1e-6, self.release_blend_seconds)
+                idle_blend = math.exp(-(idle_over / fade_tau))
+            start_blend = self._drag_start_blend if self._drag_motion_started else 1.0
+            self._release_drag_shear_blend = max(0.0, min(1.0, idle_blend * start_blend))
+
         self._drag_motion_started = False
         self._drag_start_handover_active = False
         self._drag_start_handover_elapsed = 0.0
         self._drag_start_blend = 0.0
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = True
+        self._last_drag_frame_valid = False
         # Preserve exact shear state at mouse-up; release settle should begin
         # from the current deformation, then quickly relax to neutral.
 
     def is_active(self) -> bool:
         return bool(self.active)
 
+    def _iter_control_subtree(self, root: Any):
+        stack = [root]
+        seen = set()
+        while stack:
+            node = stack.pop()
+            node_id = id(node)
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            yield node
+            children = getattr(node, "children", None)
+            if children:
+                stack.extend(children)
+
+    def _draw_window_local_buffer(self, theme, draw_window_standard, window_rect: pygame.Rect) -> None:
+        assert self.buffer is not None
+        self.buffer.fill((0, 0, 0, 0))
+
+        offset_x = -window_rect.left
+        offset_y = -window_rect.top
+        shifted: list[tuple[Any, pygame.Rect]] = []
+        try:
+            for control in self._iter_control_subtree(self.window):
+                rect = getattr(control, "rect", None)
+                if isinstance(rect, pygame.Rect):
+                    original = rect.copy()
+                    control.rect = rect.move(offset_x, offset_y)
+                    shifted.append((control, original))
+            draw_window_standard(self.buffer, theme)
+        finally:
+            for control, original in reversed(shifted):
+                control.rect = original
+
     def _refresh_buffer(self, surface: pygame.Surface, theme, draw_window_standard) -> None:
+        window_rect = pygame.Rect(self.window.rect)
+        if self.buffer is None or self.buffer.get_size() != window_rect.size:
+            self.buffer = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+
+        surface_rect = surface.get_rect()
+        clip = window_rect.clip(surface_rect)
+
+        # If any part of the window is offscreen, render to a local buffer so
+        # uncovered pixels do not become transparent/black in the shear pass.
+        if clip.size != window_rect.size:
+            self._draw_window_local_buffer(theme, draw_window_standard, window_rect)
+            return
+
         size = surface.get_size()
         if self._scratch is None or self._scratch_size != size:
             self._scratch = pygame.Surface(size, pygame.SRCALPHA)
             self._scratch_size = size
 
         scratch = self._scratch
-        window_rect = pygame.Rect(self.window.rect)
         scratch.fill((0, 0, 0, 0), window_rect)
         draw_window_standard(scratch, theme)
-
-        clip = window_rect.clip(scratch.get_rect())
-        if self.buffer is None or self.buffer.get_size() != window_rect.size:
-            self.buffer = pygame.Surface(window_rect.size, pygame.SRCALPHA)
-        else:
-            self.buffer.fill((0, 0, 0, 0))
+        self.buffer.fill((0, 0, 0, 0))
 
         if clip.width > 0 and clip.height > 0:
             dst_x = clip.left - window_rect.left
@@ -376,7 +440,14 @@ class ShearWindowController:
             idle_over = self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds
             fade_tau = max(1e-6, self.release_blend_seconds)
             drag_idle_settle_blend = math.exp(-(idle_over / fade_tau))
-        drag_start_blend = self._drag_start_blend if self.dragging else 1.0
+        if self.dragging:
+            drag_start_blend = self._drag_start_blend
+            drag_handover_blend = drag_start_blend * drag_idle_settle_blend
+            self._last_drag_frame_valid = True
+            self._last_drag_shear_dir_x = dir_x
+            self._last_drag_shear_blend = max(0.0, min(1.0, drag_handover_blend))
+        else:
+            drag_handover_blend = self._release_drag_shear_blend
         shear_release_blend = math.sqrt(release_blend) if not self.dragging else 1.0
 
         for y in range(0, h, tile_h):
@@ -392,7 +463,7 @@ class ShearWindowController:
                 shear_x = (
                     (disp_mag * self.shear_gain) + shear_distance_boost
                 ) * vertical_offset * horizontal_weight * shear_sign_x * (0.80 + (0.20 * self._motion_strength))
-                shear_x *= shear_release_blend * drag_start_blend
+                shear_x *= shear_release_blend * drag_handover_blend
                 off_x = int(max(-self.max_distort_px, min(self.max_distort_px, shear_x)))
 
                 sx = max(0, x - overlap_px)
