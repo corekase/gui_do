@@ -51,7 +51,7 @@ class ShearWindowController:
 
         self.shear_gain = float(self.params.get("shear_gain", 3.5))
         self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.7))
-        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 110.0))
+        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 120.0))
 
         self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
         self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.0))
