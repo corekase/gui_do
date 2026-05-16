@@ -7,6 +7,7 @@ from pygame import Rect
 
 from gui_do.features.data_driven_runtime import (
     AutoSizedStyledLabelSpec,
+    GlobalPointerActionSpec,
     SceneMenuStripSpec,
     RoutedRuntimeSpec,
     SceneCommandPaletteSpec,
@@ -33,8 +34,9 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
             toggle_scene_name="main",
             manual_shortcut_lines=(
                 "F1: Raise/Lower Task Panel",
-                "F5: Toggle Command Palette",
+                "F5: Open Command Palette",
                 "F9: Display this help",
+                "Right Click: Open Command Palette",
                 "Tab/Shift-Tab: cycle controls",
                 "Control-Tab/Shift-Control-Tab: cycle windows",
                 "Enter/Space: activate control",
@@ -63,6 +65,13 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
     command_palette=SceneCommandPaletteSpec(
         key=pygame.K_F5,
         scene_name="main",
+    ),
+    global_pointer_actions=(
+        GlobalPointerActionSpec(
+            action_name="palette_open",
+            button=3,
+            scene_name="main",
+        ),
     ),
 )
 

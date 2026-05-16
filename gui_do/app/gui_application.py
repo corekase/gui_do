@@ -874,6 +874,14 @@ class GuiApplication:
         logical_event = self._logicalize_pointer_event(gui_event)
         is_pointer_event = logical_event.kind in POINTER_EVENT_KINDS
 
+        if is_pointer_event:
+            trigger_global_pointer = getattr(self.actions, "trigger_global_pointer_from_event", None)
+            if callable(trigger_global_pointer) and trigger_global_pointer(logical_event, self):
+                logical_event.prevent_default()
+                logical_event.stop_propagation()
+                self.invalidation.invalidate_all()
+                return True
+
         # Toasts render above overlays/scene. Pointer hits on toast bounds are
         # consumed so pointer state does not fall through to underlying controls.
         if is_pointer_event and self.toasts.route_event(logical_event, self):

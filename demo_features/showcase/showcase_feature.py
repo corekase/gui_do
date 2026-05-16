@@ -248,6 +248,7 @@ class ShowcaseFeature(Feature):
             scene_name=_CONTROLS_RUNTIME_SPEC.scene_name,
             task_panel_focus_toggles=tuple(_CONTROLS_RUNTIME_SPEC.task_panel_focus_toggles),
             command_palette=_CONTROLS_RUNTIME_SPEC.command_palette,
+            global_pointer_actions=tuple(_CONTROLS_RUNTIME_SPEC.global_pointer_actions),
             observable_effects=(
                 ObservableEffectSpec(
                     handler=self._on_live_slider_value,

@@ -578,6 +578,19 @@ class TaskPanelFocusToggleSpec:
 
 
 @dataclass(frozen=True)
+class GlobalPointerActionSpec:
+    """Declarative descriptor for a global pointer button -> action binding.
+
+    The binding is routed before overlay, focus, active-window, feature, and scene
+    dispatch, so it behaves like global key bindings (always first).
+    """
+
+    action_name: str
+    button: int
+    scene_name: str | None = None
+
+
+@dataclass(frozen=True)
 class RoutedRuntimeSpec:
     """Declarative descriptor for standard routed-feature runtime wiring."""
 
@@ -601,6 +614,7 @@ class RoutedRuntimeSpec:
     event_subscriptions: Sequence[EventSubscriptionSpec] = field(default_factory=tuple)
     shortcut_overlays: Sequence[ShortcutOverlaySpec] = field(default_factory=tuple)
     task_panel_focus_toggles: Sequence[TaskPanelFocusToggleSpec] = field(default_factory=tuple)
+    global_pointer_actions: Sequence[GlobalPointerActionSpec] = field(default_factory=tuple)
     feature_dependencies: Sequence[FeatureDependencySpec] = field(default_factory=tuple)
     execution_context_spec: ExecutionContextSpec | None = None
     execution_context_attr_name: str | None = None
@@ -1457,6 +1471,22 @@ def register_action_hotkeys(app_actions, specs: Sequence[ActionHotkeySpec]) -> N
             app_actions.bind_key(spec.key, action_name, scene=str(spec.scene_name))
 
 
+def register_global_pointer_actions(app_actions, specs: Sequence[GlobalPointerActionSpec]) -> None:
+    """Register declarative global pointer-button bindings."""
+    if app_actions is None:
+        return
+    bind_global_pointer = getattr(app_actions, "bind_global_pointer_button", None)
+    if not callable(bind_global_pointer):
+        return
+    for spec in specs:
+        action_name = str(spec.action_name)
+        button = int(spec.button)
+        if spec.scene_name is None:
+            bind_global_pointer(button, action_name)
+        else:
+            bind_global_pointer(button, action_name, scene=str(spec.scene_name))
+
+
 def register_control_key_bindings(feature, app_actions, specs) -> None:
     """Register declarative key-to-control bindings from ControlKeyBindingSpec entries.
 
@@ -2144,6 +2174,9 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
 
     if spec.action_hotkeys and app_actions is not None:
         register_action_hotkeys(app_actions, tuple(spec.action_hotkeys))
+
+    if spec.global_pointer_actions and app_actions is not None:
+        register_global_pointer_actions(app_actions, tuple(spec.global_pointer_actions))
 
     if spec.control_key_bindings and app_actions is not None:
         register_control_key_bindings(feature, app_actions, tuple(spec.control_key_bindings))

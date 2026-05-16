@@ -11,6 +11,28 @@ class _OverlayStub:
         return None
 
 
+class _OverlayLifecycleStub:
+    def __init__(self):
+        self._open = set()
+        self.show_calls = []
+        self.hide_calls = []
+
+    def has_overlay(self, owner_id):
+        return str(owner_id) in self._open
+
+    def hide(self, owner_id):
+        owner = str(owner_id)
+        self.hide_calls.append(owner)
+        self._open.discard(owner)
+        return None
+
+    def show(self, owner_id, control, **kwargs):
+        owner = str(owner_id)
+        self.show_calls.append((owner, control, dict(kwargs)))
+        self._open.add(owner)
+        return object()
+
+
 class _WindowStub:
     def __init__(self, control_id: str, title: str, scene_name: str, visible: bool = False):
         self.control_id = str(control_id)
@@ -65,7 +87,27 @@ class _AppStub:
         }.get(str(scene_name), str(scene_name))
 
 
+class _PaletteAppStub(_AppStub):
+    def __init__(self, overlay):
+        super().__init__()
+        self.overlay = overlay
+
+
 class TestCommandPaletteGroupedEntries(unittest.TestCase):
+    def test_show_is_idempotent_while_already_open(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        manager.register(CommandEntry(entry_id="custom:one", title="One", action=lambda: None, category="Custom"))
+
+        first = manager.show(app)
+        second = manager.show(app)
+
+        self.assertTrue(first.is_open)
+        self.assertTrue(second.is_open)
+        self.assertEqual(1, len(overlay.show_calls))
+        self.assertEqual(0, len(overlay.hide_calls))
+
     def test_group_order_allows_custom_between_scene_and_window_groups(self):
         manager = CommandPaletteManager(_OverlayStub())
         app = _AppStub()

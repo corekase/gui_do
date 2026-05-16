@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Callable, Iterable
+from typing import Callable, Iterable, List, Optional
 
 import pygame
 
@@ -28,6 +28,12 @@ class KeyBinding:
     window_only: bool = False
 
 
+@dataclass(frozen=True)
+class PointerBinding:
+    button: int
+    scene: Optional[str] = None
+
+
 class ActionManager:
     """Resolves key events into named actions across scoped keymaps."""
 
@@ -38,11 +44,17 @@ class ActionManager:
         self._bindings_by_action: dict[str, list[KeyBinding]] = defaultdict(list)
         self._global_keymap: dict[KeyBinding, list[str]] = defaultdict(list)
         self._global_keymap_fast: dict[tuple[int, str | None, bool], list[str]] = {}
+        self._global_pointer_map: dict[PointerBinding, list[str]] = defaultdict(list)
+        self._global_pointer_map_fast: dict[tuple[int, str | None], list[str]] = {}
         self._middlewares: List[ActionMiddleware] = []
 
     @staticmethod
     def _binding_key(binding: KeyBinding) -> tuple[int, str | None, bool]:
         return (int(binding.key), binding.scene, bool(binding.window_only))
+
+    @staticmethod
+    def _pointer_binding_key(binding: PointerBinding) -> tuple[int, str | None]:
+        return (int(binding.button), binding.scene)
 
     def register_action(self, action_name: str, handler: ActionHandler) -> None:
         self._actions[str(action_name)] = handler
@@ -134,6 +146,28 @@ class ActionManager:
             self._global_keymap_fast.pop(self._binding_key(binding), None)
         return True
 
+    def bind_global_pointer_button(self, button: int, action_name: str, *, scene: str | None = None) -> None:
+        """Bind a mouse button tested first in routing for pointer button-down events."""
+        binding = PointerBinding(int(button), scene=scene)
+        names = self._global_pointer_map[binding]
+        normalized = str(action_name)
+        if normalized not in names:
+            names.append(normalized)
+            self._global_pointer_map_fast[self._pointer_binding_key(binding)] = names
+
+    def unbind_global_pointer_button(self, button: int, action_name: str, *, scene: str | None = None) -> bool:
+        """Remove a global pointer-button binding. Returns ``True`` if removed."""
+        binding = PointerBinding(int(button), scene=scene)
+        names = self._global_pointer_map.get(binding)
+        normalized = str(action_name)
+        if not names or normalized not in names:
+            return False
+        names.remove(normalized)
+        if not names:
+            del self._global_pointer_map[binding]
+            self._global_pointer_map_fast.pop(self._pointer_binding_key(binding), None)
+        return True
+
     def trigger_global_key_from_event(self, event, app) -> bool:
         """Fire the first matching global-key action for *event*, if any.
 
@@ -154,6 +188,23 @@ class ActionManager:
                 handler = self._actions.get(action_name)
                 if handler is not None and self._dispatch(action_name, handler, event):
                     return True
+        return False
+
+    def trigger_global_pointer_from_event(self, event, app) -> bool:
+        """Fire the first matching global pointer action for *event*, if any."""
+        if event.kind is not EventType.MOUSE_BUTTON_DOWN or event.button is None:
+            return False
+        scene_name = app.active_scene_name
+        button = int(event.button)
+        fast = self._global_pointer_map_fast
+        for action_name in fast.get((button, scene_name), ()):
+            handler = self._actions.get(action_name)
+            if handler is not None and self._dispatch(action_name, handler, event):
+                return True
+        for action_name in fast.get((button, None), ()):
+            handler = self._actions.get(action_name)
+            if handler is not None and self._dispatch(action_name, handler, event):
+                return True
         return False
 
     def bindings_for_action(self, action_name: str) -> List[KeyBinding]:

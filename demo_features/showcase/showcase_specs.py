@@ -2,6 +2,7 @@
 
 import pygame
 from gui_do.features.data_driven_runtime import (
+    GlobalPointerActionSpec,
     RoutedRuntimeSpec,
     SceneCommandPaletteSpec,
     TaskPanelFocusToggleSpec,
@@ -20,6 +21,13 @@ _CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
     command_palette=SceneCommandPaletteSpec(
         key=pygame.K_F5,
         scene_name="control_showcase",
+    ),
+    global_pointer_actions=(
+        GlobalPointerActionSpec(
+            action_name="palette_open",
+            button=3,
+            scene_name="control_showcase",
+        ),
     ),
 )
 

@@ -299,7 +299,6 @@ class CommandPaletteManager:
         self._entry_index_by_id: Dict[str, int] = {}
         self._entries_dirty: bool = True
         self._handle: Optional[OverlayHandle] = None
-        self._background_trigger_dispose: Optional[Callable[[], bool]] = None
         self._action_registry = action_registry
         self._before_show_callback: Optional[Callable[[], None]] = None
         self._selection_provider: Optional[Callable[[], Optional[str]]] = None
@@ -310,8 +309,6 @@ class CommandPaletteManager:
         self._include_window_entries: bool = True
         self._group_order: tuple[str, ...] = ("scenes", "windows", "custom")
         self._custom_entries_provider: Optional[Callable[..., Sequence[CommandEntry]]] = None
-        if app is not None:
-            self._register_background_trigger(app)
 
     def _invalidate_entry_projection(self) -> None:
         self._entries_dirty = True
@@ -474,8 +471,8 @@ class CommandPaletteManager:
     ) -> "CommandPaletteHandle":
         """Open the command palette overlay and return a handle.
 
-        If the palette is already open, calling this method closes it and
-        returns the handle (toggle behaviour).  If *rect* is not given, the
+        If the palette is already open, repeated calls are ignored and the
+        existing open session remains visible. If *rect* is not given, the
         palette is centered horizontally in the current window at the top third
         of the screen.
         """
@@ -483,15 +480,9 @@ class CommandPaletteManager:
         # don't leave the palette on a stale overlay.
         self._overlays = app.overlay
 
-        # Toggle: close if already visible (uses freshly synced overlay).
+        # Idempotent open: ignore repeated activation while already visible.
         if self.is_open:
-            self.hide()
             return CommandPaletteHandle(self)
-
-        # Auto-register the background right-click trigger the first time show
-        # is called with an app, if it was not already set up at construction.
-        if self._background_trigger_dispose is None:
-            self._register_background_trigger(app)
 
         if callable(self._before_show_callback):
             self._before_show_callback()
@@ -607,37 +598,6 @@ class CommandPaletteManager:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    def _register_background_trigger(self, app: "GuiApplication") -> None:
-        """Register a fallthrough handler that opens the palette on background right-click.
-
-        Empty space means: not over an overlay, not over a window, and not over
-        a focusable control hit target.  Uses :meth:`~GuiApplication.chain_screen_fallthrough`
-        so the handler only fires when the full event pipeline found nothing else
-        to consume the click.
-        """
-        stored_app = app
-
-        def _on_background_right_click(event) -> bool:
-            if event.kind != EventType.MOUSE_BUTTON_DOWN:
-                return False
-            if (event.button or 0) != 3:
-                return False
-            pos = event.pos
-            if not (isinstance(pos, tuple) and len(pos) == 2):
-                return False
-            if stored_app.overlay.point_in_any_overlay(pos):
-                return False
-            window_hit, focus_target = stored_app.scene.pointer_context_at(pos)
-            if window_hit or focus_target is not None:
-                return False
-            self._overlays = stored_app.overlay
-            self.show(stored_app)
-            return True
-
-        self._background_trigger_dispose = app.chain_screen_fallthrough(
-            event_handler=_on_background_right_click,
-        )
 
     def _on_dismissed(self) -> None:
         self._handle = None
