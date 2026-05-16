@@ -11,9 +11,8 @@ import pygame
 class ShearWindowController:
     """Applies a horizontal shear deformation while dragging a window titlebar."""
 
-    def __init__(self, window: Any, params: Optional[dict] = None):
+    def __init__(self, window: Any):
         self.window = window
-        self.params = params or {}
 
         self.active = False
         self.dragging = False
@@ -51,53 +50,42 @@ class ShearWindowController:
         self._drag_is_idle = True
 
         # Shear + settle tunables
-        self.band_height = int(self.params.get("band_height", 10))
-        self.tile_width = int(self.params.get("tile_width", 16))
-        self.overlap_px = int(self.params.get("overlap_px", 4))
+        self.band_height = 10
+        self.tile_width = 16
+        self.overlap_px = 4
 
-        self.time_step = float(self.params.get("time_step", 1.0 / 120.0))
-        self.simulation_substeps = int(self.params.get("simulation_substeps", 3))
-        self.spring_k = float(self.params.get("spring_k", 62.0))
-        self.damping = float(self.params.get("damping", 0.60))
-        self.drag_coupling = float(self.params.get("drag_coupling", 0.78))
-        self.max_impulse = float(self.params.get("max_impulse", 128.0))
-        self.max_velocity = float(self.params.get("max_velocity", 300.0))
-        self.max_disp_mag = float(self.params.get("max_disp_mag", 108.0))
-        self.max_distort_px = float(self.params.get("max_distort_px", 96.0))
+        self.time_step = 1.0 / 120.0
+        self.simulation_substeps = 3
+        self.spring_k = 62.0
+        self.damping = 0.60
+        self.drag_coupling = 0.78
+        self.max_impulse = 128.0
+        self.max_velocity = 300.0
+        self.max_disp_mag = 108.0
+        self.max_distort_px = 96.0
 
-        self.shear_gain = float(self.params.get("shear_gain", 3.5))
-        self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.7))
-        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 40.0))
+        self.shear_gain = 3.5
+        self.shear_horizontal_emphasis = 1.7
+        self.shear_distance_boost_px = 40.0
 
-        self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
-        self.drag_idle_speed_enter = float(
-            self.params.get("drag_idle_speed_enter", self.drag_idle_speed_threshold)
-        )
-        self.drag_idle_speed_exit = float(
-            self.params.get("drag_idle_speed_exit", self.drag_idle_speed_enter * 1.35)
-        )
-        self.drag_speed_smoothing_seconds = float(self.params.get("drag_speed_smoothing_seconds", 0.050))
-        self.drag_idle_influence_smoothing_seconds = float(
-            self.params.get("drag_idle_influence_smoothing_seconds", 0.080)
-        )
-        self.drag_direction_handover_seconds = float(self.params.get("drag_direction_handover_seconds", 0.06))
-        self.drag_start_handover_seconds = float(self.params.get("drag_start_handover_seconds", 0.07))
-        self.drag_idle_settle_delay_seconds = float(
-            self.params.get(
-                "drag_idle_settle_trigger_seconds",
-                self.params.get("drag_idle_settle_delay_seconds", 0.07),
-            )
-        )
+        self.drag_idle_speed_threshold = 1.10
+        self.drag_idle_speed_enter = self.drag_idle_speed_threshold
+        self.drag_idle_speed_exit = self.drag_idle_speed_enter * 1.35
+        self.drag_speed_smoothing_seconds = 0.050
+        self.drag_idle_influence_smoothing_seconds = 0.080
+        self.drag_direction_handover_seconds = 0.06
+        self.drag_start_handover_seconds = 0.07
+        self.drag_idle_settle_delay_seconds = 0.07
 
-        self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.22))
-        self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.12))
-        self.release_blend_seconds = float(self.params.get("release_blend_seconds", 0.16))
-        self.release_hard_limit_seconds = float(self.params.get("release_hard_limit_seconds", 0.24))
+        self.settle_timeout_seconds = 0.22
+        self.settle_hard_limit_seconds = 0.12
+        self.release_blend_seconds = 0.16
+        self.release_hard_limit_seconds = 0.24
         self._settle_blend_seconds = max(1e-6, min(self.release_blend_seconds, self.release_hard_limit_seconds))
-        self.settle_spring_boost = float(self.params.get("settle_spring_boost", 2.35))
-        self.settle_damping_scale = float(self.params.get("settle_damping_scale", 0.74))
-        self.settle_target_fps = float(self.params.get("settle_target_fps", 120.0))
-        self.settle_epsilon = float(self.params.get("settle_epsilon", 0.12))
+        self.settle_spring_boost = 2.35
+        self.settle_damping_scale = 0.74
+        self.settle_target_fps = 120.0
+        self.settle_epsilon = 0.12
         self._settle_max_steps = max(
             1,
             int(

@@ -55,13 +55,13 @@ class WindowControl(UiNode):
     def on_titlebar_drag_start(self, mouse_pos, surface=None):
         """
         Called when the user starts dragging the window via the title bar.
-        If shear_wobble_enabled is enabled, start the shear effect.
+        If shear_enabled is enabled, start the shear effect.
         """
-        if getattr(self, 'window_effects', {}).get('shear_wobble_enabled', True):
+        if getattr(self, 'window_effects', {}).get('shear_enabled', True):
             if self.shear_controller is None:
                 # Lazy import to avoid circular dependency
                 from ...graphics.shear_window import ShearWindowController
-                self.shear_controller = ShearWindowController(self, getattr(self, 'window_effects', None))
+                self.shear_controller = ShearWindowController(self)
             self.shear_controller.start_drag(mouse_pos, surface)
             self.shear_active = True
         else:

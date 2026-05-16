@@ -351,7 +351,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
     def test_titlebar_drag_uses_mouse_anchor_in_shear_mode(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         window = WindowControl("win", Rect(100, 80, 260, 180), "Window")
-        window.window_effects = {"shear_wobble_enabled": True}
+        window.window_effects = {"shear_enabled": True}
         shear = _StubShearController()
         window.shear_controller = shear
         panel.add(window)

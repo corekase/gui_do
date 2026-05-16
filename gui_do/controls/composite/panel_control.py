@@ -428,7 +428,7 @@ class PanelControl(UiNode):
                             int(raw[0] - window.rect.left),
                             int(raw[1] - window.rect.top),
                         )
-                        if getattr(window, "window_effects", {}).get("shear_wobble_enabled", True):
+                        if getattr(window, "window_effects", {}).get("shear_enabled", True):
                             focus_manager = getattr(app, "focus", None)
                             if focus_manager is not None and hasattr(focus_manager, "clear_focus"):
                                 focus_manager.clear_focus()

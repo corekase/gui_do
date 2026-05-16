@@ -71,7 +71,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 task_panel_label="Systems",
                 task_panel_style="round",
                 task_panel_slot_index=1,
-                window_effects={"shear_wobble_enabled": True},
+                window_effects={"shear_enabled": True},
             ),
             FeatureWindowBundleBindingSpec(
                 "_life_feature",
@@ -80,7 +80,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 task_panel_label="Life",
                 task_panel_style="round",
                 task_panel_slot_index=2,
-                window_effects={"shear_wobble_enabled": True},
+                window_effects={"shear_enabled": True},
             ),
             FeatureWindowBundleBindingSpec(
                 "_mandel_feature",
@@ -89,7 +89,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 task_panel_label="Mandelbrot",
                 task_panel_style="round",
                 task_panel_slot_index=3,
-                window_effects={"shear_wobble_enabled": True},
+                window_effects={"shear_enabled": True},
             ),
         ),
         action_entries=(
