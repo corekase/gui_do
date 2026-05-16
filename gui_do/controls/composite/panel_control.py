@@ -391,7 +391,7 @@ class PanelControl(UiNode):
         # Mouse up: end drag
         if event.is_mouse_up(1) and self._drag_window is not None:
             if hasattr(self._drag_window, "on_titlebar_drag_end"):
-                self._drag_window.on_titlebar_drag_end()
+                self._drag_window.on_titlebar_drag_end(raw)
             app.pointer_capture.end(self._drag_window.control_id)
             self._drag_window = None
             self._drag_last_pos = None

@@ -321,7 +321,7 @@ class _StubFocusManager:
         self.cleared = True
 
 
-class _StubWobblyController:
+class _StubShearController:
     def __init__(self):
         self.start_calls = []
         self.update_calls = []
@@ -333,7 +333,7 @@ class _StubWobblyController:
     def update_drag(self, mouse_pos):
         self.update_calls.append(mouse_pos)
 
-    def end_drag(self):
+    def end_drag(self, mouse_pos=None):
         self.end_calls += 1
 
     def is_active(self):
@@ -348,12 +348,12 @@ class _StubApp:
 
 
 class TestPanelControlWindowDrag(unittest.TestCase):
-    def test_titlebar_drag_uses_mouse_anchor_in_wobbly_mode(self):
+    def test_titlebar_drag_uses_mouse_anchor_in_shear_mode(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         window = WindowControl("win", Rect(100, 80, 260, 180), "Window")
         window.window_effects = {"shear_wobble_enabled": True}
-        wobbly = _StubWobblyController()
-        window.wobbly_controller = wobbly
+        shear = _StubShearController()
+        window.shear_controller = shear
         panel.add(window)
 
         app = _StubApp()
@@ -367,7 +367,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         consumed = panel.on_event_capture(down, app)
         self.assertTrue(consumed)
         self.assertTrue(app.pointer_capture.is_owned_by("win"))
-        self.assertEqual((130, 90), wobbly.start_calls[-1][0])
+        self.assertEqual((130, 90), shear.start_calls[-1][0])
 
         # A large rel delta should not yank the window; anchored absolute mouse
         # positioning keeps it smooth and directly under the grab point.
@@ -380,7 +380,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         consumed = panel.on_event_capture(motion, app)
         self.assertTrue(consumed)
         self.assertEqual((120, 100), window.rect.topleft)
-        self.assertEqual((150, 110), wobbly.update_calls[-1])
+        self.assertEqual((150, 110), shear.update_calls[-1])
 
         up = GuiEvent(
             kind=EventType.MOUSE_BUTTON_UP,
@@ -391,7 +391,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         consumed = panel.on_event_capture(up, app)
         self.assertTrue(consumed)
         self.assertFalse(app.pointer_capture.is_active)
-        self.assertEqual(1, wobbly.end_calls)
+        self.assertEqual(1, shear.end_calls)
 
 
 if __name__ == "__main__":

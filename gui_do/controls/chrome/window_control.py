@@ -55,40 +55,40 @@ class WindowControl(UiNode):
     def on_titlebar_drag_start(self, mouse_pos, surface=None):
         """
         Called when the user starts dragging the window via the title bar.
-        If shear_wobble_enabled is enabled, start the shear wobble effect.
+        If shear_wobble_enabled is enabled, start the shear effect.
         """
         if getattr(self, 'window_effects', {}).get('shear_wobble_enabled', True):
-            if self.wobbly_controller is None:
+            if self.shear_controller is None:
                 # Lazy import to avoid circular dependency
-                from ...graphics.wobbly_window import WobblyWindowController
-                self.wobbly_controller = WobblyWindowController(self, getattr(self, 'window_effects', None))
-            self.wobbly_controller.start_drag(mouse_pos, surface)
-            self.wobbly_active = True
+                from ...graphics.shear_window import ShearWindowController
+                self.shear_controller = ShearWindowController(self, getattr(self, 'window_effects', None))
+            self.shear_controller.start_drag(mouse_pos, surface)
+            self.shear_active = True
         else:
-            self.wobbly_active = False
+            self.shear_active = False
         # Existing drag logic continues here
 
     def on_titlebar_drag_update(self, mouse_pos):
         """
         Called on each drag update (mouse move) while dragging the title bar.
         """
-        if self.wobbly_active and self.wobbly_controller:
-            self.wobbly_controller.update_drag(mouse_pos)
+        if self.shear_active and self.shear_controller:
+            self.shear_controller.update_drag(mouse_pos)
         # Existing drag update logic continues here
 
-    def on_titlebar_drag_end(self):
+    def on_titlebar_drag_end(self, mouse_pos=None):
         """
         Called when the user releases the drag on the title bar.
         """
-        if self.wobbly_active and self.wobbly_controller:
-            self.wobbly_controller.end_drag()
-            self.wobbly_active = self.wobbly_controller.is_active()
+        if self.shear_active and self.shear_controller:
+            self.shear_controller.end_drag(mouse_pos)
+            self.shear_active = self.shear_controller.is_active()
         # Existing drag end logic continues here
 
 
-        # --- Wobbly windows effect integration ---
-        wobbly_controller = None  # type: Optional[object]
-        wobbly_active = False
+        # --- Shear windows effect integration ---
+        shear_controller = None  # type: Optional[object]
+        shear_active = False
 
     """Window container with title bar and child controls."""
 
@@ -143,9 +143,9 @@ class WindowControl(UiNode):
         self._content_host_rect_dirty = False
         super().add_child(self._content_host)
 
-        # Wobbly windows effect: initialize controller if enabled in spec (integration to be completed)
-        self.wobbly_controller = None
-        self.wobbly_active = False
+        # Shear effect: initialize controller if enabled in spec (integration to be completed)
+        self.shear_controller = None
+        self.shear_active = False
         # Actual instantiation and event hookup will be handled in drag logic
 
     def _mark_content_host_rect_dirty(self) -> None:
@@ -497,9 +497,9 @@ class WindowControl(UiNode):
             surface.set_clip(previous_clip)
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
-        # If wobbly effect is active, render from a fresh per-frame snapshot.
-        if self.wobbly_active and self.wobbly_controller:
-            self.wobbly_controller.render(surface, theme, self._draw_standard)
-            self.wobbly_active = self.wobbly_controller.is_active()
+        # If shear effect is active, render from a fresh per-frame snapshot.
+        if self.shear_active and self.shear_controller:
+            self.shear_controller.render(surface, theme, self._draw_standard)
+            self.shear_active = self.shear_controller.is_active()
             return
         self._draw_standard(surface, theme)
