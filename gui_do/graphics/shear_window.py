@@ -27,12 +27,20 @@ class ShearWindowController:
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
         self._drag_dir = (1.0, 0.0)
+        self._shear_dir_x = 1.0
+        self._drag_handover_active = False
+        self._drag_handover_elapsed = 0.0
+        self._drag_handover_start_x = 1.0
+        self._drag_handover_end_x = 1.0
+        self._drag_motion_started = False
+        self._drag_start_handover_active = False
+        self._drag_start_handover_elapsed = 0.0
+        self._drag_start_blend = 0.0
         self._motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = False
-        self._release_drag_idle_blend = 1.0
 
         # Shear + settle tunables
         self.band_height = int(self.params.get("band_height", 10))
@@ -51,15 +59,17 @@ class ShearWindowController:
 
         self.shear_gain = float(self.params.get("shear_gain", 3.5))
         self.shear_horizontal_emphasis = float(self.params.get("shear_horizontal_emphasis", 1.7))
-        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 120.0))
+        self.shear_distance_boost_px = float(self.params.get("shear_distance_boost_px", 40.0))
 
         self.drag_idle_speed_threshold = float(self.params.get("drag_idle_speed_threshold", 1.10))
-        self.drag_idle_settle_delay_seconds = float(self.params.get("drag_idle_settle_delay_seconds", 0.0))
-        self.drag_idle_spring_boost = float(self.params.get("drag_idle_spring_boost", 8.0))
-        self.drag_idle_damping_scale = float(self.params.get("drag_idle_damping_scale", 0.32))
-        self.drag_idle_quick_settle_seconds = float(self.params.get("drag_idle_quick_settle_seconds", 0.018))
-        self.drag_idle_quick_spring_boost = float(self.params.get("drag_idle_quick_spring_boost", 12.0))
-        self.drag_idle_quick_damping_scale = float(self.params.get("drag_idle_quick_damping_scale", 0.18))
+        self.drag_direction_handover_seconds = float(self.params.get("drag_direction_handover_seconds", 0.06))
+        self.drag_start_handover_seconds = float(self.params.get("drag_start_handover_seconds", 0.07))
+        self.drag_idle_settle_delay_seconds = float(
+            self.params.get(
+                "drag_idle_settle_trigger_seconds",
+                self.params.get("drag_idle_settle_delay_seconds", 0.07),
+            )
+        )
 
         self.settle_timeout_seconds = float(self.params.get("settle_timeout_seconds", 0.22))
         self.settle_hard_limit_seconds = float(self.params.get("settle_hard_limit_seconds", 0.12))
@@ -93,12 +103,20 @@ class ShearWindowController:
         self._vel[0] = 0.0
         self._vel[1] = 0.0
         self._drag_dir = (1.0, 0.0)
+        self._shear_dir_x = 1.0
+        self._drag_handover_active = False
+        self._drag_handover_elapsed = 0.0
+        self._drag_handover_start_x = self._shear_dir_x
+        self._drag_handover_end_x = self._shear_dir_x
+        self._drag_motion_started = False
+        self._drag_start_handover_active = False
+        self._drag_start_handover_elapsed = 0.0
+        self._drag_start_blend = 0.0
         self._motion_strength = 0.0
         self._settle_elapsed = 0.0
         self._settle_steps = 0
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = False
-        self._release_drag_idle_blend = 1.0
 
         self.buffer = None
         self._scratch = None
@@ -119,10 +137,35 @@ class ShearWindowController:
             dy = float(mouse_pos[1] - self._prev_mouse_pos[1])
             speed = math.hypot(dx, dy)
 
-            if speed > self.drag_idle_speed_threshold:
+            if speed > 0.0:
                 self._drag_idle_elapsed = 0.0
+
+            if speed > self.drag_idle_speed_threshold:
                 inv = 1.0 / speed
-                self._drag_dir = (dx * inv, dy * inv)
+                new_drag_dir = (dx * inv, dy * inv)
+                prev_shear_dir_x = self._shear_dir_x
+                self._drag_dir = new_drag_dir
+
+                new_dir_x = new_drag_dir[0]
+                if not self._drag_motion_started:
+                    self._drag_motion_started = True
+                    self._drag_start_handover_active = True
+                    self._drag_start_handover_elapsed = 0.0
+                    self._drag_start_blend = 0.0
+                    self._drag_handover_active = False
+                    if abs(new_dir_x) > 1e-6:
+                        self._shear_dir_x = new_dir_x
+                elif (
+                    abs(new_dir_x) > 1e-6
+                    and abs(prev_shear_dir_x) > 1e-6
+                    and (new_dir_x * prev_shear_dir_x) < 0.0
+                ):
+                    self._drag_handover_active = True
+                    self._drag_handover_elapsed = 0.0
+                    self._drag_handover_start_x = prev_shear_dir_x
+                    self._drag_handover_end_x = new_dir_x
+                elif not self._drag_handover_active and abs(new_dir_x) > 1e-6:
+                    self._shear_dir_x = new_dir_x
                 self._motion_strength = min(1.0, speed / 48.0)
 
                 impulse = min(self.max_impulse, speed * self.drag_coupling)
@@ -135,10 +178,36 @@ class ShearWindowController:
                     self._vel[0] *= scale
                     self._vel[1] *= scale
             else:
-                self._drag_idle_elapsed += self.time_step
                 self._motion_strength *= 0.86
 
         self._prev_mouse_pos = mouse_pos
+
+    def _update_drag_direction_handover(self) -> None:
+        if not self._drag_handover_active:
+            return
+
+        duration = max(1e-6, self.drag_direction_handover_seconds)
+        self._drag_handover_elapsed += self.time_step
+        t = min(1.0, self._drag_handover_elapsed / duration)
+        smooth_t = (t * t) * (3.0 - (2.0 * t))
+        self._shear_dir_x = self._drag_handover_start_x + (
+            (self._drag_handover_end_x - self._drag_handover_start_x) * smooth_t
+        )
+        if t >= 1.0:
+            self._drag_handover_active = False
+            self._shear_dir_x = self._drag_handover_end_x
+
+    def _update_drag_start_handover(self) -> None:
+        if not self._drag_start_handover_active:
+            return
+
+        duration = max(1e-6, self.drag_start_handover_seconds)
+        self._drag_start_handover_elapsed += self.time_step
+        t = min(1.0, self._drag_start_handover_elapsed / duration)
+        self._drag_start_blend = (t * t) * (3.0 - (2.0 * t))
+        if t >= 1.0:
+            self._drag_start_handover_active = False
+            self._drag_start_blend = 1.0
 
     def end_drag(self, mouse_pos: Optional[tuple[int, int]] = None):
         if mouse_pos is not None and self.active and self.dragging:
@@ -162,14 +231,10 @@ class ShearWindowController:
         self._prev_mouse_pos = None
         self._settle_elapsed = 0.0
         self._settle_steps = 0
-        # Keep the final drag-time idle envelope as the release starting point
-        # so shear amplitude does not jump at mouse-up.
-        idle_over = max(0.0, self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds)
-        if idle_over > 0.0:
-            fade_tau = max(1e-6, self.drag_idle_quick_settle_seconds)
-            self._release_drag_idle_blend = math.exp(-(idle_over / fade_tau))
-        else:
-            self._release_drag_idle_blend = 1.0
+        self._drag_motion_started = False
+        self._drag_start_handover_active = False
+        self._drag_start_handover_elapsed = 0.0
+        self._drag_start_blend = 0.0
         self._drag_idle_elapsed = 0.0
         self._release_frame_pending = True
         # Preserve exact shear state at mouse-up; release settle should begin
@@ -201,25 +266,28 @@ class ShearWindowController:
             self.buffer.blit(scratch, (dst_x, dst_y), clip)
 
     def _step_settle(self) -> None:
+        self._update_drag_start_handover()
+        self._update_drag_direction_handover()
+
         spring_k = self.spring_k
         damping = self.damping
+        idle_settling = False
 
         if self.dragging:
             self._drag_idle_elapsed += self.time_step
             if self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
+                idle_settling = True
+                self._drag_motion_started = False
+                self._drag_start_handover_active = False
+                self._drag_start_handover_elapsed = 0.0
+                self._drag_start_blend = 0.0
                 self._motion_strength = max(0.0, self._motion_strength * 0.80)
 
         boost = 1.0
         damping_scale = 1.0
-        if not self.dragging:
+        if not self.dragging or idle_settling:
             boost = max(boost, self.settle_spring_boost)
             damping_scale = min(damping_scale, self.settle_damping_scale)
-        elif self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
-            boost = max(boost, self.drag_idle_spring_boost)
-            damping_scale = min(damping_scale, self.drag_idle_damping_scale)
-            if self._drag_idle_elapsed >= self.drag_idle_quick_settle_seconds:
-                boost = max(boost, self.drag_idle_quick_spring_boost)
-                damping_scale = min(damping_scale, self.drag_idle_quick_damping_scale)
 
         spring_k *= boost
         damping = max(0.0, min(1.0, damping * damping_scale))
@@ -291,7 +359,7 @@ class ShearWindowController:
         tile_h = max(2, self.band_height)
         tile_w = max(2, self.tile_width)
         overlap_px = max(0, self.overlap_px)
-        dir_x = self._drag_dir[0]
+        dir_x = self._shear_dir_x
         anchor_y = float(self.anchor[1] if self.anchor is not None else (h * 0.5))
         horizontal_weight = min(1.0, abs(dir_x) * self.shear_horizontal_emphasis)
         shear_sign_x = -1.0 if dir_x >= 0.0 else 1.0
@@ -301,15 +369,14 @@ class ShearWindowController:
             smooth = (release_t * release_t) * (3.0 - (2.0 * release_t))
             release_blend = 1.0 - smooth
 
-        drag_idle_blend = 1.0
-        if self.dragging:
-            idle_over = max(0.0, self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds)
-            if idle_over > 0.0:
-                fade_tau = max(1e-6, self.drag_idle_quick_settle_seconds)
-                drag_idle_blend = math.exp(-(idle_over / fade_tau))
-            self._release_drag_idle_blend = drag_idle_blend
-        else:
-            drag_idle_blend = self._release_drag_idle_blend
+        drag_idle_settle_blend = 1.0
+        if self.dragging and self._drag_idle_elapsed >= self.drag_idle_settle_delay_seconds:
+            # A constant distance boost can keep shear visibly alive even while
+            # physics displacement settles. Fade it out once idle settle triggers.
+            idle_over = self._drag_idle_elapsed - self.drag_idle_settle_delay_seconds
+            fade_tau = max(1e-6, self.release_blend_seconds)
+            drag_idle_settle_blend = math.exp(-(idle_over / fade_tau))
+        drag_start_blend = self._drag_start_blend if self.dragging else 1.0
         shear_release_blend = math.sqrt(release_blend) if not self.dragging else 1.0
 
         for y in range(0, h, tile_h):
@@ -321,10 +388,11 @@ class ShearWindowController:
 
                 center_y = float(y + (src_h * 0.5))
                 vertical_offset = (center_y - anchor_y) / max(1.0, float(h))
+                shear_distance_boost = self.shear_distance_boost_px * drag_idle_settle_blend
                 shear_x = (
-                    (disp_mag * self.shear_gain) + self.shear_distance_boost_px
+                    (disp_mag * self.shear_gain) + shear_distance_boost
                 ) * vertical_offset * horizontal_weight * shear_sign_x * (0.80 + (0.20 * self._motion_strength))
-                shear_x *= shear_release_blend * drag_idle_blend
+                shear_x *= shear_release_blend * drag_start_blend
                 off_x = int(max(-self.max_distort_px, min(self.max_distort_px, shear_x)))
 
                 sx = max(0, x - overlap_px)
