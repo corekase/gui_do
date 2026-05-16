@@ -394,5 +394,64 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         self.assertEqual(1, shear.end_calls)
 
 
+class _StubFocusForDrawOrder:
+    def __init__(self, focused_node=None):
+        self.focused_node = focused_node
+
+
+class _StubFocusVisualizerForDrawOrder:
+    def draw_hint_for_window(self, surface, theme, window):
+        return None
+
+
+class _StubAppForDrawOrder:
+    def __init__(self, focused_node=None):
+        self.focus = _StubFocusForDrawOrder(focused_node=focused_node)
+        self.focus_visualizer = _StubFocusVisualizerForDrawOrder()
+
+
+class _OrderTrackingWindow(WindowControl):
+    def __init__(self, control_id: str, order_log: list[str]):
+        super().__init__(control_id, Rect(0, 0, 160, 100), control_id)
+        self._order_log = order_log
+
+    def draw(self, surface, theme):
+        self._order_log.append(self.control_id)
+
+
+class TestPanelControlFocusedWindowDrawOrder(unittest.TestCase):
+    def test_focused_window_drawn_last_when_not_shear_dragging(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
+        draw_order: list[str] = []
+        focused = _OrderTrackingWindow("focused", draw_order)
+        other = _OrderTrackingWindow("other", draw_order)
+        panel.children.extend([focused, other])
+        app = _StubAppForDrawOrder(focused_node=focused)
+
+        surface = pygame.Surface((800, 600))
+        panel.draw_window_phase(surface, theme=None, app=app)
+
+        self.assertEqual(["other", "focused"], draw_order)
+
+    def test_focused_window_not_forced_last_during_active_shear_drag(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
+        draw_order: list[str] = []
+        focused = _OrderTrackingWindow("focused", draw_order)
+        other = _OrderTrackingWindow("other", draw_order)
+        panel.children.extend([focused, other])
+        app = _StubAppForDrawOrder(focused_node=focused)
+
+        class _StubShear:
+            dragging = True
+
+        focused.shear_controller = _StubShear()
+        focused.shear_active = True
+
+        surface = pygame.Surface((800, 600))
+        panel.draw_window_phase(surface, theme=None, app=app)
+
+        self.assertEqual(["focused", "other"], draw_order)
+
+
 if __name__ == "__main__":
     unittest.main()

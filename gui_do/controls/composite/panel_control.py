@@ -505,12 +505,20 @@ class PanelControl(UiNode):
         The focused window control is drawn last so that any content it draws outside its
         assigned rect stays on top of other windows.
         """
+        def _is_actively_shear_dragging(window: UiNode) -> bool:
+            if not self._is_window_like(window):
+                return False
+            controller = getattr(window, "shear_controller", None)
+            return bool(getattr(controller, "dragging", False))
+
         # Identify the focused window child (if any) to draw it last
         focused_window = None
         if app is not None and hasattr(app, 'focus') and app.focus is not None:
             focused_node = app.focus.focused_node
             if focused_node is not None and focused_node in self.children and self._is_window_like(focused_node):
                 focused_window = focused_node
+                if _is_actively_shear_dragging(focused_window):
+                    focused_window = None
 
         # Draw non-focused window children
         for child in self.children:
