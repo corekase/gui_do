@@ -485,13 +485,27 @@ class ShearWindowController:
         drag_idle_settle_blend: float,
         shear_release_blend: float,
         drag_handover_blend: float,
+        local_bounds: Optional[pygame.Rect] = None,
     ) -> None:
         tile_h = max(2, self.band_height)
         tile_w = max(2, self.tile_width)
         overlap_px = max(0, self.overlap_px)
 
-        for y in range(0, h, tile_h):
-            for x in range(0, w, tile_w):
+        x_start = 0
+        y_start = 0
+        x_end = w
+        y_end = h
+        if local_bounds is not None:
+            clipped = local_bounds.clip(pygame.Rect(0, 0, w, h))
+            if clipped.width <= 0 or clipped.height <= 0:
+                return
+            x_start = max(0, (clipped.left // tile_w) * tile_w)
+            y_start = max(0, (clipped.top // tile_h) * tile_h)
+            x_end = min(w, ((clipped.right + tile_w - 1) // tile_w) * tile_w)
+            y_end = min(h, ((clipped.bottom + tile_h - 1) // tile_h) * tile_h)
+
+        for y in range(y_start, y_end, tile_h):
+            for x in range(x_start, x_end, tile_w):
                 src_w = min(tile_w, w - x)
                 src_h = min(tile_h, h - y)
                 if src_w <= 0 or src_h <= 0:
@@ -513,7 +527,12 @@ class ShearWindowController:
                 src = pygame.Rect(sx, sy, ex - sx, ey - sy)
                 surface.blit(source, (base_x + sx + off_x, base_y + sy), src)
 
-    def blit_sheared_overlay(self, surface: pygame.Surface, overlay: pygame.Surface) -> bool:
+    def blit_sheared_overlay(
+        self,
+        surface: pygame.Surface,
+        overlay: pygame.Surface,
+        local_bounds: Optional[pygame.Rect] = None,
+    ) -> bool:
         if not self.active:
             return False
 
@@ -529,7 +548,16 @@ class ShearWindowController:
             surface.blit(overlay, (base_x, base_y))
             return True
 
-        self._blit_sheared_source(surface, overlay, base_x, base_y, w, h, *factors)
+        self._blit_sheared_source(
+            surface,
+            overlay,
+            base_x,
+            base_y,
+            w,
+            h,
+            *factors,
+            local_bounds=local_bounds,
+        )
         return True
 
     def render(self, surface, theme=None, draw_window_standard=None):

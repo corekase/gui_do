@@ -22,6 +22,14 @@ class FocusVisualizer:
 
     def __init__(self, app) -> None:
         self.app = app
+        self._window_overlay_cache = None
+        self._window_overlay_cache_size = (0, 0)
+
+    def _window_overlay(self, size: tuple[int, int]) -> "pygame.Surface":
+        if self._window_overlay_cache is None or self._window_overlay_cache_size != size:
+            self._window_overlay_cache = pygame.Surface(size, pygame.SRCALPHA)
+            self._window_overlay_cache_size = size
+        return self._window_overlay_cache
 
     def _focused_node(self):
         """Return the currently focused UI node when hint drawing is enabled."""
@@ -49,6 +57,13 @@ class FocusVisualizer:
         if node is None:
             return
         self._draw_dashed_rect(surface, node, theme=theme)
+
+    def focused_hint_window(self):
+        """Return the window containing the currently focused node, if any."""
+        node = self._focused_node()
+        if node is None:
+            return None
+        return self._find_ancestor_window(node)
 
     def draw_hint_for_scene_root(self, surface: "pygame.Surface", theme, root_node) -> None:
         """Draw the current hint only when it belongs to the given scene root subtree.
@@ -89,13 +104,32 @@ class FocusVisualizer:
             # Draw hint in window-local coordinates, then shear-compose it with
             # the exact same deformation pass used by the dragged window.
             local_rect = rect.move(-window_rect.left, -window_rect.top)
-            overlay = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+            local_clip = local_rect.clip(pygame.Rect(0, 0, window_rect.width, window_rect.height))
+            if local_clip.width <= 0 or local_clip.height <= 0:
+                return
+
+            overlay = self._window_overlay(window_rect.size)
+            overlay.fill((0, 0, 0, 0), local_clip)
             self._draw_dashed_rectangle(overlay, local_rect, theme.highlight)
+
+            max_shear = int(max(0, getattr(controller, "max_distort_px", 0)))
+            overlap = int(max(0, getattr(controller, "overlap_px", 0)))
+            local_bounds = local_clip.inflate((2 * max_shear) + (2 * overlap), 2 * overlap)
+            local_bounds = local_bounds.clip(pygame.Rect(0, 0, window_rect.width, window_rect.height))
             try:
-                if controller.blit_sheared_overlay(surface, overlay):
+                composed = False
+                try:
+                    composed = controller.blit_sheared_overlay(surface, overlay, local_bounds=local_bounds)
+                except TypeError:
+                    # Backward-compatible path for controllers/stubs that only
+                    # accept (surface, overlay).
+                    composed = controller.blit_sheared_overlay(surface, overlay)
+                if composed:
+                    overlay.fill((0, 0, 0, 0), local_clip)
                     return
             except Exception:
                 pass
+            overlay.fill((0, 0, 0, 0), local_clip)
 
         self._draw_dashed_rectangle(surface, rect, theme.highlight)
 
