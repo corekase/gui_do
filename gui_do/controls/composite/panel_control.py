@@ -30,13 +30,17 @@ class PanelControl(UiNode):
         self._pending_capture_release_owner_id = None
         self._visual_size = None
         self._drag_pointer_sync_pending = False
+        self._drag_blocked_last = False
+        self._drag_shear_gutter_px = 3
+        self._drag_shear_lock_x_border = 0
+        self._drag_shear_lock_y_border = 0
 
     def end_window_drag(self, app: "GuiApplication | None" = None) -> bool:
         """End active title-bar dragging and release pointer capture when owned."""
         if self._drag_window is None:
             return False
         if hasattr(self._drag_window, "on_titlebar_drag_end"):
-            self._drag_window.on_titlebar_drag_end(self._drag_last_pos)
+            self._drag_window.on_titlebar_drag_end(self._drag_last_pos, blocked=self._drag_blocked_last)
         if app is not None and hasattr(app, "pointer_capture"):
             if app.pointer_capture.is_owned_by(self._drag_window.control_id):
                 app.pointer_capture.end(self._drag_window.control_id)
@@ -44,6 +48,9 @@ class PanelControl(UiNode):
         self._drag_last_pos = None
         self._drag_offset = None
         self._drag_pointer_sync_pending = False
+        self._drag_blocked_last = False
+        self._drag_shear_lock_x_border = 0
+        self._drag_shear_lock_y_border = 0
         return True
 
     def _scene_menu_bar_rect(self) -> Optional[Rect]:
@@ -86,21 +93,14 @@ class PanelControl(UiNode):
                 reserved_rects.append(reserved)
         return reserved_rects
 
-    def _clamp_window_drag_target(self, window: UiNode, target_x: int, target_y: int, app: "GuiApplication") -> tuple[int, int]:
+    def _window_drag_limits(self, window: UiNode, app: "GuiApplication") -> Optional[tuple[int, int, int, int]]:
         surface = getattr(app, "surface", None)
         if surface is None:
-            return (int(target_x), int(target_y))
+            return None
 
         screen_rect = surface.get_rect()
-        proposed_rect = Rect(window.rect)
-        proposed_rect.topleft = (int(target_x), int(target_y))
-
         min_left = int(screen_rect.left)
-        max_left = int(screen_rect.right - proposed_rect.width)
-        if max_left < min_left:
-            proposed_rect.left = min_left
-        else:
-            proposed_rect.left = max(min_left, min(int(proposed_rect.left), max_left))
+        max_left = int(screen_rect.right - window.rect.width)
 
         top_limit = int(screen_rect.top)
         bottom_limit = int(screen_rect.bottom)
@@ -109,10 +109,30 @@ class PanelControl(UiNode):
         if menu_rect is not None:
             top_limit = max(top_limit, int(menu_rect.bottom))
 
-        if proposed_rect.top < top_limit:
+        max_top = int(bottom_limit - window.rect.height)
+        return (min_left, max_left, top_limit, max_top)
+
+    def _clamp_window_drag_target(self, window: UiNode, target_x: int, target_y: int, app: "GuiApplication") -> tuple[int, int]:
+        limits = self._window_drag_limits(window, app)
+        if limits is None:
+            return (int(target_x), int(target_y))
+
+        min_left, max_left, top_limit, max_top = limits
+        bottom_limit = int(max_top + window.rect.height)
+        proposed_rect = Rect(window.rect)
+        proposed_rect.topleft = (int(target_x), int(target_y))
+
+        if max_left < min_left:
+            proposed_rect.left = min_left
+        else:
+            proposed_rect.left = max(min_left, min(int(proposed_rect.left), max_left))
+
+        if max_top < top_limit:
             proposed_rect.top = top_limit
-        if proposed_rect.bottom > bottom_limit:
-            proposed_rect.bottom = bottom_limit
+        elif proposed_rect.top < top_limit:
+            proposed_rect.top = top_limit
+        elif proposed_rect.top > max_top:
+            proposed_rect.top = max_top
 
         task_panel_reserved_rects = self._task_panel_reserved_rects()
         if task_panel_reserved_rects:
@@ -225,6 +245,9 @@ class PanelControl(UiNode):
             self._drag_window = None
             self._drag_last_pos = None
             self._drag_offset = None
+            self._drag_blocked_last = False
+            self._drag_shear_lock_x_border = 0
+            self._drag_shear_lock_y_border = 0
         self._set_window_active_state(window, False)
         next_window = self._next_top_visible_window(excluding=window)
         if next_window is None:
@@ -241,6 +264,9 @@ class PanelControl(UiNode):
                 self._drag_window = None
                 self._drag_last_pos = None
                 self._drag_offset = None
+                self._drag_blocked_last = False
+                self._drag_shear_lock_x_border = 0
+                self._drag_shear_lock_y_border = 0
             self._set_window_active_state(window, False)
             return
         if not new_enabled:
@@ -250,6 +276,9 @@ class PanelControl(UiNode):
                 self._drag_window = None
                 self._drag_last_pos = None
                 self._drag_offset = None
+                self._drag_blocked_last = False
+                self._drag_shear_lock_x_border = 0
+                self._drag_shear_lock_y_border = 0
             self._set_window_active_state(window, False)
             if not was_active:
                 return
@@ -471,6 +500,9 @@ class PanelControl(UiNode):
         # Mouse motion: dragging window
         if event.is_mouse_motion() and self._drag_window is not None:
             drag_pointer = raw if isinstance(raw, tuple) and len(raw) == 2 else self._drag_last_pos
+            drag_blocked = False
+            blocked_x = False
+            blocked_y = False
             if isinstance(raw, tuple) and len(raw) == 2:
                 if self._drag_offset is None:
                     self._drag_offset = (
@@ -480,6 +512,9 @@ class PanelControl(UiNode):
                 target_x = int(raw[0] - self._drag_offset[0])
                 target_y = int(raw[1] - self._drag_offset[1])
                 clamped_x, clamped_y = self._clamp_window_drag_target(self._drag_window, target_x, target_y, app)
+                drag_blocked = (clamped_x != target_x) or (clamped_y != target_y)
+                blocked_x = clamped_x != target_x
+                blocked_y = clamped_y != target_y
                 dx = int(clamped_x - self._drag_window.rect.left)
                 dy = int(clamped_y - self._drag_window.rect.top)
                 self._drag_window.move_by(dx, dy)
@@ -500,6 +535,9 @@ class PanelControl(UiNode):
                 target_x = int(self._drag_window.rect.left + dx)
                 target_y = int(self._drag_window.rect.top + dy)
                 clamped_x, clamped_y = self._clamp_window_drag_target(self._drag_window, target_x, target_y, app)
+                drag_blocked = (clamped_x != target_x) or (clamped_y != target_y)
+                blocked_x = clamped_x != target_x
+                blocked_y = clamped_y != target_y
                 applied_dx = int(clamped_x - self._drag_window.rect.left)
                 applied_dy = int(clamped_y - self._drag_window.rect.top)
                 self._drag_window.move_by(applied_dx, applied_dy)
@@ -516,9 +554,39 @@ class PanelControl(UiNode):
             if isinstance(raw, tuple) and len(raw) == 2 and isinstance(drag_pointer, tuple) and len(drag_pointer) == 2:
                 if (int(drag_pointer[0]), int(drag_pointer[1])) != (int(raw[0]), int(raw[1])):
                     self._set_drag_logical_pointer(app, (int(drag_pointer[0]), int(drag_pointer[1])))
+
+            shear_suppressed = drag_blocked
+            limits = self._window_drag_limits(self._drag_window, app)
+            if limits is not None:
+                min_left, max_left, min_top, max_top = limits
+                gutter = max(1, int(self._drag_shear_gutter_px))
+
+                if blocked_x:
+                    self._drag_shear_lock_x_border = -1 if int(target_x) < int(clamped_x) else 1
+                if blocked_y:
+                    self._drag_shear_lock_y_border = -1 if int(target_y) < int(clamped_y) else 1
+
+                if self._drag_shear_lock_x_border == -1:
+                    if int(self._drag_window.rect.left) > (int(min_left) + gutter):
+                        self._drag_shear_lock_x_border = 0
+                elif self._drag_shear_lock_x_border == 1:
+                    if int(self._drag_window.rect.left) < (int(max_left) - gutter):
+                        self._drag_shear_lock_x_border = 0
+
+                if self._drag_shear_lock_y_border == -1:
+                    if int(self._drag_window.rect.top) > (int(min_top) + gutter):
+                        self._drag_shear_lock_y_border = 0
+                elif self._drag_shear_lock_y_border == 1:
+                    if int(self._drag_window.rect.top) < (int(max_top) - gutter):
+                        self._drag_shear_lock_y_border = 0
+
+                if self._drag_shear_lock_x_border != 0 or self._drag_shear_lock_y_border != 0:
+                    shear_suppressed = True
+
             self._drag_last_pos = drag_pointer
+            self._drag_blocked_last = shear_suppressed
             if hasattr(self._drag_window, "on_titlebar_drag_update"):
-                self._drag_window.on_titlebar_drag_update(drag_pointer)
+                self._drag_window.on_titlebar_drag_update(drag_pointer, blocked=shear_suppressed)
             event.prevent_default()
             event.stop_propagation()
             return True
@@ -526,7 +594,7 @@ class PanelControl(UiNode):
         # Mouse up: end drag
         if event.is_mouse_up(1) and self._drag_window is not None:
             if hasattr(self._drag_window, "on_titlebar_drag_end"):
-                self._drag_window.on_titlebar_drag_end(raw)
+                self._drag_window.on_titlebar_drag_end(raw, blocked=self._drag_blocked_last)
             pointer_capture_owned = app.pointer_capture.is_owned_by(self._drag_window.control_id)
             was_relative_capture = bool(pointer_capture_owned and app.pointer_capture.use_relative_motion)
             app.pointer_capture.end(self._drag_window.control_id)
@@ -545,6 +613,9 @@ class PanelControl(UiNode):
             self._drag_last_pos = None
             self._drag_offset = None
             self._drag_pointer_sync_pending = False
+            self._drag_blocked_last = False
+            self._drag_shear_lock_x_border = 0
+            self._drag_shear_lock_y_border = 0
             event.prevent_default()
             event.stop_propagation()
             return True
@@ -577,6 +648,9 @@ class PanelControl(UiNode):
                             int(raw[0] - window.rect.left),
                             int(raw[1] - window.rect.top),
                         )
+                        self._drag_blocked_last = False
+                        self._drag_shear_lock_x_border = 0
+                        self._drag_shear_lock_y_border = 0
                         if getattr(window, "window_effects", {}).get("shear_enabled", True):
                             focus_manager = getattr(app, "focus", None)
                             if focus_manager is not None and hasattr(focus_manager, "clear_focus"):

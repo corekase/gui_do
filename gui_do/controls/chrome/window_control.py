@@ -68,20 +68,30 @@ class WindowControl(UiNode):
             self.shear_active = False
         # Existing drag logic continues here
 
-    def on_titlebar_drag_update(self, mouse_pos):
+    def on_titlebar_drag_update(self, mouse_pos, *, blocked: bool = False):
         """
         Called on each drag update (mouse move) while dragging the title bar.
         """
         if self.shear_active and self.shear_controller:
-            self.shear_controller.update_drag(mouse_pos)
+            update_drag = getattr(self.shear_controller, "update_drag", None)
+            if update_drag is not None:
+                try:
+                    update_drag(mouse_pos, blocked=blocked)
+                except TypeError:
+                    update_drag(mouse_pos)
         # Existing drag update logic continues here
 
-    def on_titlebar_drag_end(self, mouse_pos=None):
+    def on_titlebar_drag_end(self, mouse_pos=None, *, blocked: bool = False):
         """
         Called when the user releases the drag on the title bar.
         """
         if self.shear_active and self.shear_controller:
-            self.shear_controller.end_drag(mouse_pos)
+            end_drag = getattr(self.shear_controller, "end_drag", None)
+            if end_drag is not None:
+                try:
+                    end_drag(mouse_pos, blocked=blocked)
+                except TypeError:
+                    end_drag(mouse_pos)
             self.shear_active = self.shear_controller.is_active()
         # Existing drag end logic continues here
 

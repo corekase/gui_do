@@ -140,11 +140,19 @@ class ShearWindowController:
             if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
                 self.buffer = surface.subsurface(self.window.rect).copy()
 
-    def update_drag(self, mouse_pos):
+    def update_drag(self, mouse_pos, *, blocked: bool = False):
         if not self.active or not self.dragging:
             return
         wx, wy = self.window.rect.topleft
         self.anchor = (int(mouse_pos[0] - wx), int(mouse_pos[1] - wy))
+
+        if blocked:
+            speed_tau = max(1e-6, self.drag_speed_smoothing_seconds)
+            speed_decay = math.exp(-(self.time_step / speed_tau))
+            self._drag_speed_smoothed *= speed_decay
+            self._motion_strength *= 0.86
+            self._prev_mouse_pos = mouse_pos
+            return
 
         if self._prev_mouse_pos is not None:
             dx = float(mouse_pos[0] - self._prev_mouse_pos[0])
@@ -226,11 +234,11 @@ class ShearWindowController:
             self._drag_start_handover_active = False
             self._drag_start_blend = 1.0
 
-    def end_drag(self, mouse_pos: Optional[tuple[int, int]] = None):
+    def end_drag(self, mouse_pos: Optional[tuple[int, int]] = None, *, blocked: bool = False):
         if mouse_pos is not None and self.active and self.dragging:
             # Fold the release-point mouse sample into drag state so settle starts
             # from the exact final direction/velocity envelope.
-            self.update_drag(mouse_pos)
+            self.update_drag(mouse_pos, blocked=blocked)
         elif mouse_pos is not None:
             wx, wy = self.window.rect.topleft
             self.anchor = (int(mouse_pos[0] - wx), int(mouse_pos[1] - wy))
