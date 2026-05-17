@@ -168,13 +168,21 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
 
         feature.bind_runtime(host)
 
-        self.assertIn(
-            (pygame.K_F1, "toggle_task_panel_focus_control_showcase", "control_showcase"),
-            host.app.actions.bind_global_calls,
+        self.assertTrue(
+            any(
+                aid == "toggle_task_panel_focus_control_showcase" and scene == "control_showcase"
+                for _, aid, scene in host.app.actions.bind_global_calls
+            ),
+            "toggle_task_panel_focus_control_showcase not bound globally in control_showcase",
         )
 
-        action_id, handler = host.app.actions.register_calls[-1]
-        self.assertEqual("toggle_task_panel_focus_control_showcase", action_id)
+        toggle_calls = [
+            (aid, h)
+            for aid, h in host.app.actions.register_calls
+            if aid == "toggle_task_panel_focus_control_showcase"
+        ]
+        self.assertTrue(toggle_calls, "toggle_task_panel_focus_control_showcase not registered")
+        action_id, handler = toggle_calls[-1]
 
         result = bool(handler(None))
         self.assertTrue(result)

@@ -1486,6 +1486,40 @@ def register_global_pointer_actions(app_actions, specs: Sequence[GlobalPointerAc
             bind_global_pointer(button, action_name, scene=str(spec.scene_name))
 
 
+def bind_palette_window_activator(host, app_actions, *, action_name: str = "palette_open") -> None:
+    """Register an enhanced *action_name* handler that supports in-palette window
+    activation via the bound pointer activator.
+
+    When the palette is **open** and the action fires: if the pointer is over a
+    window-toggle entry the window is toggled and the palette selection is updated
+    without closing the palette; clicks on non-window entries are silently ignored.
+    When the palette is **closed** the action opens it as normal.
+
+    Call this after :func:`setup_routed_runtime` so that ``host._palette_manager``
+    is already initialised.  Replaces the previously registered handler for
+    *action_name* on *app_actions*.
+    """
+    if app_actions is None:
+        return
+    palette_manager = getattr(host, "_palette_manager", None)
+    if palette_manager is None:
+        return
+    app = getattr(host, "app", None)
+    if app is None:
+        return
+
+    def _handler(event):
+        if palette_manager.is_open:
+            pos = getattr(event, "pos", None)
+            if pos is not None:
+                palette_manager.try_activate_window_at(pos)
+            return True
+        palette_manager.show(app)
+        return True
+
+    app_actions.register_action(action_name, _handler)
+
+
 def register_control_key_bindings(feature, app_actions, specs) -> None:
     """Register declarative key-to-control bindings from ControlKeyBindingSpec entries.
 

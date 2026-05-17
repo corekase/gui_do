@@ -299,6 +299,7 @@ class CommandPaletteManager:
         self._entry_index_by_id: Dict[str, int] = {}
         self._entries_dirty: bool = True
         self._handle: Optional[OverlayHandle] = None
+        self._open_listview: Optional[_CommandPaletteListView] = None
         self._action_registry = action_registry
         self._before_show_callback: Optional[Callable[[], None]] = None
         self._selection_provider: Optional[Callable[[], Optional[str]]] = None
@@ -517,6 +518,7 @@ class CommandPaletteManager:
             row_height=_ROW_H,
             selected_index=selected_index,
         )
+        self._open_listview = listview
         if 0 <= selected_index < listview.item_count():
             listview.scroll_to_item(selected_index)
 
@@ -559,6 +561,40 @@ class CommandPaletteManager:
         """Close the palette if open."""
         self._overlays.hide(self._OWNER_ID)
         self._handle = None
+        self._open_listview = None
+
+    def try_activate_window_at(self, pos: tuple) -> None:
+        """If *pos* is over a window entry in the open palette list, activate it
+        without closing the palette and update the palette selection to that item.
+        Non-window entries at *pos* are ignored.
+        """
+        if not self.is_open or self._open_listview is None:
+            return
+        listview = self._open_listview
+        if not listview.rect.collidepoint(pos):
+            return
+        rel_y = pos[1] - listview.rect.y
+        idx = listview._row_at_y(rel_y)
+        if idx < 0 or idx >= len(listview._items):
+            return
+        item = listview._items[idx]
+        entry = item.data
+        if not isinstance(entry, CommandEntry) or entry.render_kind != "window_toggle":
+            return
+        if callable(self._entry_selected_callback):
+            try:
+                self._entry_selected_callback(entry)
+            except Exception:
+                pass
+        if callable(entry.action):
+            try:
+                entry.action()
+            except Exception:
+                pass
+        entry.window_visible = not entry.window_visible
+
+        listview.selected_index = idx
+        listview.scroll_to_item(idx)
 
     def bind_toggle_key(
         self,
@@ -601,6 +637,7 @@ class CommandPaletteManager:
 
     def _on_dismissed(self) -> None:
         self._handle = None
+        self._open_listview = None
 
     def _register_configured_builtin_entries(
         self,
