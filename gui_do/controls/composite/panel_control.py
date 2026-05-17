@@ -155,6 +155,53 @@ class PanelControl(UiNode):
 
         return (int(proposed_rect.left), int(proposed_rect.top))
 
+    def _should_suppress_drag_shear(
+        self,
+        window: UiNode,
+        app: "GuiApplication",
+        *,
+        attempted_dx: int,
+        attempted_dy: int,
+        drag_blocked: bool,
+    ) -> bool:
+        limits = self._window_drag_limits(window, app)
+        if limits is None:
+            return bool(drag_blocked)
+
+        min_left, max_left, top_limit, max_top = limits
+        gutter = max(1, int(self._drag_shear_gutter_px))
+
+        left = int(window.rect.left)
+        top = int(window.rect.top)
+        at_left = left <= (int(min_left) + gutter)
+        at_right = left >= (int(max_left) - gutter)
+        at_top = top <= (int(top_limit) + gutter)
+        at_bottom = top >= (int(max_top) - gutter)
+
+        # Left/right gutters intentionally hard-disable shear to avoid visual
+        # jitter at horizontal clamp boundaries.
+        if at_left or at_right:
+            return True
+
+        push_x = (at_left and attempted_dx < 0) or (at_right and attempted_dx > 0)
+        push_y = (at_top and attempted_dy < 0) or (at_bottom and attempted_dy > 0)
+
+        if push_x:
+            # Preserve shear while moving along an edge; only suppress when
+            # pressure into the edge dominates tangential motion.
+            push_mag_x = abs(int(attempted_dx))
+            tangent_mag_x = abs(int(attempted_dy))
+            if push_mag_x >= tangent_mag_x:
+                return True
+
+        if push_y:
+            push_mag_y = abs(int(attempted_dy))
+            tangent_mag_y = abs(int(attempted_dx))
+            if push_mag_y >= tangent_mag_y:
+                return True
+
+        return False
+
     def _set_drag_logical_pointer(self, app: "GuiApplication", pointer_pos: tuple[int, int]) -> None:
         if not (hasattr(app, "set_logical_pointer_position") and callable(app.set_logical_pointer_position)):
             return
@@ -491,18 +538,24 @@ class PanelControl(UiNode):
         if event.is_mouse_motion() and self._drag_window is not None:
             drag_pointer = raw if isinstance(raw, tuple) and len(raw) == 2 else self._drag_last_pos
             drag_blocked = False
+            attempted_dx = 0
+            attempted_dy = 0
             if isinstance(raw, tuple) and len(raw) == 2:
                 if self._drag_offset is None:
                     self._drag_offset = (
                         int(raw[0] - self._drag_window.rect.left),
                         int(raw[1] - self._drag_window.rect.top),
                     )
+                current_left = int(self._drag_window.rect.left)
+                current_top = int(self._drag_window.rect.top)
                 target_x = int(raw[0] - self._drag_offset[0])
                 target_y = int(raw[1] - self._drag_offset[1])
+                attempted_dx = int(target_x - current_left)
+                attempted_dy = int(target_y - current_top)
                 clamped_x, clamped_y = self._clamp_window_drag_target(self._drag_window, target_x, target_y, app)
                 drag_blocked = (clamped_x != target_x) or (clamped_y != target_y)
-                dx = int(clamped_x - self._drag_window.rect.left)
-                dy = int(clamped_y - self._drag_window.rect.top)
+                dx = int(clamped_x - current_left)
+                dy = int(clamped_y - current_top)
                 self._drag_window.move_by(dx, dy)
                 if self._drag_offset is not None:
                     drag_pointer = (
@@ -518,6 +571,8 @@ class PanelControl(UiNode):
                     dy = int(raw[1] - self._drag_last_pos[1])
                 else:
                     return False
+                attempted_dx = int(dx)
+                attempted_dy = int(dy)
                 target_x = int(self._drag_window.rect.left + dx)
                 target_y = int(self._drag_window.rect.top + dy)
                 clamped_x, clamped_y = self._clamp_window_drag_target(self._drag_window, target_x, target_y, app)
@@ -539,19 +594,13 @@ class PanelControl(UiNode):
                 if (int(drag_pointer[0]), int(drag_pointer[1])) != (int(raw[0]), int(raw[1])):
                     self._set_drag_logical_pointer(app, (int(drag_pointer[0]), int(drag_pointer[1])))
 
-            shear_suppressed = drag_blocked
-            limits = self._window_drag_limits(self._drag_window, app)
-            if limits is not None:
-                min_left, max_left, _, _ = limits
-                gutter = max(1, int(self._drag_shear_gutter_px))
-
-                in_horizontal_gutter = (
-                    int(self._drag_window.rect.left) <= (int(min_left) + gutter)
-                    or int(self._drag_window.rect.left) >= (int(max_left) - gutter)
-                )
-
-                if in_horizontal_gutter:
-                    shear_suppressed = True
+            shear_suppressed = self._should_suppress_drag_shear(
+                self._drag_window,
+                app,
+                attempted_dx=attempted_dx,
+                attempted_dy=attempted_dy,
+                drag_blocked=drag_blocked,
+            )
 
             self._drag_last_pos = drag_pointer
             self._drag_blocked_last = shear_suppressed

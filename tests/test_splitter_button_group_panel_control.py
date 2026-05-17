@@ -546,6 +546,40 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         self.assertEqual((120, 480), window.rect.topleft)
         self.assertEqual((150, 492), app.logical_pointer_pos)
 
+    def test_shear_suppression_only_when_drag_pushes_into_edge_gutter(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(0, 120, 260, 180), "Window")
+        panel.add(window)
+        app = _StubApp()
+
+        scenarios = [
+            ((0, 120), -12, 0, True),
+            ((0, 120), 0, -12, True),
+            ((540, 120), 12, 0, True),
+            ((540, 120), 0, 12, True),
+            ((300, 0), 0, -12, True),
+            ((300, 0), 12, 0, False),
+            ((300, 420), 0, 12, True),
+            ((300, 420), -12, 0, False),
+        ]
+
+        for topleft, attempted_dx, attempted_dy, expected in scenarios:
+            with self.subTest(
+                topleft=topleft,
+                attempted_dx=attempted_dx,
+                attempted_dy=attempted_dy,
+                expected=expected,
+            ):
+                window.set_pos(*topleft)
+                suppressed = panel._should_suppress_drag_shear(
+                    window,
+                    app,
+                    attempted_dx=attempted_dx,
+                    attempted_dy=attempted_dy,
+                    drag_blocked=expected,
+                )
+                self.assertEqual(expected, suppressed)
+
 
 class _StubFocusForDrawOrder:
     def __init__(self, focused_node=None):
