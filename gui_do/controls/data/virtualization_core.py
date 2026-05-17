@@ -9,6 +9,7 @@ Provides the building blocks for virtualised UI controls:
 """
 from __future__ import annotations
 
+from bisect import bisect_right
 from enum import Enum, auto
 from typing import Callable, Generic, TypeVar
 
@@ -57,6 +58,27 @@ class MeasurePolicy:
         self.mode = mode
         self.item_height = item_height
         self.height_fn = height_fn
+        self._prefix_offsets: list[int] = [0]
+        self._prefix_count: int = 0
+        self._prefix_signature: tuple[MeasureMode, int, int] | None = None
+
+    def _ensure_prefix_offsets(self, count: int) -> None:
+        if self.mode == MeasureMode.UNIFORM:
+            return
+        target = max(0, int(count))
+        signature = (self.mode, int(self.item_height), id(self.height_fn))
+        if self._prefix_signature != signature:
+            self._prefix_signature = signature
+            self._prefix_offsets = [0]
+            self._prefix_count = 0
+        if target <= self._prefix_count:
+            return
+        offsets = self._prefix_offsets
+        cumulative = offsets[-1]
+        for i in range(self._prefix_count, target):
+            cumulative += self.get_height(i)
+            offsets.append(cumulative)
+        self._prefix_count = target
 
     def get_height(self, index: int) -> int:
         """Return the pixel height of item at *index*."""
@@ -70,7 +92,8 @@ class MeasurePolicy:
         """Return the total scroll height for *item_count* items."""
         if self.mode == MeasureMode.UNIFORM:
             return item_count * self.item_height
-        return sum(self.get_height(i) for i in range(item_count))
+        self._ensure_prefix_offsets(item_count)
+        return self._prefix_offsets[max(0, int(item_count))]
 
     def item_at_offset(self, offset: int, item_count: int) -> int:
         """Return the index of the item visible at scroll *offset* pixels."""
@@ -79,19 +102,18 @@ class MeasurePolicy:
         if self.mode == MeasureMode.UNIFORM:
             idx = offset // max(self.item_height, 1)
             return max(0, min(idx, item_count - 1))
-        cumulative = 0
-        for i in range(item_count):
-            h = self.get_height(i)
-            if cumulative + h > offset:
-                return i
-            cumulative += h
-        return item_count - 1
+        self._ensure_prefix_offsets(item_count)
+        clamped_offset = max(0, int(offset))
+        idx = bisect_right(self._prefix_offsets, clamped_offset) - 1
+        return max(0, min(idx, item_count - 1))
 
     def offset_of_item(self, index: int) -> int:
         """Return the pixel offset (top) of item *index*."""
         if self.mode == MeasureMode.UNIFORM:
             return index * self.item_height
-        return sum(self.get_height(i) for i in range(index))
+        target = max(0, int(index))
+        self._ensure_prefix_offsets(target)
+        return self._prefix_offsets[target]
 
 
 # ---------------------------------------------------------------------------

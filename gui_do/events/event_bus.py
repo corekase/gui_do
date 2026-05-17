@@ -23,6 +23,8 @@ class EventBus:
     def __init__(self) -> None:
         self._subscribers: dict[str, list[Subscription]] = defaultdict(list)
         self._subscriptions_by_scope: dict[str, set[Subscription]] = defaultdict(set)
+        self._unscoped_subscribers: dict[str, list[Subscription]] = defaultdict(list)
+        self._scoped_subscribers_by_topic: dict[tuple[str, str], list[Subscription]] = defaultdict(list)
         self._subscriber_snapshots: dict[str, tuple[Subscription, ...]] = {}
         self._snapshot_dirty_topics: set[str] = set()
 
@@ -32,6 +34,9 @@ class EventBus:
         self._snapshot_dirty_topics.add(sub.topic)
         if sub.scope is not None:
             self._subscriptions_by_scope[sub.scope].add(sub)
+            self._scoped_subscribers_by_topic[(sub.scope, sub.topic)].append(sub)
+        else:
+            self._unscoped_subscribers[sub.topic].append(sub)
         return sub
 
     def unsubscribe(self, subscription: Subscription) -> None:
@@ -47,6 +52,7 @@ class EventBus:
                 self._snapshot_dirty_topics.add(subscription.topic)
                 if not subs:
                     del self._subscribers[subscription.topic]
+                    self._unscoped_subscribers.pop(subscription.topic, None)
                     self._subscriber_snapshots.pop(subscription.topic, None)
                 scope = subscription.scope
                 if scope is not None:
@@ -55,6 +61,23 @@ class EventBus:
                         scoped.discard(subscription)
                         if not scoped:
                             del self._subscriptions_by_scope[scope]
+                    scoped_topic = self._scoped_subscribers_by_topic.get((scope, subscription.topic))
+                    if scoped_topic is not None:
+                        for j, scoped_sub in enumerate(scoped_topic):
+                            if scoped_sub is subscription:
+                                del scoped_topic[j]
+                                break
+                        if not scoped_topic:
+                            self._scoped_subscribers_by_topic.pop((scope, subscription.topic), None)
+                else:
+                    unscoped = self._unscoped_subscribers.get(subscription.topic)
+                    if unscoped is not None:
+                        for j, unscoped_sub in enumerate(unscoped):
+                            if unscoped_sub is subscription:
+                                del unscoped[j]
+                                break
+                        if not unscoped:
+                            self._unscoped_subscribers.pop(subscription.topic, None)
                 return
 
     def unsubscribe_scope(self, scope: str) -> int:
@@ -78,7 +101,9 @@ class EventBus:
                 self._subscribers[topic] = new_subs
             else:
                 del self._subscribers[topic]
+                self._unscoped_subscribers.pop(topic, None)
                 self._subscriber_snapshots.pop(topic, None)
+            self._scoped_subscribers_by_topic.pop((scope, topic), None)
         return removed
 
     def subscriber_count(self, topic: str | None = None) -> int:
@@ -89,24 +114,37 @@ class EventBus:
 
     def publish(self, topic: str, payload: object = None, *, scope: str | None = None) -> None:
         topic_name = str(topic)
-        subscribers = self._subscribers.get(topic_name)
-        if not subscribers:
-            return
-        count = len(subscribers)
-        collector = telemetry_collector()
-        # Snapshot for safe iteration (handlers may mutate the subscriber list).
-        # Avoid tuple allocation in the common single-subscriber case.
-        if count == 1:
-            snapshot = subscribers
+        if scope is None:
+            subscribers = self._subscribers.get(topic_name)
+            if not subscribers:
+                return
+            count = len(subscribers)
+            # Snapshot for safe iteration (handlers may mutate the subscriber list).
+            # Avoid tuple allocation in the common single-subscriber case.
+            if count == 1:
+                snapshot = subscribers
+            else:
+                if topic_name in self._snapshot_dirty_topics or topic_name not in self._subscriber_snapshots:
+                    self._subscriber_snapshots[topic_name] = tuple(subscribers)
+                    self._snapshot_dirty_topics.discard(topic_name)
+                snapshot = self._subscriber_snapshots[topic_name]
         else:
-            if topic_name in self._snapshot_dirty_topics or topic_name not in self._subscriber_snapshots:
-                self._subscriber_snapshots[topic_name] = tuple(subscribers)
-                self._snapshot_dirty_topics.discard(topic_name)
-            snapshot = self._subscriber_snapshots[topic_name]
+            unscoped = self._unscoped_subscribers.get(topic_name)
+            scoped = self._scoped_subscribers_by_topic.get((scope, topic_name))
+            if not unscoped and not scoped:
+                return
+            if unscoped and scoped:
+                count = len(unscoped) + len(scoped)
+                snapshot = tuple(unscoped) + tuple(scoped)
+            else:
+                snapshot = unscoped if unscoped else scoped
+                count = len(snapshot)
+
+        collector = telemetry_collector()
         # Fast path: skip all span/metadata overhead when telemetry is off.
         if not collector._enabled:  # noqa: SLF001 — intentional lock-free check
             for sub in snapshot:
-                if sub.scope is None or sub.scope == scope:
+                if scope is None or sub.scope is None or sub.scope == scope:
                     sub.handler(payload)
             return
         with collector.span(
@@ -119,7 +157,7 @@ class EventBus:
             },
         ):
             for sub in snapshot:
-                if sub.scope is None or sub.scope == scope:
+                if scope is None or sub.scope is None or sub.scope == scope:
                     with collector.span(
                         "event_bus",
                         "publish_handler",

@@ -168,19 +168,33 @@ class UiNode:
         """Return all descendants (BFS) that satisfy *predicate*."""
         result: List[UiNode] = []
         queue = list(self.children)
+        queue_extend = queue.extend
+        result_append = result.append
         i = 0
         while i < len(queue):
             candidate = queue[i]
             i += 1
             if predicate(candidate):
-                result.append(candidate)
+                result_append(candidate)
             if candidate.children:
-                queue.extend(candidate.children)
+                queue_extend(candidate.children)
         return result
 
     def find_descendants_of_type(self, node_type: type) -> "List[UiNode]":
         """Return all descendants (BFS) that are instances of *node_type*."""
-        return self.find_descendants(lambda n: isinstance(n, node_type))
+        result: List[UiNode] = []
+        queue = list(self.children)
+        queue_extend = queue.extend
+        result_append = result.append
+        i = 0
+        while i < len(queue):
+            candidate = queue[i]
+            i += 1
+            if isinstance(candidate, node_type):
+                result_append(candidate)
+            if candidate.children:
+                queue_extend(candidate.children)
+        return result
 
     def is_root(self) -> bool:
         """Return True when this node has no parent (is a scene root node)."""

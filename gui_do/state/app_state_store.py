@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import threading
+from types import MappingProxyType
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
 
 __all__ = ["AppStateStore", "StateSelector", "StatePatch", "StateTransaction"]
@@ -176,7 +177,7 @@ class AppStateStore:
 
         # Selectors — only snapshot state if selectors are registered (optimization for hot path).
         if self._selectors:
-            state_snapshot = dict(self._state)
+            state_snapshot = MappingProxyType(self._state)
             for sel in self._selectors:
                 # Pass changed_keys to selector so it can short-circuit if it has no dependencies on them.
                 sel._update(state_snapshot, changed_keys=changed_keys)

@@ -94,13 +94,14 @@ class CollectionView:
                 predicate = filters[0]
                 items = [item for item in items if predicate(item)]
             else:
-                def _all_filters(item: Any) -> bool:
+                filtered: List[Any] = []
+                for item in items:
                     for predicate in filters:
                         if not predicate(item):
-                            return False
-                    return True
-
-                items = [item for item in items if _all_filters(item)]
+                            break
+                    else:
+                        filtered.append(item)
+                items = filtered
         if self._query.sort_key is not None:
             items.sort(key=self._query.sort_key, reverse=self._query.reverse)
         if self._query.projector is not None:

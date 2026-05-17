@@ -186,10 +186,10 @@ class ObservableStream(Generic[T]):
             unsub = parent.subscribe(_on_value)
 
             class _Unsub:
-                def __call__(self_inner) -> None:
+                def __call__(self) -> None:
                     unsub()
 
-                def tick(self_inner) -> None:
+                def tick(self) -> None:
                     _tick()
 
             return _Unsub()

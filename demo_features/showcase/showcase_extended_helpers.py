@@ -10,7 +10,6 @@ from gui_do import (
     BreadcrumbControl,
     BreadcrumbItem,
     ChipInputControl,
-    ColorPickerControl,
     ContextMenuItem,
     DatePickerControl,
     ErrorBoundary,

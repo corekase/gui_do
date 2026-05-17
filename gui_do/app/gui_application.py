@@ -116,6 +116,8 @@ class GuiApplication:
         self._startup_scene_prewarm_job_keys: set[str] = set()
         self._scene_deferred_prewarm_jobs: dict[str, deque[tuple[str, Callable[[pygame.Surface, "ColorTheme"], None]]]] = {}
         self._scene_deferred_prewarm_job_keys: dict[str, set[str]] = {}
+        self._deferred_prewarm_surface: Optional[pygame.Surface] = None
+        self._deferred_prewarm_surface_size: tuple[int, int] = (0, 0)
         self._startup_prewarm_overlay_armed = True
         self._startup_prewarm_overlay_started = False
         self._startup_prewarm_overlay_visible = False
@@ -725,7 +727,7 @@ class GuiApplication:
             if self._startup_scene_prewarm_jobs:
                 self._run_startup_scene_prewarm_jobs(max_steps=1)
             if self._scene_deferred_prewarm_jobs.get(self._active_scene_name):
-                warm_surface = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
+                warm_surface = self._get_deferred_prewarm_surface()
                 self._run_deferred_scene_prewarm_jobs(
                     self._active_scene_name,
                     warm_surface,
@@ -767,6 +769,13 @@ class GuiApplication:
         if target_ms > max_ms:
             return max_ms
         return target_ms
+
+    def _get_deferred_prewarm_surface(self) -> pygame.Surface:
+        target_size = self.surface.get_size()
+        if self._deferred_prewarm_surface is None or self._deferred_prewarm_surface_size != target_size:
+            self._deferred_prewarm_surface = pygame.Surface(target_size, pygame.SRCALPHA)
+            self._deferred_prewarm_surface_size = target_size
+        return self._deferred_prewarm_surface
 
     def shutdown(self) -> None:
         """Release runtime services."""

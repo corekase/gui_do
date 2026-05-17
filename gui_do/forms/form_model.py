@@ -43,6 +43,14 @@ class FormField(Generic[T]):
         self._required: bool = required
         self._errors: List[str] = []
         self._on_errors_changed: List[Callable[[List[str]], None]] = []
+        self._on_errors_changed_snapshot: tuple[Callable[[List[str]], None], ...] = ()
+        self._on_errors_changed_dirty: bool = False
+
+    def _iter_error_callbacks(self) -> tuple[Callable[[List[str]], None], ...]:
+        if self._on_errors_changed_dirty:
+            self._on_errors_changed_snapshot = tuple(self._on_errors_changed)
+            self._on_errors_changed_dirty = False
+        return self._on_errors_changed_snapshot
 
     # ------------------------------------------------------------------
     # Properties
@@ -92,7 +100,7 @@ class FormField(Generic[T]):
         old_errors = self._errors
         self._errors = errors
         if old_errors != errors:
-            for cb in list(self._on_errors_changed):
+            for cb in self._iter_error_callbacks():
                 try:
                     cb(self._errors)
                 except Exception:
@@ -113,7 +121,7 @@ class FormField(Generic[T]):
         old_errors = self._errors
         self._errors = []
         if old_errors:
-            for cb in list(self._on_errors_changed):
+            for cb in self._iter_error_callbacks():
                 try:
                     cb(self._errors)
                 except Exception:
@@ -126,10 +134,12 @@ class FormField(Generic[T]):
     def on_errors_changed(self, callback: Callable[[List[str]], None]) -> Callable[[], None]:
         """Subscribe to error-list changes.  Returns an unsubscribe callable."""
         self._on_errors_changed.append(callback)
+        self._on_errors_changed_dirty = True
 
         def _unsubscribe() -> None:
             if callback in self._on_errors_changed:
                 self._on_errors_changed.remove(callback)
+                self._on_errors_changed_dirty = True
 
         return _unsubscribe
 

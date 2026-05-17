@@ -108,6 +108,8 @@ class FlexLayout:
         self.inset = self._parse_box_param(inset)
         self.margin = self._parse_box_param(margin)
         self.items: list = list(items) if items else []
+        self._scratch_bases: list[int] = []
+        self._scratch_sizes: list[int] = []
 
     @staticmethod
     def _parse_box_param(val):
@@ -127,7 +129,8 @@ class FlexLayout:
         The *container_rect* is treated as the available space.  ``padding``
         is subtracted from each side before distributing space.
         """
-        if not self.items:
+        items = self.items
+        if not items:
             return
 
 
@@ -144,9 +147,20 @@ class FlexLayout:
         main_size = cw if is_row else ch
         cross_size = ch if is_row else cw
 
+        n = len(items)
+        bases = self._scratch_bases
+        sizes = self._scratch_sizes
+        if len(bases) < n:
+            bases.extend(0 for _ in range(n - len(bases)))
+        else:
+            del bases[n:]
+        if len(sizes) < n:
+            sizes.extend(0 for _ in range(n - len(sizes)))
+        else:
+            del sizes[n:]
+
         # Resolve bases
-        bases = []
-        for item in self.items:
+        for i, item in enumerate(items):
             if item.basis is not None:
                 b = int(item.basis)
             else:
@@ -155,22 +169,21 @@ class FlexLayout:
                 b = max(b, int(item.min_size))
             if item.max_size is not None:
                 b = min(b, int(item.max_size))
-            bases.append(b)
+            bases[i] = b
+            sizes[i] = b
 
         # Total gap space
-        n = len(self.items)
         total_gap = self.gap * (n - 1)
         available = main_size - total_gap
 
         # Compute initial sizes from bases, then grow/shrink
-        sizes = list(bases)
         total_used = sum(sizes)
         surplus = available - total_used
 
         if surplus > 0:
-            total_grow = sum(item.grow for item in self.items)
+            total_grow = sum(item.grow for item in items)
             if total_grow > 0:
-                for i, item in enumerate(self.items):
+                for i, item in enumerate(items):
                     if item.grow > 0:
                         extra = int(surplus * item.grow / total_grow)
                         new_s = sizes[i] + extra
@@ -179,9 +192,9 @@ class FlexLayout:
                         sizes[i] = new_s
         elif surplus < 0:
             deficit = -surplus
-            total_shrink = sum(item.shrink * bases[i] for i, item in enumerate(self.items))
+            total_shrink = sum(item.shrink * bases[i] for i, item in enumerate(items))
             if total_shrink > 0:
-                for i, item in enumerate(self.items):
+                for i, item in enumerate(items):
                     if item.shrink > 0:
                         scaled_shrink = item.shrink * bases[i] / total_shrink
                         reduction = int(deficit * scaled_shrink)
@@ -209,7 +222,7 @@ class FlexLayout:
 
         # Assign rects
         pos = (cx if is_row else cy) + justify_offset
-        for i, (item, main) in enumerate(zip(self.items, sizes)):
+        for i, (item, main) in enumerate(zip(items, sizes)):
             eff_align = item.align_self if item.align_self is not None else self.align
             # Cross dimension
             node_cross = item.node.rect.height if is_row else item.node.rect.width

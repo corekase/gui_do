@@ -84,6 +84,10 @@ class TaskScheduler:
         self._incoming_messages: Queue[_TaskMessage] = Queue()
         self._incoming_failures: Queue[_TaskFailure] = Queue()
         self._incoming_completions: Queue[_TaskCompletion] = Queue()
+        self._completion_buffer: list[_TaskCompletion] = []
+        self._drained_message_buffer: list[_TaskMessage] = []
+        self._dispatch_batch_buffer: list[_TaskMessage] = []
+        self._dispatch_decrement_buffer: dict[Hashable, int] = {}
 
         # Keyed by task_id for O(1) insert/remove instead of O(n) list filtering.
         self._failed_events: Dict[Hashable, TaskEvent] = {}
@@ -442,7 +446,8 @@ class TaskScheduler:
     def _collect_finished_tasks(self) -> List[Hashable]:
         collector = telemetry_collector()
         finished_task_ids: List[Hashable] = []
-        completions: List[_TaskCompletion] = []
+        completions = self._completion_buffer
+        completions.clear()
         while True:
             try:
                 completions.append(self._incoming_completions.get_nowait())
@@ -476,7 +481,8 @@ class TaskScheduler:
 
     def _drain_messages(self) -> None:
         collector = telemetry_collector()
-        drained: List[_TaskMessage] = []
+        drained = self._drained_message_buffer
+        drained.clear()
         with self._lock:
             ingest_limit = self._message_ingest_limit
         if ingest_limit is None:
@@ -511,8 +517,8 @@ class TaskScheduler:
         dispatch_start = perf_counter()
         now = perf_counter
         dispatched_count = 0
-        decremented_counts: Dict[Hashable, int] = {}
-        dispatch_batch: List[_TaskMessage] = []
+        decremented_counts = self._dispatch_decrement_buffer
+        dispatch_batch = self._dispatch_batch_buffer
         while True:
             dispatch_batch.clear()
             with self._lock:

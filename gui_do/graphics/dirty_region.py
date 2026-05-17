@@ -48,12 +48,16 @@ class DirtyRegionTracker:
     # Marking
     # ------------------------------------------------------------------
 
-    def mark_dirty(self, rect: Rect) -> None:
-        """Accumulate *rect* as needing a redraw this frame."""
+    def mark_dirty(self, rect: Rect, *, copy_rect: bool = True) -> None:
+        """Accumulate *rect* as needing a redraw this frame.
+
+        Set ``copy_rect=False`` for trusted hotpaths that already own a stable
+        Rect instance and want to avoid per-call Rect copies.
+        """
         if self._full_dirty:
             return  # already a full-screen dirty — no point accumulating
         if rect.width > 0 and rect.height > 0:
-            r = Rect(rect)
+            r = Rect(rect) if copy_rect else rect
             self._dirty.append(r)
             if self._dirty_union is None:
                 self._dirty_union = Rect(r)

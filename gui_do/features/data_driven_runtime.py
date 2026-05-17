@@ -1813,7 +1813,8 @@ def add_scene_task_panel_items(
             slot_index = int(resolved_toggle_slots.get(str(binding.key), 0))
             label = binding.accessibility_label or binding.action_label or binding.key
             ordered_items.append((int(slot_index), control, "toggle", str(label)))
-        items = [(control, role, label) for _slot, control, role, label in sorted(ordered_items, key=lambda x: x[0])]
+        ordered_items.sort(key=lambda x: x[0])
+        items = [(control, role, label) for _slot, control, role, label in ordered_items]
         apply_accessibility_sequence(items, int(tab_sequence_start))
 
     return SceneTaskPanelItemsResult(

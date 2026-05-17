@@ -39,7 +39,7 @@ def split_columns(bounds: Rect, *, count: int, gap: int = 0, min_width: int = 1)
     ]
 
 # --- Generalized, compact layout helpers for demo features ---
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 class RowBoundsCalculator:
     @staticmethod

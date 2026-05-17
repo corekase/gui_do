@@ -131,22 +131,26 @@ class ListDiffCalculator:
         removes: List[DiffRemove] = []
         moves: List[DiffMove] = []
 
-        # Items removed from old (not in new at all)
+        old_key_set: set = set()
+        old_index_map: dict = {}
+        for i, k in enumerate(old_keys):
+            old_key_set.add(k)
+            old_index_map[k] = i
         new_key_set = set(new_keys)
+
+        # Items removed from old (not in new at all)
         for i, item in enumerate(old_list):
             k = old_keys[i]
             if k not in new_key_set:
                 removes.append(DiffRemove(index=i, item=item))
 
         # Items inserted into new (not in old at all)
-        old_key_set = set(old_keys)
         for j, item in enumerate(new_list):
             k = new_keys[j]
             if k not in old_key_set:
                 inserts.append(DiffInsert(index=j, item=item))
 
         # Items that exist in both but moved
-        old_index_map = {k: i for i, k in enumerate(old_keys)}
         for j, item in enumerate(new_list):
             k = new_keys[j]
             if k in old_index_map:

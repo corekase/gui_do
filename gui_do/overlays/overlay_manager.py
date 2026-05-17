@@ -163,13 +163,14 @@ class OverlayManager:
         pointer_pos = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         await_inside_hit = bool(pointer_down and pointer_pos is not None)
         inside_hit = False
-        deferred_records: list[OverlayRecord] = []
-        dismissible_owner_ids: list[str] = []
+        deferred_records: list[OverlayRecord] | None = [] if await_inside_hit else None
+        dismissible_owner_ids: list[str] | None = [] if pointer_down else None
         consume_unhandled_keys = False
 
         for rec in reversed(self._records):
             if pointer_down and rec.dismiss_on_outside_click:
-                dismissible_owner_ids.append(rec.owner_id)
+                if dismissible_owner_ids is not None:
+                    dismissible_owner_ids.append(rec.owner_id)
             if not (rec.control.visible and rec.control.enabled):
                 continue
             if event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING):
@@ -178,21 +179,24 @@ class OverlayManager:
                 if rec.control.rect.collidepoint(pointer_pos):
                     inside_hit = True
                     await_inside_hit = False
-                    for pending in deferred_records:
-                        if pending.control.handle_routed_event(event, app):
-                            return True
-                    deferred_records.clear()
+                    if deferred_records is not None:
+                        for pending in deferred_records:
+                            if pending.control.handle_routed_event(event, app):
+                                return True
+                        deferred_records.clear()
                     if rec.control.handle_routed_event(event, app):
                         return True
                 else:
-                    deferred_records.append(rec)
+                    if deferred_records is not None:
+                        deferred_records.append(rec)
                 continue
             if rec.control.handle_routed_event(event, app):
                 return True
 
         if pointer_down and pointer_pos is not None and not inside_hit:
-            for owner_id in dismissible_owner_ids:
-                self.hide(owner_id)
+            if dismissible_owner_ids is not None:
+                for owner_id in dismissible_owner_ids:
+                    self.hide(owner_id)
             return False
 
         if consume_unhandled_keys:

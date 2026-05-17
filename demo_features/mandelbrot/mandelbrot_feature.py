@@ -30,11 +30,10 @@ from gui_do.features.data_driven_runtime import (
     shutdown_routed_feature_lifecycle,
 )
 from gui_do.features.runtime_routed_helpers import (
-    RoutedFeatureLifecycleBuilder, EventSubscriptionSpecBuilder
+    RoutedFeatureLifecycleBuilder
 )
 from gui_do.scheduling.staged_task_queue import StagedTaskQueue
 
-from .mandelbrot_logic_feature import MandelbrotLogicFeature
 from .mandelbrot_canvas_helpers import (
     apply_result as apply_result_helper,
     canvas_for_task as canvas_for_task_helper,
@@ -61,11 +60,8 @@ from .mandelbrot_runtime_helpers import (
 )
 from .mandelbrot_scheduling_helpers import queue_task as queue_task_helper
 from .mandelbrot_specs import (
-    _CANVAS_H,
-    _CANVAS_W,
     MANDEL_ALL_TASK_IDS,
-    MANDEL_KIND_CLEARED, MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED,
-    MANDEL_LOGIC_BINDINGS,
+    MANDEL_KIND_CLEARED, MANDEL_LOGIC_BINDINGS,
     MANDEL_SPLIT_KEYS,
     MANDEL_STATUS_SCOPE,
     MANDEL_STATUS_TOPIC,

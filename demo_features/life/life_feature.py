@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Set, Tuple
 
-from pygame import Rect
 from gui_do import FeatureMessage, RoutedFeature, WindowControl
 from gui_do.features.data_driven_runtime import (
     create_feature_presented_window,
@@ -25,8 +24,6 @@ from .life_runtime_helpers import (
 from .life_specs import (
     LIFE_EVENT_STATE,
     LIFE_KEY_CELLS,
-    LIFE_KEY_COMMAND,
-    LIFE_KEY_TOPIC,
     LIFE_LOGIC_TOPIC,
     _LIFE_WINDOW_SPEC,
     _LIFE_LIFECYCLE_SPEC,
