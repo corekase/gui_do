@@ -23,7 +23,7 @@ from .mandelbrot_specs import (
 
 # --- Refactored: Use gui_do presenter control builder and layout helpers ---
 from gui_do.features.presenter_control_builders import ControlFactory, PanelPresenterMixin
-from gui_do.features.layout_geometry import RowBoundsCalculator, VerticalGridSequencePlacer, ControlStackLayout
+from gui_do.features.layout_geometry import VerticalGridSequencePlacer
 
 class MandelbrotPresenter(WindowPresenter, PanelPresenterMixin):
     """Constructs the Mandelbrot window controls and wires them to the feature."""
@@ -38,23 +38,24 @@ class MandelbrotPresenter(WindowPresenter, PanelPresenterMixin):
         host = self.host
         content_rect = self.window.content_rect()
 
-        # Use layout helpers for compact placement
-        y_positions = ControlStackLayout.stack(3, start=content_rect.top + _PAD, spacing=_CANVAS_H + 9)
+        canvas_y = content_rect.top + _PAD
+        buttons_y = canvas_y + _CANVAS_H + 9
+        status_y = buttons_y + _BTN_H + 6
 
         # Canvas controls
-        feature.primary_canvas = self.add_control(CanvasControl("mandel_canvas", Rect(content_rect.left + _PAD, y_positions[0], _CANVAS_W, _CANVAS_H), max_events=128))
+        feature.primary_canvas = self.add_control(CanvasControl("mandel_canvas", Rect(content_rect.left + _PAD, canvas_y, _CANVAS_W, _CANVAS_H), max_events=128))
         feature.split_canvases = {}
         placer = VerticalGridSequencePlacer(2, (_CANVAS_W // 2 - _SPLIT_GAP, _CANVAS_H // 2 - _SPLIT_GAP), padding=_SPLIT_GAP)
         for key in MANDEL_SPLIT_KEYS:
             x, y = placer.next()
-            canvas = CanvasControl(key, Rect(content_rect.left + _PAD + x, y_positions[0] + y, _CANVAS_W // 2 - _SPLIT_GAP, _CANVAS_H // 2 - _SPLIT_GAP), max_events=32)
+            canvas = CanvasControl(key, Rect(content_rect.left + _PAD + x, canvas_y + y, _CANVAS_W // 2 - _SPLIT_GAP, _CANVAS_H // 2 - _SPLIT_GAP), max_events=32)
             canvas.visible = False
             self.add_control(canvas)
             feature.split_canvases[key] = canvas
 
         # Button row
         btn_defs = [
-            {"type": "button", "id": "mandel_reset", "label": "Reset", "rect": Rect(content_rect.left + _ROW_PAD, y_positions[1], 120, _BTN_H), "callback": lambda: feature.clear(host), "style": "angle", "accessibility": ("button", "Clear Mandelbrot surfaces")},
+            {"type": "button", "id": "mandel_reset", "label": "Reset", "rect": Rect(content_rect.left + _ROW_PAD, buttons_y, 120, _BTN_H), "callback": lambda: feature.clear(host), "style": "angle", "accessibility": ("button", "Clear Mandelbrot surfaces")},
             {"type": "button", "id": "mandel_iter", "label": "Iterative", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_iterative(host), "style": "round", "accessibility": ("button", "Run iterative")},
             {"type": "button", "id": "mandel_recur", "label": "Recursive", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_recursive(host), "style": "round", "accessibility": ("button", "Run recursive")},
             {"type": "button", "id": "mandel_one_split", "label": "1M 4Tasks", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_one_split(host), "style": "round", "accessibility": ("button", "Run 1-canvas 4-task split")},
@@ -69,12 +70,12 @@ class MandelbrotPresenter(WindowPresenter, PanelPresenterMixin):
         # Place buttons in a row
         btn_x = content_rect.left + _ROW_PAD
         for i, btn in enumerate((feature.reset_button,) + feature.task_buttons):
-            btn.rect = Rect(btn_x + i * (120 + _BTN_GAP), y_positions[1], 120, _BTN_H)
+            btn.rect = Rect(btn_x + i * (120 + _BTN_GAP), buttons_y, 120, _BTN_H)
 
         # Status label
         feature.status_label = self.add_control(LabelControl(
             "mandel_status",
-            Rect(content_rect.left + _PAD, y_positions[2], _CANVAS_W, _STATUS_H),
+            Rect(content_rect.left + _PAD, status_y, _CANVAS_W, _STATUS_H),
             feature.status_text,
         ))
 
