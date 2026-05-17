@@ -56,20 +56,27 @@ def create_display(
     pygame.init()
 
     # Windows fullscreen presentation paths can exhibit monitor-only artifacts
-    # (not visible in framebuffer captures). Prefer borderless desktop mode by
-    # default to stay on the composited window path.
+    # (not visible in framebuffer captures) when desktop resolution already
+    # matches the requested logical size. Use borderless fallback only in that
+    # specific mode so high-resolution desktops can still use SCALED.
     force_windows_true_fullscreen = os.getenv("GUI_DO_WINDOWS_FORCE_TRUE_FULLSCREEN", "").strip().lower() in {
         "1",
         "true",
         "yes",
         "on",
     }
+    use_windows_borderless_fallback = False
     if os.name == "nt" and fullscreen and not force_windows_true_fullscreen:
+        requested_size = (int(size[0]), int(size[1]))
         desktop_sizes = pygame.display.get_desktop_sizes()
         if desktop_sizes:
-            size = (int(desktop_sizes[0][0]), int(desktop_sizes[0][1]))
-        fullscreen = False
-        scaled = False
+            desktop_size = (int(desktop_sizes[0][0]), int(desktop_sizes[0][1]))
+            # Fallback is only for panel-desktop mode where no scaling is needed.
+            if desktop_size == requested_size:
+                size = desktop_size
+                fullscreen = False
+                scaled = False
+                use_windows_borderless_fallback = True
 
     # Windows + FULLSCREEN + SCALED has shown compositor artifacts in runtime
     # despite clean framebuffer captures; default to the safer non-SCALED path.
@@ -85,7 +92,7 @@ def create_display(
     flags = 0
     if fullscreen:
         flags |= pygame.FULLSCREEN
-    elif os.name == "nt" and not force_windows_true_fullscreen:
+    elif os.name == "nt" and use_windows_borderless_fallback:
         flags |= pygame.NOFRAME
     if scaled:
         flags |= pygame.SCALED
