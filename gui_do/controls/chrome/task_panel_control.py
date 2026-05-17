@@ -50,6 +50,19 @@ class TaskPanelControl(PanelControl):
             return int(self._shown_y + self.rect.height - self.hidden_peek_pixels)
         return int(self._shown_y - self.rect.height + self.hidden_peek_pixels)
 
+    def _sync_autohide_geometry(self, shown_y: int | None = None) -> None:
+        """Recompute shown/hidden targets and align current y to active autohide state."""
+        if shown_y is not None:
+            self._shown_y = int(shown_y)
+        else:
+            self._shown_y = int(self.rect.y)
+        self._hidden_y = self._compute_hidden_y()
+        if not self.auto_hide:
+            return
+        target = self._shown_y if (self._hovered or self._focus_mode_active) else self._hidden_y
+        if self.rect.y != target:
+            self.rect.y = int(target)
+
     def is_task_panel(self) -> bool:
         return True
 
@@ -168,7 +181,7 @@ class TaskPanelControl(PanelControl):
 
     def set_hidden_peek_pixels(self, hidden_peek_pixels: int) -> None:
         self.hidden_peek_pixels = max(1, int(hidden_peek_pixels))
-        self._hidden_y = self._compute_hidden_y()
+        self._sync_autohide_geometry(self._shown_y)
 
     def set_animation_step_px(self, animation_step_px: int) -> None:
         self.animation_step_px = max(1, int(animation_step_px))
@@ -176,18 +189,21 @@ class TaskPanelControl(PanelControl):
     def set_pos(self, x: int, y: int) -> None:
         previous = self.rect.topleft
         super().set_pos(x, y)
+        self._sync_autohide_geometry(int(y))
         if self.rect.topleft != previous:
             self._mark_child_layout_dirty()
 
     def set_rect(self, rect: Rect) -> None:
         previous = Rect(self.rect)
         super().set_rect(rect)
+        self._sync_autohide_geometry(int(rect.y))
         if self.rect != previous:
             self._mark_child_layout_dirty()
 
     def resize(self, width: int, height: int) -> None:
         previous = self.rect.size
         super().resize(width, height)
+        self._sync_autohide_geometry(self._shown_y)
         if self.rect.size != previous:
             self._mark_child_layout_dirty()
 
