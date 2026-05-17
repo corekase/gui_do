@@ -61,5 +61,58 @@ class TestShearWindowControllerReleaseRefresh(unittest.TestCase):
         self.assertGreaterEqual(len(refresh_calls), 2)
 
 
+class TestShearWindowControllerAutoQuality(unittest.TestCase):
+    def test_auto_quality_degrades_when_render_time_is_high(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+
+        controller._auto_quality_hold_frames = 0
+        controller._auto_render_ms_ema = controller._auto_degrade_threshold_ms[0] + 0.5
+        controller._update_auto_quality(controller._auto_degrade_threshold_ms[0] + 0.5)
+
+        self.assertEqual(1, controller._auto_quality_level)
+
+        controller._auto_quality_hold_frames = 0
+        controller._auto_render_ms_ema = controller._auto_degrade_threshold_ms[1] + 0.5
+        controller._update_auto_quality(controller._auto_degrade_threshold_ms[1] + 0.5)
+
+        self.assertEqual(2, controller._auto_quality_level)
+
+    def test_auto_quality_upgrades_when_render_time_is_low(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+
+        controller._auto_quality_level = 2
+        controller._auto_quality_hold_frames = 0
+        controller._auto_render_ms_ema = controller._auto_upgrade_threshold_ms[2] - 0.5
+        controller._update_auto_quality(controller._auto_upgrade_threshold_ms[2] - 0.5)
+        self.assertEqual(1, controller._auto_quality_level)
+
+        controller._auto_quality_hold_frames = 0
+        controller._auto_render_ms_ema = controller._auto_upgrade_threshold_ms[1] - 0.5
+        controller._update_auto_quality(controller._auto_upgrade_threshold_ms[1] - 0.5)
+        self.assertEqual(0, controller._auto_quality_level)
+
+    def test_quality_params_shift_with_auto_level(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+
+        controller._auto_quality_level = 0
+        high = controller._current_quality_params()
+        controller._auto_quality_level = 1
+        balanced = controller._current_quality_params()
+        controller._auto_quality_level = 2
+        perf = controller._current_quality_params()
+
+        self.assertGreaterEqual(balanced[0], high[0])
+        self.assertGreaterEqual(perf[0], balanced[0])
+        self.assertGreaterEqual(balanced[1], high[1])
+        self.assertGreaterEqual(perf[1], balanced[1])
+        self.assertLessEqual(balanced[2], high[2])
+        self.assertLessEqual(perf[2], balanced[2])
+        self.assertLessEqual(balanced[3], high[3])
+        self.assertLessEqual(perf[3], balanced[3])
+
+
 if __name__ == "__main__":
     unittest.main()

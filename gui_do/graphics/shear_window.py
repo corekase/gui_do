@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from time import perf_counter
 from typing import Any, Optional
 
 import pygame
@@ -25,6 +26,17 @@ class ShearWindowController:
         self._tile_cache_key: tuple[int, int, int, int] | None = None
         self._tile_rows: list[tuple[int, int, float]] = []
         self._tile_cols: list[tuple[int, int]] = []
+
+        # Automatic quality scaling keeps shear responsive on slower hardware
+        # while preserving high-fidelity deformation on faster systems.
+        self._auto_quality_level = 0  # 0=high, 1=balanced, 2=performance
+        self._auto_quality_hold_frames = 0
+        self._auto_render_ms_ema: Optional[float] = None
+        self._auto_render_ema_alpha = 0.22
+        self._auto_degrade_threshold_ms = (2.2, 3.4)
+        self._auto_upgrade_threshold_ms = (0.0, 1.4, 2.3)
+        self._auto_hold_degrade_frames = 8
+        self._auto_hold_upgrade_frames = 30
 
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
@@ -125,6 +137,59 @@ class ShearWindowController:
         for x in range(0, w, tile_w):
             src_w = min(tile_w, w - x)
             self._tile_cols.append((x, src_w))
+
+    def _current_quality_params(self) -> tuple[int, int, int, int]:
+        level = self._auto_quality_level
+        if level <= 0:
+            return (
+                max(2, int(self.band_height)),
+                max(2, int(self.tile_width)),
+                max(0, int(self.overlap_px)),
+                max(1, int(self.simulation_substeps)),
+            )
+        if level == 1:
+            return (
+                max(2, int(round(self.band_height * 1.2))),
+                max(2, int(round(self.tile_width * 1.25))),
+                max(1, int(self.overlap_px) - 1),
+                max(1, int(self.simulation_substeps) - 1),
+            )
+        return (
+            max(2, int(round(self.band_height * 1.4))),
+            max(2, int(round(self.tile_width * 1.5))),
+            max(1, int(self.overlap_px) - 2),
+            1,
+        )
+
+    def _update_auto_quality(self, render_ms: float) -> None:
+        if render_ms <= 0.0:
+            return
+
+        if self._auto_render_ms_ema is None:
+            self._auto_render_ms_ema = render_ms
+        else:
+            alpha = max(0.01, min(1.0, self._auto_render_ema_alpha))
+            self._auto_render_ms_ema += (render_ms - self._auto_render_ms_ema) * alpha
+
+        ema = self._auto_render_ms_ema
+        if ema is None:
+            return
+
+        if self._auto_quality_hold_frames > 0:
+            self._auto_quality_hold_frames -= 1
+            return
+
+        level = self._auto_quality_level
+        if level < 2 and ema > self._auto_degrade_threshold_ms[level]:
+            self._auto_quality_level = level + 1
+            self._auto_quality_hold_frames = self._auto_hold_degrade_frames
+            self._tile_cache_key = None
+            return
+
+        if level > 0 and ema < self._auto_upgrade_threshold_ms[level]:
+            self._auto_quality_level = level - 1
+            self._auto_quality_hold_frames = self._auto_hold_upgrade_frames
+            self._tile_cache_key = None
 
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
         self.active = True
@@ -521,9 +586,7 @@ class ShearWindowController:
         drag_handover_blend: float,
         local_bounds: Optional[pygame.Rect] = None,
     ) -> None:
-        tile_h = max(2, self.band_height)
-        tile_w = max(2, self.tile_width)
-        overlap_px = max(0, self.overlap_px)
+        tile_h, tile_w, overlap_px, _ = self._current_quality_params()
         self._ensure_tile_cache(w, h, tile_w, tile_h)
 
         x_start = 0
@@ -617,6 +680,8 @@ class ShearWindowController:
         if not self.active:
             return
 
+        render_start = perf_counter()
+
         if draw_window_standard is not None and theme is not None:
             # Keep the source buffer live during settle so child content keeps
             # updating and release work stays in the normal frame pass.
@@ -628,7 +693,7 @@ class ShearWindowController:
             # Render one frame at exact mouse-up geometry before integrating settle.
             self._release_frame_pending = False
         else:
-            substeps = max(1, self.simulation_substeps)
+            _, _, _, substeps = self._current_quality_params()
             for _ in range(substeps):
                 self._step_settle()
 
@@ -640,6 +705,8 @@ class ShearWindowController:
         factors = self._current_shear_factors(w, h, capture_drag_frame=True)
         if factors is None:
             surface.blit(self.buffer, (base_x, base_y))
+            self._update_auto_quality((perf_counter() - render_start) * 1000.0)
             return
 
         self._blit_sheared_source(surface, self.buffer, base_x, base_y, w, h, *factors)
+        self._update_auto_quality((perf_counter() - render_start) * 1000.0)
