@@ -22,6 +22,9 @@ class ShearWindowController:
         self.buffer: Optional[pygame.Surface] = None
         self._scratch: Optional[pygame.Surface] = None
         self._scratch_size: tuple[int, int] = (0, 0)
+        self._tile_cache_key: tuple[int, int, int, int] | None = None
+        self._tile_rows: list[tuple[int, int, float]] = []
+        self._tile_cols: list[tuple[int, int]] = []
 
         self._disp = [0.0, 0.0]
         self._vel = [0.0, 0.0]
@@ -97,6 +100,32 @@ class ShearWindowController:
             ),
         )
 
+    @staticmethod
+    def _smoothstep(edge0: float, edge1: float, value: float) -> float:
+        if edge1 <= edge0:
+            return 1.0 if value >= edge1 else 0.0
+        t = max(0.0, min(1.0, (value - edge0) / (edge1 - edge0)))
+        return t * t * (3.0 - (2.0 * t))
+
+    def _ensure_tile_cache(self, w: int, h: int, tile_w: int, tile_h: int) -> None:
+        key = (w, h, tile_w, tile_h)
+        if self._tile_cache_key == key:
+            return
+
+        self._tile_cache_key = key
+        self._tile_rows = []
+        self._tile_cols = []
+
+        inv_h = 1.0 / max(1.0, float(h))
+        for y in range(0, h, tile_h):
+            src_h = min(tile_h, h - y)
+            center_ratio = float(y + (src_h * 0.5)) * inv_h
+            self._tile_rows.append((y, src_h, center_ratio))
+
+        for x in range(0, w, tile_w):
+            src_w = min(tile_w, w - x)
+            self._tile_cols.append((x, src_w))
+
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
         self.active = True
         self.dragging = True
@@ -135,6 +164,9 @@ class ShearWindowController:
         self.buffer = None
         self._scratch = None
         self._scratch_size = (0, 0)
+        self._tile_cache_key = None
+        self._tile_rows = []
+        self._tile_cols = []
         if surface is not None:
             rect = self.window.rect.clip(surface.get_rect())
             if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
@@ -344,12 +376,6 @@ class ShearWindowController:
         damping = self.damping
         drag_idle_influence = 0.0
 
-        def _smoothstep(edge0: float, edge1: float, value: float) -> float:
-            if edge1 <= edge0:
-                return 1.0 if value >= edge1 else 0.0
-            t = max(0.0, min(1.0, (value - edge0) / (edge1 - edge0)))
-            return t * t * (3.0 - (2.0 * t))
-
         if self.dragging:
             self._drag_idle_elapsed += self.time_step
 
@@ -366,7 +392,7 @@ class ShearWindowController:
             elif self._drag_speed_smoothed < enter:
                 self._drag_is_idle = True
 
-            moving_factor = _smoothstep(enter, exit_speed, self._drag_speed_smoothed)
+            moving_factor = self._smoothstep(enter, exit_speed, self._drag_speed_smoothed)
             target_idle = 1.0 - moving_factor
             if self._drag_is_idle:
                 target_idle = max(target_idle, 0.60)
@@ -498,6 +524,7 @@ class ShearWindowController:
         tile_h = max(2, self.band_height)
         tile_w = max(2, self.tile_width)
         overlap_px = max(0, self.overlap_px)
+        self._ensure_tile_cache(w, h, tile_w, tile_h)
 
         x_start = 0
         y_start = 0
@@ -512,28 +539,46 @@ class ShearWindowController:
             x_end = min(w, ((clipped.right + tile_w - 1) // tile_w) * tile_w)
             y_end = min(h, ((clipped.bottom + tile_h - 1) // tile_h) * tile_h)
 
-        for y in range(y_start, y_end, tile_h):
-            for x in range(x_start, x_end, tile_w):
-                src_w = min(tile_w, w - x)
-                src_h = min(tile_h, h - y)
-                if src_w <= 0 or src_h <= 0:
+        anchor_ratio = float(anchor_y) / max(1.0, float(h))
+        shear_distance_boost = self.shear_distance_boost_px * drag_idle_settle_blend
+        shear_common = (
+            ((disp_mag * self.shear_gain) + shear_distance_boost)
+            * horizontal_weight
+            * shear_sign_x
+            * (0.80 + (0.20 * self._motion_strength))
+            * shear_release_blend
+            * drag_handover_blend
+        )
+        max_distort = self.max_distort_px
+
+        for y, src_h, center_ratio in self._tile_rows:
+            if y < y_start or y >= y_end:
+                continue
+
+            vertical_offset = center_ratio - anchor_ratio
+            shear_x = shear_common * vertical_offset
+            off_x = int(max(-max_distort, min(max_distort, shear_x)))
+
+            sy = max(0, y - overlap_px)
+            ey = min(h, y + src_h + overlap_px)
+            blit_h = ey - sy
+            if blit_h <= 0:
+                continue
+
+            for x, src_w in self._tile_cols:
+                if x < x_start or x >= x_end:
                     continue
 
-                center_y = float(y + (src_h * 0.5))
-                vertical_offset = (center_y - anchor_y) / max(1.0, float(h))
-                shear_distance_boost = self.shear_distance_boost_px * drag_idle_settle_blend
-                shear_x = (
-                    (disp_mag * self.shear_gain) + shear_distance_boost
-                ) * vertical_offset * horizontal_weight * shear_sign_x * (0.80 + (0.20 * self._motion_strength))
-                shear_x *= shear_release_blend * drag_handover_blend
-                off_x = int(max(-self.max_distort_px, min(self.max_distort_px, shear_x)))
-
                 sx = max(0, x - overlap_px)
-                sy = max(0, y - overlap_px)
                 ex = min(w, x + src_w + overlap_px)
-                ey = min(h, y + src_h + overlap_px)
-                src = pygame.Rect(sx, sy, ex - sx, ey - sy)
-                surface.blit(source, (base_x + sx + off_x, base_y + sy), src)
+                blit_w = ex - sx
+                if blit_w <= 0:
+                    continue
+                surface.blit(
+                    source,
+                    (base_x + sx + off_x, base_y + sy),
+                    (sx, sy, blit_w, blit_h),
+                )
 
     def blit_sheared_overlay(
         self,
