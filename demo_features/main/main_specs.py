@@ -36,7 +36,7 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
                 "F1: Raise/Lower Task Panel",
                 "F5: Open Command Palette",
                 "F9: Display this help",
-                "Right Click: Open Command Palette",
+                "Mouse Wheel Click: Open Command Palette",
                 "Tab/Shift-Tab: cycle controls",
                 "Control-Tab/Shift-Control-Tab: cycle windows",
                 "Enter/Space: activate control",
@@ -69,7 +69,7 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
     global_pointer_actions=(
         GlobalPointerActionSpec(
             action_name="palette_open",
-            button=3,
+            button=2,
             scene_name="main",
         ),
     ),

@@ -25,7 +25,7 @@ _CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
     global_pointer_actions=(
         GlobalPointerActionSpec(
             action_name="palette_open",
-            button=3,
+            button=2,
             scene_name="control_showcase",
         ),
     ),
