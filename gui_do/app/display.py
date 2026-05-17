@@ -1,6 +1,7 @@
 """Display surface creation helpers."""
 from __future__ import annotations
 
+import os
 import warnings
 
 import pygame
@@ -32,12 +33,60 @@ def create_display(
         Request vertical synchronization.  Silently falls back to no-vsync
         when the driver cannot provide it.
     """
+    force_windows_hardware_renderer = os.getenv("GUI_DO_WINDOWS_FORCE_HARDWARE_RENDERER", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    allow_windows_vsync = os.getenv("GUI_DO_WINDOWS_ALLOW_VSYNC", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if os.name == "nt" and not force_windows_hardware_renderer:
+        # Force SDL renderer to software to avoid GPU overlay/compositor paths
+        # that can show monitor-only artifacts not present in captures.
+        os.environ.setdefault("SDL_RENDER_DRIVER", "software")
+        if not allow_windows_vsync:
+            vsync = False
+
     # Centralize pygame startup in display creation for top-level apps.
     pygame.init()
+
+    # Windows fullscreen presentation paths can exhibit monitor-only artifacts
+    # (not visible in framebuffer captures). Prefer borderless desktop mode by
+    # default to stay on the composited window path.
+    force_windows_true_fullscreen = os.getenv("GUI_DO_WINDOWS_FORCE_TRUE_FULLSCREEN", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if os.name == "nt" and fullscreen and not force_windows_true_fullscreen:
+        desktop_sizes = pygame.display.get_desktop_sizes()
+        if desktop_sizes:
+            size = (int(desktop_sizes[0][0]), int(desktop_sizes[0][1]))
+        fullscreen = False
+        scaled = False
+
+    # Windows + FULLSCREEN + SCALED has shown compositor artifacts in runtime
+    # despite clean framebuffer captures; default to the safer non-SCALED path.
+    allow_windows_scaled_fullscreen = os.getenv("GUI_DO_WINDOWS_ALLOW_SCALED_FULLSCREEN", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if os.name == "nt" and fullscreen and scaled and not allow_windows_scaled_fullscreen:
+        scaled = False
 
     flags = 0
     if fullscreen:
         flags |= pygame.FULLSCREEN
+    elif os.name == "nt" and not force_windows_true_fullscreen:
+        flags |= pygame.NOFRAME
     if scaled:
         flags |= pygame.SCALED
 

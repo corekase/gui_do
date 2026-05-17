@@ -1,3 +1,5 @@
+import os
+
 import pygame
 
 
@@ -35,7 +37,9 @@ class UiEngine:
                 dt_seconds = clock.tick(target_fps) / 1000.0
                 app.update(dt_seconds)
                 dirty = app.draw()
-                if dirty:
+                if os.name == "nt":
+                    display_flip()
+                elif dirty:
                     display_update(dirty)
                 else:
                     display_flip()
