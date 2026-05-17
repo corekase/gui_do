@@ -20,7 +20,12 @@ from .mandelbrot_specs import (
 )
 
 
-class MandelbrotPresenter(WindowPresenter):
+
+# --- Refactored: Use gui_do presenter control builder and layout helpers ---
+from gui_do.features.presenter_control_builders import ControlFactory, PanelPresenterMixin
+from gui_do.features.layout_geometry import RowBoundsCalculator, VerticalGridSequencePlacer, ControlStackLayout
+
+class MandelbrotPresenter(WindowPresenter, PanelPresenterMixin):
     """Constructs the Mandelbrot window controls and wires them to the feature."""
 
     def __init__(self, feature, host) -> None:
@@ -29,89 +34,60 @@ class MandelbrotPresenter(WindowPresenter):
         self.host = host
 
     def on_create(self) -> None:
-        from gui_do import FlexLayout, GridLayout, GridPlacement
-
         feature = self.feature
         host = self.host
         content_rect = self.window.content_rect()
-        inner_rect = Rect(
-            content_rect.left + _PAD,
-            content_rect.top + _PAD,
-            max(1, content_rect.width - _PAD * 2),
-            max(1, content_rect.height - _PAD * 2),
-        )
 
-        primary_canvas = CanvasControl("mandel_canvas", Rect(0, 0, _CANVAS_W, _CANVAS_H), max_events=128)
-        feature.primary_canvas = self._add(primary_canvas)
-        canvas_rect = Rect(inner_rect.left, inner_rect.top, _CANVAS_W, _CANVAS_H)
-        primary_canvas.rect = Rect(canvas_rect)
+        # Use layout helpers for compact placement
+        y_positions = ControlStackLayout.stack(3, start=content_rect.top + _PAD, spacing=_CANVAS_H + 9)
 
-        split_gap = _SPLIT_GAP
-        split_canvas_w = max(1, (_CANVAS_W - split_gap) // 2)
-        split_canvas_h = max(1, (_CANVAS_H - split_gap) // 2)
-        split_grid = GridLayout(
-            row_tracks=[split_canvas_h, split_canvas_h],
-            col_tracks=[split_canvas_w, split_canvas_w],
-            gap=split_gap,
-            padding=0,
-        )
+        # Canvas controls
+        feature.primary_canvas = self.add_control(CanvasControl("mandel_canvas", Rect(content_rect.left + _PAD, y_positions[0], _CANVAS_W, _CANVAS_H), max_events=128))
         feature.split_canvases = {}
-        for idx, key in enumerate(MANDEL_SPLIT_KEYS):
-            row = idx // 2
-            col = idx % 2
-            canvas = CanvasControl(key, Rect(0, 0, split_canvas_w, split_canvas_h), max_events=32)
+        placer = VerticalGridSequencePlacer(2, (_CANVAS_W // 2 - _SPLIT_GAP, _CANVAS_H // 2 - _SPLIT_GAP), padding=_SPLIT_GAP)
+        for key in MANDEL_SPLIT_KEYS:
+            x, y = placer.next()
+            canvas = CanvasControl(key, Rect(content_rect.left + _PAD + x, y_positions[0] + y, _CANVAS_W // 2 - _SPLIT_GAP, _CANVAS_H // 2 - _SPLIT_GAP), max_events=32)
             canvas.visible = False
-            split_grid.place(canvas, GridPlacement(row=row, col=col))
             self.add_control(canvas)
             feature.split_canvases[key] = canvas
-        split_grid.apply(canvas_rect)
 
-        btn_row = FlexLayout(direction="row", gap=_BTN_GAP, padding=0)
-        feature.reset_button = self._add(ButtonControl(
-            "mandel_reset", Rect(0, 0, 120, _BTN_H), "Reset", lambda: feature.clear(host), style="angle",
-        ))
-        feature.reset_button.set_accessibility(role="button", label="Clear Mandelbrot surfaces")
-        btn_row.add(feature.reset_button, grow=0)
+        # Button row
+        btn_defs = [
+            {"type": "button", "id": "mandel_reset", "label": "Reset", "rect": Rect(content_rect.left + _ROW_PAD, y_positions[1], 120, _BTN_H), "callback": lambda: feature.clear(host), "style": "angle", "accessibility": ("button", "Clear Mandelbrot surfaces")},
+            {"type": "button", "id": "mandel_iter", "label": "Iterative", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_iterative(host), "style": "round", "accessibility": ("button", "Run iterative")},
+            {"type": "button", "id": "mandel_recur", "label": "Recursive", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_recursive(host), "style": "round", "accessibility": ("button", "Run recursive")},
+            {"type": "button", "id": "mandel_one_split", "label": "1M 4Tasks", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_one_split(host), "style": "round", "accessibility": ("button", "Run 1-canvas 4-task split")},
+            {"type": "button", "id": "mandel_four_split", "label": "4M 4Tasks", "rect": Rect(0, 0, 120, _BTN_H), "callback": lambda: feature.launch_four_split(host), "style": "round", "accessibility": ("button", "Run 4-canvas 4-task split")},
+        ]
+        factory = ControlFactory({
+            "button": lambda id, label, rect, callback, style, accessibility: self._add_btn(id, label, rect, callback, style, accessibility)
+        })
+        feature.reset_button = factory.create(btn_defs[0])
+        feature.task_buttons = tuple(factory.create(spec) for spec in btn_defs[1:])
 
-        task_defs = (
-            ("mandel_iter", "Iterative", feature.launch_iterative, "Run iterative"),
-            ("mandel_recur", "Recursive", feature.launch_recursive, "Run recursive"),
-            ("mandel_one_split", "1M 4Tasks", feature.launch_one_split, "Run 1-canvas 4-task split"),
-            ("mandel_four_split", "4M 4Tasks", feature.launch_four_split, "Run 4-canvas 4-task split"),
-        )
-        feature.task_buttons = tuple(
-            self._make_task_btn(cid, label, method, tip, Rect(0, 0, 120, _BTN_H))
-            for (cid, label, method, tip) in task_defs
-        )
-        for btn in feature.task_buttons:
-            btn_row.add(btn, grow=0)
-        btn_row_rect = Rect(
-            inner_rect.left + _ROW_PAD,
-            canvas_rect.bottom + 9,
-            max(1, _CANVAS_W - (_ROW_PAD * 2)),
-            _BTN_H,
-        )
-        btn_row.apply(btn_row_rect)
+        # Place buttons in a row
+        btn_x = content_rect.left + _ROW_PAD
+        for i, btn in enumerate((feature.reset_button,) + feature.task_buttons):
+            btn.rect = Rect(btn_x + i * (120 + _BTN_GAP), y_positions[1], 120, _BTN_H)
 
-        feature.status_label = self._add(LabelControl(
+        # Status label
+        feature.status_label = self.add_control(LabelControl(
             "mandel_status",
-            Rect(0, 0, _CANVAS_W, _STATUS_H),
+            Rect(content_rect.left + _PAD, y_positions[2], _CANVAS_W, _STATUS_H),
             feature.status_text,
         ))
-        feature.status_label.rect = Rect(inner_rect.left, btn_row_rect.bottom + 9, _CANVAS_W, _STATUS_H)
 
         feature.window = self.window
         feature.demo = host
         feature.clear(host)
         self.window.visible = False
 
-    def _add(self, control):
-        self.add_control(control)
-        return control
-
-    def _make_task_btn(self, cid, label, method, tip, rect):
-        btn = self._add(ButtonControl(cid, rect, label, lambda m=method: m(self.host), style="round"))
-        btn.set_accessibility(role="button", label=tip)
+    def _add_btn(self, id, label, rect, callback, style, accessibility):
+        btn = ButtonControl(id, rect, label, callback, style=style)
+        role, acc_label = accessibility
+        btn.set_accessibility(role=role, label=acc_label)
+        self.add_control(btn)
         return btn
 
 

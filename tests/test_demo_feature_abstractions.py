@@ -26,7 +26,7 @@ from gui_do.features.data_driven_runtime import (
     apply_accessibility_sequence,
     apply_accessibility_sequence_from_attrs,
     bind_input_map_actions,
-    bind_feature_logic_aliases,
+    configure_routed_feature_runtime,
     build_tab_builder_specs,
     build_tools_menu_entries,
     create_tab_control_from_specs,
@@ -57,7 +57,6 @@ from gui_do.features.data_driven_runtime import (
     register_tab_update_handlers,
     ActiveTabUpdateRouter,
     TabLayoutContext,
-    setup_routed_feature_runtime,
     apply_runtime_scene_pristine_assets,
     bind_runtime_scene_exit_keys,
 )
@@ -493,12 +492,12 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertIs(scheduler, feature.scheduler)
         self.assertEqual(["main"], host.app.requests)
 
-    def test_setup_routed_feature_runtime_sets_scheduler_and_logic_aliases(self):
+    def test_configure_routed_feature_runtime_sets_scheduler_and_logic_aliases(self):
         scheduler = _StubConfigurableScheduler()
         host = _StubSchedulerHost(scheduler)
         feature = _StubRoutedFeature()
 
-        result = setup_routed_feature_runtime(
+        result = configure_routed_feature_runtime(
             feature,
             host,
             scene_name="main",
@@ -515,13 +514,17 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual("provider.main", feature.bound_logic_name(alias="primary"))
         self.assertEqual("provider.can1", feature.bound_logic_name(alias="can1"))
 
-    def test_bind_feature_logic_aliases_is_idempotent(self):
+    def test_configure_routed_feature_runtime_logic_binding_is_idempotent(self):
+        scheduler = _StubConfigurableScheduler()
+        host = _StubSchedulerHost(scheduler)
         feature = _StubRoutedFeature()
         feature.bind_logic("existing.provider", alias="primary")
 
-        bind_feature_logic_aliases(
+        configure_routed_feature_runtime(
             feature,
-            (
+            host,
+            scene_name="main",
+            logic_bindings=(
                 LogicBindingSpec(alias="primary", provider_name="new.provider"),
                 LogicBindingSpec(alias="secondary", provider_name="secondary.provider"),
             ),

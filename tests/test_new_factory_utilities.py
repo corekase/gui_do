@@ -751,7 +751,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ):
             setup_routed_runtime(feature, host, runtime_spec)
@@ -804,7 +804,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ):
             setup_routed_runtime(feature, host, runtime_spec)
@@ -829,7 +829,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ):
             setup_routed_runtime(feature, host, runtime_spec)
@@ -866,7 +866,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ):
             setup_routed_runtime(feature, host, runtime_spec)
@@ -902,7 +902,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ):
             setup_routed_runtime(feature, host, runtime_spec)
@@ -930,7 +930,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ), unittest.mock.patch(
             "gui_do.features.data_driven_runtime.create_shortcut_help_overlay",
@@ -954,7 +954,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ), unittest.mock.patch(
             "gui_do.features.data_driven_runtime.bind_task_panel_focus_toggle",
@@ -982,7 +982,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ), unittest.mock.patch(
             "gui_do.features.data_driven_runtime.bind_task_panel_focus_toggle",
@@ -1018,7 +1018,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=scheduler,
         ) as setup_runtime_mock, unittest.mock.patch(
             "gui_do.features.data_driven_runtime.register_action_hotkeys",
@@ -1077,7 +1077,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         )
 
         with unittest.mock.patch(
-            "gui_do.features.data_driven_runtime.setup_routed_feature_runtime",
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
             return_value=object(),
         ) as setup_runtime_mock, unittest.mock.patch(
             "gui_do.features.data_driven_runtime.register_action_hotkeys",

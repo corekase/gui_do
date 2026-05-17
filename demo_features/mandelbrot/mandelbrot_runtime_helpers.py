@@ -79,19 +79,15 @@ def queue_staged_tasks(feature: MandelbrotFeature, host, tasks: list[tuple[str, 
     first_task = tasks[0]
     feature._queue_task(host, *first_task)
     if len(tasks) > 1:
-        feature._pending_launches.extend(tasks[1:])
+        for staged_task in tasks[1:]:
+            feature._pending_tasks.enqueue(lambda t=staged_task: feature._queue_task(host, *t))
 
 
 def drain_pending_launches(feature: MandelbrotFeature) -> None:
-    demo = feature.demo
-    if demo is None or not feature._pending_launches:
+    if feature.demo is None or len(feature._pending_tasks) == 0:
         return
     launches = max(1, int(feature._launches_per_update))
-    count = 0
-    while feature._pending_launches and count < launches:
-        task_id, logic_alias, runnable, params = feature._pending_launches.pop(0)
-        feature._queue_task(demo, task_id, logic_alias, runnable, params)
-        count += 1
+    feature._pending_tasks.drain(launches)
 
 
 def set_buttons_enabled(feature: MandelbrotFeature, host, enabled: bool) -> None:
@@ -153,12 +149,13 @@ def drain_scheduler_events(feature: MandelbrotFeature) -> None:
     if failed:
         feature._publish_status(MANDEL_KIND_FAILED, "; ".join(sorted(failed)))
 
-    busy = bool(feature._pending_launches) or sched.tasks_busy_match_any(*MANDEL_ALL_TASK_IDS)
+    pending_count = len(feature._pending_tasks)
+    busy = (pending_count > 0) or sched.tasks_busy_match_any(*MANDEL_ALL_TASK_IDS)
     feature._set_busy(busy)
     feature._set_buttons_enabled(demo, not busy)
 
     if busy:
-        n = len(feature.task_ids) + len(feature._pending_launches)
+        n = len(feature.task_ids) + pending_count
         word = "task" if n == 1 else "tasks"
         status_text = f"Mandelbrot: running ({n} {word})"
         if feature.status_text != status_text:
@@ -173,7 +170,7 @@ def begin_launch(feature: MandelbrotFeature, host, *, split: bool = False):
     sched = feature._get_scheduler(host)
     if sched.tasks_busy_match_any(*MANDEL_ALL_TASK_IDS):
         return None
-    feature._pending_launches.clear()
+    feature._pending_tasks.clear()
     feature._refresh_color_table()
     feature._set_busy(True)
     feature._set_buttons_enabled(host, False)

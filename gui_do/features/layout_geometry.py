@@ -38,6 +38,39 @@ def split_columns(bounds: Rect, *, count: int, gap: int = 0, min_width: int = 1)
         for idx in range(cols)
     ]
 
+# --- Generalized, compact layout helpers for demo features ---
+from typing import List, Tuple, Optional
+
+class RowBoundsCalculator:
+    @staticmethod
+    def calculate(num_rows: int, height: int, padding: int = 0) -> List[Tuple[int, int]]:
+        """Returns (y_start, y_end) for each row, evenly spaced."""
+        row_height = (height - (num_rows - 1) * padding) // num_rows
+        return [
+            (i * (row_height + padding), i * (row_height + padding) + row_height)
+            for i in range(num_rows)
+        ]
+
+class VerticalGridSequencePlacer:
+    def __init__(self, cols: int, cell_size: Tuple[int, int], padding: int = 0):
+        self.cols = cols
+        self.cell_size = cell_size
+        self.padding = padding
+        self._count = 0
+    def next(self) -> Tuple[int, int]:
+        row = self._count // self.cols
+        col = self._count % self.cols
+        x = col * (self.cell_size[0] + self.padding)
+        y = row * (self.cell_size[1] + self.padding)
+        self._count += 1
+        return x, y
+
+class ControlStackLayout:
+    @staticmethod
+    def stack(count: int, start: int = 0, spacing: int = 8) -> List[int]:
+        """Returns y positions for stacking controls vertically."""
+        return [start + i * spacing for i in range(count)]
+
 
 def column_flow_anchors_for(
     bounds: Rect,

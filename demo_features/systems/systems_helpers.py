@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect
 
-from gui_do import CanvasControl, FlexLayout, GridLayout, GridPlacement, LabelControl, PanelControl
+from gui_do import CanvasControl, LabelControl, PanelControl
+from gui_do.features import panel_layout_helpers as panel_layout
 from .systems_specs import (
     SYSTEMS_COMPACT_LABEL_WIDTH,
     SYSTEMS_COMPACT_ROW_GAP,
@@ -29,14 +30,16 @@ def row_bounds(
     width: int | None = None,
     height: int | None = None,
 ) -> Rect:
-    row_left = feature.PANEL_PADDING_X if left is None else int(left)
-    row_height = feature.BUTTON_ROW_HEIGHT if height is None else max(1, int(height))
-    if width is None:
-        right_padding = feature.PANEL_PADDING_X if left is None else feature.PANEL_PADDING_X
-        row_width = rect.width - row_left - right_padding
-    else:
-        row_width = int(width)
-    return Rect(row_left, int(top), max(1, row_width), row_height)
+    return panel_layout.row_bounds(
+        rect,
+        top,
+        default_left=feature.PANEL_PADDING_X,
+        default_height=feature.BUTTON_ROW_HEIGHT,
+        edge_padding=feature.PANEL_PADDING_X,
+        left=left,
+        width=width,
+        height=height,
+    )
 
 
 def place_row_controls(
@@ -45,15 +48,7 @@ def place_row_controls(
     row_bounds_value: Rect,
     controls: list[object],
 ) -> None:
-    if not controls:
-        return
-    layout = FlexLayout(direction="row", gap=feature.BUTTON_ROW_GAP, padding=0)
-    for control in controls:
-        control.rect = Rect(0, 0, max(1, row_bounds_value.width), row_bounds_value.height)
-        layout.add(control, grow=1)
-    layout.apply(row_bounds_value)
-    for control in controls:
-        panel.add_at(control, control.rect.left, control.rect.top)
+    panel_layout.place_row_controls(panel, row_bounds_value, controls, gap=feature.BUTTON_ROW_GAP)
 
 
 def place_vertical_grid_sequence(
@@ -64,28 +59,13 @@ def place_vertical_grid_sequence(
     *,
     stretch_width: bool = True,
 ) -> None:
-    """Place controls in one column with per-item spacer rows using GridLayout."""
-    if not items:
-        return
-    row_tracks: list[int] = []
-    placements: list[tuple[int, object, int]] = []
-    for control, row_height, after_gap in items:
-        target_height = max(1, int(row_height))
-        row_index = len(row_tracks)
-        row_tracks.append(target_height)
-        placements.append((row_index, control, target_height))
-        gap_height = max(0, int(after_gap))
-        if gap_height > 0:
-            row_tracks.append(gap_height)
-
-    layout = GridLayout(row_tracks=row_tracks, col_tracks=["1fr"], gap=0, padding=0)
-    for row_index, control, target_height in placements:
-        target_width = max(1, bounds.width) if stretch_width else max(1, int(control.rect.width))
-        control.rect = Rect(0, 0, target_width, target_height)
-        layout.place(control, GridPlacement(row=row_index, col=0))
-    layout.apply(bounds)
-    for _row_index, control, _target_height in placements:
-        panel.add_at(control, control.rect.left, control.rect.top)
+    """Place controls in one column with per-item spacer rows."""
+    panel_layout.place_vertical_grid_sequence(
+        panel,
+        bounds,
+        items,
+        stretch_width=stretch_width,
+    )
 
 
 def place_vertical_label_stack(
@@ -96,17 +76,8 @@ def place_vertical_label_stack(
     *,
     gap: int = SYSTEMS_LABEL_STACK_GAP,
 ) -> None:
-    """Stack status labels vertically with FlexLayout for consistent spacing."""
-    if not labels:
-        return
-    layout = FlexLayout(direction="column", gap=max(0, int(gap)), padding=0)
-    for label in labels:
-        target_height = max(1, int(label.rect.height))
-        label.rect = Rect(0, 0, max(1, bounds.width), target_height)
-        layout.add(label, grow=0, basis=target_height)
-    layout.apply(bounds)
-    for label in labels:
-        panel.add_at(label, label.rect.left, label.rect.top)
+    """Stack status labels vertically with consistent spacing."""
+    panel_layout.place_vertical_label_stack(panel, bounds, labels, gap=gap)
 
 
 def place_compact_labeled_row(
@@ -121,24 +92,15 @@ def place_compact_labeled_row(
     gap: int = SYSTEMS_COMPACT_ROW_GAP,
 ) -> None:
     """Place a fixed-width label and field in a compact single row."""
-    row_height = max(1, max(int(label.rect.height), int(field.rect.height)))
-    left_width = max(1, int(label_width))
-    col_gap = max(0, int(gap))
-    field_width = max(1, int(field.rect.width))
-    row_bounds_value = Rect(int(left), int(top), left_width + col_gap + field_width, row_height)
-    layout = GridLayout(
-        row_tracks=[row_height],
-        col_tracks=[left_width, field_width],
-        gap=col_gap,
-        padding=0,
+    panel_layout.place_compact_labeled_row(
+        panel,
+        left=int(left),
+        top=int(top),
+        label=label,
+        field=field,
+        label_width=int(label_width),
+        gap=int(gap),
     )
-    label.rect = Rect(0, 0, left_width, row_height)
-    field.rect = Rect(0, 0, field_width, row_height)
-    layout.place(label, GridPlacement(row=0, col=0))
-    layout.place(field, GridPlacement(row=0, col=1))
-    layout.apply(row_bounds_value)
-    panel.add_at(label, label.rect.left, label.rect.top)
-    panel.add_at(field, field.rect.left, field.rect.top)
 
 
 def place_graphics_particle_layer(

@@ -7,14 +7,15 @@ from typing import TYPE_CHECKING
 from pygame import Rect
 
 from gui_do import (
-    TaskPanelSceneNavButtonSpec,
-    add_scene_task_panel_items,
-    apply_category_visibility,
     draw_controls_prewarm,
-    ensure_scene_task_panel,
-    SceneTaskPanelSpec,
 )
-from gui_do.features.data_driven_runtime import TaskPanelSlotLayoutSpec, create_task_panel_slot_layout
+from gui_do.controls.visibility_helpers import TabCategoryVisibilityManager
+from gui_do.features.scene_task_panel_builder import (
+    SceneNavTaskButtonSpec,
+    SceneTaskPanelBuilder,
+    SceneTaskPanelBuildSpec,
+    TaskPanelSlotBuildSpec,
+)
 from gui_do.features.layout_geometry import split_columns
 
 from .showcase_helpers import category_for_row
@@ -54,48 +55,42 @@ def set_active_category(feature: ShowcaseFeature, host, key: str) -> None:
 
 def apply_active_category_visibility(feature: ShowcaseFeature, host) -> None:
     reg = feature._registry
-    apply_category_visibility(
-        active_key=feature._active_category_key,
+    manager = TabCategoryVisibilityManager(category_fn=category_for_row)
+    manager.apply(
+        active_category=feature._active_category_key,
         placed_controls=reg.placed_controls if reg is not None else [],
         control_labels=reg.control_labels if reg is not None else [],
-        category_fn=category_for_row,
+        focus_controller=host.app.focus,
+        fallback_focus_target=feature._category_tabs,
     )
-    focused = getattr(host.app.focus, "focused", None)
-    if focused is not None and not getattr(focused, "visible", True):
-        if feature._category_tabs is not None and feature._category_tabs.visible and feature._category_tabs.enabled:
-            host.app.focus.set_focus(feature._category_tabs)
 
 
 def build_scene_task_panel(feature: ShowcaseFeature, host) -> None:
-    feature.task_panel = ensure_scene_task_panel(
-        host,
-        SceneTaskPanelSpec(
-            scene_name=feature.scene_name,
-            control_id="control_showcase_task_panel",
-            height=feature.TASK_PANEL_HEIGHT,
-            hidden_peek_pixels=feature.TASK_PANEL_HIDDEN_PEEK_PIXELS,
-            animation_step_px=feature.TASK_PANEL_ANIMATION_STEP_PX,
-            dock_bottom=True,
-            auto_hide=True,
-        ),
-    )
-    task_panel_layout = create_task_panel_slot_layout(
-        feature.task_panel,
-        TaskPanelSlotLayoutSpec(
-            left=feature.TASK_PANEL_BUTTON_LEFT,
-            top_offset=feature.TASK_PANEL_BUTTON_TOP_OFFSET,
-            item_width=feature.TASK_PANEL_BUTTON_WIDTH,
-            item_height=feature.TASK_PANEL_BUTTON_HEIGHT,
-            spacing=feature.TASK_PANEL_SLOT_SPACING,
-            horizontal=True,
-        ),
-    )
-    task_panel_items = add_scene_task_panel_items(
-        host,
-        feature.task_panel,
-        task_panel_layout,
-        scene_nav_button_specs=(
-            TaskPanelSceneNavButtonSpec(
+    builder = (
+        SceneTaskPanelBuilder(host)
+        .panel(
+            SceneTaskPanelBuildSpec(
+                scene_name=feature.scene_name,
+                control_id="control_showcase_task_panel",
+                height=feature.TASK_PANEL_HEIGHT,
+                hidden_peek_pixels=feature.TASK_PANEL_HIDDEN_PEEK_PIXELS,
+                animation_step_px=feature.TASK_PANEL_ANIMATION_STEP_PX,
+                dock_bottom=True,
+                auto_hide=True,
+            )
+        )
+        .slots(
+            TaskPanelSlotBuildSpec(
+                left=feature.TASK_PANEL_BUTTON_LEFT,
+                top_offset=feature.TASK_PANEL_BUTTON_TOP_OFFSET,
+                item_width=feature.TASK_PANEL_BUTTON_WIDTH,
+                item_height=feature.TASK_PANEL_BUTTON_HEIGHT,
+                spacing=feature.TASK_PANEL_SLOT_SPACING,
+                horizontal=True,
+            )
+        )
+        .add_scene_nav(
+            SceneNavTaskButtonSpec(
                 control_id="showcase_return",
                 slot_index=0,
                 label="Return",
@@ -105,13 +100,16 @@ def build_scene_task_panel(feature: ShowcaseFeature, host) -> None:
                 accessibility_role="button",
                 accessibility_label="Return to main",
                 tab_index=-1,
-            ),
-        ),
-        window_toggle_group_spec=None,
-        window_presentation=getattr(host, "window_presentation", None),
-        window_toggle_attr_owner=feature,
-        tab_sequence_start=None,
+            )
+        )
+        .with_window_toggles(
+            group_spec=None,
+            window_presentation=getattr(host, "window_presentation", None),
+            attr_owner=feature,
+            tab_sequence_start=None,
+        )
     )
+    feature.task_panel, _layout, task_panel_items = builder.build()
     feature.showcase_return_button = (
         task_panel_items.scene_nav_buttons[0] if task_panel_items.scene_nav_buttons else None
     )

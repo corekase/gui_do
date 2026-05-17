@@ -10,14 +10,12 @@ from gui_do import PanelControl, TooltipManager
 from gui_do.features.data_driven_runtime import (
     RightAnchoredTaskPanelButtonSpec,
     add_right_anchored_task_panel_button,
-    add_scene_task_panel_items,
     add_scene_menu_strip_from_spec,
     create_auto_sized_styled_label,
-    create_task_panel_slot_layout,
-    ensure_scene_task_panel,
     register_tooltip_attr_specs,
     register_window_toggle_tooltips,
 )
+from gui_do.features.scene_task_panel_builder import SceneTaskPanelBuilder
 
 from .main_specs import (
     MAIN_TASK_PANEL_LAYOUT_SPEC,
@@ -53,25 +51,22 @@ def build_main_scene(feature: MainFeature, host) -> None:
         )
     )
 
-    host.task_panel = ensure_scene_task_panel(
-        host,
-        MAIN_TASK_PANEL_SPEC,
+    builder = (
+        SceneTaskPanelBuilder(host)
+        .panel_runtime(MAIN_TASK_PANEL_SPEC)
+        .slots_runtime(MAIN_TASK_PANEL_LAYOUT_SPEC)
+        .add_buttons(build_main_task_panel_button_specs(host))
+        .with_window_toggles(
+            group_spec=MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC,
+            window_presentation=host.window_presentation,
+            attr_owner=host,
+            tab_sequence_start=0,
+        )
     )
-    task_panel_layout = create_task_panel_slot_layout(
-        host.task_panel,
-        MAIN_TASK_PANEL_LAYOUT_SPEC,
-    )
+    for nav_spec in MAIN_TASK_PANEL_SCENE_NAV_SPECS:
+        builder.add_scene_nav_runtime(nav_spec)
 
-    task_panel_items = add_scene_task_panel_items(
-        host,
-        host.task_panel,
-        task_panel_layout,
-        button_specs=build_main_task_panel_button_specs(host),
-        scene_nav_button_specs=MAIN_TASK_PANEL_SCENE_NAV_SPECS,
-        window_toggle_group_spec=MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC,
-        window_presentation=host.window_presentation,
-        tab_sequence_start=0,
-    )
+    host.task_panel, task_panel_layout, task_panel_items = builder.build()
     toggle_controls = task_panel_items.window_toggle_controls
 
     slot0_rect = task_panel_layout.slot_rect(0)

@@ -108,8 +108,7 @@ from .runtime_registration_helpers import (
     register_window_tab_builders as _register_window_tab_builders,
 )
 from .runtime_routed_helpers import (
-    bind_feature_logic_aliases as _bind_feature_logic_aliases,
-    setup_routed_feature_runtime as _setup_routed_feature_runtime,
+    configure_routed_feature_runtime as _configure_routed_feature_runtime,
 )
 from .runtime_window_toggle_helpers import (
     add_task_panel_window_toggle_group as _add_task_panel_window_toggle_group,
@@ -2065,7 +2064,7 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
     Wires scheduler/logic aliases, optional action hotkeys, event subscriptions,
     and optional shortcut overlays while keeping feature bind_runtime methods short.
     """
-    scheduler = setup_routed_feature_runtime(
+    scheduler = configure_routed_feature_runtime(
         feature,
         host,
         scene_name=str(spec.scene_name),
@@ -3159,12 +3158,7 @@ def create_feature_presented_window(
     )
 
 
-def bind_feature_logic_aliases(feature, logic_bindings: Sequence[LogicBindingSpec]) -> None:
-    """Bind routed-feature logic aliases idempotently from declarative bindings."""
-    _bind_feature_logic_aliases(feature, logic_bindings)
-
-
-def setup_routed_feature_runtime(
+def configure_routed_feature_runtime(
     feature,
     host,
     *,
@@ -3172,9 +3166,10 @@ def setup_routed_feature_runtime(
     scheduler_attr_name: str = "scheduler",
     scheduler_dispatch_limit: int | None = None,
     logic_bindings: Sequence[LogicBindingSpec] = (),
+    companion_providers=(),
 ):
-    """Initialize standard routed-feature runtime dependencies and optional logic bindings."""
-    return _setup_routed_feature_runtime(
+    """Single routed-runtime entrypoint for scheduler, logic bindings, and companions."""
+    return _configure_routed_feature_runtime(
         feature,
         host,
         ensure_scene_scheduler_fn=ensure_scene_scheduler,
@@ -3182,4 +3177,5 @@ def setup_routed_feature_runtime(
         scheduler_attr_name=scheduler_attr_name,
         scheduler_dispatch_limit=scheduler_dispatch_limit,
         logic_bindings=logic_bindings,
+        companion_providers=companion_providers,
     )

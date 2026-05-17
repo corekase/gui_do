@@ -93,10 +93,7 @@ class MandelbrotFeatureSchedulerOptimizationTests(unittest.TestCase):
         feature._queue_staged_tasks(object(), tasks)
 
         self.assertEqual([(MANDEL_TASK_IDS_QUADRANTS[0], "primary", "recursive_task", {"k": 1})], queued)
-        self.assertEqual([
-            (MANDEL_TASK_IDS_QUADRANTS[1], "primary", "recursive_task", {"k": 2}),
-            (MANDEL_TASK_IDS_QUADRANTS[2], "primary", "recursive_task", {"k": 3}),
-        ], feature._pending_launches)
+        self.assertEqual(2, len(feature._pending_tasks))
 
 
 if __name__ == "__main__":

@@ -26,10 +26,13 @@ from gui_do.features.data_driven_runtime import (
     bind_routed_feature_lifecycle,
     create_feature_presented_window,
     EventSubscriptionSpec,
-    register_routed_feature_companions,
     RoutedRuntimeSpec,
     shutdown_routed_feature_lifecycle,
 )
+from gui_do.features.runtime_routed_helpers import (
+    RoutedFeatureLifecycleBuilder, EventSubscriptionSpecBuilder
+)
+from gui_do.scheduling.staged_task_queue import StagedTaskQueue
 
 from .mandelbrot_logic_feature import MandelbrotLogicFeature
 from .mandelbrot_canvas_helpers import (
@@ -109,7 +112,7 @@ class MandelbrotFeature(RoutedFeature):
         self._mapped_color_tables: dict[int, tuple[int, ...]] = {}
         self._idle_dispatch_limit = None
         self._idle_ingest_limit = None
-        self._pending_launches: list[tuple[str, str, str, dict]] = []
+        self._pending_tasks = StagedTaskQueue()
         self._launches_per_update = 1
 
     # ------------------------------------------------------------------
@@ -117,7 +120,11 @@ class MandelbrotFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def on_register(self, host) -> None:
-        register_routed_feature_companions(self, host, _LIFECYCLE_SPEC)
+        # Use generalized lifecycle builder
+        lifecycle = RoutedFeatureLifecycleBuilder()
+        for provider in _LIFECYCLE_SPEC.companion_providers:
+            lifecycle.add_companion(provider)
+        lifecycle.register_on(self, host=host)
 
     def build(self, host) -> None:
         self.window = create_feature_presented_window(
@@ -137,7 +144,7 @@ class MandelbrotFeature(RoutedFeature):
             if hasattr(self.scheduler, "get_message_ingest_limit"):
                 self._idle_ingest_limit = self.scheduler.get_message_ingest_limit()
         self._refresh_color_table()
-        self._set_busy(False)
+        self._busy = False
 
     def _build_runtime_spec(self, host) -> RoutedRuntimeSpec:
         return RoutedRuntimeSpec(
@@ -155,7 +162,7 @@ class MandelbrotFeature(RoutedFeature):
 
     def shutdown_runtime(self, host) -> None:
         shutdown_routed_feature_lifecycle(self, host, _LIFECYCLE_SPEC)
-        self._pending_launches.clear()
+        self._pending_tasks.clear()
         self._set_busy(False)
 
     def on_update(self, _host) -> None:
@@ -244,7 +251,7 @@ class MandelbrotFeature(RoutedFeature):
         """Cancel all running tasks, clear canvases, and reset the UI."""
         sched = self._get_scheduler(host)
         sched.remove_tasks(*MANDEL_ALL_TASK_IDS)
-        self._pending_launches.clear()
+        self._pending_tasks.clear()
         self.task_ids.clear()
         self._set_busy(False)
         self._show_primary()
