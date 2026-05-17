@@ -71,6 +71,8 @@ def create_display(
         desktop_sizes = pygame.display.get_desktop_sizes()
         if desktop_sizes:
             desktop_size = (int(desktop_sizes[0][0]), int(desktop_sizes[0][1]))
+            if desktop_size[0] > requested_size[0] or desktop_size[1] > requested_size[1]:
+                scaled = True
             # Fallback is only for panel-desktop mode where no scaling is needed.
             if desktop_size == requested_size:
                 size = desktop_size
@@ -86,7 +88,13 @@ def create_display(
         "yes",
         "on",
     }
-    if os.name == "nt" and fullscreen and scaled and not allow_windows_scaled_fullscreen:
+    if (
+        os.name == "nt"
+        and fullscreen
+        and scaled
+        and force_windows_true_fullscreen
+        and not allow_windows_scaled_fullscreen
+    ):
         scaled = False
 
     flags = 0
