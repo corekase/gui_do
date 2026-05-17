@@ -13,10 +13,10 @@ class ShapeSpriteState:
 
     radius: int
     sprite: pygame.Surface
-    x: float
-    y: float
-    dx: float
-    dy: float
+    center_x: float
+    center_y: float
+    velocity_x: float
+    velocity_y: float
 
 
 __all__ = ["ShapeSpriteState"]

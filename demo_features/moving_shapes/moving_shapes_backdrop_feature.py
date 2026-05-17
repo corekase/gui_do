@@ -15,6 +15,7 @@ from .moving_shapes_specs import (
     DEMO_SHAPE_COLOURS,
     MOVING_SHAPES_ALPHA_RANGE,
     MOVING_SHAPES_DEFINITIONS,
+    MOVING_SHAPES_MIN_SPEED,
     MOVING_SHAPES_RADIUS_RANGE,
     MOVING_SHAPES_SPEED_BASE,
     MOVING_SHAPES_SPEED_VARIANCE,
@@ -49,33 +50,34 @@ class MovingShapesBackdropFeature(DirectFeature):
         width, height = host.screen_rect.size
         self._randomize_positions(width, height)
 
-    def on_direct_update(self, host, _dt_seconds: float) -> None:
-        """Advance shape positions and bounce off active screen boundaries."""
+    def on_direct_update(self, host, dt_seconds: float) -> None:
+        """Advance shape centers by velocity * dt and bounce off screen boundaries."""
         width = int(host.screen_rect.width)
         height = int(host.screen_rect.height)
+        frame_delta = max(0.0, float(dt_seconds))
         for shape in self._shapes:
-            shape.x += shape.dx
-            shape.y += shape.dy
+            shape.center_x += shape.velocity_x * frame_delta
+            shape.center_y += shape.velocity_y * frame_delta
 
-            if shape.x - shape.radius <= 0:
-                shape.x = float(shape.radius)
-                shape.dx = abs(shape.dx)
-            elif shape.x + shape.radius >= width:
-                shape.x = float(width - shape.radius)
-                shape.dx = -abs(shape.dx)
+            if shape.center_x - shape.radius <= 0:
+                shape.center_x = float(shape.radius)
+                shape.velocity_x = abs(shape.velocity_x)
+            elif shape.center_x + shape.radius >= width:
+                shape.center_x = float(width - shape.radius)
+                shape.velocity_x = -abs(shape.velocity_x)
 
-            if shape.y - shape.radius <= 0:
-                shape.y = float(shape.radius)
-                shape.dy = abs(shape.dy)
-            elif shape.y + shape.radius >= height:
-                shape.y = float(height - shape.radius)
-                shape.dy = -abs(shape.dy)
+            if shape.center_y - shape.radius <= 0:
+                shape.center_y = float(shape.radius)
+                shape.velocity_y = abs(shape.velocity_y)
+            elif shape.center_y + shape.radius >= height:
+                shape.center_y = float(height - shape.radius)
+                shape.velocity_y = -abs(shape.velocity_y)
 
     def draw_direct(self, _host, surface, _theme) -> None:
         """Draw current shape sprites on the already-restored frame surface."""
         for shape in self._shapes:
-            left = int(round(shape.x - shape.radius))
-            top = int(round(shape.y - shape.radius))
+            left = int(round(shape.center_x - shape.radius))
+            top = int(round(shape.center_y - shape.radius))
             surface.blit(shape.sprite, (left, top))
 
     def _create_shapes(self) -> None:
@@ -136,23 +138,25 @@ class MovingShapesBackdropFeature(DirectFeature):
 
     def _build_shape_state(self, sprite: pygame.Surface, radius: int) -> ShapeSpriteState:
         """Finalize sprite and motion into a ShapeSpriteState."""
-        dx, dy = self._random_velocity()
+        velocity_x, velocity_y = self._random_velocity()
         return ShapeSpriteState(
             radius=int(radius),
             sprite=sprite,
-            x=0.0,
-            y=0.0,
-            dx=dx,
-            dy=dy,
+            center_x=0.0,
+            center_y=0.0,
+            velocity_x=velocity_x,
+            velocity_y=velocity_y,
         )
 
     def _random_velocity(self) -> tuple[float, float]:
         """Create a random velocity vector with bounded speed."""
-        speed = MOVING_SHAPES_SPEED_BASE + self._rng.uniform(0.0, MOVING_SHAPES_SPEED_VARIANCE)
+        boosted_min_speed = float(MOVING_SHAPES_MIN_SPEED) * 1.10
+        random_bonus = MOVING_SHAPES_SPEED_BASE + self._rng.uniform(0.0, MOVING_SHAPES_SPEED_VARIANCE)
+        speed = boosted_min_speed + random_bonus
         angle = self._rng.uniform(0.0, math.tau)
-        dx = math.cos(angle) * speed
-        dy = math.sin(angle) * speed
-        return dx, dy
+        velocity_x = math.cos(angle) * speed
+        velocity_y = math.sin(angle) * speed
+        return velocity_x, velocity_y
 
     def _randomize_positions(self, width: int, height: int) -> None:
         """Initialize random on-screen starting positions using current host size."""
@@ -161,5 +165,5 @@ class MovingShapesBackdropFeature(DirectFeature):
             max_x = max(min_x, int(width) - shape.radius)
             min_y = shape.radius
             max_y = max(min_y, int(height) - shape.radius)
-            shape.x = float(self._rng.randint(min_x, max_x))
-            shape.y = float(self._rng.randint(min_y, max_y))
+            shape.center_x = float(self._rng.randint(min_x, max_x))
+            shape.center_y = float(self._rng.randint(min_y, max_y))
