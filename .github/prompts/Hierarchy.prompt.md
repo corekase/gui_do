@@ -665,7 +665,7 @@ def load_asset(filename: str) -> bytes:
 
 2. **Verify folder hierarchy** matches the architectural tiers document (Phase section above).
 
-3. **Create/update `gui_do/ARCHITECTURE.md`** (if not present) documenting:
+3. **Create/update `docs/architecture.md`** (if not present) documenting:
    - The tier structure.
    - Each subsystem's purpose.
    - Main entry points and patterns.
