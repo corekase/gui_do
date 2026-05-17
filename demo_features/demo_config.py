@@ -111,7 +111,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
             CursorBindingSpec("hand", "demo_features/data/cursors/hand.png", (12, 12)),
         ),
         telemetry=TelemetryConfig(enabled=False),
-        target_fps=120,
+        target_fps=60,
         palette_spec=PaletteBindingSpec(
             enable_builtin_entries=True,
             include_scene_entries=True,
