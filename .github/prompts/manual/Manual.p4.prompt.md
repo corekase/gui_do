@@ -1,8 +1,22 @@
----
-name: Manual.p4
-description: Expand Main Systems chapters 1–4 (Bootstrap, Feature Lifecycle, Events/Actions, State/Observables)
----
+# General Usage of gui_do Systems (Expanded)
 
+## General Usage
+
+- The Main Systems Reference must include a comprehensive, verbose, and non-redundant section on general usage of gui_do systems, covering their modular, declarative, and lifecycle-driven nature.
+- Add explicit, detailed sections for the Task Panel, Scene Menu Strip, and Command Palette. For each, explain:
+  - That they are optional facilities, not required by the framework.
+  - How to declare or omit them in scene/window/runtime specs.
+  - How to bind global keys to them from user-side code, using ActionSpec, ActionHotkeySpec, TaskPanelFocusToggleSpec, ShortcutOverlaySpec, or routed runtime specs.
+  - How to ensure all bindings are registered in bind_runtime and disposed in shutdown_runtime for lifecycle safety.
+  - Best practices for focus, visibility, and discoverability.
+  - Example code for each, verified against the current API.
+- This section must be as verbose and comprehensive as the theory section, but not redundant or stilted. It should provide a working mental model for users who have not read other chapters.
+- All code examples must be verified against the current codebase.
+- Cross-link to the Specifications appendix for all spec types and options.
+- Add anti-pattern notes for leaks, partial teardown, or accidental inclusion of optional facilities.
+- Place this section at the start of Main Systems Reference, before 8.1.
+
+---
 
 # Manual Step 4 — Main Systems Reference (Systems 8.1–8.4) (Discovery-Based)
 
