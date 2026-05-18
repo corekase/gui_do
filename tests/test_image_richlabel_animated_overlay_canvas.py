@@ -13,7 +13,7 @@ from gui_do.controls.composite.panel_control import PanelControl
 from gui_do.controls.composite.overlay_panel_control import OverlayPanelControl
 from gui_do.controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
 from gui_do.graphics.sprite_sheet import SpriteSheet, FrameAnimation
-from gui_do.events.gui_event import EventType
+from gui_do.events.gui_event import EventType, GuiEvent
 
 pygame.init()
 pygame.display.set_mode((1, 1))  # convert_alpha() requires a display surface
@@ -280,6 +280,66 @@ class TestOverlayPanelControlInitial(unittest.TestCase):
 
             parent.set_rect(Rect(100, 120, 400, 300))
             self.assertEqual((138, 166), child.rect.topleft)
+
+
+class TestOverlayPanelControlInputConsumption(unittest.TestCase):
+    """Test that overlays consume mouse input to prevent fall-through."""
+
+    def test_overlay_consumes_mouse_click_within_bounds(self):
+        """Overlay should consume (return True for) mouse click within its rect."""
+        opc = OverlayPanelControl("opc", Rect(100, 100, 200, 150))
+        event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, button=1, pos=(150, 125))
+
+        # Create stub app with no children so dispatch doesn't process anything
+        class StubApp:
+            pass
+
+        result = opc.handle_event(event, StubApp())
+        self.assertTrue(result, "Overlay should consume click within its bounds")
+
+    def test_overlay_rejects_mouse_click_outside_bounds(self):
+        """Overlay should reject (return False for) mouse click outside its rect."""
+        opc = OverlayPanelControl("opc", Rect(100, 100, 200, 150))
+        event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, button=1, pos=(50, 50))
+
+        class StubApp:
+            pass
+
+        result = opc.handle_event(event, StubApp())
+        self.assertFalse(result, "Overlay should reject click outside its bounds")
+
+    def test_overlay_consumes_click_at_edge(self):
+        """Overlay should consume click at its edge boundary."""
+        opc = OverlayPanelControl("opc", Rect(100, 100, 200, 150))
+        event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, button=1, pos=(100, 100))
+
+        class StubApp:
+            pass
+
+        result = opc.handle_event(event, StubApp())
+        self.assertTrue(result, "Overlay should consume click at edge boundary")
+
+    def test_overlay_ignores_other_button_clicks(self):
+        """Overlay should not consume mouse clicks with non-left buttons."""
+        opc = OverlayPanelControl("opc", Rect(100, 100, 200, 150))
+        event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, button=3, pos=(150, 125))
+
+        class StubApp:
+            pass
+
+        result = opc.handle_event(event, StubApp())
+        self.assertFalse(result, "Overlay should not consume non-left button clicks")
+
+    def test_overlay_ignores_non_mouse_events(self):
+        """Overlay should not consume non-mouse events."""
+        opc = OverlayPanelControl("opc", Rect(100, 100, 200, 150))
+        event = GuiEvent(kind=EventType.MOUSE_MOTION, type=0, pos=(150, 125))
+
+        class StubApp:
+            pass
+
+        result = opc.handle_event(event, StubApp())
+        self.assertFalse(result, "Overlay should not consume motion events")
 
 
 # ===========================================================================
