@@ -65,8 +65,6 @@ def _wrap_text(font, text: str, max_width: int) -> List[str]:
 
 
 def _font_render(font, text: str, color):
-    if hasattr(font, "_font"):
-        return font._font.render(str(text), True, color)
     return font.render(str(text), True, color)
 
 
@@ -536,9 +534,14 @@ class ShortcutHelpOverlay:
         width = max(120, int(self._rect.width))
         if not pygame.font.get_init():
             pygame.font.init()
-        title_font = pygame.font.SysFont(None, 22)
-        section_font = pygame.font.SysFont(None, 19)
-        body_font = pygame.font.SysFont(None, 17)
+        try:
+            title_font = self._app.theme.fonts.font_instance("menu_bar.entry", size=19)
+            section_font = self._app.theme.fonts.font_instance("menu_bar.entry", size=17)
+            body_font = self._app.theme.fonts.font_instance("default", size=16)
+        except Exception:
+            title_font = pygame.font.SysFont(None, 22)
+            section_font = pygame.font.SysFont(None, 19)
+            body_font = pygame.font.SysFont(None, 17)
 
         pad_x = 20
         pad_y = 12

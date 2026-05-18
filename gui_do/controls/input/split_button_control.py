@@ -221,7 +221,7 @@ class SplitButtonControl(UiNode):
 
         label_color = theme.dark if not self.enabled else (theme.background if self._main_pressed else theme.text)
         label_surf = theme.render_text(
-            self._label, role=self._font_role, shadow=False,
+            self._label, role=self._font_role,
             size=font_size, color=label_color,
         )
         lx = main_rect.left + (main_rect.width - label_surf.get_width()) // 2

@@ -216,7 +216,7 @@ class DatePickerControl(UiNode):
         # Value text
         val_color = theme.dark if not self.enabled else theme.text
         val_surf = theme.render_text(
-            self._value.isoformat(), role=self._font_role, shadow=False,
+            self._value.isoformat(), role=self._font_role,
             size=font_size, color=val_color,
         )
         ty = field_rect.top + (field_h - val_surf.get_height()) // 2
@@ -364,14 +364,14 @@ class DatePickerControl(UiNode):
         hdr_rect = Rect(cr.left, cr.top, cr.width, header_h)
         pygame.draw.rect(surface, theme.medium, hdr_rect)
         lbl = f"< {calendar.month_abbr[self._nav_month]} {self._nav_year} >"
-        hdr_surf = theme.render_text(lbl, role=self._font_role, shadow=False, size=font_size)
+        hdr_surf = theme.render_text(lbl, role=self._font_role, size=font_size)
         hx = cr.left + (cr.width - hdr_surf.get_width()) // 2
         hy = cr.top + (header_h - hdr_surf.get_height()) // 2
         surface.blit(hdr_surf, (hx, hy))
 
         # Day-name row
         for col, name in enumerate(_DAY_NAMES):
-            dn_surf = theme.render_text(name, role=self._font_role, shadow=False, size=font_size, color=theme.dark)
+            dn_surf = theme.render_text(name, role=self._font_role, size=font_size, color=theme.dark)
             dx = cr.left + col * cell_w + (cell_w - dn_surf.get_width()) // 2
             dy = cr.top + header_h + (day_lbl_h - dn_surf.get_height()) // 2
             surface.blit(dn_surf, (dx, dy))
@@ -402,7 +402,7 @@ class DatePickerControl(UiNode):
                     day_color = theme.dark
                 else:
                     day_color = theme.text
-                day_surf = theme.render_text(str(day), role=self._font_role, shadow=False, size=font_size, color=day_color)
+                day_surf = theme.render_text(str(day), role=self._font_role, size=font_size, color=day_color)
                 dx = cell_rect.left + (cell_rect.width - day_surf.get_width()) // 2
                 dy = cell_rect.top + (cell_rect.height - day_surf.get_height()) // 2
                 surface.blit(day_surf, (dx, dy))

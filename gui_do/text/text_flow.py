@@ -265,7 +265,7 @@ class TextFlow:
         try:
             fm = theme.fonts
             role = span.role if span.role else "body"
-            return fm.get_font(role_name=role)
+            return fm.font_instance(role_name=role)
         except Exception as e:
             raise RuntimeError("TextFlow requires centralized font roles; font resolution failed.") from e
 

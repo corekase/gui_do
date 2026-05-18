@@ -218,7 +218,7 @@ class ColorPickerControl(UiNode):
         font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         text_color = theme.text
         display_hex = self._hex_text + ("|" if self._hex_editing else "")
-        hex_surf = font._font.render(display_hex, True, text_color) if hasattr(font, "_font") else font.render(display_hex, True, text_color)
+        hex_surf = font.render(display_hex, True, text_color)
         surface.blit(hex_surf, (hex_rect.x + 3, hex_rect.centery - hex_surf.get_height() // 2))
 
         # Focus ring

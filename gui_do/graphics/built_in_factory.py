@@ -59,7 +59,7 @@ class BuiltInGraphicsFactory:
     def font_revision(self) -> int:
         return self.fonts.revision
 
-    def render_text(self, text: str, colour=None, shadow: bool = False, role_name: str = "body") -> Surface:
+    def render_text(self, text: str, colour=None, shadow: bool = True, role_name: str = "body") -> Surface:
         text_colour = self.theme.text if colour is None else colour
         if not shadow:
             return self.fonts.render_text(text, text_colour, role_name=role_name)
@@ -128,7 +128,7 @@ class BuiltInGraphicsFactory:
         width, height = rect.size
         surface = Surface((width, height)).convert()
         draw_box_bitmap(surface, state, Rect(0, 0, width, height), BUILT_IN_COLOURS)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2 - 1))
         surface.blit(text_bitmap, text_rect)
         return surface
@@ -186,7 +186,7 @@ class BuiltInGraphicsFactory:
         width, height = rect.size
         surface = Surface((width, height), pygame.SRCALPHA).convert_alpha()
         self._draw_rounded_state(surface, state)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2))
         surface.blit(text_bitmap, text_rect)
         return surface
@@ -194,7 +194,7 @@ class BuiltInGraphicsFactory:
     def _draw_angle_button_surface(self, text: str, rect: Rect, state: str, *, font_role: str = "body", highlight: bool = False) -> Surface:
         width, height = rect.size
         surface = self._draw_angle_state((width, height), state)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2))
         surface.blit(text_bitmap, text_rect)
         return surface
@@ -239,7 +239,7 @@ class BuiltInGraphicsFactory:
         return self._draw_check_bitmap(index, int(size))
 
     def _draw_check_style_surface(self, text: str, rect: Rect, state: int, *, font_role: str = "body", highlight: bool = False) -> Surface:
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, role_name=font_role)
         _, _, _, text_height = text_bitmap.get_rect()
         y_offset = self._center(rect.height, text_height)
         complete = Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
@@ -248,7 +248,7 @@ class BuiltInGraphicsFactory:
         return complete
 
     def _draw_radio_style_surface(self, text: str, rect: Rect, col1, col2, *, font_role: str = "body", highlight: bool = False) -> Surface:
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, role_name=font_role)
         _, _, _, text_height = text_bitmap.get_rect()
         y_offset = self._center(rect.height, text_height)
         complete = Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
@@ -368,8 +368,8 @@ class BuiltInGraphicsFactory:
             Rect(0, 0, width, chrome_height),
         )
 
-        inactive_text = self.render_text(title, colour=self.theme.text, shadow=True, role_name=title_font_role)
-        active_text = self.render_text(title, colour=self.theme.highlight, shadow=True, role_name=title_font_role)
+        inactive_text = self.render_text(title, colour=self.theme.text, role_name=title_font_role)
+        active_text = self.render_text(title, colour=self.theme.highlight, role_name=title_font_role)
 
         inactive_y = self._center(chrome_height, inactive_text.get_rect().height)
         active_y = self._center(chrome_height, active_text.get_rect().height)

@@ -217,7 +217,7 @@ class TimePickerControl(UiNode):
         self._draw_field_text(surface, theme, h_str, rects["h_field"], font_size, field_color)
 
         # Separator
-        sep_surf = theme.render_text(":", role=self._font_role, shadow=False, size=font_size, color=field_color)
+        sep_surf = theme.render_text(":", role=self._font_role, size=font_size, color=field_color)
         sep_x = rects["sep"].left + (rects["sep"].width - sep_surf.get_width()) // 2
         sep_y = rects["sep"].top + (rects["sep"].height - sep_surf.get_height()) // 2
         surface.blit(sep_surf, (sep_x, sep_y))
@@ -241,7 +241,7 @@ class TimePickerControl(UiNode):
             pygame.draw.rect(surface, spin_bg, spin_rect)
             pygame.draw.rect(surface, theme.dark, spin_rect, 1)
             arrow_color = theme.dark if not self.enabled else theme.text
-            arrow_surf = theme.render_text(label, role=self._font_role, shadow=False, size=font_size, color=arrow_color)
+            arrow_surf = theme.render_text(label, role=self._font_role, size=font_size, color=arrow_color)
             ax = spin_rect.left + (spin_rect.width - arrow_surf.get_width()) // 2
             ay = spin_rect.top + (spin_rect.height - arrow_surf.get_height()) // 2
             surface.blit(arrow_surf, (ax, ay))
@@ -253,7 +253,7 @@ class TimePickerControl(UiNode):
             pygame.draw.rect(surface, ampm_bg, ampm_rect)
             pygame.draw.rect(surface, theme.dark, ampm_rect, 1)
             ampm_label = "AM" if self._hour < 12 else "PM"
-            ampm_surf = theme.render_text(ampm_label, role=self._font_role, shadow=False, size=font_size, color=field_color)
+            ampm_surf = theme.render_text(ampm_label, role=self._font_role, size=font_size, color=field_color)
             ax = ampm_rect.left + (ampm_rect.width - ampm_surf.get_width()) // 2
             ay = ampm_rect.top + (ampm_rect.height - ampm_surf.get_height()) // 2
             surface.blit(ampm_surf, (ax, ay))
@@ -266,7 +266,7 @@ class TimePickerControl(UiNode):
     # ------------------------------------------------------------------
 
     def _draw_field_text(self, surface, theme, text: str, field_rect: Rect, font_size: int, color) -> None:
-        surf = theme.render_text(text, role=self._font_role, shadow=False, size=font_size, color=color)
+        surf = theme.render_text(text, role=self._font_role, size=font_size, color=color)
         tx = field_rect.left + (field_rect.width - surf.get_width()) // 2
         ty = field_rect.top + (field_rect.height - surf.get_height()) // 2
         surface.blit(surf, (tx, ty))

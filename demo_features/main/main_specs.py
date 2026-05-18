@@ -102,7 +102,6 @@ MAIN_TITLE_SPEC = AutoSizedStyledLabelSpec(
     top=36,
     fallback_size=(640, 96),
     style_size=64,
-    shadow=True,
 )
 
 MAIN_TASK_PANEL_SPEC = SceneTaskPanelSpec(

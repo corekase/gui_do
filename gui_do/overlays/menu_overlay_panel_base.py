@@ -42,7 +42,7 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         self._font_size = int(font_size)
         self._hovered_index = -1
         self._keyboard_index = -1
-        self._draw_font: object = None     # cached SysFont(None, font_size)
+        self._draw_font: object = None     # cached themed font instance for submenu items
         self._shadow_surface: object = None  # cached shadow Surface
         self._shadow_size: tuple = (0, 0)
 
@@ -57,20 +57,25 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         text_padding: int,
         min_width: int,
         font_size: int,
+        theme=None,
     ) -> Tuple[int, int]:
         h = int(padding) * 2
         for item in items:
             h += int(separator_height) if bool(getattr(item, "separator", False)) else int(item_height)
         try:
-            if not pygame.font.get_init():
-                pygame.font.init()
-            font = pygame.font.SysFont(None, int(font_size))
+            if theme is not None and getattr(theme, "fonts", None) is not None:
+                font = theme.fonts.font_instance("title", size=int(font_size))
+            else:
+                if not pygame.font.get_init():
+                    pygame.font.init()
+                font = pygame.font.SysFont(None, int(font_size))
             item_text_padding = int(text_padding) * 2
             widths = []
             for item in items:
                 if bool(getattr(item, "separator", False)):
                     continue
-                label_width = font.size(str(getattr(item, "label", "")))[0]
+                text = str(getattr(item, "label", ""))
+                label_width = font.text_size(text)[0] if hasattr(font, "text_size") else font.size(text)[0]
                 if bool(getattr(item, "_menu_window_checkbox", False)):
                     # 3px left inset + checkbox + 3px gap + text + 3px right padding.
                     line_h = int(item_height)
@@ -180,7 +185,10 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         border_col = getattr(theme, "border", (80, 80, 90))
 
         if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, self._font_size)
+            if hasattr(theme, "fonts") and theme.fonts is not None:
+                self._draw_font = theme.fonts.font_instance("title", size=self._font_size)
+            else:
+                self._draw_font = pygame.font.SysFont(None, self._font_size)
         font = self._draw_font
         graphics_factory = BuiltInGraphicsFactory(theme)
 

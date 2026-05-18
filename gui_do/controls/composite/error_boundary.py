@@ -248,7 +248,7 @@ class ErrorBoundary(UiNode):
         if not (theme and hasattr(theme, "fonts")):
             raise RuntimeError("ErrorBoundary requires theme with centralized font roles.")
         font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
-        render_text = lambda text, color: font._font.render(text, True, color) if hasattr(font, "_font") else font.render(text, True, color)
+        render_text = lambda text, color: font.render(text, True, color)
 
         lines = [self._error_text]
         if self._error is not None:

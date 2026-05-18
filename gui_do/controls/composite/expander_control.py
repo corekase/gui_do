@@ -231,7 +231,7 @@ class ExpanderControl(UiNode):
         # Title text
         title_color = theme.dark if not self.enabled else theme.text
         title_surf = theme.render_text(
-            self._title, role=self._font_role, shadow=False,
+            self._title, role=self._font_role,
             size=font_size, color=title_color,
         )
         text_x = r.left + pad_x + arrow_size + pad_x // 2

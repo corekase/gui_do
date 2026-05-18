@@ -545,7 +545,6 @@ class ListViewControl(_VirtualizedScrollListBase):
         pygame.draw.rect(surface, bg_color, r)
 
         font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
-        render_text = font._font.render if hasattr(font, "_font") else font.render
         vh = self._viewport_height()
         if self._parent_scroll_view() is not None and not self._show_scrollbar:
             # Parent ScrollView movement determines visibility; render full list
@@ -581,7 +580,7 @@ class ListViewControl(_VirtualizedScrollListBase):
             text_color = theme.text
             if not item.enabled:
                 text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
-            text_surf = render_text(item.label, True, text_color)
+            text_surf = font.render(item.label, True, text_color)
             surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
         surface.set_clip(clip)

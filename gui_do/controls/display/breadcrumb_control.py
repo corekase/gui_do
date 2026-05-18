@@ -173,7 +173,7 @@ class BreadcrumbControl(UiNode):
                 color = theme.text
 
             label_surf = theme.render_text(
-                item.label, role=self._font_role, shadow=False,
+                item.label, role=self._font_role,
                 size=font_size, color=color,
             )
             lw, lh = label_surf.get_size()
@@ -188,7 +188,7 @@ class BreadcrumbControl(UiNode):
             if not is_last:
                 sep_color = theme.dark if not self.enabled else theme.medium
                 sep_surf = theme.render_text(
-                    " › ", role=self._font_role, shadow=False,
+                    " › ", role=self._font_role,
                     size=font_size, color=sep_color,
                 )
                 surface.blit(sep_surf, (x, ty))

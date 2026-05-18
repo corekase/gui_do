@@ -146,6 +146,12 @@ class ShapeRenderer:
         ShapeRenderer.pill(surface, bg_color, rect)
         if text:
             text_surf = font.render(text, True, text_color)
+            if not hasattr(font, "_font"):
+                shadow = font.render(text, True, (0, 0, 0))
+                shadowed = Surface((text_surf.get_width() + 1, text_surf.get_height() + 1), pygame.SRCALPHA)
+                shadowed.blit(shadow, (1, 1))
+                shadowed.blit(text_surf, (0, 0))
+                text_surf = shadowed
             tx = rect.x + (rect.width - text_surf.get_width()) // 2
             ty = rect.y + (rect.height - text_surf.get_height()) // 2
             surface.blit(text_surf, (tx, ty))

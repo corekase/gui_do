@@ -136,7 +136,7 @@ class DockWorkspacePanel(UiNode):
             text = "(unsupported root)"
         font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         try:
-            surf = font._font.render(text, True, fg) if hasattr(font, "_font") else font.render(text, True, fg)
+            surf = font.render(text, True, fg)
             cx = self.rect.x + (self.rect.width - surf.get_width()) // 2
             cy = self.rect.y + (self.rect.height - surf.get_height()) // 2
             surface.blit(surf, (cx, cy))
@@ -162,7 +162,7 @@ class DockWorkspacePanel(UiNode):
         pygame.draw.rect(surface, border_col, tab_rect, 1)
         font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         try:
-            surf = font._font.render(label, True, fg) if hasattr(font, "_font") else font.render(label, True, fg)
+            surf = font.render(label, True, fg)
             cx = tab_rect.x + (tab_rect.width - surf.get_width()) // 2
             cy = tab_rect.y + (tab_rect.height - surf.get_height()) // 2
             surface.blit(surf, (cx, cy))

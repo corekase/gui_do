@@ -476,7 +476,7 @@ class TreeControl(_VirtualizedScrollListBase):
                 text_x = vr.x + depth * self._indent_width + self._indent_width + 2
                 col = disabled_col if not node.enabled else text_col
                 if font:
-                    txt = font._font.render(node.label, True, col) if hasattr(font, "_font") else font.render(node.label, True, col)
+                    txt = font.render(node.label, True, col)
                     surface.blit(txt, (text_x, row_y + (self._row_height - txt.get_height()) // 2))
         finally:
             surface.set_clip(old_clip)

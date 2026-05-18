@@ -234,19 +234,13 @@ class NotificationPanelControl(OverlayPanelControl):
 
         try:
             hf = theme.fonts.font_instance(self._header_font_role, size=theme.fonts.scaled_size(self._HEADER_SCALE))
-            if hasattr(hf, "_font"):
-                ht = hf._font.render("Notifications", True, text_col)
-            else:
-                ht = hf.render("Notifications", True, text_col)
+            ht = hf.render("Notifications", True, text_col)
             surface.blit(ht, (header_rect.x + _PAD, header_rect.y + (header_rect.height - ht.get_height()) // 2))
 
             # "Mark all read" button text
             if self._center.unread_count.value > 0:
                 mf = theme.fonts.font_instance(self._title_font_role, size=theme.fonts.scaled_size(self._TITLE_SCALE))
-                if hasattr(mf, "_font"):
-                    mt = mf._font.render("Mark all read", True, (180, 210, 255))
-                else:
-                    mt = mf.render("Mark all read", True, (180, 210, 255))
+                mt = mf.render("Mark all read", True, (180, 210, 255))
                 mx = header_rect.right - mt.get_width() - _PAD
                 my = header_rect.y + (header_rect.height - mt.get_height()) // 2
                 self._mark_all_rect = Rect(mx, my, mt.get_width(), mt.get_height())
@@ -294,7 +288,7 @@ class NotificationPanelControl(OverlayPanelControl):
                 tx = rr.x + 4 + _PAD
                 if body_font:
                     if rec.title:
-                        ttxt = title_font._font.render(rec.title, True, text_col) if hasattr(title_font, "_font") else title_font.render(rec.title, True, text_col)
+                        ttxt = title_font.render(rec.title, True, text_col)
                         surface.blit(ttxt, (tx, rr.y + _PAD))
                         msg_y = rr.y + _PAD + ttxt.get_height() + 2
                     else:
@@ -305,10 +299,10 @@ class NotificationPanelControl(OverlayPanelControl):
                         msg = msg[:-1]
                     if msg != rec.message:
                         msg = msg[:-3] + "..."
-                    mtxt = body_font._font.render(msg, True, muted_col if rec.read else text_col) if hasattr(body_font, "_font") else body_font.render(msg, True, muted_col if rec.read else text_col)
+                    mtxt = body_font.render(msg, True, muted_col if rec.read else text_col)
                     surface.blit(mtxt, (tx, msg_y))
                     # Timestamp
-                    ts_txt = ts_font._font.render(rec.timestamp, True, muted_col) if hasattr(ts_font, "_font") else ts_font.render(rec.timestamp, True, muted_col)
+                    ts_txt = ts_font.render(rec.timestamp, True, muted_col)
                     surface.blit(ts_txt, (rr.right - ts_txt.get_width() - _PAD, rr.y + _PAD))
                 # Separator
                 pygame.draw.line(surface, border_col, (rr.x, rr.bottom - 1), (rr.right, rr.bottom - 1))
@@ -326,7 +320,7 @@ class NotificationPanelControl(OverlayPanelControl):
         if not self._center.all_records:
             try:
                 bf = theme.fonts.font_instance(self._body_font_role, size=theme.fonts.scaled_size(self._BODY_SCALE))
-                et = bf._font.render("No notifications", True, muted_col) if hasattr(bf, "_font") else bf.render("No notifications", True, muted_col)
+                et = bf.render("No notifications", True, muted_col)
                 surface.blit(et, (
                     lr.x + (lr.width - et.get_width()) // 2,
                     lr.y + (lr.height - et.get_height()) // 2,

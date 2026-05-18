@@ -23,6 +23,15 @@ _CHIP_CORNER: int = 4               # border-radius for chip rect (px, not scale
 _INPUT_MIN_W_RATIO: float = 3.75   # minimum input field width ratio
 _INPUT_FONT_SCALE: float = _FONT_SCALE  # keep typed text size aligned with chip labels
 
+_CHIP_BG: tuple[int, int, int] = (58, 82, 118)
+_CHIP_BG_DISABLED: tuple[int, int, int] = (72, 78, 88)
+_CHIP_TEXT: tuple[int, int, int] = (244, 248, 252)
+_CHIP_TEXT_DISABLED: tuple[int, int, int] = (210, 216, 226)
+_INPUT_BG: tuple[int, int, int] = (28, 31, 37)
+_INPUT_BG_FOCUSED: tuple[int, int, int] = (40, 45, 54)
+_INPUT_TEXT: tuple[int, int, int] = (238, 243, 249)
+_INPUT_PLACEHOLDER: tuple[int, int, int] = (150, 156, 168)
+
 
 class ChipInputControl(UiNode):
     """Multi-value tag/chip input control.
@@ -244,15 +253,16 @@ class ChipInputControl(UiNode):
         chip_h = self._chip_h(fonts)
         y = r.top + (r.height - chip_h) // 2
 
-        text_color = theme.dark if not self.enabled else theme.text
+        text_color = _INPUT_TEXT if self.enabled else _INPUT_PLACEHOLDER
 
         for val in self._values:
-            chip_surf = theme.render_text(val, role=self._font_role, shadow=False, size=chip_font_size, color=theme.background)
+            chip_color = _CHIP_TEXT if self.enabled else _CHIP_TEXT_DISABLED
+            chip_surf = theme.render_text(val, role=self._font_role, size=chip_font_size, color=chip_color)
             cw = chip_surf.get_width() + pad_x * 2 + close_w
             ch = chip_h
             chip_rect = Rect(x, y, cw, ch)
 
-            chip_bg = theme.dark if not self.enabled else theme.highlight
+            chip_bg = _CHIP_BG_DISABLED if not self.enabled else _CHIP_BG
             pygame.draw.rect(surface, chip_bg, chip_rect, border_radius=_CHIP_CORNER)
             pygame.draw.rect(surface, theme.dark, chip_rect, 1, border_radius=_CHIP_CORNER)
             text_cy = chip_rect.top + (chip_rect.height - chip_surf.get_height()) // 2
@@ -265,21 +275,20 @@ class ChipInputControl(UiNode):
                 cx_mid = close_rect.left + close_rect.width // 2
                 cy_mid = close_rect.top + close_rect.height // 2
                 d = max(3, close_w // 4)
-                pygame.draw.line(surface, theme.background, (cx_mid - d, cy_mid - d), (cx_mid + d, cy_mid + d), 2)
-                pygame.draw.line(surface, theme.background, (cx_mid + d, cy_mid - d), (cx_mid - d, cy_mid + d), 2)
+                pygame.draw.line(surface, _CHIP_TEXT, (cx_mid - d, cy_mid - d), (cx_mid + d, cy_mid + d), 2)
+                pygame.draw.line(surface, _CHIP_TEXT, (cx_mid + d, cy_mid - d), (cx_mid - d, cy_mid + d), 2)
 
             x += cw + _CHIP_GAP
 
         # Input field area
         if self._edit_text:
-            input_surf = theme.render_text(self._edit_text, role=self._font_role, shadow=False, size=input_font_size, color=text_color)
+            input_surf = theme.render_text(self._edit_text, role=self._font_role, size=input_font_size, color=_INPUT_TEXT)
             input_y = r.top + (r.height - input_surf.get_height()) // 2
             surface.blit(input_surf, (x, input_y))
             cursor_x = x + input_surf.get_width()
         else:
             if not self._focused:
-                ph_color = theme.dark
-                ph_surf = theme.render_text(self._placeholder, role=self._font_role, shadow=False, size=input_font_size, color=ph_color)
+                ph_surf = theme.render_text(self._placeholder, role=self._font_role, size=input_font_size, color=_INPUT_PLACEHOLDER)
                 ph_y = r.top + (r.height - ph_surf.get_height()) // 2
                 surface.blit(ph_surf, (x, ph_y))
             cursor_x = x
@@ -287,7 +296,7 @@ class ChipInputControl(UiNode):
         if self._focused and self._cursor_visible and self.enabled:
             cursor_top = max(r.top + 2, r.top + (r.height - input_font_size) // 2)
             cursor_bottom = min(r.bottom - 3, cursor_top + input_font_size)
-            pygame.draw.line(surface, text_color, (cursor_x, cursor_top), (cursor_x, cursor_bottom), 1)
+            pygame.draw.line(surface, _INPUT_TEXT, (cursor_x, cursor_top), (cursor_x, cursor_bottom), 1)
 
     def _chip_h(self, fonts) -> int:
         """Compute chip height from font metrics."""

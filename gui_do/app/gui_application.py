@@ -197,12 +197,22 @@ class GuiApplication:
 
         title_surface = None
         try:
-            title_surface = theme.render_text("Prewarming", role="heading", size=22, shadow=False)
+            title_surface = theme.render_text("Prewarming", role="heading", size=22)
         except Exception:
             title_surface = None
         if title_surface is None:
             fallback_font = pygame.font.Font(None, 28)
-            title_surface = fallback_font.render("Prewarming", True, theme.text)
+            fallback_text = fallback_font.render("Prewarming", True, theme.text)
+            fallback_shadow = fallback_font.render("Prewarming", True, theme.dark)
+            title_surface = pygame.Surface(
+                (
+                    fallback_text.get_width() + 1,
+                    fallback_text.get_height() + 1,
+                ),
+                pygame.SRCALPHA,
+            )
+            title_surface.blit(fallback_shadow, (1, 1))
+            title_surface.blit(fallback_text, (0, 0))
 
         title_rect = title_surface.get_rect(midtop=(frame_rect.centerx, frame_rect.top + 14))
         surface.blit(title_surface, title_rect)

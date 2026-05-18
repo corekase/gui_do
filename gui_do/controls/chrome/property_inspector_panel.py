@@ -290,7 +290,7 @@ class PropertyInspectorPanel(UiNode):
             if y + h >= r.y and y <= r.bottom:
                 if row.is_header:
                     pygame.draw.rect(surface, header_bg, row_rect)
-                    surf = font._font.render(row.group_name, True, header_text) if hasattr(font, "_font") else font.render(row.group_name, True, header_text)
+                    surf = font.render(row.group_name, True, header_text)
                     surface.blit(surf, (row_rect.x + 6, row_rect.y + (h - surf.get_height()) // 2))
                 else:
                     if row.prop is not None:
@@ -299,7 +299,7 @@ class PropertyInspectorPanel(UiNode):
                         pygame.draw.rect(surface, row_bg, row_rect)
                         # Label (left side)
                         lbl = row.prop.descriptor.label or row.prop.descriptor.name
-                        lbl_surf = font._font.render(lbl, True, text_color) if hasattr(font, "_font") else font.render(lbl, True, text_color)
+                        lbl_surf = font.render(lbl, True, text_color)
                         surface.blit(lbl_surf, (row_rect.x + 4, row_rect.y + (h - lbl_surf.get_height()) // 2))
                         # Value (right side)
                         try:
@@ -307,7 +307,7 @@ class PropertyInspectorPanel(UiNode):
                         except Exception:
                             val_str = "—"
                         vc = text_color if is_selected else val_color
-                        val_surf = font._font.render(val_str, True, vc) if hasattr(font, "_font") else font.render(val_str, True, vc)
+                        val_surf = font.render(val_str, True, vc)
                         surface.blit(val_surf, (val_x + 4, row_rect.y + (h - val_surf.get_height()) // 2))
                         alt = not alt
 

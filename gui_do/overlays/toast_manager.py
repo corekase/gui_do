@@ -191,7 +191,6 @@ class ToastManager:
                     role="toast.text",
                     size=font.point_size,
                     color=text_color,
-                    shadow=True,
                 )
                 surface.blit(title_surf, (rect.x + 16, draw_y))
                 draw_y += title_surf.get_height() + 6
@@ -200,7 +199,6 @@ class ToastManager:
                 role="toast.text",
                 size=font.point_size,
                 color=text_color,
-                shadow=True,
             )
             surface.blit(msg_surf, (rect.x + 16, draw_y))
 

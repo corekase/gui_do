@@ -349,7 +349,7 @@ class RichLabelControl(UiNode):
         role = style_roles.get(style, self._font_role)
         color = theme.highlight if style == "code" else base_color
         size = self._resolve_fs(theme) if resolved_size is None else int(resolved_size)
-        return theme.render_text(text, role=role, size=size, color=color, shadow=False)
+        return theme.render_text(text, role=role, size=size, color=color)
 
     def _render_line(
         self,

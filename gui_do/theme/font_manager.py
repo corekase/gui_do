@@ -45,8 +45,38 @@ class _FontInstance:
 
     def text_size(self, text: str) -> tuple[int, int]:
         return self._font.size(str(text))
+    def get_ascent(self) -> int:
+        return int(self._font.get_ascent())
 
-    def text_surface_size(self, text: str, *, shadow: bool = False, shadow_offset: tuple[int, int] = (1, 1)) -> tuple[int, int]:
+    def render(
+        self,
+        text: str,
+        antialias: bool,
+        color,
+        shadow: bool = True,
+        shadow_color=None,
+        shadow_offset: tuple[int, int] = (1, 1),
+    ) -> pygame.Surface:
+        str_text = str(text)
+        if not shadow:
+            return self._font.render(str_text, bool(antialias), color)
+        resolved_shadow_color = (0, 0, 0) if shadow_color is None else shadow_color
+        text_bitmap = self._font.render(str_text, bool(antialias), color)
+        shadow_bitmap = self._font.render(str_text, bool(antialias), resolved_shadow_color)
+        offset_x = int(shadow_offset[0])
+        offset_y = int(shadow_offset[1])
+        out = pygame.Surface(
+            (
+                text_bitmap.get_width() + max(0, offset_x),
+                text_bitmap.get_height() + max(0, offset_y),
+            ),
+            pygame.SRCALPHA,
+        )
+        out.blit(shadow_bitmap, (max(0, offset_x), max(0, offset_y)))
+        out.blit(text_bitmap, (0, 0))
+        return out
+
+    def text_surface_size(self, text: str, *, shadow: bool = True, shadow_offset: tuple[int, int] = (1, 1)) -> tuple[int, int]:
         width, height = self.text_size(text)
         if not shadow:
             return int(width), int(height)

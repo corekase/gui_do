@@ -323,7 +323,6 @@ class AutoSizedStyledLabelSpec:
     top: int
     fallback_size: tuple[int, int]
     style_size: int = 64
-    shadow: bool = True
 
 
 @dataclass(frozen=True)
@@ -1654,7 +1653,7 @@ def create_auto_sized_styled_label(host, spec: AutoSizedStyledLabelSpec, *, scen
     scene_font_manager = getattr(getattr(scene_runtime, "theme", None), "fonts", None)
     if scene_font_manager is not None and scene_font_manager.has_role(label.font_role):
         font = scene_font_manager.font_instance(label.font_role, size=label.font_size)
-        label.rect.size = font.text_surface_size(label.text, shadow=bool(spec.shadow))
+        label.rect.size = font.text_surface_size(label.text)
     return label
 
 

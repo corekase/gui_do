@@ -521,7 +521,7 @@ class DataGridControl(_VirtualizedScrollListBase):
             cache_key = (title, text_col)
             ts = self._text_cache.get(cache_key)
             if ts is None:
-                ts = font._font.render(title, True, text_col) if hasattr(font, "_font") else font.render(title, True, text_col)
+                ts = font.render(title, True, text_col)
                 self._text_cache[cache_key] = ts
             surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
 
@@ -557,7 +557,7 @@ class DataGridControl(_VirtualizedScrollListBase):
                 cache_key = (val_str, text_col)
                 ts = self._text_cache.get(cache_key)
                 if ts is None:
-                    ts = font._font.render(val_str, True, text_col) if hasattr(font, "_font") else font.render(val_str, True, text_col)
+                    ts = font.render(val_str, True, text_col)
                     self._text_cache[cache_key] = ts
                 surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
                 # column separator

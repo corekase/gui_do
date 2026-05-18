@@ -87,6 +87,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
         cls,
         items: List[ContextMenuItem],
         *,
+        theme=None,
         min_width: Optional[int] = None,
     ) -> Tuple[int, int]:
         resolved_min_width = cls._MIN_W if min_width is None else max(1, int(min_width))
@@ -98,6 +99,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
             text_padding=cls._TEXT_PAD,
             min_width=resolved_min_width,
             font_size=cls._FONT_SIZE,
+            theme=theme,
         )
 
 
@@ -428,7 +430,7 @@ class MenuStripControl(UiNode):
                 pygame.draw.rect(surface, hover_col, r)
             col = disabled_col if not entry.enabled else text_col
             if font:
-                txt = font._font.render(entry.label, True, col) if hasattr(font, "_font") else font.render(entry.label, True, col)
+                txt = font.render(entry.label, True, col)
                 surface.blit(txt, (r.x + _ENTRY_PADDING_X, r.y + (r.height - txt.get_height()) // 2))
 
     # ------------------------------------------------------------------
@@ -526,7 +528,7 @@ class MenuStripControl(UiNode):
             return
         owner = f"_menubar_{self.control_id}_{index}"
         er_rect = er[index]
-        w, h = _FlyoutPanel.measure(entry.items, min_width=entry.flyout_min_width)
+        w, h = _FlyoutPanel.measure(entry.items, theme=getattr(app, "theme", None), min_width=entry.flyout_min_width)
         # Ensure each dropdown is never narrower than its top-level menu entry.
         if w < er_rect.width:
             w = int(er_rect.width)
@@ -564,7 +566,7 @@ class MenuStripControl(UiNode):
                 provider_items = []
             for item in provider_items:
                 setattr(item, "_menu_scene_compact", True)
-            self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, provider_items)
+            self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, provider_items, theme=getattr(self._app, "theme", None))
             return provider_items
 
         if self._app is None:
@@ -583,18 +585,25 @@ class MenuStripControl(UiNode):
             item = ContextMenuItem(pretty, action=lambda selected=scene: self._select_scene(selected))
             setattr(item, "_menu_scene_compact", True)
             items.append(item)
-        self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, items)
+        self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, items, theme=getattr(self._app, "theme", None))
         return items
 
-    def _set_auto_scene_menu_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+    def _set_auto_scene_menu_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem], theme=None) -> None:
         longest = 0
+        font = None
+        if theme is not None and getattr(theme, "fonts", None) is not None:
+            try:
+                font = theme.fonts.font_instance("title", size=_FlyoutPanel._FONT_SIZE)
+            except Exception:
+                font = None
         for item in items:
             if bool(getattr(item, "separator", False)):
                 continue
             text = str(getattr(item, "label", ""))
             try:
-                font = pygame.font.SysFont(None, int(_FlyoutPanel._FONT_SIZE))
-                text_w = font.size(text)[0]
+                if font is None:
+                    font = pygame.font.SysFont(None, int(_FlyoutPanel._FONT_SIZE))
+                text_w = font.text_size(text)[0] if hasattr(font, "text_size") else font.size(text)[0]
             except Exception:
                 text_w = len(text) * 8
             # 3px inset + longest entry text width + 5px end gutter.
@@ -645,7 +654,7 @@ class MenuStripControl(UiNode):
                 provider_items = self._window_items_provider() or []
             except Exception:
                 provider_items = []
-            self._set_dynamic_flyout_min_width(self._window_menu.label, provider_items)
+            self._set_dynamic_flyout_min_width(self._window_menu.label, provider_items, theme=getattr(self._app, "theme", None))
             return provider_items
 
         scene = self._resolve_scene()
@@ -663,20 +672,27 @@ class MenuStripControl(UiNode):
             setattr(item, "_menu_window_checkbox", True)
             setattr(item, "_menu_window_visible", bool(window.visible))
             items.append(item)
-        self._set_auto_window_menu_flyout_min_width(self._window_menu.label, items)
+        self._set_auto_window_menu_flyout_min_width(self._window_menu.label, items, theme=getattr(self._app, "theme", None))
         return items
 
-    def _set_auto_window_menu_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+    def _set_auto_window_menu_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem], theme=None) -> None:
         longest = 0
         line_height = int(_FlyoutPanel._ITEM_H)
         checkbox_size = max(1, line_height - 4)
+        font = None
+        if theme is not None and getattr(theme, "fonts", None) is not None:
+            try:
+                font = theme.fonts.font_instance("title", size=_FlyoutPanel._FONT_SIZE)
+            except Exception:
+                font = None
         for item in items:
             if bool(getattr(item, "separator", False)):
                 continue
             text = str(getattr(item, "label", ""))
             try:
-                font = pygame.font.SysFont(None, int(_FlyoutPanel._FONT_SIZE))
-                text_w = font.size(text)[0]
+                if font is None:
+                    font = pygame.font.SysFont(None, int(_FlyoutPanel._FONT_SIZE))
+                text_w = font.text_size(text)[0] if hasattr(font, "text_size") else font.size(text)[0]
             except Exception:
                 text_w = len(text) * 8
             entry_width = 3 + checkbox_size + 3 + int(text_w) + 3 + 5
@@ -686,21 +702,25 @@ class MenuStripControl(UiNode):
             return
         self._dynamic_flyout_min_width_by_label.pop(str(menu_label), None)
 
-    def _measure_item_label_width(self, label: str) -> int:
+    def _measure_item_label_width(self, label: str, theme=None) -> int:
         text = str(label)
         try:
-            font = pygame.font.SysFont(None, 17)
-            text_w = font.size(text)[0]
+            font = None
+            if theme is not None and getattr(theme, "fonts", None) is not None:
+                font = theme.fonts.font_instance("title", size=17)
+            if font is None:
+                font = pygame.font.SysFont(None, 17)
+            text_w = font.text_size(text)[0] if hasattr(font, "text_size") else font.size(text)[0]
         except Exception:
             text_w = len(text) * 8
         return int(text_w) + 40
 
-    def _set_dynamic_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+    def _set_dynamic_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem], theme=None) -> None:
         longest = 0
         for item in items:
             if bool(getattr(item, "separator", False)):
                 continue
-            longest = max(longest, self._measure_item_label_width(getattr(item, "label", "")))
+            longest = max(longest, self._measure_item_label_width(getattr(item, "label", ""), theme=theme))
         if longest > 0:
             self._dynamic_flyout_min_width_by_label[str(menu_label)] = longest
             return

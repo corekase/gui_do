@@ -259,8 +259,8 @@ class DropdownControl(UiNode):
         opt = self.selected_option
         label = opt.label if opt is not None else self._placeholder
         text_color = theme.text
-        text_surf = font._font.render(label, True, text_color) if hasattr(font, "_font") else font.render(label, True, text_color)
+        text_surf = font.render(label, True, text_color)
         surface.blit(text_surf, (r.x + 6, r.y + (r.height - text_surf.get_height()) // 2))
 
-        arrow_surf = font._font.render(_ARROW, True, text_color) if hasattr(font, "_font") else font.render(_ARROW, True, text_color)
+        arrow_surf = font.render(_ARROW, True, text_color)
         surface.blit(arrow_surf, (r.right - arrow_surf.get_width() - 6, r.y + (r.height - arrow_surf.get_height()) // 2))

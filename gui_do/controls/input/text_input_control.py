@@ -553,11 +553,11 @@ class TextInputControl(AbstractTextInputControl):
 
             # Text or placeholder
             if display:
-                text_surf = font._font.render(display, True, theme.text)
+                text_surf = font.render(display, True, theme.text)
                 surface.blit(text_surf, (self.rect.x + _H_PADDING - self._scroll_offset_px, text_y))
             elif self._placeholder and not self._focused:
                 ph_color = getattr(theme, "medium", (150, 150, 150))
-                ph_surf = font._font.render(self._placeholder, True, ph_color)
+                ph_surf = font.render(self._placeholder, True, ph_color)
                 surface.blit(ph_surf, (self.rect.x + _H_PADDING, text_y))
 
             # Cursor

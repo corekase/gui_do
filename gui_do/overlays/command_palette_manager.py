@@ -206,8 +206,7 @@ class _CommandPaletteListView(ListViewControl):
         text_color = theme.text
         if not item.enabled:
             text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
-        raw_font = getattr(font, "_font", font)
-        text_surf = raw_font.render(item.label, True, text_color)
+        text_surf = font.render(item.label, True, text_color)
         surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
     def _draw_window_toggle_row(self, surface: "pygame.Surface", theme, row_rect: Rect, entry: "CommandEntry") -> None:

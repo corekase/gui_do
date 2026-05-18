@@ -196,8 +196,8 @@ class SpinnerControl(_TextEditFocusBase):
             raise RuntimeError("SpinnerControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
         text_color = theme.text
         font = theme.fonts.font_instance(self._btn_font_role, size=theme.fonts.scaled_size(self._BTN_FONT_SCALE))
-        up_surf = font._font.render("▲", True, text_color) if hasattr(font, "_font") else font.render("▲", True, text_color)
-        dn_surf = font._font.render("▼", True, text_color) if hasattr(font, "_font") else font.render("▼", True, text_color)
+        up_surf = font.render("▲", True, text_color)
+        dn_surf = font.render("▼", True, text_color)
         surface.blit(
             up_surf,
             (
@@ -218,7 +218,7 @@ class SpinnerControl(_TextEditFocusBase):
         if self._editing and self._cursor_visible:
             display = display + "|"
         val_font = theme.fonts.font_instance(self._val_font_role, size=theme.fonts.scaled_size(self._VAL_FONT_SCALE))
-        val_surf = val_font._font.render(display, True, text_color) if hasattr(val_font, "_font") else val_font.render(display, True, text_color)
+        val_surf = val_font.render(display, True, text_color)
         text_x = r.x + _H_PAD
         text_y = r.centery - val_surf.get_height() // 2
         # Clip text area

@@ -103,7 +103,7 @@ class LabelControl(UiNode):
         if self._render_key != render_key:
             start = perf_counter()
             self._rendered_surface = theme.render_text(
-                self._text, role=self._font_role, size=fs, color=colour, shadow=True
+                self._text, role=self._font_role, size=fs, color=colour
             )
             self._render_key = render_key
             first_frame_profiler().record_once(

@@ -122,7 +122,7 @@ class StatusBarControl(UiNode):
 
         for slot in self._slots:
             label_surf = theme.render_text(
-                slot.text, role=self._font_role, shadow=False,
+                slot.text, role=self._font_role,
                 size=font_size, color=text_color,
             )
             text_w, text_h = label_surf.get_size()
