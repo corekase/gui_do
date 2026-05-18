@@ -163,7 +163,7 @@ class ShowcaseFeature(Feature):
                 rect=Rect(0, 0, host.control_showcase_root.rect.width, SHOWCASE_MENU_BAR_HEIGHT),
                 scene_name="control_showcase",
                 scenes_shown=True,
-                windows_shown=True,
+                windows_shown=False,
                 scene_menu_label="Scene",
                 window_menu_label="Window",
                 scene_menu_insert_index=0,
