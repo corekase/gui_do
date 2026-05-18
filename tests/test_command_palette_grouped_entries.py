@@ -194,6 +194,95 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         entry_ids = [entry.entry_id for entry in manager.entries()]
         self.assertEqual(["custom:retile"], entry_ids)
 
+    def test_selecting_window_toggle_entry_dismisses_palette(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+        manager.register(
+            CommandEntry(
+                entry_id="window:main:logs",
+                title="Logs",
+                action=lambda: calls.append("toggle"),
+                category="Windows",
+                render_kind="window_toggle",
+                window_visible=False,
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+
+        listview._on_select(0, item)
+
+        self.assertFalse(manager.is_open)
+        self.assertEqual(["toggle"], calls)
+        self.assertTrue(bool(item.data.window_visible))
+        self.assertEqual(1, len(overlay.show_calls))
+        self.assertEqual(1, len(overlay.hide_calls))
+
+    def test_mouse_activation_then_select_callback_does_not_double_toggle(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+        manager.register(
+            CommandEntry(
+                entry_id="window:main:inspector",
+                title="Inspector",
+                action=lambda: calls.append("toggle"),
+                category="Windows",
+                render_kind="window_toggle",
+                window_visible=False,
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        handled = manager.try_activate_window_at(pos)
+        self.assertTrue(handled)
+        self.assertEqual(["toggle"], calls)
+        self.assertTrue(bool(item.data.window_visible))
+
+        # Simulate the list-view select callback on the same click path.
+        listview._on_select(0, item)
+
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["toggle"], calls)
+        self.assertTrue(bool(item.data.window_visible))
+        self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_selecting_non_window_entry_still_closes_palette(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+        manager.register(
+            CommandEntry(
+                entry_id="custom:refresh",
+                title="Refresh",
+                action=lambda: calls.append("run"),
+                category="Custom",
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+
+        listview._on_select(0, item)
+
+        self.assertFalse(manager.is_open)
+        self.assertEqual(["run"], calls)
+        self.assertEqual(1, len(overlay.hide_calls))
+
 
 if __name__ == "__main__":
     unittest.main()

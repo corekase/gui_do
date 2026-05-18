@@ -39,9 +39,16 @@ class _StubSceneTransitions:
 class _StubPaletteManager:
     def __init__(self):
         self.show_calls = []
+        self.hide_calls = 0
+        self.is_open = False
 
     def show(self, app):
         self.show_calls.append(app)
+        self.is_open = True
+
+    def hide(self):
+        self.hide_calls += 1
+        self.is_open = False
 
 
 class _StubApp:
@@ -73,7 +80,7 @@ class TestDemoActionSpecs(unittest.TestCase):
 
         by_id = self._declarations_by_id(host)
         self.assertEqual(
-            ["nav_main", "nav_showcase", "exit", "palette_open"],
+            ["nav_main", "nav_showcase", "exit", "palette_toggle"],
             [d["action_id"] for d in host.action_registry.declarations],
         )
         self.assertEqual("Exit", by_id["exit"]["label"])
@@ -82,8 +89,8 @@ class TestDemoActionSpecs(unittest.TestCase):
         self.assertEqual("Scenes", by_id["nav_main"]["category"])
         self.assertEqual("Go to Controls Showcase", by_id["nav_showcase"]["label"])
         self.assertEqual("Scenes", by_id["nav_showcase"]["category"])
-        self.assertEqual("Open Command Palette", by_id["palette_open"]["label"])
-        self.assertIsNone(by_id["palette_open"]["category"])
+        self.assertEqual("Toggle Command Palette", by_id["palette_toggle"]["label"])
+        self.assertIsNone(by_id["palette_toggle"]["category"])
 
         self.assertEqual(1, len(host.window_presentation.declare_calls))
         self.assertEqual("Windows", host.window_presentation.declare_calls[0][1])
@@ -101,10 +108,13 @@ class TestDemoActionSpecs(unittest.TestCase):
         self.assertTrue(by_id["nav_showcase"]["handler"](None, None))
         self.assertEqual(["main", "control_showcase"], host.scene_transitions.go_calls)
 
-        self.assertTrue(by_id["palette_open"]["handler"](None, None))
+        self.assertTrue(by_id["palette_toggle"]["handler"](None, None))
         self.assertEqual([host.app], host._palette_manager.show_calls)
 
-    def test_palette_open_handler_creates_palette_manager_lazily_when_missing(self):
+        self.assertTrue(by_id["palette_toggle"]["handler"](None, None))
+        self.assertEqual(1, host._palette_manager.hide_calls)
+
+    def test_palette_toggle_handler_creates_palette_manager_lazily_when_missing(self):
         host = self._make_host()
         host._palette_manager = None
         lazy_manager = _StubPaletteManager()
@@ -112,19 +122,19 @@ class TestDemoActionSpecs(unittest.TestCase):
         with patch("gui_do.features.data_driven_runtime._ensure_command_palette_manager", return_value=lazy_manager) as ensure_mock:
             declare_host_actions(host, ACTION_SPECS)
             by_id = self._declarations_by_id(host)
-            self.assertTrue(by_id["palette_open"]["handler"](None, None))
+            self.assertTrue(by_id["palette_toggle"]["handler"](None, None))
 
         ensure_mock.assert_called_once_with(host, palette_requested=True)
         self.assertEqual([host.app], lazy_manager.show_calls)
 
-    def test_palette_open_handler_returns_false_when_palette_unavailable(self):
+    def test_palette_toggle_handler_returns_false_when_palette_unavailable(self):
         host = self._make_host()
         host._palette_manager = None
 
         with patch("gui_do.features.data_driven_runtime._ensure_command_palette_manager", return_value=None) as ensure_mock:
             declare_host_actions(host, ACTION_SPECS)
             by_id = self._declarations_by_id(host)
-            self.assertFalse(by_id["palette_open"]["handler"](None, None))
+            self.assertFalse(by_id["palette_toggle"]["handler"](None, None))
 
         ensure_mock.assert_called_once_with(host, palette_requested=True)
 

@@ -56,18 +56,18 @@ def make_exit_action(*, action_spec_cls, action_id: str = "exit", label: str = "
     )
 
 
-def make_palette_open_action(
+def make_palette_toggle_action(
     *,
     action_spec_cls,
-    action_id: str = "palette_open",
-    label: str = "Open Command Palette",
+    action_id: str = "palette_toggle",
+    label: str = "Toggle Command Palette",
     key: int | None = None,
 ):
-    """Build a standard command-palette open ActionSpec-like object."""
+    """Build a standard command-palette toggle ActionSpec-like object."""
     return action_spec_cls(
         action_id=str(action_id),
         label=str(label),
-        kind="palette_open",
+        kind="palette_toggle",
         target=None,
         category=None,
         key=key,

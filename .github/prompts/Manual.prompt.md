@@ -91,6 +91,40 @@ Describe their role, how they fit into the overall architecture, and how they ar
 | 8 | `.github/prompts/manual/Manual.p8.prompt.md` | Testing/Diagnostics · Performance · Migration · FAQ · Appendices |
 | 9 | `.github/prompts/manual/Manual.p9.prompt.md` | Enrichment pass: add concise examples where missing + build/link specifications options appendix |
 
+## Focused Update Subprompts
+
+For targeted documentation updates on specific topics, the following focused subprompts are available:
+
+| Topic | Sub-prompt file | Scope |
+|-------|-----------------|-------|
+| Command Palette | `.github/prompts/manual/CommandPalette.prompt.md` | Generate/update 8.8.X Command Palette section with two-bind input model, specs, lifecycle, and examples |
+
+### Command Palette Update Notes (May 2026)
+
+The command palette has been refactored with a cleaner two-bind input model:
+
+**Spec Structure**:
+- `PaletteInputBindSpec`: Defines one bind with `action_name` (required), `key` (optional), and `pointer_button` (optional)
+- `SceneCommandPaletteSpec`: Has two `PaletteInputBindSpec` instances:
+  - `toggle`: Opens/closes the palette itself. Can be key, button, or both.
+  - `action`: Shows palette if closed (stops), or toggles window entries at pointer if already open. Can be key, button, or both.
+
+**Implementation Details**:
+- Toggle bind fires the `_toggle` handler that toggles `palette_manager.is_open`
+- Action bind fires the `_action` handler that:
+  1. If palette is closed: opens it and **returns immediately** (fully consumes event)
+  2. If palette is already open: calls `palette_manager.try_activate_window_at(pos)` to toggle window entry visibility
+  3. Non-window entries at pointer position are silently ignored
+- Both binds support key and pointer button independently via `spec.toggle.key`, `spec.toggle.pointer_button`, `spec.action.key`, `spec.action.pointer_button`
+- Current demo configuration: toggle=F5, action=middle-click (button 2)
+
+When updating CommandPalette.prompt.md, verify:
+- Confirm `PaletteInputBindSpec` structure with actual field definitions from data_driven_runtime.py
+- Confirm toggle/action semantics match the actual handler logic in `setup_scene_command_palette_bindings()`
+- Include concrete examples from demo_features/main/main_specs.py and demo_features/showcase/showcase_specs.py
+- Explain why action bind stops on first trigger (palette open) vs subsequent triggers (window toggle)
+- Document the full flexibility: each bind can use key, button, or both independently
+
 ## Completion Check
 
 After all assigned steps are done:

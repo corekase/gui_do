@@ -2,7 +2,7 @@
 
 import pygame
 from gui_do.features.data_driven_runtime import (
-    GlobalPointerActionSpec,
+    PaletteInputBindSpec,
     RoutedRuntimeSpec,
     SceneCommandPaletteSpec,
     TaskPanelFocusToggleSpec,
@@ -19,14 +19,14 @@ _CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
     ),
     # Ensure command_palette does not use F1 (should use F5 or another key)
     command_palette=SceneCommandPaletteSpec(
-        key=pygame.K_F5,
         scene_name="control_showcase",
-    ),
-    global_pointer_actions=(
-        GlobalPointerActionSpec(
-            action_name="palette_open",
-            button=2,
-            scene_name="control_showcase",
+        toggle=PaletteInputBindSpec(
+            action_name="command_palette_toggle",
+            key=pygame.K_F5,
+        ),
+        action=PaletteInputBindSpec(
+            action_name="command_palette_action",
+            pointer_button=2,
         ),
     ),
 )

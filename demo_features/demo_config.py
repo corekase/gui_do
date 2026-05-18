@@ -95,9 +95,9 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         action_entries=(
             ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
             ActionBindingSpec(
-                kind="palette_open",
-                action_id="palette_open",
-                label="Open Command Palette",
+                kind="palette_toggle",
+                action_id="palette_toggle",
+                label="Toggle Command Palette",
             ),
         ),
         static_accessibility_entries=(

@@ -99,7 +99,7 @@ def build_action_specs(
     action_spec_cls,
     make_exit_action_fn,
     make_scene_nav_action_fn,
-    make_palette_open_action_fn,
+    make_palette_toggle_action_fn,
 ):
     """Build ActionSpec-like values from action-binding entries."""
     specs = []
@@ -129,9 +129,9 @@ def build_action_specs(
                 )
             )
             continue
-        if kind == "palette_open":
+        if kind == "palette_toggle":
             specs.append(
-                make_palette_open_action_fn(
+                make_palette_toggle_action_fn(
                     action_id=str(entry.action_id),
                     label=str(entry.label),
                     key=entry.key,

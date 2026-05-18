@@ -310,6 +310,7 @@ class CommandPaletteManager:
         self._include_window_entries: bool = True
         self._group_order: tuple[str, ...] = ("scenes", "windows", "custom")
         self._custom_entries_provider: Optional[Callable[..., Sequence[CommandEntry]]] = None
+        self._suppressed_window_select_entry_id: Optional[str] = None
 
     def _invalidate_entry_projection(self) -> None:
         self._entries_dirty = True
@@ -524,8 +525,14 @@ class CommandPaletteManager:
 
         # Wire list selection → action + close
         def _on_select(idx: int, item: ListItem) -> None:
-            del idx
             entry = item.data
+            if (
+                isinstance(entry, CommandEntry)
+                and entry.render_kind == "window_toggle"
+                and str(entry.entry_id) == str(self._suppressed_window_select_entry_id or "")
+            ):
+                self._suppressed_window_select_entry_id = None
+                return
             if entry is not None and callable(self._entry_selected_callback):
                 try:
                     self._entry_selected_callback(entry)
@@ -537,6 +544,8 @@ class CommandPaletteManager:
                     entry.action()
                 except Exception:
                     pass
+            if isinstance(entry, CommandEntry) and entry.render_kind == "window_toggle":
+                entry.window_visible = not entry.window_visible
 
         listview._on_select = _on_select
 
@@ -564,25 +573,26 @@ class CommandPaletteManager:
         self._overlays.hide(self._OWNER_ID)
         self._handle = None
         self._open_listview = None
+        self._suppressed_window_select_entry_id = None
 
-    def try_activate_window_at(self, pos: tuple) -> None:
+    def try_activate_window_at(self, pos: tuple) -> bool:
         """If *pos* is over a window entry in the open palette list, activate it
         without closing the palette and update the palette selection to that item.
         Non-window entries at *pos* are ignored.
         """
         if not self.is_open or self._open_listview is None:
-            return
+            return False
         listview = self._open_listview
         if not listview.rect.collidepoint(pos):
-            return
+            return False
         rel_y = pos[1] - listview.rect.y
         idx = listview._row_at_y(rel_y)
         if idx < 0 or idx >= len(listview._items):
-            return
+            return False
         item = listview._items[idx]
         entry = item.data
         if not isinstance(entry, CommandEntry) or entry.render_kind != "window_toggle":
-            return
+            return False
         if callable(self._entry_selected_callback):
             try:
                 self._entry_selected_callback(entry)
@@ -594,9 +604,11 @@ class CommandPaletteManager:
             except Exception:
                 pass
         entry.window_visible = not entry.window_visible
+        self._suppressed_window_select_entry_id = str(entry.entry_id)
 
         listview.selected_index = idx
         listview.scroll_to_item(idx)
+        return True
 
     def bind_toggle_key(
         self,
@@ -640,6 +652,7 @@ class CommandPaletteManager:
     def _on_dismissed(self) -> None:
         self._handle = None
         self._open_listview = None
+        self._suppressed_window_select_entry_id = None
 
     def _register_configured_builtin_entries(
         self,

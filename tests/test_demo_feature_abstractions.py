@@ -40,7 +40,7 @@ from gui_do.features.data_driven_runtime import (
     initialize_locale_registry,
     instantiate_features_from_specs,
     make_exit_action,
-    make_palette_open_action,
+    make_palette_toggle_action,
     make_scene_nav_action,
     make_static_accessibility_spec,
     make_window_toggle_spec,
@@ -1207,9 +1207,9 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual("exit", exit_spec.action_id)
         self.assertEqual("exit", exit_spec.kind)
 
-        palette = make_palette_open_action()
-        self.assertEqual("palette_open", palette.action_id)
-        self.assertEqual("palette_open", palette.kind)
+        palette = make_palette_toggle_action()
+        self.assertEqual("palette_toggle", palette.action_id)
+        self.assertEqual("palette_toggle", palette.kind)
         self.assertIsNone(palette.category)
 
         accessibility = make_static_accessibility_spec("save_button", label="Save")

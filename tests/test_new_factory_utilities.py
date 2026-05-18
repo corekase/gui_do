@@ -1488,7 +1488,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
             (
                 ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
                 ActionBindingSpec(kind="scene_nav", action_id="nav_tools", label="Go Tools", target="tools", category="Scenes"),
-                ActionBindingSpec(kind="palette_open", action_id="palette_open", label="Open Command Palette (F5)"),
+                ActionBindingSpec(kind="palette_toggle", action_id="palette_toggle", label="Toggle Command Palette (F5)"),
                 passthrough,
             )
         )
@@ -1497,7 +1497,7 @@ class TestBootstrapCollectionBuilders(unittest.TestCase):
         self.assertEqual(built[0].kind, "exit")
         self.assertEqual(built[1].kind, "scene_nav")
         self.assertEqual(built[1].target, "tools")
-        self.assertEqual(built[2].kind, "palette_open")
+        self.assertEqual(built[2].kind, "palette_toggle")
         self.assertIs(built[3], passthrough)
 
     def test_build_action_specs_scene_nav_requires_target(self):

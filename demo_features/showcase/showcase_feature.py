@@ -13,7 +13,6 @@ from gui_do.features.data_driven_runtime import (
     create_tab_control_from_specs,
     shutdown_routed_runtime,
     setup_routed_runtime,
-    bind_palette_window_activator,
 )
 from gui_do.features.control_spec import ControlDefinition
 from gui_do.features.feature_lifecycle import ControlPlacementSpec
@@ -267,7 +266,7 @@ class ShowcaseFeature(Feature):
         bind_global_key = getattr(app_actions, "bind_global_key", None)
         if callable(bind_global_key):
             bind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
-        bind_palette_window_activator(host, app_actions)
+
 
     def shutdown_runtime(self, host) -> None:
         if self._runtime_spec is not None:

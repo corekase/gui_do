@@ -135,7 +135,7 @@ from .runtime_tab_helpers import (
 )
 from .runtime_spec_factories import (
     make_exit_action as _make_exit_action,
-    make_palette_open_action as _make_palette_open_action,
+    make_palette_toggle_action as _make_palette_toggle_action,
     make_scene_nav_action as _make_scene_nav_action,
     make_static_accessibility_spec as _make_static_accessibility_spec,
     make_window_toggle_spec as _make_window_toggle_spec,
@@ -201,7 +201,7 @@ class ActionSpec:
     """Declarative descriptor for a host-level application action."""
     action_id: str
     label: str
-    kind: str           # "exit" | "scene_nav" | "palette_open"
+    kind: str           # "exit" | "scene_nav" | "palette_toggle"
     target: str | None = None
     category: str | None = None
     key: int | None = None
@@ -411,32 +411,34 @@ class TaskPanelWindowToggleGroupSpec:
 
 
 @dataclass(frozen=True)
-class SceneCommandPaletteSpec:
-    """Declarative spec for a scene's command palette activation key.
+class PaletteInputBindSpec:
+    """Declarative spec for a command palette input bind (toggle or action).
 
-    Declared per-scene.  The key is registered as a *global* key — it fires at the
-    very start of key routing, before focus dispatch, active-window handlers, and
-    screen-event handlers.  This guarantees the palette is always reachable regardless
-    of which window or control has keyboard focus.
-
-    *scene_name* scopes the activation key to one scene; pass ``None`` to activate in
-    every scene (useful when the same key should open the palette everywhere).
-
-    The command palette itself is provided by ``gui_do`` as a built-in facility.
-    Each scene declares its own spec — having a command palette is optional.
-
-    Example::
-
-        MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
-            scene_name="main",
-            command_palette=SceneCommandPaletteSpec(key=pygame.K_F5, scene_name="main"),
-            ...
-        )
+    Defines how one palette operation is triggered via keyboard, pointer button, or both.
     """
 
-    key: int
+    action_name: str
+    key: int | None = None
+    pointer_button: int | None = None
+
+
+@dataclass(frozen=True)
+class SceneCommandPaletteSpec:
+    """Declarative spec for command palette UX bindings.
+
+    This spec models two independent input binds:
+    - *toggle*: opens/closes the command palette itself.
+    - *action*: while palette is open, toggles visibility of window entries
+      under the pointer without dismissing the palette.
+
+    Each bind is a PaletteInputBindSpec that specifies the action name, optional key,
+    and optional pointer button. *scene_name* scopes all binds to one scene; pass
+    ``None`` for global scope.
+    """
+
     scene_name: str | None = None
-    action_id: str = "command_palette_open"
+    toggle: PaletteInputBindSpec = field(default_factory=lambda: PaletteInputBindSpec(action_name="command_palette_toggle"))
+    action: PaletteInputBindSpec = field(default_factory=lambda: PaletteInputBindSpec(action_name="command_palette_action"))
 
 
 @dataclass(frozen=True)
@@ -785,7 +787,7 @@ class FontRoleBindingSpec:
 class ActionBindingSpec:
     """Input descriptor for building ActionSpec values from common action kinds."""
 
-    kind: str  # "exit" | "scene_nav" | "palette_open"
+    kind: str  # "exit" | "scene_nav" | "palette_toggle"
     action_id: str
     label: str
     target: str | None = None
@@ -1032,7 +1034,7 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     host._palette_manager = None
     wants_palette = bool(
         palette_spec is not None
-        or any(str(getattr(spec, "kind", "")) == "palette_open" for spec in config.action_specs)
+        or any(str(getattr(spec, "kind", "")) == "palette_toggle" for spec in config.action_specs)
     )
     if wants_palette:
         _ensure_command_palette_manager(host, palette_requested=True)
@@ -1069,7 +1071,7 @@ def declare_host_actions(host, action_specs) -> None:
     """Declare all standard actions on host.action_registry from declarative specs.
 
     Also binds any declared key to the application input dispatcher so the user's
-    key choice (e.g. F5 for palette_open) is honoured without any hidden auto-binding.
+    key choice (e.g. F5 for palette_toggle) is honoured without any hidden auto-binding.
     """
     r = host.action_registry
     app_actions = getattr(host.app, "actions", None)
@@ -1093,15 +1095,18 @@ def _build_standard_action_handler(host, spec):
     if spec.kind == "scene_nav":
         target = str(spec.target)
         return lambda _ctx, _ev, _t=target: (host.scene_transitions.go(_t) or True)
-    if spec.kind == "palette_open":
-        def _open_palette(_ctx, _ev):
+    if spec.kind == "palette_toggle":
+        def _toggle_palette(_ctx, _ev):
             palette_manager = _ensure_command_palette_manager(host, palette_requested=True)
             if palette_manager is None:
                 return False
-            palette_manager.show(host.app)
+            if palette_manager.is_open:
+                palette_manager.hide()
+            else:
+                palette_manager.show(host.app)
             return True
 
-        return _open_palette
+        return _toggle_palette
     raise ValueError(f"Unsupported action kind: {spec.kind!r}")
 
 
@@ -1390,23 +1395,52 @@ def add_task_panel_window_toggle_group(
     )
 
 
-def setup_scene_command_palette_key(app, palette_manager, spec: "SceneCommandPaletteSpec") -> None:
-    """Register a global per-scene activation key for the command palette.
+def setup_scene_command_palette_bindings(app, palette_manager, spec: "SceneCommandPaletteSpec") -> None:
+    """Register command palette toggle/action binds from one scene-level spec.
 
-    The key is bound as a *global* key (via ``ActionManager.bind_global_key``) so it
-    fires before focus dispatch, active-window handlers, and screen-event handlers.
-    This guarantees the palette is always reachable regardless of UI state.
-
-    The action is idempotent: if the action is already registered it is reused, so
-    multiple features in the same scene can each declare the same spec safely.
-
-    Called automatically by ``setup_routed_runtime`` when ``RoutedRuntimeSpec.command_palette``
-    is set.  User code may also call this directly for fine-grained control.
+    Toggle bind: toggles the overall palette visibility.
+    Action bind: consumes the event and toggles only window entries under pointer;
+    non-window entries are consumed with no action.
     """
-    action_id = str(spec.action_id)
-    if not app.actions.has_action(action_id):
-        app.actions.register_action(action_id, lambda _e: (palette_manager.show(app) or True))
-    app.actions.bind_global_key(int(spec.key), action_id, scene=spec.scene_name)
+    app_actions = getattr(app, "actions", None)
+    if app_actions is None:
+        return
+
+    toggle_action_name = str(spec.toggle.action_name)
+    if not app_actions.has_action(toggle_action_name):
+        def _toggle(_event):
+            if palette_manager.is_open:
+                palette_manager.hide()
+            else:
+                palette_manager.show(app)
+            return True
+
+        app_actions.register_action(toggle_action_name, _toggle)
+
+    if spec.toggle.key is not None:
+        app_actions.bind_global_key(int(spec.toggle.key), toggle_action_name, scene=spec.scene_name)
+    if spec.toggle.pointer_button is not None and hasattr(app_actions, "bind_global_pointer_button"):
+        app_actions.bind_global_pointer_button(int(spec.toggle.pointer_button), toggle_action_name, scene=spec.scene_name)
+
+    action_action_name = str(spec.action.action_name)
+    if not app_actions.has_action(action_action_name):
+        def _action(event):
+            # Show palette if not already open, and stop—next action will activate entry
+            if not palette_manager.is_open:
+                palette_manager.show(app)
+                return True
+            # Try to activate window entry at pointer position only if palette was already open
+            pos = getattr(event, "pos", None)
+            if pos is not None:
+                palette_manager.try_activate_window_at(pos)
+            return True
+
+        app_actions.register_action(action_action_name, _action)
+
+    if spec.action.key is not None:
+        app_actions.bind_global_key(int(spec.action.key), action_action_name, scene=spec.scene_name)
+    if spec.action.pointer_button is not None and hasattr(app_actions, "bind_global_pointer_button"):
+        app_actions.bind_global_pointer_button(int(spec.action.pointer_button), action_action_name, scene=spec.scene_name)
 
 
 def initialize_locale_registry(tables, *, initial_locale: str) -> LocaleRegistry:
@@ -1530,18 +1564,11 @@ def register_global_pointer_actions(app_actions, specs: Sequence[GlobalPointerAc
             bind_global_pointer(button, action_name, scene=str(spec.scene_name))
 
 
-def bind_palette_window_activator(host, app_actions, *, action_name: str = "palette_open") -> None:
-    """Register an enhanced *action_name* handler that supports in-palette window
-    activation via the bound pointer activator.
+def bind_palette_window_action_bind(host, app_actions, *, action_name: str = "command_palette_action") -> None:
+    """Register an action bind that only toggles window entries in an open palette.
 
-    When the palette is **open** and the action fires: if the pointer is over a
-    window-toggle entry the window is toggled and the palette selection is updated
-    without closing the palette; clicks on non-window entries are silently ignored.
-    When the palette is **closed** the action opens it as normal.
-
-    Call this after :func:`setup_routed_runtime` so that ``host._palette_manager``
-    is already initialised.  Replaces the previously registered handler for
-    *action_name* on *app_actions*.
+    The event is consumed in all cases; if the palette is closed or pointer is not
+    over a window entry, no side effect is applied.
     """
     if app_actions is None:
         return
@@ -1553,12 +1580,11 @@ def bind_palette_window_activator(host, app_actions, *, action_name: str = "pale
         return
 
     def _handler(event):
-        if palette_manager.is_open:
-            pos = getattr(event, "pos", None)
-            if pos is not None:
-                palette_manager.try_activate_window_at(pos)
+        if not palette_manager.is_open:
             return True
-        palette_manager.show(app)
+        pos = getattr(event, "pos", None)
+        if pos is not None:
+            palette_manager.try_activate_window_at(pos)
         return True
 
     app_actions.register_action(action_name, _handler)
@@ -2298,7 +2324,7 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
     if spec.command_palette is not None and app is not None:
         palette_manager = _ensure_command_palette_manager(host, palette_requested=True)
         if palette_manager is not None:
-            setup_scene_command_palette_key(app, palette_manager, spec.command_palette)
+            setup_scene_command_palette_bindings(app, palette_manager, spec.command_palette)
 
     if spec.task_panel_focus_toggles and app is not None and app_actions is not None:
         for tpft in spec.task_panel_focus_toggles:
@@ -2756,14 +2782,14 @@ def make_exit_action(
     )
 
 
-def make_palette_open_action(
-    action_id: str = "palette_open",
+def make_palette_toggle_action(
+    action_id: str = "palette_toggle",
     *,
-    label: str = "Open Command Palette",
+    label: str = "Toggle Command Palette",
     key: int | None = None,
 ) -> ActionSpec:
-    """Build a standard command-palette open ActionSpec."""
-    return _make_palette_open_action(
+    """Build a standard command-palette toggle ActionSpec."""
+    return _make_palette_toggle_action(
         action_spec_cls=ActionSpec,
         action_id=action_id,
         label=label,
@@ -2851,7 +2877,7 @@ def build_action_specs(entries: Sequence[ActionBindingSpec | ActionSpec]) -> tup
     Supports common action kinds:
     - ``exit``
     - ``scene_nav`` (requires ``target``)
-    - ``palette_open``
+    - ``palette_toggle``
 
     Pre-built ActionSpec entries are passed through unchanged.
     """
@@ -2860,7 +2886,7 @@ def build_action_specs(entries: Sequence[ActionBindingSpec | ActionSpec]) -> tup
         action_spec_cls=ActionSpec,
         make_exit_action_fn=make_exit_action,
         make_scene_nav_action_fn=make_scene_nav_action,
-        make_palette_open_action_fn=make_palette_open_action,
+        make_palette_toggle_action_fn=make_palette_toggle_action,
     )
 
 

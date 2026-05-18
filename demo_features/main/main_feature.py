@@ -11,7 +11,6 @@ from gui_do import (
 from gui_do.features.data_driven_runtime import (
     shutdown_routed_runtime,
     setup_routed_runtime,
-    bind_palette_window_activator,
 )
 
 from .main_build_helpers import build_main_scene as build_main_scene_helper, toggle_help_overlay as toggle_help_overlay_helper
@@ -49,7 +48,7 @@ class MainFeature(Feature):
         if callable(bind_global_key):
             bind_global_key(pygame.K_ESCAPE, "exit", scene="main")
 
-        bind_palette_window_activator(host, app_actions)
+
     def shutdown_runtime(self, host) -> None:
         shutdown_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
         app_actions = getattr(host.app, "actions", None)
