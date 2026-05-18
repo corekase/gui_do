@@ -199,18 +199,17 @@ class MenuStripControl(UiNode):
 
         if self._window_menu.shown:
             window_items = self._build_window_items()
-            if window_items:
-                dynamic_insertions.append(
-                    (
-                        int(self._window_menu.insert_index),
-                        MenuEntry(
-                            str(self._window_menu.label),
-                            window_items,
-                            enabled=True,
-                            flyout_min_width=self._dynamic_flyout_min_width_by_label.get(str(self._window_menu.label)),
-                        ),
-                    )
+            dynamic_insertions.append(
+                (
+                    int(self._window_menu.insert_index),
+                    MenuEntry(
+                        str(self._window_menu.label),
+                        window_items,
+                        enabled=True,
+                        flyout_min_width=self._dynamic_flyout_min_width_by_label.get(str(self._window_menu.label)),
+                    ),
                 )
+            )
 
         for offset, (insert_index, entry) in enumerate(sorted(dynamic_insertions, key=lambda item: item[0])):
             target = max(0, min(int(insert_index) + offset, len(merged_entries)))
@@ -528,6 +527,9 @@ class MenuStripControl(UiNode):
         owner = f"_menubar_{self.control_id}_{index}"
         er_rect = er[index]
         w, h = _FlyoutPanel.measure(entry.items, min_width=entry.flyout_min_width)
+        # Ensure each dropdown is never narrower than its top-level menu entry.
+        if w < er_rect.width:
+            w = int(er_rect.width)
         screen = app.surface.get_rect()
         fx = er_rect.x
         fy = er_rect.bottom
