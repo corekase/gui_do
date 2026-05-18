@@ -606,8 +606,8 @@ class MenuStripControl(UiNode):
                 text_w = font.text_size(text)[0] if hasattr(font, "text_size") else font.size(text)[0]
             except Exception:
                 text_w = len(text) * 8
-            # 3px inset + longest entry text width + 5px end gutter.
-            entry_width = 3 + int(text_w) + 5
+            # 5px inset + longest entry text width + 5px end gutter.
+            entry_width = 5 + int(text_w) + 5
             longest = max(longest, entry_width)
         if longest > 0:
             self._dynamic_flyout_min_width_by_label[str(menu_label)] = int(longest)
