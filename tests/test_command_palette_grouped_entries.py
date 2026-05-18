@@ -108,6 +108,19 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         self.assertEqual(1, len(overlay.show_calls))
         self.assertEqual(0, len(overlay.hide_calls))
 
+    def test_show_enables_focus_lost_dismiss_for_non_palette_control_activation(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        manager.register(CommandEntry(entry_id="custom:one", title="One", action=lambda: None, category="Custom"))
+
+        manager.show(app)
+
+        self.assertEqual(1, len(overlay.show_calls))
+        _, _control, kwargs = overlay.show_calls[0]
+        self.assertTrue(bool(kwargs.get("dismiss_on_focus_lost")))
+        self.assertEqual("__command_palette___list", str(kwargs.get("focus_owner_id", "")))
+
     def test_group_order_allows_custom_between_scene_and_window_groups(self):
         manager = CommandPaletteManager(_OverlayStub())
         app = _AppStub()

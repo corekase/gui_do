@@ -908,6 +908,21 @@ class GuiApplication:
 
         if is_pointer_event:
             is_lmb_down = logical_event.is_mouse_down(1)
+            has_overlay = getattr(self.overlay, "has_overlay", None)
+            hide_overlay = getattr(self.overlay, "hide", None)
+            point_in_overlay = getattr(self.overlay, "point_in_overlay", None)
+            if (
+                is_lmb_down
+                and callable(has_overlay)
+                and has_overlay("__command_palette__")
+            ):
+                pointer_in_palette = bool(
+                    callable(point_in_overlay)
+                    and point_in_overlay("__command_palette__", logical_event.pos)
+                )
+                if not pointer_in_palette and callable(hide_overlay):
+                    if hide_overlay("__command_palette__"):
+                        self.invalidation.invalidate_all()
             # IMPORTANT: for mouse-down clicks inside an open overlay, route the overlay
             # BEFORE changing scene-graph focus.  Setting focus first triggers
             # on_focus_changed(False) on the focused control (e.g. a menu bar), which

@@ -553,6 +553,8 @@ class CommandPaletteManager:
             panel,
             dismiss_on_outside_click=True,
             dismiss_on_escape=True,
+            dismiss_on_focus_lost=True,
+            focus_owner_id=listview.control_id,
             on_dismiss=self._on_dismissed,
         )
         return CommandPaletteHandle(self)

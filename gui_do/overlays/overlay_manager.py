@@ -142,6 +142,13 @@ class OverlayManager:
                 return True
         return False
 
+    def point_in_overlay(self, owner_id: str, pos: tuple) -> bool:
+        """Return True if pos lies within the specific overlay owner's rect."""
+        rec = self._record_by_owner.get(owner_id)
+        if rec is None:
+            return False
+        return bool(rec.control.rect.collidepoint(pos))
+
     def route_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         """Route an event to overlays. Returns True only if event was consumed."""
         if not self._records:

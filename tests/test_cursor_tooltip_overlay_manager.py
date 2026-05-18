@@ -354,6 +354,13 @@ class TestOverlayManagerPointInOverlay(unittest.TestCase):
         mgr = OverlayManager()
         self.assertFalse(mgr.point_in_any_overlay((50, 50)))
 
+    def test_point_in_specific_overlay_returns_true_when_inside(self):
+        self.assertTrue(self.mgr.point_in_overlay("o1", (50, 30)))
+
+    def test_point_in_specific_overlay_returns_false_when_missing_or_outside(self):
+        self.assertFalse(self.mgr.point_in_overlay("missing", (50, 30)))
+        self.assertFalse(self.mgr.point_in_overlay("o1", (200, 200)))
+
 
 class TestOverlayManagerAnchorPosition(unittest.TestCase):
     TARGET = Rect(100, 100, 80, 40)
