@@ -149,6 +149,20 @@ All sub-prompts inherit these shared rules. Sub-prompt files do not need to repe
 4. Demo feature usage patterns under `demo_features/`.
 5. Existing README/TUTORIAL prose.
 
+## File Path Resolution Contract (Required)
+
+When documenting file-related APIs (persistence, telemetry, asset/image/font loading,
+event recording playback files, and file dialog defaults), enforce this behavior:
+
+- Relative paths and bare filenames are resolved from the process current working directory.
+- The expected working directory is the launching application directory (for this repo,
+  the project root when launching from `gui_do_demo.py`).
+- Absolute paths remain absolute and are never rewritten.
+
+Manual sections that show file-path examples must reflect this contract explicitly and
+must avoid language that implies package-relative defaults (for example relative to
+`gui_do/` source files).
+
 ## Demo Features Organization Convention (Required)
 
 Document the project and examples using `demo_features/` as the canonical feature organization pattern:

@@ -81,7 +81,7 @@ class TelemetryCollector:
 
     @staticmethod
     def _default_log_directory() -> Path:
-        return Path(__file__).resolve().parents[2]
+        return Path.cwd()
 
     @staticmethod
     def _normalize_key(system: str, point: str) -> tuple[str, str, str]:

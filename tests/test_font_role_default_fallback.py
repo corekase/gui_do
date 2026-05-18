@@ -1,6 +1,7 @@
 import unittest
 
 from gui_do.features.feature_lifecycle import setup_standard_font_roles
+from gui_do.theme.color_theme import ColorTheme
 from gui_do.theme.font_manager import FontManager
 from gui_do.theme.font_role_registry import FontRoleRegistry
 
@@ -123,6 +124,10 @@ class TestFontRoleDefaultFallback(unittest.TestCase):
         manager.register_role("default", size=16)
 
         self.assertEqual(revision_before, manager.revision)
+
+    def test_color_theme_font_manager_uses_cwd_relative_resolution_by_default(self):
+        theme = ColorTheme()
+        self.assertIsNone(theme.fonts._resource_root)
 
 
 if __name__ == "__main__":

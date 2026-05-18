@@ -1,8 +1,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from ..graphics.built_in_definitions import BUILT_IN_COLOURS
 from .font_manager import FontManager
 
@@ -18,7 +16,7 @@ class ColorTheme:
         self.highlight = BUILT_IN_COLOURS["highlight"]
         self.text = BUILT_IN_COLOURS["text"]
         self.shadow = BUILT_IN_COLOURS["none"]
-        self.fonts = FontManager(resource_root=Path(__file__).resolve().parents[2])
+        self.fonts = FontManager()
         self._background_bitmap = None
 
     @property

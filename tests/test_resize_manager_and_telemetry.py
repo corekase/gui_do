@@ -1,5 +1,6 @@
 """Tests for ResizeManager and TelemetryCollector."""
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 import pygame
@@ -195,6 +196,10 @@ class TestTelemetryCollectorInitial(unittest.TestCase):
     def test_should_record_false_when_disabled(self):
         tc = TelemetryCollector()
         self.assertFalse(tc.should_record("sys", "point"))
+
+    def test_default_log_directory_uses_current_working_directory(self):
+        tc = TelemetryCollector()
+        self.assertEqual(Path.cwd(), tc._log_directory)
 
 
 class TestTelemetryCollectorEnableDisable(unittest.TestCase):
