@@ -8,6 +8,7 @@ from pygame import Rect
 
 from ..controls.composite.overlay_panel_control import OverlayPanelControl
 from ..events.gui_event import EventType, GuiEvent
+from ..graphics.built_in_factory import BuiltInGraphicsFactory
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -65,11 +66,21 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
                 pygame.font.init()
             font = pygame.font.SysFont(None, int(font_size))
             item_text_padding = int(text_padding) * 2
-            widths = [
-                font.size(str(getattr(item, "label", "")))[0] + item_text_padding + 16
-                for item in items
-                if not bool(getattr(item, "separator", False))
-            ]
+            widths = []
+            for item in items:
+                if bool(getattr(item, "separator", False)):
+                    continue
+                label_width = font.size(str(getattr(item, "label", "")))[0]
+                if bool(getattr(item, "_menu_window_checkbox", False)):
+                    # 3px left inset + checkbox + 3px gap + text + 3px right padding.
+                    line_h = int(item_height)
+                    checkbox_size = max(1, line_h - 4)
+                    widths.append(3 + checkbox_size + 3 + label_width + 3)
+                elif bool(getattr(item, "_menu_scene_compact", False)):
+                    # 3px left inset + text + 5px end gutter.
+                    widths.append(3 + label_width + 5)
+                else:
+                    widths.append(label_width + item_text_padding + 16)
             if widths:
                 return max(int(min_width), max(widths)), h
         except Exception:
@@ -171,6 +182,7 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         if self._draw_font is None:
             self._draw_font = pygame.font.SysFont(None, self._font_size)
         font = self._draw_font
+        graphics_factory = BuiltInGraphicsFactory(theme)
 
         shadow_size = (self.rect.width, self.rect.height)
         if self._shadow_surface is None or self._shadow_size != shadow_size:
@@ -201,4 +213,23 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
             col = text_col if bool(getattr(item, "enabled", True)) else disabled_col
             label = str(getattr(item, "label", ""))
             ts = font.render(label, True, col)
-            surface.blit(ts, (r.x + self._text_padding, r.y + (r.height - ts.get_height()) // 2))
+            if bool(getattr(item, "_menu_window_checkbox", False)):
+                checkbox_area_size = max(1, int(r.height) - 4)
+                checkbox_size = max(1, int(round(checkbox_area_size * 0.85)))
+                checkbox_area_x = int(r.x) + 3
+                checkbox_area_y = int(r.y) + (int(r.height) - checkbox_area_size) // 2
+                checkbox_x = checkbox_area_x + (checkbox_area_size - checkbox_size) // 2
+                checkbox_y = checkbox_area_y + (checkbox_area_size - checkbox_size) // 2
+                checkbox_state = "idle"
+                if i == draw_hovered_index:
+                    checkbox_state = "hover"
+                elif bool(getattr(item, "_menu_window_visible", False)):
+                    checkbox_state = "armed"
+                checkbox_bitmap = graphics_factory.draw_checkbox_bitmap(checkbox_state, checkbox_size)
+                surface.blit(checkbox_bitmap, (checkbox_x, checkbox_y))
+                text_x = checkbox_area_x + checkbox_area_size + 3
+                surface.blit(ts, (text_x, r.y + (r.height - ts.get_height()) // 2))
+            elif bool(getattr(item, "_menu_scene_compact", False)):
+                surface.blit(ts, (int(r.x) + 3, r.y + (r.height - ts.get_height()) // 2))
+            else:
+                surface.blit(ts, (r.x + self._text_padding, r.y + (r.height - ts.get_height()) // 2))

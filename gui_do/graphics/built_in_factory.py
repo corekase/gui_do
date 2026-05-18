@@ -200,7 +200,7 @@ class BuiltInGraphicsFactory:
         return surface
 
     def _draw_check_bitmap(self, state: int, size: int) -> Surface:
-        shrink = max(2, int(size))
+        shrink = max(1, int(size * 0.65))
         offset = self._center(size, shrink)
         box_bitmap = Surface((shrink, shrink)).convert()
         if state == 2:
@@ -213,13 +213,30 @@ class BuiltInGraphicsFactory:
         complete = Surface((size, size), pygame.SRCALPHA).convert_alpha()
         complete.blit(box_bitmap, (offset, offset))
         if state in (1, 2):
-            thickness = max(2, size // 6)
-            p1 = (max(1, size // 6), max(1, int(size * 0.55)))
-            p2 = (max(1, int(size * 0.42)), max(1, int(size * 0.80)))
-            p3 = (max(1, int(size * 0.86)), max(1, int(size * 0.16)))
-            pygame.draw.lines(complete, BUILT_IN_COLOURS["full"], False, [p1, p2, p3], thickness)
-            pygame.draw.lines(complete, BUILT_IN_COLOURS["none"], False, [p1, p2, p3], max(1, thickness // 3))
+            glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
+            points = (
+                (20, 200),
+                (80, 140),
+                (160, 220),
+                (360, 0),
+                (400, 60),
+                (160, 320),
+                (20, 200),
+            )
+            polygon(glyph, BUILT_IN_COLOURS["full"], points, 0)
+            polygon(glyph, BUILT_IN_COLOURS["none"], points, 20)
+            complete.blit(smoothscale(glyph, (size, size)), (0, 0))
         return complete
+
+    def draw_checkbox_bitmap(self, state: str, size: int) -> Surface:
+        """Return a checkbox bitmap for one of: idle, hover, armed."""
+        mapping = {
+            "idle": 0,
+            "hover": 1,
+            "armed": 2,
+        }
+        index = mapping.get(str(state).strip().lower(), 0)
+        return self._draw_check_bitmap(index, int(size))
 
     def _draw_check_style_surface(self, text: str, rect: Rect, state: int, *, font_role: str = "body", highlight: bool = False) -> Surface:
         text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)

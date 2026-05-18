@@ -89,7 +89,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
         *,
         min_width: Optional[int] = None,
     ) -> Tuple[int, int]:
-        resolved_min_width = cls._MIN_W if min_width is None else max(cls._MIN_W, int(min_width))
+        resolved_min_width = cls._MIN_W if min_width is None else max(1, int(min_width))
         return _MenuOverlayPanelBase.measure(
             items,
             item_height=cls._ITEM_H,
@@ -469,6 +469,8 @@ class MenuStripControl(UiNode):
                     str(getattr(item, "label", "")),
                     bool(getattr(item, "enabled", True)),
                     bool(getattr(item, "separator", False)),
+                    bool(getattr(item, "_menu_window_checkbox", False)),
+                    bool(getattr(item, "_menu_window_visible", False)),
                 )
             )
         return (str(entry.label), bool(entry.enabled), tuple(items), entry.flyout_min_width)
@@ -558,11 +560,13 @@ class MenuStripControl(UiNode):
                 provider_items = self._scene_items_provider() or []
             except Exception:
                 provider_items = []
-            self._set_dynamic_flyout_min_width(self._scene_menu.label, provider_items)
+            for item in provider_items:
+                setattr(item, "_menu_scene_compact", True)
+            self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, provider_items)
             return provider_items
 
         if self._app is None:
-            self._set_dynamic_flyout_min_width(self._scene_menu.label, [])
+            self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, [])
             return []
 
         active = str(getattr(self._app, "active_scene_name", ""))
@@ -574,9 +578,30 @@ class MenuStripControl(UiNode):
             pretty = str(scene)
             if callable(scene_pretty_name_fn):
                 pretty = str(scene_pretty_name_fn(scene))
-            items.append(ContextMenuItem(pretty, action=lambda selected=scene: self._select_scene(selected)))
-        self._set_dynamic_flyout_min_width(self._scene_menu.label, items)
+            item = ContextMenuItem(pretty, action=lambda selected=scene: self._select_scene(selected))
+            setattr(item, "_menu_scene_compact", True)
+            items.append(item)
+        self._set_auto_scene_menu_flyout_min_width(self._scene_menu.label, items)
         return items
+
+    def _set_auto_scene_menu_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+        longest = 0
+        for item in items:
+            if bool(getattr(item, "separator", False)):
+                continue
+            text = str(getattr(item, "label", ""))
+            try:
+                font = pygame.font.SysFont(None, int(_FlyoutPanel._FONT_SIZE))
+                text_w = font.size(text)[0]
+            except Exception:
+                text_w = len(text) * 8
+            # 3px inset + longest entry text width + 5px end gutter.
+            entry_width = 3 + int(text_w) + 5
+            longest = max(longest, entry_width)
+        if longest > 0:
+            self._dynamic_flyout_min_width_by_label[str(menu_label)] = int(longest)
+            return
+        self._dynamic_flyout_min_width_by_label.pop(str(menu_label), None)
 
     def _allowed_scene_names(self) -> List[str]:
         if self._app is None:
@@ -631,10 +656,33 @@ class MenuStripControl(UiNode):
         items: List[ContextMenuItem] = []
         for window in windows:
             window_name = str(getattr(window, "title", "") or window.control_id)
-            prefix = "[x]" if bool(window.visible) else "[ ]"
-            items.append(ContextMenuItem(f"{prefix} {window_name}", action=lambda target=window: self._toggle_window(target)))
-        self._set_dynamic_flyout_min_width(self._window_menu.label, items)
+            item = ContextMenuItem(window_name, action=lambda target=window: self._toggle_window(target))
+            # Tag auto-generated window items so flyout drawing can render checkbox glyphs.
+            setattr(item, "_menu_window_checkbox", True)
+            setattr(item, "_menu_window_visible", bool(window.visible))
+            items.append(item)
+        self._set_auto_window_menu_flyout_min_width(self._window_menu.label, items)
         return items
+
+    def _set_auto_window_menu_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+        longest = 0
+        line_height = int(_FlyoutPanel._ITEM_H)
+        checkbox_size = max(1, line_height - 4)
+        for item in items:
+            if bool(getattr(item, "separator", False)):
+                continue
+            text = str(getattr(item, "label", ""))
+            try:
+                font = pygame.font.SysFont(None, int(_FlyoutPanel._FONT_SIZE))
+                text_w = font.size(text)[0]
+            except Exception:
+                text_w = len(text) * 8
+            entry_width = 3 + checkbox_size + 3 + int(text_w) + 3 + 5
+            longest = max(longest, entry_width)
+        if longest > 0:
+            self._dynamic_flyout_min_width_by_label[str(menu_label)] = int(longest)
+            return
+        self._dynamic_flyout_min_width_by_label.pop(str(menu_label), None)
 
     def _measure_item_label_width(self, label: str) -> int:
         text = str(label)

@@ -227,7 +227,7 @@ class TestMenuStripControl(unittest.TestCase):
         windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
-        self.assertIn("[x] Systems Demo", labels)
+        self.assertIn("Systems Demo", labels)
 
     def test_open_windows_flyout_auto_refreshes_when_visibility_changes(self):
         window = _StubWindowNode("systems_window", "Systems Demo", visible=False)
@@ -254,7 +254,7 @@ class TestMenuStripControl(unittest.TestCase):
         windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
-        self.assertIn("[x] Systems Demo", labels)
+        self.assertIn("Systems Demo", labels)
         self.assertGreaterEqual(len(app.overlay.hidden), 1)
         self.assertGreaterEqual(len(app.overlay.shown), 2)
 
@@ -457,6 +457,13 @@ class TestMenuStripControl(unittest.TestCase):
         self.assertGreater(width, 140)
         self.assertGreater(height, 0)
 
+    def test_scene_menu_compact_width_is_not_clamped_to_legacy_floor(self):
+        item = ContextMenuItem("Main")
+        setattr(item, "_menu_scene_compact", True)
+        width, _height = _FlyoutPanel.measure([item], min_width=24)
+
+        self.assertLess(width, 140)
+
     def test_windows_menu_discovers_mandelbrot_window_without_built_in_setter(self):
         mandel_window = _StubWindowNode("mandelbrot_window", "Mandelbrot Demo", visible=False)
         scene = _StubScene([_StubPlainNode(), mandel_window])
@@ -473,7 +480,7 @@ class TestMenuStripControl(unittest.TestCase):
         windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
-        self.assertIn("[ ] Mandelbrot Demo", labels)
+        self.assertIn("Mandelbrot Demo", labels)
 
     def test_windows_menu_action_calls_on_window_toggled_callback(self):
         systems_window = _StubWindowNode("systems_window", "Systems Demo", visible=False)
