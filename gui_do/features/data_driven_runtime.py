@@ -184,6 +184,7 @@ class WindowSpec:
     task_panel_slot_index: int | None
     accessibility_label: str
     window_effects: dict = field(default_factory=dict)
+    window_menu_opt_in: bool = True
 
 
 @dataclass(frozen=True)
@@ -239,6 +240,7 @@ class AnchoredWindowSpec:
     anchor: str
     margin: tuple[int, int]
     use_frame_backdrop: bool = True
+    window_menu_opt_in: bool = True
 
 
 @dataclass(frozen=True)
@@ -285,7 +287,10 @@ class TooltipBindingSpec:
 
 @dataclass(frozen=True)
 class MenuStripSpec:
-    """Declarative descriptor for attaching a unified menu strip."""
+    """Declarative descriptor for attaching a unified menu strip.
+
+    If scene_menu_opt_in is False, the scene is opted out of the menu strip. Default is True (opted in).
+    """
 
     control_id: str
     rect: Rect | tuple[int, int, int, int]
@@ -305,6 +310,7 @@ class MenuStripSpec:
     tab_index: int = 0
     accessibility_role: str = "menubar"
     accessibility_label: str = "Menu strip"
+    scene_menu_opt_in: bool = True
 
 
 @dataclass(frozen=True)
@@ -698,6 +704,7 @@ class FeatureWindowBundleBindingSpec:
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
+    window_menu_opt_in: bool = True
 
 
 
