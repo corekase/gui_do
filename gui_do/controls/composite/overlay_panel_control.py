@@ -11,7 +11,6 @@ from ...events.gui_event import EventType, GuiEvent
 if TYPE_CHECKING:
     from ..layout.constraint_layout import ConstraintLayout
     from ...app.gui_application import GuiApplication
-    from ...theme.color_theme import ColorTheme
 
 
 class OverlayPanelControl(PanelControl):
