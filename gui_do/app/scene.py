@@ -200,11 +200,15 @@ class Scene:
                 # separate BFS traversals (_point_in_task_panel + _point_in_window).
                 hit_interactive = False
                 windows, task_panels = self._window_query_nodes()
-                interactive_nodes = task_panels + windows
-                for node in interactive_nodes:
+                for node in task_panels:
                     if node.visible and node.enabled and node.rect.collidepoint(pos):
                         hit_interactive = True
                         break
+                if not hit_interactive:
+                    for node in windows:
+                        if node.visible and node.enabled and node.rect.collidepoint(pos):
+                            hit_interactive = True
+                            break
                 if not hit_interactive:
                     self._clear_active_windows()
         capture_event = event.with_phase(EventPhase.CAPTURE)

@@ -1319,6 +1319,7 @@ class DurableOperationQueueRuntime:
         self._storage = storage
         self._replay = replay_harness
         self._counter = 0
+        self._inflight_pending = 0
         self._records: list[DurableQueueRecord] = []
         self._bindings = {str(binding.queue_operation): binding for binding in spec.bindings}
         self._restore_records()
@@ -1360,7 +1361,7 @@ class DurableOperationQueueRuntime:
                 self._commit_handle(record)
                 processed += 1
                 continue
-            if self._inflight_count() >= inflight_limit:
+            if self._inflight_pending >= inflight_limit:
                 break
             binding = self._bindings.get(record.queue_operation)
             if binding is None:
@@ -1374,6 +1375,8 @@ class DurableOperationQueueRuntime:
             record.attempts += 1
             if not handle.is_pending:
                 self._commit_handle(record)
+            else:
+                self._inflight_pending += 1
                 processed += 1
         if processed > 0:
             self._save_records()
@@ -1390,12 +1393,15 @@ class DurableOperationQueueRuntime:
                 except Exception:
                     pass
                 record.status = "cancelled"
+                if self._inflight_pending > 0:
+                    self._inflight_pending -= 1
         self._save_records()
 
     def _commit_handle(self, record: DurableQueueRecord) -> None:
         handle = record.active_handle
         if handle is None:
             return
+        was_pending = handle.is_pending
         if handle.is_complete:
             record.status = "completed"
             record.result = handle.result
@@ -1407,11 +1413,10 @@ class DurableOperationQueueRuntime:
             record.status = "cancelled"
             record.error = None
         record.active_handle = None
+        if was_pending and self._inflight_pending > 0:
+            self._inflight_pending -= 1
         if self._replay is not None:
             self._replay.record("durable_queue", {"record_id": record.record_id, "status": record.status})
-
-    def _inflight_count(self) -> int:
-        return sum(1 for record in self._records if record.active_handle is not None and record.active_handle.is_pending)
 
     def _find_record_by_idempotency(self, idempotency_key: str) -> DurableQueueRecord | None:
         for record in reversed(self._records):

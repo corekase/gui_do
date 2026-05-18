@@ -43,6 +43,9 @@ class CollectionView:
     def items(self) -> List[Any]:
         return list(self._items)
 
+    def iter_items(self) -> Iterable[Any]:
+        return iter(self._items)
+
     def count(self) -> int:
         return len(self._items)
 

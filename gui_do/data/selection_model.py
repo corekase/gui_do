@@ -138,6 +138,18 @@ class SelectionModel:
             return frozenset(self._range_set())
         return frozenset(self._selected)
 
+    def contains(self, index: int) -> bool:
+        """Return whether *index* is currently selected without allocating."""
+        if not self._valid(index):
+            return False
+        if self._mode is SelectionMode.RANGE:
+            if self._anchor is None or self._active is None:
+                return index in self._selected
+            lo = min(self._anchor, self._active)
+            hi = max(self._anchor, self._active)
+            return lo <= index <= hi
+        return index in self._selected
+
     @property
     def selected_index(self) -> int:
         """Lowest selected index, or ``-1`` when nothing is selected."""
@@ -236,7 +248,7 @@ class SelectionModel:
 
     def is_selected(self, index: int) -> bool:
         """Return whether *index* is currently selected."""
-        return index in self.selected_indices
+        return self.contains(index)
 
     # ------------------------------------------------------------------
     # Internals

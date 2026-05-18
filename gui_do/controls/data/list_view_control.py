@@ -147,7 +147,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         }
 
         converted: List[ListItem] = []
-        for item in cv.items:
+        for item in cv.iter_items():
             if isinstance(item, ListItem):
                 converted.append(item)
                 continue
@@ -486,7 +486,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         return False
 
     def _toggle_or_select(self, idx: int) -> None:
-        if self._multi_select and idx in self._selected_indices:
+        if self._multi_select and idx in self._selected_set:
             # Preserve at least one selected item when list has content.
             if len(self._selected_indices) > 1:
                 self._selected_indices.remove(idx)
@@ -495,7 +495,7 @@ class ListViewControl(_VirtualizedScrollListBase):
             if not self._multi_select:
                 self._selected_indices = [idx]
                 self._selected_set = {idx}
-            elif idx not in self._selected_indices:
+            elif idx not in self._selected_set:
                 self._selected_indices.append(idx)
                 self._selected_set.add(idx)
         self._ensure_selection_invariant()

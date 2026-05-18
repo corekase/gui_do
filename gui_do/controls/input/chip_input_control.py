@@ -253,8 +253,6 @@ class ChipInputControl(UiNode):
         chip_h = self._chip_h(fonts)
         y = r.top + (r.height - chip_h) // 2
 
-        text_color = _INPUT_TEXT if self.enabled else _INPUT_PLACEHOLDER
-
         for val in self._values:
             chip_color = _CHIP_TEXT if self.enabled else _CHIP_TEXT_DISABLED
             chip_surf = theme.render_text(val, role=self._font_role, size=chip_font_size, color=chip_color)

@@ -151,7 +151,7 @@ class DataGridControl(_VirtualizedScrollListBase):
             selected_key = _row_key(old_rows[self._selected_row])
 
         converted: List[GridRow] = []
-        for item in cv.items:
+        for item in cv.iter_items():
             if isinstance(item, GridRow):
                 converted.append(item)
                 continue

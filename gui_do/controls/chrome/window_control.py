@@ -95,11 +95,6 @@ class WindowControl(UiNode):
             self.shear_active = self.shear_controller.is_active()
         # Existing drag end logic continues here
 
-
-        # --- Shear windows effect integration ---
-        shear_controller = None  # type: Optional[object]
-        shear_active = False
-
     """Window container with title bar and child controls."""
 
     presenter: Optional[object] = None

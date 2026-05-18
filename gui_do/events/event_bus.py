@@ -135,7 +135,7 @@ class EventBus:
                 return
             if unscoped and scoped:
                 count = len(unscoped) + len(scoped)
-                snapshot = tuple(unscoped) + tuple(scoped)
+                snapshot = None
             else:
                 snapshot = unscoped if unscoped else scoped
                 count = len(snapshot)
@@ -156,8 +156,8 @@ class EventBus:
                 "subscriber_count": count,
             },
         ):
-            for sub in snapshot:
-                if scope is None or sub.scope is None or sub.scope == scope:
+            if unscoped and scoped:
+                for sub in unscoped:
                     with collector.span(
                         "event_bus",
                         "publish_handler",
@@ -168,6 +168,30 @@ class EventBus:
                         },
                     ):
                         sub.handler(payload)
+                for sub in scoped:
+                    with collector.span(
+                        "event_bus",
+                        "publish_handler",
+                        metadata={
+                            "topic": topic_name,
+                            "scope": "" if scope is None else str(scope),
+                            "subscriber_scope": "" if sub.scope is None else str(sub.scope),
+                        },
+                    ):
+                        sub.handler(payload)
+            else:
+                for sub in snapshot:
+                    if scope is None or sub.scope is None or sub.scope == scope:
+                        with collector.span(
+                            "event_bus",
+                            "publish_handler",
+                            metadata={
+                                "topic": topic_name,
+                                "scope": "" if scope is None else str(scope),
+                                "subscriber_scope": "" if sub.scope is None else str(sub.scope),
+                            },
+                        ):
+                            sub.handler(payload)
 
     def once(self, topic: str, handler: EventHandler, *, scope: str | None = None) -> Subscription:
         """Subscribe to *topic* and automatically unsubscribe after the first delivery.

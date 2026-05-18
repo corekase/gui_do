@@ -108,6 +108,7 @@ class TreeControl(_VirtualizedScrollListBase):
         self._show_scrollbar: bool = bool(show_scrollbar)
         self._font_role: str = font_role
         self._selected_node: Optional[TreeNode] = None
+        self._selected_row_index: int = -1
         self._rows: List[_FlatRow] = []
         self._draw_font_role: str = "tree.row"
         self._rebuild_rows()
@@ -139,6 +140,7 @@ class TreeControl(_VirtualizedScrollListBase):
         """Replace the root node list."""
         self._nodes = list(nodes)
         self._selected_node = None
+        self._selected_row_index = -1
         self._scroll_offset = 0
         self._rebuild_rows()
         self.invalidate()
@@ -158,7 +160,7 @@ class TreeControl(_VirtualizedScrollListBase):
             self.set_nodes([])
             return
         converted: List[TreeNode] = []
-        for item in cv.items:
+        for item in cv.iter_items():
             if isinstance(item, TreeNode):
                 converted.append(item)
             else:
@@ -218,6 +220,7 @@ class TreeControl(_VirtualizedScrollListBase):
     def select(self, node: Optional[TreeNode]) -> None:
         """Programmatically select a node (None clears selection)."""
         self._selected_node = node
+        self._selected_row_index = self._row_index_for_node(node)
         self.invalidate()
 
     def expand_all(self) -> None:
@@ -246,6 +249,16 @@ class TreeControl(_VirtualizedScrollListBase):
         # Reassign indices to match position in flat list
         for i, row in enumerate(self._rows):
             row.index = i
+
+        self._selected_row_index = self._row_index_for_node(self._selected_node)
+
+    def _row_index_for_node(self, node: Optional[TreeNode]) -> int:
+        if node is None:
+            return -1
+        for i, row in enumerate(self._rows):
+            if row.node is node:
+                return i
+        return -1
 
     def _content_height(self) -> int:
         return len(self._rows) * self._row_height
@@ -368,6 +381,7 @@ class TreeControl(_VirtualizedScrollListBase):
                     self.toggle(node)
                 old = self._selected_node
                 self._selected_node = node
+                self._selected_row_index = row_idx
                 if node is not old:
                     self.invalidate()
                     if self._on_select:
@@ -379,10 +393,11 @@ class TreeControl(_VirtualizedScrollListBase):
 
         if event.kind == EventType.KEY_DOWN and self._selected_node is not None:
             key = event.key
-            sel_idx = next((i for i, r in enumerate(self._rows) if r.node is self._selected_node), -1)
+            sel_idx = self._selected_row_index
             if key == pygame.K_DOWN and sel_idx < len(self._rows) - 1:
                 new_row = self._rows[sel_idx + 1]
                 self._selected_node = new_row.node
+                self._selected_row_index = sel_idx + 1
                 self._scroll_to_row(sel_idx + 1, vr)
                 self.invalidate()
                 if self._on_select:
@@ -394,6 +409,7 @@ class TreeControl(_VirtualizedScrollListBase):
             if key == pygame.K_UP and sel_idx > 0:
                 new_row = self._rows[sel_idx - 1]
                 self._selected_node = new_row.node
+                self._selected_row_index = sel_idx - 1
                 self._scroll_to_row(sel_idx - 1, vr)
                 self.invalidate()
                 if self._on_select:
@@ -453,7 +469,7 @@ class TreeControl(_VirtualizedScrollListBase):
                 node = row.node
                 depth = row.depth
                 # Row background
-                if node is self._selected_node:
+                if i == self._selected_row_index:
                     pygame.draw.rect(surface, sel_col, rr)
                 # Arrow for non-leaf nodes
                 if not node.is_leaf:

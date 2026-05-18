@@ -258,6 +258,7 @@ class VirtualizationCore(Generic[T]):
         self._pool = pool
         self._bind_fn = bind_fn
         self._active: dict[int, T] = {}  # index → cell
+        self._pending_release: set[int] = set()
 
     @property
     def window(self) -> VirtualizedWindow:
@@ -285,9 +286,13 @@ class VirtualizationCore(Generic[T]):
             return []
 
         active = self._active
+        pending_release = self._pending_release
+        pending_release.clear()
         # Release cells no longer needed
-        stale_indices = [idx for idx in active if idx < first or idx > last]
-        for idx in stale_indices:
+        for idx in active:
+            if idx < first or idx > last:
+                pending_release.add(idx)
+        for idx in pending_release:
             self._pool.release(active.pop(idx))
 
         # Acquire cells for newly visible indices
@@ -298,4 +303,7 @@ class VirtualizationCore(Generic[T]):
             self._bind_fn(cell, idx)
             active[idx] = cell
 
-        return [(idx, active[idx]) for idx in range(first, last + 1)]
+        visible: list[Tuple[int, T]] = []
+        for idx in range(first, last + 1):
+            visible.append((idx, active[idx]))
+        return visible

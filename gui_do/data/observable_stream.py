@@ -239,14 +239,25 @@ class ObservableStream(Generic[T]):
 
         def _subscribe(cb: Callable[[Tuple], None]) -> Callable[[], None]:
             buffers: list = [deque() for _ in range(n)]
+            has_value = [False] * n
+            ready_count = 0
             unsubs: list = []
 
             def _make_handler(idx: int) -> Callable:
                 def _on_value(v: Any) -> None:
-                    buffers[idx].append(v)
-                    if all(len(b) > 0 for b in buffers):
-                        args = tuple(b.popleft() for b in buffers)
-                        cb(args)
+                    nonlocal ready_count
+                    buffer = buffers[idx]
+                    buffer.append(v)
+                    if not has_value[idx]:
+                        has_value[idx] = True
+                        ready_count += 1
+                    if ready_count != n:
+                        return
+                    cb(tuple(buffer.popleft() for buffer in buffers))
+                    for buffer_index, buffer in enumerate(buffers):
+                        if not buffer:
+                            has_value[buffer_index] = False
+                            ready_count -= 1
 
                 return _on_value
 
