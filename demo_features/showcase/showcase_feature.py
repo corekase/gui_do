@@ -7,8 +7,8 @@ from pygame import Rect
 from gui_do.features.data_driven_runtime import (
     ObservableEffectSpec,
     RoutedRuntimeSpec,
-    SceneMenuStripSpec,
-    add_scene_menu_strip_from_spec,
+    MenuStripSpec,
+    add_menu_strip_from_spec,
     build_tab_builder_specs,
     create_tab_control_from_specs,
     shutdown_routed_runtime,
@@ -155,15 +155,21 @@ class ShowcaseFeature(Feature):
 
     def build(self, host) -> None:
         self._showcase_root = host.control_showcase_root
-        host.control_showcase_menu_bar = add_scene_menu_strip_from_spec(
+        host.control_showcase_menu_bar = add_menu_strip_from_spec(
             host.control_showcase_root,
             host,
-            SceneMenuStripSpec(
+            MenuStripSpec(
                 control_id="control_showcase_menu_bar",
                 rect=Rect(0, 0, host.control_showcase_root.rect.width, SHOWCASE_MENU_BAR_HEIGHT),
                 scene_name="control_showcase",
                 scenes_shown=True,
                 windows_shown=True,
+                scene_menu_label="Scene",
+                window_menu_label="Window",
+                scene_menu_insert_index=0,
+                window_menu_insert_index=1,
+                scene_menu_mode="add_all",
+                scene_menu_include_current_scene=False,
                 tools_exclude_labels=SHOWCASE_MENU_TOOLS_EXCLUDE_LABELS,
             ),
         )

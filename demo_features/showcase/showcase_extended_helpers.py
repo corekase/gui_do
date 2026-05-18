@@ -10,16 +10,13 @@ from gui_do import (
     BreadcrumbControl,
     BreadcrumbItem,
     ChipInputControl,
-    ContextMenuItem,
     DatePickerControl,
     ErrorBoundary,
     ExpanderControl,
     GridLayout,
     GridPlacement,
     LabelControl,
-    MenuEntry,
     PanelControl,
-    SceneMenuStripControl,
     SplitButtonControl,
     SplitButtonOption,
     StatusBarControl,
@@ -36,7 +33,7 @@ if TYPE_CHECKING:
 
 
 def extended_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDefinition]:
-    app = host.app
+    _ = host
     label_h = int(feature.LABEL_HEIGHT)
     label_gap = int(feature.LABEL_GAP)
     row_gap = int(feature.ROW_GAP)
@@ -135,43 +132,25 @@ def extended_defs(feature: ShowcaseFeature, col_w: int, host) -> list[ControlDef
     def _make_row3_panel() -> PanelControl:
         panel = PanelControl("control_ext_row3", Rect(0, 0, col_w, row3_h), draw_background=False)
         first_row_h = label_h + label_gap + 32
-        scene_menu = SceneMenuStripControl(
-            "control_scene_menu_strip",
-            Rect(0, 0, sc0_w, 30),
-            app,
-            scenes_shown=False,
-            windows_shown=False,
-            extra_entries_provider=lambda: [
-                MenuEntry(
-                    "Demo",
-                    [
-                        ContextMenuItem("Inspect", action=lambda: None),
-                        ContextMenuItem("Refresh", action=lambda: None),
-                    ],
-                ),
-            ],
-        )
-        _add_cell(panel, "scene_menu_strip", sc0_x, sc0_w, "Scene Menu Strip", scene_menu)
+        date_picker = DatePickerControl("control_date_picker", Rect(0, 0, sc0_w, 32))
+        _add_cell(panel, "date_picker", sc0_x, sc0_w, "Date Picker", date_picker)
 
-        date_picker = DatePickerControl("control_date_picker", Rect(0, 0, sc1_w, 32))
-        _add_cell(panel, "date_picker", sc1_x, sc1_w, "Date Picker", date_picker)
-
-        time_picker = TimePickerControl("control_time_picker", Rect(0, 0, sc0_w, 32), hour=9, minute=30)
+        time_picker = TimePickerControl("control_time_picker", Rect(0, 0, sc1_w, 32), hour=9, minute=30)
         time_label = LabelControl(
             "label_time_picker_ext_row2",
-            Rect(0, 0, sc0_w, label_h),
+            Rect(0, 0, sc1_w, label_h),
             "Time Picker",
             align="left",
         )
         time_layout = GridLayout(
             row_tracks=[label_h, label_gap, 32],
-            col_tracks=[max(1, int(sc0_w))],
+            col_tracks=[max(1, int(sc1_w))],
             gap=0,
             padding=0,
         )
         time_layout.place(time_label, GridPlacement(row=0, col=0))
         time_layout.place(time_picker, GridPlacement(row=2, col=0))
-        time_layout.apply(Rect(sc0_x, first_row_h + row_gap, sc0_w, label_h + label_gap + 32))
+        time_layout.apply(Rect(sc1_x, first_row_h + row_gap, sc1_w, label_h + label_gap + 32))
         panel.add_at(time_label, time_label.rect.left, time_label.rect.top)
         panel.add_at(time_picker, time_picker.rect.left, time_picker.rect.top)
         return panel

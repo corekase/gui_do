@@ -9,8 +9,7 @@ import inspect
 import pygame
 from pygame import Rect
 
-from ..controls.chrome.menu_bar_control import MenuEntry
-from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
+from ..controls.chrome.menu_bar_control import MenuEntry, MenuStripControl, SceneMenuOptions, WindowMenuOptions
 from ..controls.chrome.window_control import WindowControl
 from ..controls.data.tab_control import TabControl
 from ..controls.input.button_control import ButtonControl
@@ -285,19 +284,27 @@ class TooltipBindingSpec:
 
 
 @dataclass(frozen=True)
-class SceneMenuStripSpec:
-    """Declarative descriptor for attaching a standard scene menu strip."""
+class MenuStripSpec:
+    """Declarative descriptor for attaching a unified menu strip."""
 
     control_id: str
     rect: Rect | tuple[int, int, int, int]
     scene_name: str
     scenes_shown: bool = True
     windows_shown: bool = True
+    scene_menu_label: str = "Scene"
+    window_menu_label: str = "Window"
+    scene_menu_insert_index: int = 0
+    window_menu_insert_index: int = 1
+    scene_menu_mode: str = "add_all"  # add_all | opt_in
+    scene_menu_opt_in_scene_names: Sequence[str] = field(default_factory=tuple)
+    scene_menu_include_current_scene: bool = False
+    static_entries: Sequence[MenuEntry] = field(default_factory=tuple)
     tools_exclude_labels: Sequence[str] = field(default_factory=tuple)
     on_window_toggled: Callable[[object, bool], object] | None = None
     tab_index: int = 0
     accessibility_role: str = "menubar"
-    accessibility_label: str = "Scene menu"
+    accessibility_label: str = "Menu strip"
 
 
 @dataclass(frozen=True)
@@ -1190,7 +1197,7 @@ def build_tools_menu_entries(host, *, exclude_labels: Iterable[str] = ()) -> lis
     return [MenuEntry("Tools", tools_items)]
 
 
-def add_standard_scene_menu_strip(
+def add_standard_menu_strip(
     container,
     host,
     *,
@@ -1201,36 +1208,66 @@ def add_standard_scene_menu_strip(
     windows_shown: bool = True,
     tools_exclude_labels: Sequence[str] = (),
     on_window_toggled=None,
+    scene_menu_label: str = "Scene",
+    window_menu_label: str = "Window",
+    scene_menu_insert_index: int = 0,
+    window_menu_insert_index: int = 1,
+    scene_menu_mode: str = "add_all",
+    scene_menu_opt_in_scene_names: Sequence[str] = (),
+    scene_menu_include_current_scene: bool = False,
 ):
-    """Attach a standardized SceneMenuStripControl with optional Tools menu entries."""
-    return add_scene_menu_strip_from_spec(
+    """Attach a standardized MenuStripControl with optional Scene/Window sections."""
+    return add_menu_strip_from_spec(
         container,
         host,
-        SceneMenuStripSpec(
+        MenuStripSpec(
             control_id=str(control_id),
             rect=rect,
             scene_name=str(scene_name),
             scenes_shown=bool(scenes_shown),
             windows_shown=bool(windows_shown),
+            scene_menu_label=str(scene_menu_label),
+            window_menu_label=str(window_menu_label),
+            scene_menu_insert_index=int(scene_menu_insert_index),
+            window_menu_insert_index=int(window_menu_insert_index),
+            scene_menu_mode=str(scene_menu_mode),
+            scene_menu_opt_in_scene_names=tuple(scene_menu_opt_in_scene_names),
+            scene_menu_include_current_scene=bool(scene_menu_include_current_scene),
             tools_exclude_labels=tuple(tools_exclude_labels),
             on_window_toggled=on_window_toggled,
         ),
     )
 
 
-def add_scene_menu_strip_from_spec(container, host, spec: SceneMenuStripSpec):
-    """Attach a SceneMenuStripControl from a declarative scene-menu spec."""
+def add_menu_strip_from_spec(container, host, spec: MenuStripSpec):
+    """Attach a MenuStripControl from a declarative menu-strip spec."""
+    static_entries = list(spec.static_entries)
+    static_entries.extend(
+        build_tools_menu_entries(
+            host,
+            exclude_labels=tuple(spec.tools_exclude_labels),
+        )
+    )
+
     menu_strip = container.add(
-        SceneMenuStripControl(
+        MenuStripControl(
             str(spec.control_id),
             Rect(spec.rect),
-            host.app,
+            static_entries,
+            app=host.app,
             scene_name=str(spec.scene_name),
-            scenes_shown=bool(spec.scenes_shown),
-            windows_shown=bool(spec.windows_shown),
-            extra_entries_provider=lambda: build_tools_menu_entries(
-                host,
-                exclude_labels=tuple(spec.tools_exclude_labels),
+            scene_menu=SceneMenuOptions(
+                label=str(spec.scene_menu_label),
+                insert_index=int(spec.scene_menu_insert_index),
+                mode=str(spec.scene_menu_mode),
+                opt_in_scene_names=tuple(spec.scene_menu_opt_in_scene_names),
+                include_current_scene=bool(spec.scene_menu_include_current_scene),
+                shown=bool(spec.scenes_shown),
+            ),
+            window_menu=WindowMenuOptions(
+                label=str(spec.window_menu_label),
+                insert_index=int(spec.window_menu_insert_index),
+                shown=bool(spec.windows_shown),
             ),
             on_scene_selected=resolve_scene_selection_callback(host),
             on_window_toggled=spec.on_window_toggled,

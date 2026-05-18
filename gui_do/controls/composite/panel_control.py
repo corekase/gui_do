@@ -53,7 +53,7 @@ class PanelControl(UiNode):
         menu_rect: Optional[Rect] = None
         for child in self.children:
             class_name = str(getattr(child.__class__, "__name__", ""))
-            is_menu_bar_like = class_name in ("MenuBarControl", "SceneMenuStripControl")
+            is_menu_bar_like = class_name == "MenuStripControl"
             if (
                 child.visible
                 and child.enabled

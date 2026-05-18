@@ -1,14 +1,14 @@
-import unittest
+﻿import unittest
 
 import pygame
 from pygame import Rect
 
 from gui_do.controls.chrome.menu_bar_control import _FlyoutPanel
-from gui_do.controls.chrome.scene_menu_strip_control import SceneMenuStripControl
+from gui_do.controls.chrome.menu_bar_control import MenuStripControl, SceneMenuOptions, WindowMenuOptions
 from gui_do.controls.base.ui_node import UiNode
 from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.focus.focus_manager import FocusManager
-from gui_do.features.feature_lifecycle import add_window_scene_menu_strip
+from gui_do.features.feature_lifecycle import add_window_menu_strip
 from gui_do.overlays.context_menu_manager import ContextMenuItem
 
 
@@ -117,7 +117,7 @@ class _DummyTaskPanel(UiNode):
         return True
 
 
-class TestSceneMenuStripControl(unittest.TestCase):
+class TestMenuStripControl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not pygame.get_init():
@@ -134,27 +134,27 @@ class TestSceneMenuStripControl(unittest.TestCase):
                 ContextMenuItem("A very long scene display label that must fit"),
             ]
 
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
-            scenes_shown=True,
+            app=app,
+            scene_menu=SceneMenuOptions(shown=True),
             scene_items_provider=_scene_items,
         )
 
-        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scene"), None)
         self.assertIsNotNone(scenes_entry)
         self.assertIsNotNone(scenes_entry.flyout_min_width)
         self.assertGreater(scenes_entry.flyout_min_width, 140)
 
     def test_scene_menu_accepts_focus_for_tab_traversal(self):
         app = _StubApp(scene=_StubScene([]))
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
-            scenes_shown=True,
+            scene_menu=SceneMenuOptions(shown=True),
         )
 
         self.assertTrue(menu.accepts_focus())
@@ -162,21 +162,21 @@ class TestSceneMenuStripControl(unittest.TestCase):
     def test_scene_menu_keyboard_left_right_cycles_open_submenus(self):
         app = _StubApp(scene=_StubScene([]))
 
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
             window_items_provider=lambda: [ContextMenuItem("Systems")],
-            scenes_shown=True,
-            windows_shown=True,
+            scene_menu=SceneMenuOptions(shown=True),
+            window_menu=WindowMenuOptions(shown=True),
         )
 
         app.theme
 
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
         self.assertTrue(consumed)
@@ -184,46 +184,47 @@ class TestSceneMenuStripControl(unittest.TestCase):
 
     def test_scene_menu_active_marker_updates_on_keyboard_open(self):
         app = _StubApp(scene=_StubScene([]))
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
-            scenes_shown=True,
+            app=app,
+            scene_menu=SceneMenuOptions(shown=True),
         )
 
         app.active_scene_name = "control_showcase"
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
 
         self.assertTrue(consumed)
-        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scene"), None)
         self.assertIsNotNone(scenes_entry)
         labels = [item.label for item in scenes_entry.items]
-        self.assertIn("* Control Showcase", labels)
+        self.assertNotIn("Control Showcase", labels)
+        self.assertIn("Main", labels)
 
     def test_windows_menu_state_updates_on_keyboard_open(self):
         window = _StubWindowNode("systems_window", "Systems Demo", visible=False)
         app = _StubApp(scene=_StubScene([window]))
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_name="main",
-            windows_shown=True,
+            window_menu=WindowMenuOptions(shown=True),
         )
 
         window.visible = True
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
 
         self.assertTrue(consumed)
-        windows_entry = next((entry for entry in menu.entries if entry.label == "Windows"), None)
+        windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
         self.assertIn("[x] Systems Demo", labels)
@@ -231,17 +232,17 @@ class TestSceneMenuStripControl(unittest.TestCase):
     def test_open_windows_flyout_auto_refreshes_when_visibility_changes(self):
         window = _StubWindowNode("systems_window", "Systems Demo", visible=False)
         app = _StubApp(scene=_StubScene([window]))
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_name="main",
-            windows_shown=True,
+            window_menu=WindowMenuOptions(shown=True),
         )
 
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
         self.assertTrue(consumed)
@@ -250,25 +251,25 @@ class TestSceneMenuStripControl(unittest.TestCase):
         window.visible = True
         menu.update(0.016)
 
-        windows_entry = next((entry for entry in menu.entries if entry.label == "Windows"), None)
+        windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
         self.assertIn("[x] Systems Demo", labels)
         self.assertGreaterEqual(len(app.overlay.hidden), 1)
         self.assertGreaterEqual(len(app.overlay.shown), 2)
 
-    def test_open_scenes_flyout_auto_refreshes_active_marker(self):
+    def test_open_scenes_flyout_auto_refreshes_current_scene_filtering(self):
         app = _StubApp(scene=_StubScene([]))
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
-            scenes_shown=True,
+            app=app,
+            scene_menu=SceneMenuOptions(shown=True),
         )
 
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
         self.assertTrue(consumed)
@@ -277,10 +278,11 @@ class TestSceneMenuStripControl(unittest.TestCase):
         app.active_scene_name = "control_showcase"
         menu.update(0.016)
 
-        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scene"), None)
         self.assertIsNotNone(scenes_entry)
         labels = [item.label for item in scenes_entry.items]
-        self.assertIn("* Control Showcase", labels)
+        self.assertNotIn("Control Showcase", labels)
+        self.assertIn("Main", labels)
         self.assertGreaterEqual(len(app.overlay.hidden), 1)
         self.assertGreaterEqual(len(app.overlay.shown), 2)
 
@@ -299,12 +301,12 @@ class TestSceneMenuStripControl(unittest.TestCase):
                     queue.extend(getattr(node, "children", ()))
 
         app = _StubApp()
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
-            scenes_shown=True,
+            scene_menu=SceneMenuOptions(shown=True),
         )
         app.scene = _FocusScene([menu])
 
@@ -313,7 +315,7 @@ class TestSceneMenuStripControl(unittest.TestCase):
 
         consumed = focus.route_key_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
         )
 
         self.assertTrue(consumed)
@@ -322,18 +324,18 @@ class TestSceneMenuStripControl(unittest.TestCase):
     def test_space_activates_highlighted_flyout_item(self):
         app = _StubApp(scene=_StubScene([]))
         calls = []
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main", action=lambda: calls.append("main"))],
-            scenes_shown=True,
+            scene_menu=SceneMenuOptions(shown=True),
         )
 
         # Open first menu.
         consumed = menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
         self.assertTrue(consumed)
@@ -343,12 +345,12 @@ class TestSceneMenuStripControl(unittest.TestCase):
         # Highlight first selectable row and activate with Space.
         panel.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
         consumed = panel.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_SPACE),
-            app,
+            app=app,
             theme=app.theme,
         )
         self.assertTrue(consumed)
@@ -369,12 +371,12 @@ class TestSceneMenuStripControl(unittest.TestCase):
                     queue.extend(getattr(node, "children", ()))
 
         app = _StubApp()
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
-            scenes_shown=True,
+            scene_menu=SceneMenuOptions(shown=True),
         )
         other = _DummyFocusable("other")
         app.scene = _FocusScene([menu, other])
@@ -384,7 +386,7 @@ class TestSceneMenuStripControl(unittest.TestCase):
 
         consumed = focus.route_key_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
         )
         self.assertTrue(consumed)
         self.assertGreaterEqual(menu._open_index, 0)
@@ -428,21 +430,21 @@ class TestSceneMenuStripControl(unittest.TestCase):
                 return [ContextMenuItem("A very long scene display label that must fit")]
             return [ContextMenuItem("Short")]
 
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
-            scenes_shown=True,
+            app=app,
+            scene_menu=SceneMenuOptions(shown=True),
             scene_items_provider=_scene_items,
         )
 
-        first_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        first_entry = next((entry for entry in menu.entries if entry.label == "Scene"), None)
         self.assertIsNotNone(first_entry)
         first_width = int(first_entry.flyout_min_width)
 
         state["long"] = False
         menu.refresh_entries()
-        second_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        second_entry = next((entry for entry in menu.entries if entry.label == "Scene"), None)
         self.assertIsNotNone(second_entry)
         second_width = int(second_entry.flyout_min_width)
 
@@ -460,15 +462,15 @@ class TestSceneMenuStripControl(unittest.TestCase):
         scene = _StubScene([_StubPlainNode(), mandel_window])
         app = _StubApp(scene=scene)
 
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_name="main",
-            windows_shown=True,
+            window_menu=WindowMenuOptions(shown=True),
         )
 
-        windows_entry = next((entry for entry in menu.entries if entry.label == "Windows"), None)
+        windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
         self.assertIn("[ ] Mandelbrot Demo", labels)
@@ -479,16 +481,16 @@ class TestSceneMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=scene)
         callback_events = []
 
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
+            app=app,
             scene_name="main",
-            windows_shown=True,
+            window_menu=WindowMenuOptions(shown=True),
             on_window_toggled=lambda window, next_visible: callback_events.append((window.control_id, bool(next_visible))),
         )
 
-        windows_entry = next((entry for entry in menu.entries if entry.label == "Windows"), None)
+        windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
         self.assertIsNotNone(windows_entry)
         self.assertTrue(windows_entry.items)
 
@@ -497,34 +499,30 @@ class TestSceneMenuStripControl(unittest.TestCase):
         self.assertTrue(systems_window.visible)
         self.assertEqual([("systems_window", True)], callback_events)
 
-    def test_scene_menu_ignores_selection_of_current_active_scene(self):
+    def test_scene_menu_excludes_current_active_scene(self):
         app = _StubApp(scene=_StubScene([]))
         selected = []
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 500, 28),
-            app,
-            scenes_shown=True,
+            app=app,
+            scene_menu=SceneMenuOptions(shown=True),
             on_scene_selected=lambda scene_name: selected.append(str(scene_name)),
         )
 
-        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scene"), None)
         self.assertIsNotNone(scenes_entry)
-        self.assertGreaterEqual(len(scenes_entry.items), 2)
+        self.assertEqual(1, len(scenes_entry.items))
 
-        # Active scene is "main" in the stub app; selecting it again is a no-op.
         scenes_entry.items[0].action()
-        self.assertEqual([], selected)
-
-        scenes_entry.items[1].action()
         self.assertEqual(["control_showcase"], selected)
 
-    def test_add_window_scene_menu_strip_accepts_optional_scene_and_window_providers(self):
+    def test_add_window_menu_strip_accepts_optional_scene_and_window_providers(self):
         app = _StubApp(scene=_StubScene([]))
         host = _StubHost(app)
         window = _StubWindowContainer()
 
-        added = add_window_scene_menu_strip(
+        added = add_window_menu_strip(
             window,
             host,
             control_id="menu",
@@ -539,8 +537,8 @@ class TestSceneMenuStripControl(unittest.TestCase):
 
         self.assertIs(added, window.added[0])
         entries_by_label = {entry.label: entry for entry in added.entries}
-        self.assertEqual(["Custom Scene"], [item.label for item in entries_by_label["Scenes"].items])
-        self.assertEqual(["Custom Window"], [item.label for item in entries_by_label["Windows"].items])
+        self.assertEqual(["Custom Scene"], [item.label for item in entries_by_label["Scene"].items])
+        self.assertEqual(["Custom Window"], [item.label for item in entries_by_label["Window"].items])
 
 
 class TestSceneMenuStripMouseClickRegression(unittest.TestCase):
@@ -560,12 +558,12 @@ class TestSceneMenuStripMouseClickRegression(unittest.TestCase):
         app.create_scene("control_showcase")
         app.switch_scene("control_showcase")
         fired = []
-        menu = SceneMenuStripControl(
+        menu = MenuStripControl(
             "menu",
             Rect(0, 0, 800, 28),
-            app,
+            app=app,
             scene_name="control_showcase",
-            scenes_shown=True,
+            scene_menu=SceneMenuOptions(shown=True),
             scene_items_provider=lambda: [
                 ContextMenuItem("Main", action=lambda: fired.append("main"))
             ],
@@ -579,7 +577,7 @@ class TestSceneMenuStripMouseClickRegression(unittest.TestCase):
         app.theme.register_font_role("default", size=14)
         menu.handle_event(
             GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
-            app,
+            app=app,
             theme=app.theme,
         )
         self.assertGreaterEqual(menu._open_index, 0)

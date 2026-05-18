@@ -7,7 +7,7 @@ from pygame import Rect
 from gui_do.controls.composite.splitter_control import SplitterControl
 from gui_do.controls.input.button_group_control import ButtonGroupControl
 from gui_do.controls.composite.panel_control import PanelControl
-from gui_do.controls.chrome.menu_bar_control import MenuBarControl
+from gui_do.controls.chrome.menu_bar_control import MenuStripControl
 from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.chrome.window_control import WindowControl
 from gui_do.events.gui_event import GuiEvent, EventType
@@ -418,7 +418,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_drag_clamps_to_scene_menu_bar_boundary_and_preserves_title_anchor(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        menu = MenuBarControl("scene_menu", Rect(0, 0, 800, 28), entries=[])
+        menu = MenuStripControl("scene_menu", Rect(0, 0, 800, 28), entries=[])
         window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
         panel.add(menu)
         panel.add(window)

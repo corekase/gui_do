@@ -19,8 +19,8 @@ from gui_do import (
     LayoutAxis,
     ListItem,
     ListViewControl,
-    MenuBarControl,
     MenuEntry,
+    MenuStripControl,
     PanelControl,
     ScrollViewControl,
     SplitterControl,
@@ -177,12 +177,12 @@ def data_defs(feature: ShowcaseFeature, col_w: int) -> list[ControlDefinition]:
             accessibility_label="Splitter",
         ),
         ControlDefinition(
-            "menu_bar",
-            "Menu Bar",
+            "menu_strip",
+            "Menu Strip",
             28,
             65,
-            lambda: MenuBarControl(
-                "control_menu_bar",
+            lambda: MenuStripControl(
+                "control_menu_strip",
                 Rect(0, 0, col_w, 28),
                 [
                     MenuEntry("File", [ContextMenuItem("Open"), ContextMenuItem("Save")]),
@@ -190,7 +190,7 @@ def data_defs(feature: ShowcaseFeature, col_w: int) -> list[ControlDefinition]:
                 ],
             ),
             accessibility_role="menubar",
-            accessibility_label="Menu bar",
+            accessibility_label="Menu strip",
         ),
         ControlDefinition(
             "canvas",

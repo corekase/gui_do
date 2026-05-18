@@ -8,7 +8,7 @@ from pygame import Rect
 from gui_do.features.data_driven_runtime import (
     AutoSizedStyledLabelSpec,
     GlobalPointerActionSpec,
-    SceneMenuStripSpec,
+    MenuStripSpec,
     RoutedRuntimeSpec,
     SceneCommandPaletteSpec,
     SceneTaskPanelSpec,
@@ -78,13 +78,19 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
 MAIN_MENU_BAR_HEIGHT = 28
 
 
-def build_main_menu_strip_spec(screen_width: int, on_window_toggled) -> SceneMenuStripSpec:
-    return SceneMenuStripSpec(
+def build_main_menu_strip_spec(screen_width: int, on_window_toggled) -> MenuStripSpec:
+    return MenuStripSpec(
         control_id="desktop_menu_bar",
         rect=Rect(0, 0, int(screen_width), MAIN_MENU_BAR_HEIGHT),
         scene_name="main",
         scenes_shown=True,
         windows_shown=True,
+        scene_menu_label="Scene",
+        window_menu_label="Window",
+        scene_menu_insert_index=0,
+        window_menu_insert_index=1,
+        scene_menu_mode="add_all",
+        scene_menu_include_current_scene=False,
         on_window_toggled=on_window_toggled,
     )
 

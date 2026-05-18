@@ -41,7 +41,7 @@ class ToolbarItem:
 class ToolbarControl(UiNode):
     """Horizontal toolbar strip with labeled tool buttons and separators.
 
-    Unlike :class:`MenuBarControl`, a toolbar presents direct-action buttons
+    Unlike :class:`MenuStripControl`, a toolbar presents direct-action buttons
     rather than pull-down menus.  Items can be enabled or disabled at runtime
     via :meth:`set_item_enabled`.
 

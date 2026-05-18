@@ -398,8 +398,12 @@ from .controls.composite.error_boundary import ErrorBoundary
 from .controls.chrome.window_control import WindowControl
 from .controls.chrome.task_panel_control import TaskPanelControl
 from .controls.chrome.window_presenter import WindowPresenter
-from .controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
-from .controls.chrome.scene_menu_strip_control import SceneMenuStripControl
+from .controls.chrome.menu_bar_control import (
+    MenuEntry,
+    MenuStripControl,
+    SceneMenuOptions,
+    WindowMenuOptions,
+)
 from .controls.chrome.notification_panel_control import NotificationPanelControl
 from .controls.chrome.property_inspector_panel import PropertyInspectorPanel
 from .controls.chrome.toolbar_control import ToolbarControl, ToolbarItem
@@ -488,7 +492,7 @@ from .features.feature_lifecycle import (
     set_window_visible_state,
     toggle_window_visibility,
     create_anchored_feature_window,
-    add_window_scene_menu_strip,
+    add_window_menu_strip,
     place_control,
     place_control_unlabeled,
     register_placed_control,
@@ -501,7 +505,8 @@ from .features.feature_lifecycle import (
 from .features.layout_geometry import split_slot_bounds
 from .features.data_driven_runtime import (
     build_tools_menu_entries,
-    add_standard_scene_menu_strip,
+    add_standard_menu_strip,
+    add_menu_strip_from_spec,
     apply_accessibility_sequence,
     apply_accessibility_sequence_from_attrs,
     register_companion_logic_features,
@@ -1080,9 +1085,10 @@ __all__ = [
     "WindowControl",
     "TaskPanelControl",
     "WindowPresenter",
-    "MenuBarControl",
+    "MenuStripControl",
     "MenuEntry",
-    "SceneMenuStripControl",
+    "SceneMenuOptions",
+    "WindowMenuOptions",
     "NotificationPanelControl",
     "PropertyInspectorPanel",
     "ToolbarControl",
@@ -1159,7 +1165,7 @@ __all__ = [
     "set_window_visible_state",
     "toggle_window_visibility",
     "create_anchored_feature_window",
-    "add_window_scene_menu_strip",
+    "add_window_menu_strip",
     "split_slot_bounds",
     "place_control",
     "place_control_unlabeled",
@@ -1173,7 +1179,8 @@ __all__ = [
     "build_horizontal_row_specs",
     "build_multi_column_grid_specs",
     "build_tools_menu_entries",
-    "add_standard_scene_menu_strip",
+    "add_standard_menu_strip",
+    "add_menu_strip_from_spec",
     "apply_accessibility_sequence",
     "apply_accessibility_sequence_from_attrs",
     "register_companion_logic_features",

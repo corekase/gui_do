@@ -7,7 +7,7 @@ from pygame import Rect
 
 from gui_do.overlays.menu_bar_manager import MenuBarManager
 from gui_do.overlays.context_menu_manager import ContextMenuItem
-from gui_do.controls.chrome.menu_bar_control import MenuBarControl
+from gui_do.controls.chrome.menu_bar_control import MenuStripControl
 from gui_do.overlays.shortcut_help_overlay import (
     ShortcutEntry, ShortcutSection, ShortcutHelpOverlay,
 )
@@ -195,7 +195,7 @@ class TestMenuBarManagerBuild(unittest.TestCase):
 
     def test_build_returns_menu_bar_control(self):
         bar = self._mgr().build("bar", Rect(0, 0, 800, 28))
-        self.assertIsInstance(bar, MenuBarControl)
+        self.assertIsInstance(bar, MenuStripControl)
 
     def test_build_control_id(self):
         bar = self._mgr().build("mybar", Rect(0, 0, 800, 28))

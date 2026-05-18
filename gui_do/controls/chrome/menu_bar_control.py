@@ -1,16 +1,17 @@
-"""MenuBarControl — horizontal application menu bar with flyout sub-menus."""
+"""Menu strip control with static and dynamic scene/window menu sections."""
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Sequence, Tuple
 
 import pygame
 from pygame import Rect
 
 from ...events.gui_event import EventType, GuiEvent
-from ..base.ui_node import UiNode
 from ...overlays.context_menu_manager import ContextMenuItem
 from ...overlays.menu_overlay_panel_base import _MenuOverlayPanelBase
+from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
     from ...app.gui_application import GuiApplication
@@ -22,12 +23,33 @@ _ENTRY_PADDING_X = 12
 
 @dataclass
 class MenuEntry:
-    """One top-level menu in the menu bar (e.g., File, Edit, View)."""
+    """One top-level menu in the menu strip (for example File/Edit/View)."""
 
     label: str
     items: List[ContextMenuItem] = field(default_factory=list)
     enabled: bool = True
     flyout_min_width: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class SceneMenuOptions:
+    """Configuration for automatic Scene menu population."""
+
+    label: str = "Scene"
+    insert_index: int = 0
+    mode: str = "add_all"  # add_all | opt_in
+    opt_in_scene_names: Sequence[str] = field(default_factory=tuple)
+    include_current_scene: bool = False
+    shown: bool = True
+
+
+@dataclass(frozen=True)
+class WindowMenuOptions:
+    """Configuration for automatic Window menu population."""
+
+    label: str = "Window"
+    insert_index: int = 1
+    shown: bool = True
 
 
 class _FlyoutPanel(_MenuOverlayPanelBase):
@@ -38,7 +60,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
     _PAD = 4
     _TEXT_PAD = 12
     _MIN_W = 140
-    _FONT_SIZE = 17  # legacy concrete size; no theme at construction time
+    _FONT_SIZE = 17
 
     def __init__(
         self,
@@ -79,40 +101,39 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
         )
 
 
-class MenuBarControl(UiNode):
-    """Horizontal application menu bar control.
+class MenuStripControl(UiNode):
+    """Unified menu strip for static entries and dynamic Scene/Window menus."""
 
-    Add :class:`MenuEntry` items via :meth:`set_entries`.  When the user clicks
-    a top-level entry a flyout sub-menu is shown via the application's
-    :attr:`~gui_do.GuiApplication.overlay` manager.
-
-    Usage::
-
-        bar = MenuBarControl("menubar", Rect(0, 0, 800, 28))
-        bar.set_entries([
-            MenuEntry("File", [
-                ContextMenuItem("New", action=on_new),
-                ContextMenuItem("Open", action=on_open),
-                ContextMenuItem("", separator=True),
-                ContextMenuItem("Quit", action=on_quit),
-            ]),
-            MenuEntry("Edit", [
-                ContextMenuItem("Undo", action=on_undo),
-                ContextMenuItem("Redo", action=on_redo),
-            ]),
-        ])
-        app.add(bar)
-    """
+    _FONT_SCALE: float = 1.0625
 
     def __init__(
         self,
         control_id: str,
         rect: Rect,
         entries: Optional[List[MenuEntry]] = None,
+        *,
+        app: Optional["GuiApplication"] = None,
+        scene_name: Optional[str] = None,
+        scene_menu: Optional[SceneMenuOptions] = None,
+        window_menu: Optional[WindowMenuOptions] = None,
+        scene_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
+        window_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
+        on_scene_selected: Optional[Callable[[str], None]] = None,
+        on_window_toggled: Optional[Callable[[UiNode, bool], None]] = None,
     ) -> None:
         super().__init__(control_id, rect)
-        self._entries: List[MenuEntry] = list(entries) if entries else []
-        self._open_index: int = -1  # index of currently open top-level entry
+        self._app = app
+        self._scene_name = scene_name
+        self._scene_menu = scene_menu if scene_menu is not None else SceneMenuOptions(shown=False)
+        self._window_menu = window_menu if window_menu is not None else WindowMenuOptions(shown=False)
+        self._scene_items_provider = scene_items_provider
+        self._window_items_provider = window_items_provider
+        self._on_scene_selected = on_scene_selected
+        self._on_window_toggled = on_window_toggled
+
+        self._base_entries: List[MenuEntry] = list(entries) if entries else []
+        self._entries: List[MenuEntry] = []
+        self._open_index: int = -1
         self._hovered_index: int = -1
         self._open_flyout_rect: Optional[Rect] = None
         self._last_app: Optional["GuiApplication"] = None
@@ -120,21 +141,27 @@ class MenuBarControl(UiNode):
         self._draw_font_role: str = "menu_bar.entry"
         self._entry_rects_cache_key: Optional[tuple] = None
         self._entry_rects_cache: List[Rect] = []
-
-    _FONT_SCALE: float = 1.0625   # 17/16 — slightly larger than body for menu legibility
+        self._dynamic_flyout_min_width_by_label: Dict[str, int] = {}
+        self._window_order_rank_by_scene: Dict[str, Dict[str, int]] = {}
+        self._window_order_next_by_scene: Dict[str, int] = {}
+        self.refresh_entries()
 
     # ------------------------------------------------------------------
-    # API
+    # Public API
     # ------------------------------------------------------------------
 
     def set_entries(self, entries: List[MenuEntry]) -> None:
-        """Replace all top-level menu entries."""
-        self._entries = list(entries)
-        self._open_index = -1
-        self._hovered_index = -1
-        self._entry_rects_cache_key = None
-        self._entry_rects_cache = []
-        self.invalidate()
+        self._base_entries = list(entries)
+        self.refresh_entries()
+
+    def append_entry(self, entry: MenuEntry) -> None:
+        self._base_entries.append(entry)
+        self.refresh_entries()
+
+    def insert_entry(self, index: int, entry: MenuEntry) -> None:
+        target = max(0, min(int(index), len(self._base_entries)))
+        self._base_entries.insert(target, entry)
+        self.refresh_entries()
 
     def accepts_focus(self) -> bool:
         return True
@@ -152,13 +179,52 @@ class MenuBarControl(UiNode):
     def entries(self) -> List[MenuEntry]:
         return list(self._entries)
 
+    def refresh_entries(self) -> None:
+        merged_entries: List[MenuEntry] = list(self._base_entries)
+        dynamic_insertions: List[Tuple[int, MenuEntry]] = []
+
+        if self._scene_menu.shown:
+            scene_items = self._build_scene_items()
+            dynamic_insertions.append(
+                (
+                    int(self._scene_menu.insert_index),
+                    MenuEntry(
+                        str(self._scene_menu.label),
+                        scene_items,
+                        enabled=True,
+                        flyout_min_width=self._dynamic_flyout_min_width_by_label.get(str(self._scene_menu.label)),
+                    ),
+                )
+            )
+
+        if self._window_menu.shown:
+            window_items = self._build_window_items()
+            if window_items:
+                dynamic_insertions.append(
+                    (
+                        int(self._window_menu.insert_index),
+                        MenuEntry(
+                            str(self._window_menu.label),
+                            window_items,
+                            enabled=True,
+                            flyout_min_width=self._dynamic_flyout_min_width_by_label.get(str(self._window_menu.label)),
+                        ),
+                    )
+                )
+
+        for offset, (insert_index, entry) in enumerate(sorted(dynamic_insertions, key=lambda item: item[0])):
+            target = max(0, min(int(insert_index) + offset, len(merged_entries)))
+            merged_entries.insert(target, entry)
+
+        self._set_entries_preserving_state(merged_entries)
+
     # ------------------------------------------------------------------
     # Geometry helpers
     # ------------------------------------------------------------------
 
     def _entry_rects(self, theme) -> List[Rect]:
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            raise RuntimeError("MenuBarControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
+            raise RuntimeError("MenuStripControl requires a non-None theme with a valid 'fonts' attribute.")
         scaled_size = theme.fonts.scaled_size(self._FONT_SCALE)
         labels = tuple(entry.label for entry in self._entries)
         font_revision = getattr(theme.fonts, "revision", 0)
@@ -269,8 +335,11 @@ class MenuBarControl(UiNode):
         if not self.visible or not self.enabled:
             return False
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            raise RuntimeError("MenuBarControl.handle_event requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
+            raise RuntimeError("MenuStripControl.handle_event requires a non-None theme with a valid 'fonts' attribute.")
+
         self._last_app = app
+        if getattr(event, "kind", None) in (EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN, EventType.KEY_DOWN):
+            self.refresh_entries()
         er = self._entry_rects(theme)
 
         if event.kind == EventType.MOUSE_MOTION:
@@ -279,14 +348,10 @@ class MenuBarControl(UiNode):
                 if r.collidepoint(event.pos):
                     self._hovered_index = i
                     break
-            # Entering/hovering strip should open the submenu under pointer.
             if self._hovered_index >= 0 and self._open_index < 0:
                 if self._entries[self._hovered_index].enabled and self._entries[self._hovered_index].items:
                     self._open_flyout(self._hovered_index, app, er)
-            # If a menu is already open and highlight moved to a new entry,
-            # keep the flyout in sync with the highlighted top-level item.
             self._sync_open_menu_with_highlight(app, er)
-            # Leaving both strip and flyout closes any open menu and clears highlight.
             if self._hovered_index < 0 and not self._pointer_in_open_menu_elements(event.pos):
                 if self._open_index >= 0:
                     self._dismiss_flyout(app)
@@ -304,7 +369,6 @@ class MenuBarControl(UiNode):
                         self._dismiss_flyout(app)
                         self._open_flyout(i, app, er)
                     return True
-            # Click outside while open: dismiss
             if self._open_index >= 0:
                 self._dismiss_flyout(app)
             return self.rect.collidepoint(pos)
@@ -316,21 +380,134 @@ class MenuBarControl(UiNode):
                 return self._cycle_top_level_menu(app, er, step=1)
             if event.key in (pygame.K_DOWN, pygame.K_UP):
                 if self._open_index >= 0:
-                    # Keep up/down ownership with the active flyout panel.
                     return False
                 return self._open_for_keyboard(app, er)
-
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 if self._open_index >= 0:
                     self._dismiss_flyout(app)
                     return True
                 return self._open_for_keyboard(app, er)
-
             if event.key == pygame.K_ESCAPE and self._open_index >= 0:
                 self._dismiss_flyout(app)
                 return True
 
         return False
+
+    def update(self, dt_seconds: float) -> None:
+        super().update(dt_seconds)
+        self._refresh_open_flyout_if_needed()
+
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        if not self.visible:
+            return
+
+        bar_bg = getattr(theme, "panel", (40, 40, 50))
+        text_col = theme.text
+        disabled_col = (text_col[0] >> 1, text_col[1] >> 1, text_col[2] >> 1)
+        hover_col = theme.highlight
+        border_col = getattr(theme, "border", (60, 60, 70))
+
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
+
+        pygame.draw.rect(surface, bar_bg, self.rect)
+        pygame.draw.line(surface, border_col, (self.rect.left, self.rect.bottom - 1), (self.rect.right, self.rect.bottom - 1))
+
+        er = self._entry_rects(theme)
+        if self._last_app is not None and hasattr(self._last_app, "logical_pointer_pos"):
+            pointer_pos = self._last_app.logical_pointer_pos
+        else:
+            pointer_pos = (0, 0)
+        pointer_hovered = self._hover_index_from_pointer(pointer_pos, er)
+        if pointer_hovered != self._hovered_index:
+            self._hovered_index = pointer_hovered
+            if self._last_app is not None:
+                self._sync_open_menu_with_highlight(self._last_app, er)
+        draw_hovered_index = pointer_hovered if pointer_hovered >= 0 else self._hovered_index
+
+        for i, (entry, r) in enumerate(zip(self._entries, er)):
+            if (i == self._open_index or i == draw_hovered_index) and entry.enabled:
+                pygame.draw.rect(surface, hover_col, r)
+            col = disabled_col if not entry.enabled else text_col
+            if font:
+                txt = font._font.render(entry.label, True, col) if hasattr(font, "_font") else font.render(entry.label, True, col)
+                surface.blit(txt, (r.x + _ENTRY_PADDING_X, r.y + (r.height - txt.get_height()) // 2))
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _set_entries_preserving_state(self, entries: List[MenuEntry]) -> None:
+        old_open_label = None
+        old_hover_label = None
+        if 0 <= self._open_index < len(self._entries):
+            old_open_label = self._entries[self._open_index].label
+        if 0 <= self._hovered_index < len(self._entries):
+            old_hover_label = self._entries[self._hovered_index].label
+
+        self._entries = list(entries)
+        self._entry_rects_cache_key = None
+        self._entry_rects_cache = []
+
+        def _index_for_label(label: Optional[str]) -> int:
+            if label is None:
+                return -1
+            for i, entry in enumerate(self._entries):
+                if entry.label == label:
+                    return i
+            return -1
+
+        self._open_index = _index_for_label(old_open_label)
+        self._hovered_index = _index_for_label(old_hover_label)
+        self.invalidate()
+
+    @staticmethod
+    def _entry_state_signature(entry: MenuEntry) -> tuple:
+        items = []
+        for item in entry.items:
+            items.append(
+                (
+                    str(getattr(item, "label", "")),
+                    bool(getattr(item, "enabled", True)),
+                    bool(getattr(item, "separator", False)),
+                )
+            )
+        return (str(entry.label), bool(entry.enabled), tuple(items), entry.flyout_min_width)
+
+    def _refresh_open_flyout_if_needed(self) -> None:
+        app = self._last_app if self._last_app is not None else self._app
+        if app is None or self._open_index < 0:
+            return
+
+        old_index = int(self._open_index)
+        old_label = None
+        old_signature = None
+        if 0 <= old_index < len(self._entries):
+            old_entry = self._entries[old_index]
+            old_label = str(old_entry.label)
+            old_signature = self._entry_state_signature(old_entry)
+
+        self.refresh_entries()
+
+        if self._open_index < 0:
+            if old_label is not None:
+                app.overlay.hide(f"_menubar_{self.control_id}_{old_index}")
+            return
+
+        if not (0 <= self._open_index < len(self._entries)):
+            return
+
+        refreshed_entry = self._entries[self._open_index]
+        refreshed_signature = self._entry_state_signature(refreshed_entry)
+        if refreshed_signature == old_signature:
+            return
+
+        theme = getattr(app, "theme", None)
+        if theme is None or getattr(theme, "fonts", None) is None:
+            return
+        target_index = int(self._open_index)
+        er = self._entry_rects(theme)
+        self._dismiss_flyout(app)
+        self._open_flyout(target_index, app, er)
 
     def _dismiss_flyout(self, app: "GuiApplication") -> None:
         if self._open_index >= 0:
@@ -352,19 +529,12 @@ class MenuBarControl(UiNode):
         screen = app.surface.get_rect()
         fx = er_rect.x
         fy = er_rect.bottom
-        # Ensure flyout stays on screen horizontally
         if fx + w > screen.right:
             fx = screen.right - w
-        # Ensure flyout stays on screen vertically
         if fy + h > screen.bottom:
             fy = er_rect.y - h
 
-        panel = _FlyoutPanel(
-            owner,
-            Rect(fx, fy, w, h),
-            entry.items,
-            on_close=lambda: self._dismiss_flyout(app),
-        )
+        panel = _FlyoutPanel(owner, Rect(fx, fy, w, h), entry.items, on_close=lambda: self._dismiss_flyout(app))
         app.overlay.show(
             owner,
             panel,
@@ -382,43 +552,185 @@ class MenuBarControl(UiNode):
             self._open_flyout_rect = None
             self.invalidate()
 
-    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        if not self.visible:
+    def _build_scene_items(self) -> List[ContextMenuItem]:
+        if self._scene_items_provider is not None:
+            try:
+                provider_items = self._scene_items_provider() or []
+            except Exception:
+                provider_items = []
+            self._set_dynamic_flyout_min_width(self._scene_menu.label, provider_items)
+            return provider_items
+
+        if self._app is None:
+            self._set_dynamic_flyout_min_width(self._scene_menu.label, [])
+            return []
+
+        active = str(getattr(self._app, "active_scene_name", ""))
+        scene_pretty_name_fn = getattr(self._app, "scene_pretty_name", None)
+        items: List[ContextMenuItem] = []
+        for scene in self._allowed_scene_names():
+            if scene == active and not bool(self._scene_menu.include_current_scene):
+                continue
+            pretty = str(scene)
+            if callable(scene_pretty_name_fn):
+                pretty = str(scene_pretty_name_fn(scene))
+            items.append(ContextMenuItem(pretty, action=lambda selected=scene: self._select_scene(selected)))
+        self._set_dynamic_flyout_min_width(self._scene_menu.label, items)
+        return items
+
+    def _allowed_scene_names(self) -> List[str]:
+        if self._app is None:
+            return []
+        scene_names_fn = getattr(self._app, "scene_names", None)
+        if not callable(scene_names_fn):
+            return []
+        names = [str(name) for name in scene_names_fn()]
+
+        mode = str(self._scene_menu.mode).strip().lower()
+        if mode == "opt_in":
+            allowed_opt_in = {str(name) for name in self._scene_menu.opt_in_scene_names}
+            return [name for name in names if name in allowed_opt_in]
+
+        features = getattr(self._app, "features", None)
+        feature_map = getattr(features, "_features", None)
+        active = str(getattr(self._app, "active_scene_name", ""))
+        if not hasattr(feature_map, "values"):
+            return [name for name in names if name != "default"]
+
+        scene_counts: Counter[str] = Counter()
+        for feature in feature_map.values():
+            scene_name = getattr(feature, "scene_name", None)
+            if isinstance(scene_name, str) and scene_name:
+                scene_counts[scene_name] += 1
+
+        allowed: List[str] = []
+        for name in names:
+            if name == "default" and scene_counts.get("default", 0) <= 0:
+                continue
+            if scene_counts and scene_counts.get(name, 0) <= 0 and name != active:
+                continue
+            allowed.append(name)
+        return allowed
+
+    def _build_window_items(self) -> List[ContextMenuItem]:
+        if self._window_items_provider is not None:
+            try:
+                provider_items = self._window_items_provider() or []
+            except Exception:
+                provider_items = []
+            self._set_dynamic_flyout_min_width(self._window_menu.label, provider_items)
+            return provider_items
+
+        scene = self._resolve_scene()
+        if scene is None:
+            self._set_dynamic_flyout_min_width(self._window_menu.label, [])
+            return []
+        windows: List[UiNode] = [node for node in scene._walk_nodes() if node.is_window()]  # noqa: SLF001
+        scene_order_key = self._window_scene_order_key(scene)
+        windows.sort(key=lambda window: self._window_order_rank(scene_order_key, window))
+        items: List[ContextMenuItem] = []
+        for window in windows:
+            window_name = str(getattr(window, "title", "") or window.control_id)
+            prefix = "[x]" if bool(window.visible) else "[ ]"
+            items.append(ContextMenuItem(f"{prefix} {window_name}", action=lambda target=window: self._toggle_window(target)))
+        self._set_dynamic_flyout_min_width(self._window_menu.label, items)
+        return items
+
+    def _measure_item_label_width(self, label: str) -> int:
+        text = str(label)
+        try:
+            font = pygame.font.SysFont(None, 17)
+            text_w = font.size(text)[0]
+        except Exception:
+            text_w = len(text) * 8
+        return int(text_w) + 40
+
+    def _set_dynamic_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+        longest = 0
+        for item in items:
+            if bool(getattr(item, "separator", False)):
+                continue
+            longest = max(longest, self._measure_item_label_width(getattr(item, "label", "")))
+        if longest > 0:
+            self._dynamic_flyout_min_width_by_label[str(menu_label)] = longest
             return
+        self._dynamic_flyout_min_width_by_label.pop(str(menu_label), None)
 
-        bar_bg = getattr(theme, "panel", (40, 40, 50))
-        text_col = theme.text
-        disabled_col = (text_col[0] >> 1, text_col[1] >> 1, text_col[2] >> 1)
-        hover_col = theme.highlight
-        border_col = getattr(theme, "border", (60, 60, 70))
+    def _window_scene_order_key(self, scene) -> str:
+        if self._scene_name:
+            return str(self._scene_name)
+        if self._app is not None:
+            active_scene_name = str(getattr(self._app, "active_scene_name", "")).strip()
+            if active_scene_name:
+                return active_scene_name
+        scene_name = str(getattr(scene, "name", "")).strip()
+        if scene_name:
+            return scene_name
+        return f"scene:{id(scene)}"
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
+    @staticmethod
+    def _window_order_key(window: UiNode) -> str:
+        control_id = str(getattr(window, "control_id", "")).strip()
+        if control_id:
+            return control_id
+        title = str(getattr(window, "title", "")).strip()
+        if title:
+            return f"title:{title}"
+        return f"window:{id(window)}"
 
-        pygame.draw.rect(surface, bar_bg, self.rect)
-        # Bottom border line
-        pygame.draw.line(
-            surface, border_col,
-            (self.rect.left, self.rect.bottom - 1),
-            (self.rect.right, self.rect.bottom - 1),
-        )
+    def _window_order_rank(self, scene_order_key: str, window: UiNode) -> int:
+        ranks = self._window_order_rank_by_scene.setdefault(scene_order_key, {})
+        key = self._window_order_key(window)
+        existing = ranks.get(key)
+        if existing is not None:
+            return existing
+        next_rank = self._window_order_next_by_scene.get(scene_order_key, 0)
+        ranks[key] = next_rank
+        self._window_order_next_by_scene[scene_order_key] = next_rank + 1
+        return next_rank
 
-        er = self._entry_rects(theme)
-        pointer_pos = None
-        app = self._last_app
-        if app is not None and hasattr(app, "logical_pointer_pos"):
-            pointer_pos = app.logical_pointer_pos
-        else:
-            pointer_pos = (0, 0)
-        pointer_hovered = self._hover_index_from_pointer(pointer_pos, er)
-        if pointer_hovered != self._hovered_index:
-            self._hovered_index = pointer_hovered
-            if self._last_app is not None:
-                self._sync_open_menu_with_highlight(self._last_app, er)
-        draw_hovered_index = pointer_hovered if pointer_hovered >= 0 else self._hovered_index
-        for i, (entry, r) in enumerate(zip(self._entries, er)):
-            if (i == self._open_index or i == draw_hovered_index) and entry.enabled:
-                pygame.draw.rect(surface, hover_col, r)
-            col = disabled_col if not entry.enabled else text_col
-            if font:
-                txt = font._font.render(entry.label, True, col) if hasattr(font, "_font") else font.render(entry.label, True, col)
-                surface.blit(txt, (r.x + _ENTRY_PADDING_X, r.y + (r.height - txt.get_height()) // 2))
+    def _select_scene(self, scene_name: str) -> None:
+        if self._app is None:
+            return
+        active_scene = str(getattr(self._app, "active_scene_name", ""))
+        if str(scene_name) == active_scene:
+            return
+        if self._on_scene_selected is not None:
+            self._on_scene_selected(scene_name)
+            return
+        switch_scene = getattr(self._app, "switch_scene", None)
+        if callable(switch_scene):
+            switch_scene(scene_name)
+
+    def _toggle_window(self, window: UiNode) -> None:
+        next_visible = not bool(window.visible)
+        window.visible = next_visible
+        if self._on_window_toggled is not None:
+            self._on_window_toggled(window, next_visible)
+            return
+        if self._app is not None:
+            tile_windows = getattr(self._app, "tile_windows", None)
+            if callable(tile_windows):
+                tile_windows()
+
+    def _resolve_scene(self):
+        if self._app is None:
+            return None
+        current_scene = getattr(self._app, "scene", None)
+        active_scene_name = getattr(self._app, "active_scene_name", None)
+        if self._scene_name is None or active_scene_name == self._scene_name:
+            return current_scene
+        has_scene = getattr(self._app, "has_scene", None)
+        create_scene = getattr(self._app, "create_scene", None)
+        if callable(has_scene) and callable(create_scene) and has_scene(self._scene_name):
+            return create_scene(self._scene_name)
+        return None
+
+
+__all__ = [
+    "MenuEntry",
+    "SceneMenuOptions",
+    "WindowMenuOptions",
+    "MenuStripControl",
+    "_FlyoutPanel",
+]

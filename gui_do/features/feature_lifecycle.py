@@ -18,10 +18,15 @@ def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):
     """
     return _calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap)
 
-from ..controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem
+from ..controls.chrome.menu_bar_control import (
+    ContextMenuItem,
+    MenuEntry,
+    MenuStripControl,
+    SceneMenuOptions,
+    WindowMenuOptions,
+)
 from ..app.error_handling import logical_error, report_nonfatal_error
 from time import perf_counter
-from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 import inspect
 from ..telemetry.telemetry import telemetry_collector
 from collections import deque, OrderedDict
@@ -590,7 +595,7 @@ def minimize_window_menu_entries(
     menu_label: str = "WIndow",
     item_label: str = "Minimize",
 ) -> list[MenuEntry]:
-    """Return a standard minimize-only menu entry list for SceneMenuStripControl."""
+    """Return a standard minimize-only menu entry list for MenuStripControl."""
     return [
         MenuEntry(
             str(menu_label),
@@ -1020,7 +1025,7 @@ def create_anchored_feature_window(
     return host.root.add(window)
 
 
-def add_window_scene_menu_strip(
+def add_window_menu_strip(
     window,
     host,
     *,
@@ -1030,25 +1035,41 @@ def add_window_scene_menu_strip(
     on_minimize: Callable[[], None],
     scenes_shown: bool = False,
     windows_shown: bool = False,
+    scene_menu_label: str = "Scene",
+    window_menu_label: str = "Window",
+    scene_menu_insert_index: int = 0,
+    window_menu_insert_index: int = 1,
+    scene_menu_mode: str = "add_all",
+    scene_menu_opt_in_scene_names: Sequence[str] = (),
+    scene_menu_include_current_scene: bool = False,
     scene_items_provider=None,
     window_items_provider=None,
-    extra_entries_provider=None,
+    static_entries: Sequence[MenuEntry] = (),
 ):
-    """Attach a SceneMenuStripControl to a window using standard scene fallback wiring."""
-    entries_provider = extra_entries_provider
-    if entries_provider is None:
-        entries_provider = lambda: minimize_window_menu_entries(on_minimize)
+    """Attach a MenuStripControl to a window using standard scene fallback wiring."""
+    entries = list(static_entries) if static_entries else minimize_window_menu_entries(on_minimize)
     return window.add(
-        SceneMenuStripControl(
+        MenuStripControl(
             str(control_id),
             rect,
-            host.app,
+            entries,
+            app=host.app,
             scene_name=str(scene_name),
-            scenes_shown=bool(scenes_shown),
-            windows_shown=bool(windows_shown),
+            scene_menu=SceneMenuOptions(
+                label=str(scene_menu_label),
+                insert_index=int(scene_menu_insert_index),
+                mode=str(scene_menu_mode),
+                opt_in_scene_names=tuple(scene_menu_opt_in_scene_names),
+                include_current_scene=bool(scene_menu_include_current_scene),
+                shown=bool(scenes_shown),
+            ),
+            window_menu=WindowMenuOptions(
+                label=str(window_menu_label),
+                insert_index=int(window_menu_insert_index),
+                shown=bool(windows_shown),
+            ),
             scene_items_provider=scene_items_provider,
             window_items_provider=window_items_provider,
-            extra_entries_provider=entries_provider,
             on_scene_selected=resolve_scene_selection_callback(host),
         )
     )

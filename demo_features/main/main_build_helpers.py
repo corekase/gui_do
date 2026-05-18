@@ -10,7 +10,7 @@ from gui_do import PanelControl, TooltipManager
 from gui_do.features.data_driven_runtime import (
     RightAnchoredTaskPanelButtonSpec,
     add_right_anchored_task_panel_button,
-    add_scene_menu_strip_from_spec,
+    add_menu_strip_from_spec,
     create_auto_sized_styled_label,
     register_tooltip_attr_specs,
     register_window_toggle_tooltips,
@@ -38,7 +38,7 @@ def build_main_scene(feature: MainFeature, host) -> None:
         scene_name="main",
     )
 
-    host.desktop_menu_bar = add_scene_menu_strip_from_spec(
+    host.desktop_menu_bar = add_menu_strip_from_spec(
         host.root,
         host,
         build_main_menu_strip_spec(host.screen_rect.width, host.window_presentation.handle_window_toggle),

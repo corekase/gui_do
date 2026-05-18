@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .context_menu_manager import ContextMenuItem
-from ..controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
+from ..controls.chrome.menu_bar_control import MenuEntry, MenuStripControl
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -16,7 +16,7 @@ class MenuBarManager:
 
     Features call :meth:`register_menu` to declare their top-level menu and
     the items within it.  After all features have registered, call
-    :meth:`build` to construct a :class:`MenuBarControl` with the merged
+    :meth:`build` to construct a :class:`MenuStripControl` with the merged
     entries in registration order, then add it to the scene.
 
     Usage::
@@ -95,8 +95,8 @@ class MenuBarManager:
         control_id: str,
         rect: "Rect",
         app: Optional["GuiApplication"] = None,
-    ) -> "MenuBarControl":
-        """Build and return a :class:`MenuBarControl` from registered menus."""
+    ) -> "MenuStripControl":
+        """Build and return a :class:`MenuStripControl` from registered menus."""
         entries = [
             MenuEntry(
                 label=label,
@@ -105,7 +105,7 @@ class MenuBarManager:
             )
             for label in self._order
         ]
-        bar = MenuBarControl(control_id, rect, entries)
+        bar = MenuStripControl(control_id, rect, entries)
         return bar
 
     # ------------------------------------------------------------------

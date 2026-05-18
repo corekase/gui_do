@@ -135,6 +135,71 @@ Across the full manual pipeline, ensure explicit coverage of routed runtime faci
 - Clear anti-pattern notes for leaks and partial teardown when `shutdown_runtime` does not unwind routed runtime resources.
 - In Section 4 (Conceptual Foundations / Theory), include these higher-level routed runtime faculties as a significant architectural pillar (not a footnote), including why they exist as declarative control-plane/runtime-plane composition.
 
+## Unified Menu Strip Coverage Requirement
+
+The manual pipeline must treat the unified menu-strip API as the only supported menu-strip surface. Do not describe or preserve split legacy narratives for separate regular-menu and scene-menu controls.
+
+### Required API Surface to Document
+
+Document and cross-link these names exactly as discovered from the current codebase:
+- `MenuStripControl`
+- `MenuEntry`
+- `SceneMenuOptions`
+- `WindowMenuOptions`
+- `MenuStripSpec`
+- `add_menu_strip_from_spec`
+- `add_standard_menu_strip`
+- `add_window_menu_strip`
+
+### Required Behavioral Semantics
+
+The menu-strip documentation must explicitly explain and exemplify all of the following:
+
+- Unified top-level model:
+  The same control supports ordinary static menus (`MenuEntry` with `ContextMenuItem` callbacks/signals) and optional automatic Scene/Window sections.
+
+- Dynamic insertion indices:
+  Scene and Window sections can each be inserted at independently configured indices (`scene_menu_insert_index`, `window_menu_insert_index`) relative to static top-level entries.
+
+- User-defined section names:
+  Scene and Window section labels are user-spec configurable (`scene_menu_label`, `window_menu_label`) and are not hardcoded by the runtime contract.
+
+- Scene discovery modes:
+  `scene_menu_mode` supports:
+  - `add_all`: include all discoverable scenes governed by runtime scene eligibility.
+  - `opt_in`: include only user-marked scenes via `scene_menu_opt_in_scene_names`.
+
+- Current scene filtering:
+  The active/current scene is excluded from Scene menu options by default (and this behavior must be described as the default operational contract unless explicitly configured otherwise).
+
+- Empty Scene menu-open behavior:
+  If filtering leaves no scene targets, the Scene top-level entry remains highlightable like other menu headers but has no flyout to open.
+
+- Window menu behavior:
+  Window section lists visible-toggle entries using scene window pretty names/titles from the current target scene context and keeps standard toggle callback behavior.
+
+### Required Usage Guidance
+
+Include a dedicated subsection in the relevant manual chapter that is verbose, comprehensive, and non-redundant, covering:
+
+- When to use static-only menu strips versus dynamic Scene/Window-enabled strips.
+- How to choose insertion indices to preserve expected menu order.
+- How to choose `add_all` versus `opt_in` scene mode and how to maintain opt-in lists over time.
+- How current-scene exclusion affects navigation UX and why it prevents redundant no-op actions.
+- How to wire callbacks/signals for static `ContextMenuItem` actions and dynamic scene/window actions.
+- How this API is used in the demo scenes (main and control_showcase) and control showcase control gallery.
+
+### Required Examples
+
+Provide at least these verified examples:
+
+- Static-only menu strip with multiple top-level menus and item callbacks.
+- Scene+Window dynamic menu strip with custom labels and independent insertion indices.
+- Opt-in Scene mode example with explicit `scene_menu_opt_in_scene_names`.
+- Spec-driven wiring example using `MenuStripSpec` + `add_menu_strip_from_spec`.
+
+All examples must be discovery-verified against the current code and must not mention removed/legacy split menu-strip APIs.
+
 ---
 
 # Shared Specification
