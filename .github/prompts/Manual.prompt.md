@@ -155,6 +155,31 @@ Document the project and examples using `demo_features/` as the canonical featur
 
 When describing best practices for user projects, present this pattern as the recommended default.
 
+### Mandatory Manual Section: Feature Organization Conventions
+
+The generated MANUAL.md must include one dedicated section named exactly:
+
+`## Feature Organization Conventions`
+
+This section is required even if nearby chapters already discuss architecture or lifecycle. Do not merge it away into short bullets inside other sections.
+
+The section must be verbose, comprehensive, and non-redundant. It must explain, in substantial prose:
+
+- Why each feature should live in its own folder/package and how this enables safe growth over time.
+- Why that folder must be a Python package with `__init__.py` as the package-level integration surface.
+- How package-root imports and clear boundaries support maintainability as features add lifecycle hooks, runtime wiring, and internal modules.
+- How this organization model scales especially when gui_do feature-to-feature communication and routed runtime facilities are introduced.
+
+Use current `demo_features/` packages as concrete evidence, not hypothetical names. Discover real folders and reference multiple existing examples from the repository to illustrate:
+
+- Package root layout (`demo_features/<feature>/__init__.py`).
+- Growth through focused internal files in the same package.
+- Import boundary discipline across feature packages.
+
+The section must avoid repeating the same point in different wording. Prefer progressive explanation: baseline structure -> package surface role -> growth mechanics -> cross-feature communication implications.
+
+At least one short code example must show a package-root export/import pattern aligned with actual `demo_features/` organization discovered at generation time.
+
 ## Verbosity Standard
 
 Write comprehensive prose throughout. Every major concept should have enough explanation that a developer reading only that section comes away with a genuine working mental model — not just a list of bullet points. Terse bullet lists are acceptable only in quick-reference appendices and API signature sections. Conceptual sections and system chapters must contain substantial paragraphs that explain *what*, *why*, *how it compares to alternatives*, and *how it connects to adjacent systems*. Cover the material as thoroughly as it requires; do not pad unnecessarily but do not truncate genuine content either.
