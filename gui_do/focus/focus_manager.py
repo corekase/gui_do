@@ -170,6 +170,8 @@ class FocusManager:
             return False
         # Check scene membership via parent chain (O(depth)) instead of a full
         # BFS list creation (O(nodes)), which matters on every key event.
+        if self._should_preserve_overlay_focus(target, app):
+            return False
         if not self._is_node_in_scene(target, app.scene):
             self.clear_focus()
             return False
@@ -191,6 +193,15 @@ class FocusManager:
             return True
         self._try_arm_focused_control_for_adjustment_event(event, target)
         return bool(target.handle_routed_event(event, app, theme=app.theme))
+
+    @staticmethod
+    def _should_preserve_overlay_focus(target, app) -> bool:
+        control_id = str(getattr(target, "control_id", "") or "")
+        if control_id != "__command_palette___list":
+            return False
+        overlay = getattr(app, "overlay", None)
+        has_overlay = getattr(overlay, "has_overlay", None)
+        return bool(callable(has_overlay) and has_overlay("__command_palette__"))
 
     def update(self, dt_seconds: float) -> None:
         """Advance focus-driven cosmetic states."""
@@ -400,7 +411,7 @@ class FocusManager:
             wants_hover = bool(node.visible and node.enabled and node.rect.collidepoint(probe))
             node.reconcile_hover(wants_hover)
 
-    def revalidate_focus(self, scene, cached_walk_nodes=None) -> None:
+    def revalidate_focus(self, scene, cached_walk_nodes=None, app=None) -> None:
         """If the focused node is no longer focusable, move to the nearest valid node or clear.
 
         Searches within the same enclosing window as the previously focused node first.
@@ -412,6 +423,8 @@ class FocusManager:
         """
         focused = self._focused_node
         if focused is None:
+            return
+        if app is not None and self._should_preserve_overlay_focus(focused, app):
             return
         if not self._is_node_in_scene(focused, scene):
             self.clear_focus()

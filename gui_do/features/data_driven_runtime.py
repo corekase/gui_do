@@ -1395,6 +1395,16 @@ def add_task_panel_window_toggle_group(
     )
 
 
+def _resolve_pointer_activation_pos(event, app):
+    pos = getattr(event, "pos", None)
+    if isinstance(pos, tuple) and len(pos) == 2:
+        return (int(pos[0]), int(pos[1]))
+    logical_pointer_pos = getattr(app, "logical_pointer_pos", None)
+    if isinstance(logical_pointer_pos, tuple) and len(logical_pointer_pos) == 2:
+        return (int(logical_pointer_pos[0]), int(logical_pointer_pos[1]))
+    return None
+
+
 def setup_scene_command_palette_bindings(app, palette_manager, spec: "SceneCommandPaletteSpec") -> None:
     """Register command palette toggle/action binds from one scene-level spec.
 
@@ -1430,7 +1440,7 @@ def setup_scene_command_palette_bindings(app, palette_manager, spec: "SceneComma
                 palette_manager.show(app)
                 return True
             # Try to activate window entry at pointer position only if palette was already open
-            pos = getattr(event, "pos", None)
+            pos = _resolve_pointer_activation_pos(event, app)
             if pos is not None:
                 palette_manager.try_activate_window_at(pos)
             return True
@@ -1582,7 +1592,7 @@ def bind_palette_window_action_bind(host, app_actions, *, action_name: str = "co
     def _handler(event):
         if not palette_manager.is_open:
             return True
-        pos = getattr(event, "pos", None)
+        pos = _resolve_pointer_activation_pos(event, app)
         if pos is not None:
             palette_manager.try_activate_window_at(pos)
         return True

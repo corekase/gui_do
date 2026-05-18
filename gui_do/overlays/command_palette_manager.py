@@ -293,6 +293,7 @@ class CommandPaletteManager:
 
     def __init__(self, overlay_manager: OverlayManager, app: "Optional[GuiApplication]" = None, *, action_registry=None) -> None:
         self._overlays = overlay_manager
+        self._app = app
         self._entries: Dict[str, CommandEntry] = {}
         self._entry_snapshot: List[CommandEntry] = []
         self._entry_items: List[ListItem] = []
@@ -300,6 +301,8 @@ class CommandPaletteManager:
         self._entries_dirty: bool = True
         self._handle: Optional[OverlayHandle] = None
         self._open_listview: Optional[_CommandPaletteListView] = None
+        self._open_rect: Optional[Rect] = None
+        self._previous_focus = None
         self._action_registry = action_registry
         self._before_show_callback: Optional[Callable[[], None]] = None
         self._selection_provider: Optional[Callable[[], Optional[str]]] = None
@@ -480,6 +483,7 @@ class CommandPaletteManager:
         """
         # Always sync to the current scene's overlay manager so scene switches
         # don't leave the palette on a stale overlay.
+        self._app = app
         self._overlays = app.overlay
 
         # Idempotent open: ignore repeated activation while already visible.
@@ -503,6 +507,7 @@ class CommandPaletteManager:
             visible_rows = max(1, min(len(current_entries), _MAX_VISIBLE_ROWS))
             ph = _PAD * 2 + _ROW_H * visible_rows
             rect = Rect((sw - pw) // 2, (sh - ph) // 2, pw, ph)
+        self._open_rect = Rect(rect)
 
         # Results list
         list_rect = Rect(
@@ -566,6 +571,10 @@ class CommandPaletteManager:
             focus_owner_id=listview.control_id,
             on_dismiss=self._on_dismissed,
         )
+        focus = getattr(app, "focus", None)
+        if focus is not None and hasattr(focus, "set_focus"):
+            self._previous_focus = getattr(focus, "focused_node", None)
+            focus.set_focus(listview)
         return CommandPaletteHandle(self)
 
     def hide(self) -> None:
@@ -573,6 +582,7 @@ class CommandPaletteManager:
         self._overlays.hide(self._OWNER_ID)
         self._handle = None
         self._open_listview = None
+        self._open_rect = None
         self._suppressed_window_select_entry_id = None
 
     def try_activate_window_at(self, pos: tuple) -> bool:
@@ -593,6 +603,8 @@ class CommandPaletteManager:
         entry = item.data
         if not isinstance(entry, CommandEntry) or entry.render_kind != "window_toggle":
             return False
+        reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
+        reopen_app = self._app
         if callable(self._entry_selected_callback):
             try:
                 self._entry_selected_callback(entry)
@@ -605,6 +617,9 @@ class CommandPaletteManager:
                 pass
         entry.window_visible = not entry.window_visible
         self._suppressed_window_select_entry_id = str(entry.entry_id)
+
+        if not self.is_open and reopen_app is not None:
+            self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
 
         listview.selected_index = idx
         listview.scroll_to_item(idx)
@@ -650,8 +665,17 @@ class CommandPaletteManager:
     # ------------------------------------------------------------------
 
     def _on_dismissed(self) -> None:
+        previous_focus = self._previous_focus
+        app = self._app
+        focus = getattr(app, "focus", None) if app is not None else None
+        current_focus = getattr(focus, "focused_node", None) if focus is not None else None
+        if focus is not None and hasattr(focus, "set_focus"):
+            if current_focus is self._open_listview:
+                focus.set_focus(previous_focus)
         self._handle = None
         self._open_listview = None
+        self._open_rect = None
+        self._previous_focus = None
         self._suppressed_window_select_entry_id = None
 
     def _register_configured_builtin_entries(

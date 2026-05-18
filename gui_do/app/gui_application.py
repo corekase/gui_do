@@ -409,6 +409,15 @@ class GuiApplication:
         if dismissed:
             self.invalidation.invalidate_all()
 
+    def _should_restore_active_window_focus(self, active_window) -> bool:
+        if active_window is None:
+            return False
+        overlay = getattr(self, "overlay", None)
+        has_overlay = getattr(overlay, "has_overlay", None)
+        if callable(has_overlay) and has_overlay("__command_palette__"):
+            return False
+        return True
+
     @property
     def dialogs(self) -> "DialogManager":
         """Per-application dialog manager (lazy-initialised)."""
@@ -711,13 +720,15 @@ class GuiApplication:
             # This eliminates redundant O(n_nodes) walks across focus, window_focus,
             # and task_panel_focus revalidation in a single frame.
             cached_walk = self.scene._get_cached_bfs_walk()
-            self.focus.revalidate_focus(self.scene, cached_walk_nodes=cached_walk)
+            self.focus.revalidate_focus(self.scene, cached_walk_nodes=cached_walk, app=self)
             self.window_focus.revalidate(self.scene, cached_walk_nodes=cached_walk)
             self.task_panel_focus.revalidate(self.scene, self)
             active_window = self.scene.active_window()
             if active_window is not self._last_active_window:
-                self._last_active_window = active_window
-                if active_window is not None:
+                if active_window is None:
+                    self._last_active_window = None
+                elif self._should_restore_active_window_focus(active_window):
+                    self._last_active_window = active_window
                     self.focus.restore_remembered_focus_for_window(self.scene, active_window)
             if self._screen_lifecycle_active and self._screen_postamble is not None:
                 self._screen_postamble()

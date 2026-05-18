@@ -14,6 +14,7 @@ class _OverlayStub:
 class _OverlayLifecycleStub:
     def __init__(self):
         self._open = set()
+        self._dismiss_callbacks = {}
         self.show_calls = []
         self.hide_calls = []
 
@@ -24,12 +25,16 @@ class _OverlayLifecycleStub:
         owner = str(owner_id)
         self.hide_calls.append(owner)
         self._open.discard(owner)
+        callback = self._dismiss_callbacks.pop(owner, None)
+        if callable(callback):
+            callback()
         return None
 
     def show(self, owner_id, control, **kwargs):
         owner = str(owner_id)
         self.show_calls.append((owner, control, dict(kwargs)))
         self._open.add(owner)
+        self._dismiss_callbacks[owner] = kwargs.get("on_dismiss")
         return object()
 
 
@@ -91,6 +96,18 @@ class _PaletteAppStub(_AppStub):
     def __init__(self, overlay):
         super().__init__()
         self.overlay = overlay
+        self.focus = _FocusStub()
+
+
+class _FocusStub:
+    def __init__(self):
+        self.focused_node = None
+        self.calls = []
+
+    def set_focus(self, node, *, via_keyboard=False):
+        _ = via_keyboard
+        self.focused_node = node
+        self.calls.append(node)
 
 
 class TestCommandPaletteGroupedEntries(unittest.TestCase):
@@ -120,6 +137,23 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         _, _control, kwargs = overlay.show_calls[0]
         self.assertTrue(bool(kwargs.get("dismiss_on_focus_lost")))
         self.assertEqual("__command_palette___list", str(kwargs.get("focus_owner_id", "")))
+
+    def test_show_moves_focus_to_palette_list_and_hide_restores_previous_focus(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        manager.register(CommandEntry(entry_id="custom:one", title="One", action=lambda: None, category="Custom"))
+        previous_focus = object()
+        app.focus.focused_node = previous_focus
+
+        manager.show(app)
+
+        self.assertIsNotNone(manager._open_listview)
+        self.assertIs(app.focus.focused_node, manager._open_listview)
+
+        manager.hide()
+
+        self.assertIs(app.focus.focused_node, previous_focus)
 
     def test_group_order_allows_custom_between_scene_and_window_groups(self):
         manager = CommandPaletteManager(_OverlayStub())
@@ -257,6 +291,42 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         self.assertEqual(["toggle"], calls)
         self.assertTrue(bool(item.data.window_visible))
         self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_mouse_activation_reopens_palette_when_action_path_dismisses_it(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+
+        def _toggle_and_dismiss():
+            calls.append("toggle")
+            overlay.hide("__command_palette__")
+
+        manager.register(
+            CommandEntry(
+                entry_id="window:main:inspector",
+                title="Inspector",
+                action=_toggle_and_dismiss,
+                category="Windows",
+                render_kind="window_toggle",
+                window_visible=False,
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        handled = manager.try_activate_window_at(pos)
+
+        self.assertTrue(handled)
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["toggle"], calls)
+        self.assertTrue(bool(item.data.window_visible))
+        self.assertEqual(2, len(overlay.show_calls))
+        self.assertEqual(["__command_palette__"], overlay.hide_calls)
 
     def test_selecting_non_window_entry_still_closes_palette(self):
         overlay = _OverlayLifecycleStub()
