@@ -223,6 +223,33 @@ Also cover declarative reactive specs (`StoreSubscriptionSpec`, `StoreSelectorSp
 `ObservableEffectSpec`, `SignalEffectSpec`) as the routed-runtime path for subscription
 registration and cleanup.
 
+### Required Subsection in 8.4: Automatic Subscription Ownership and Cleanup
+
+The generated 8.4 chapter must include one dedicated subsection named exactly:
+
+`#### Automatic Subscription Ownership and Cleanup`
+
+This subsection is required and must be verbose, comprehensive, and non-redundant. It must explain:
+
+- Why automatic subscription ownership exists as a lifecycle-safety mechanism and consistency model,
+    not just a convenience feature.
+- How observable subscriptions made from feature-bound handlers are automatically associated with
+    feature/runtime ownership and are released during runtime teardown.
+- Why this reduces manual unsubscribe bookkeeping burden and prevents drift between setup and
+    shutdown logic.
+- What broad class of resource and reliability issues this mitigates, with concrete examples:
+    subscription leaks, retained feature instances after teardown, callbacks firing against dead UI,
+    duplicate callbacks after repeated bind cycles, and partial cleanup during scene/feature transitions.
+- How this automatic behavior complements (rather than replaces) explicit lifecycle discipline
+    in `bind_runtime` and `shutdown_runtime`.
+
+Require at least one concise, verified code example contrasting:
+1. a fragile manual-subscription pattern, and
+2. the lifecycle-owned automatic handling path.
+
+The prose must be progressive and non-repetitive: purpose -> mechanism -> operational benefits ->
+failure modes prevented -> practical guidance.
+
 ---
 
 ## Replace Target

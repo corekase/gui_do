@@ -1,5 +1,6 @@
 import unittest
 
+from gui_do.data.presentation_model import ObservableValue
 from gui_do.features.feature_lifecycle import Feature, FeatureManager
 from gui_do.features.runtime_systems import (
     CapabilityContractRuntime,
@@ -95,6 +96,21 @@ class _BaseFeature(Feature):
         self.value = int(state.get("value", 0))
 
 
+class _AutoSubscriptionFeature(_BaseFeature):
+    def __init__(self, name="auto_sub"):
+        super().__init__(name)
+        self.observable = ObservableValue(0)
+        self.received = []
+
+    def _on_observable(self, value):
+        self.received.append(value)
+
+    def bind_runtime(self, host):
+        super().bind_runtime(host)
+        # Intentionally not storing unsubscribe: feature manager should auto-release.
+        self.observable.subscribe(self._on_observable)
+
+
 class TestDependencyValidation(unittest.TestCase):
     def test_missing_dependency_raises(self):
         app = _App()
@@ -110,6 +126,26 @@ class TestDependencyValidation(unittest.TestCase):
                     FeatureDependencySpec(feature_name="provider", required=True),
                 ),
             )
+
+
+class TestFeatureManagerAutoSubscriptionCleanup(unittest.TestCase):
+    def test_shutdown_runtime_releases_tracked_feature_observable_subscriptions(self):
+        app = _App()
+        host = _Host(app)
+        manager = FeatureManager(app)
+        feature = _AutoSubscriptionFeature("auto_sub")
+        manager.register(feature, host)
+        manager.bind_runtime(host)
+
+        feature.observable.value = 1
+        self.assertEqual([1], feature.received)
+        self.assertEqual(1, feature.observable.observer_count)
+
+        manager.shutdown_runtime(host)
+        self.assertEqual(0, feature.observable.observer_count)
+
+        feature.observable.value = 2
+        self.assertEqual([1], feature.received)
 
 
 class TestWorkflowCoordinator(unittest.TestCase):

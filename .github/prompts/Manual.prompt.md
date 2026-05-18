@@ -110,6 +110,7 @@ After all assigned steps are done:
 Across the full manual pipeline, ensure explicit coverage of routed runtime facilities and lifecycle-safe teardown:
 
 - Runtime scope ownership model (`FeatureRuntimeScope`) and why setup/cleanup must pair across lifecycle phases.
+- Automatic feature subscription ownership for observable subscriptions, including framework-driven cleanup during feature runtime shutdown.
 - Declarative service wiring (`ServiceBindingSpec`, `ServiceConsumerSpec`).
 - Declarative reactive wiring (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`).
 - Operation orchestration and resilience (`FeatureOperationSpec`, `FailurePolicySpec`, `FeatureOperationBus`).
@@ -127,6 +128,10 @@ Across the full manual pipeline, ensure explicit coverage of routed runtime faci
   - Feature health/degradation monitoring (`HealthProbeSpec`, `FeatureHealthRuntime`).
   - Replay and diagnostics capture (`ReplaySpec`, `RuntimeReplayHarness`).
   - Hot-swap/rebind policy (`ReplacePolicySpec`, `FeatureHotSwapManager`).
+  - A dedicated manual section that explains automatic subscription handling in verbose, comprehensive, and non-redundant prose:
+    - why automatic ownership exists and what consistency/lifecycle guarantees it enforces,
+    - what automation reduces for authors (manual unsubscribe bookkeeping and teardown drift),
+    - the resource-error class it mitigates (subscription leaks, retained feature instances, post-shutdown callbacks, duplicate notifications, and partial teardown failures).
 - Clear anti-pattern notes for leaks and partial teardown when `shutdown_runtime` does not unwind routed runtime resources.
 - In Section 4 (Conceptual Foundations / Theory), include these higher-level routed runtime faculties as a significant architectural pillar (not a footnote), including why they exist as declarative control-plane/runtime-plane composition.
 

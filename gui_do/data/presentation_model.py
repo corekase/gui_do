@@ -101,7 +101,24 @@ class ObservableValue(Generic[T]):
             except ValueError:
                 pass
 
+        # Auto-register subscriptions for bound feature handlers when available.
+        _track_feature_bound_subscription(observer, _unsubscribe)
+
         return _unsubscribe
+
+
+def _track_feature_bound_subscription(observer: Observer[Any], unsubscribe: Callable[[], None]) -> None:
+    owner = getattr(observer, "__self__", None)
+    if owner is None:
+        return
+    tracker = getattr(owner, "_track_runtime_subscription", None)
+    if not callable(tracker):
+        return
+    try:
+        tracker(unsubscribe)
+    except Exception:
+        # Subscription still succeeds even if optional ownership tracking fails.
+        return
 
 
 # ---------------------------------------------------------------------------

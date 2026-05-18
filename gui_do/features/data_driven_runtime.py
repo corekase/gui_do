@@ -2039,7 +2039,7 @@ def bind_observable_effects(feature, host, runtime_scope: FeatureRuntimeScope, e
             observable = _invoke_runtime_factory(spec.observable_factory, feature, host, runtime_scope)
         else:
             observable = _resolve_runtime_observable(feature, runtime_scope, spec)
-        runtime_scope.add_cleanup(observable.subscribe(spec.handler))
+        runtime_scope.subscribe(observable, spec.handler)
         if spec.invoke_immediately and hasattr(observable, "value"):
             spec.handler(observable.value)
 

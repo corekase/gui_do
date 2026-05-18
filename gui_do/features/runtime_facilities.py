@@ -62,6 +62,16 @@ class FeatureRuntimeScope:
             raise TypeError("instance must expose dispose()")
         return instance
 
+    def subscribe(self, observable: object, handler: Callable[..., object]) -> Callable[[], object]:
+        subscribe = getattr(observable, "subscribe", None)
+        if not callable(subscribe):
+            raise TypeError("observable must expose subscribe()")
+        unsubscribe = subscribe(handler)
+        if not callable(unsubscribe):
+            raise TypeError("observable subscribe() must return an unsubscribe callable")
+        self.add_cleanup(unsubscribe)
+        return unsubscribe
+
     def bind_service(self, key, instance: object, *, owned: bool = True) -> object:
         self._service_scope.bind(key, instance, owned=owned)
         return instance

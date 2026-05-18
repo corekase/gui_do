@@ -1121,6 +1121,29 @@ class Feature:
         self._feature_manager = None
         self._message_queue: Deque[FeatureMessage] = deque()
         self._font_roles: Dict[str, str] = {}
+        self._runtime_subscriptions = []
+
+    def _track_runtime_subscription(self, unsubscribe):
+        if unsubscribe is None or not callable(unsubscribe):
+            return unsubscribe
+        runtime_scope = getattr(self, "runtime_scope", None)
+        add_cleanup = getattr(runtime_scope, "add_cleanup", None)
+        if callable(add_cleanup):
+            add_cleanup(unsubscribe)
+            return unsubscribe
+        self._runtime_subscriptions.append(unsubscribe)
+        return unsubscribe
+
+    def _release_runtime_subscriptions(self) -> None:
+        subscriptions = self._runtime_subscriptions
+        if not subscriptions:
+            return
+        for unsubscribe in reversed(subscriptions):
+            try:
+                unsubscribe()
+            except Exception:
+                pass
+        subscriptions.clear()
 
     def on_register(self, host) -> None:
         return None
@@ -1798,7 +1821,12 @@ class FeatureManager:
             if feature.name not in self._runtime_bound:
                 continue
             with collector.span("feature_lifecycle", "feature_shutdown_runtime", metadata={"feature_name": feature.name}):
-                feature.shutdown_runtime(host_obj)
+                try:
+                    feature.shutdown_runtime(host_obj)
+                finally:
+                    release_runtime_subscriptions = getattr(feature, "_release_runtime_subscriptions", None)
+                    if callable(release_runtime_subscriptions):
+                        release_runtime_subscriptions()
             self._runtime_bound.discard(feature.name)
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:

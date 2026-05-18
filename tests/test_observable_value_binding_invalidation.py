@@ -7,6 +7,8 @@ from gui_do.data.presentation_model import (
     ObservableValue,
     PresentationModel,
 )
+from gui_do.features.feature_lifecycle import Feature
+from gui_do.features.runtime_facilities import FeatureRuntimeScope
 from gui_do.data.binding import Binding, BindingGroup
 from gui_do.data.invalidation import InvalidationTracker
 
@@ -74,6 +76,48 @@ class TestObservableValue(unittest.TestCase):
         ov.subscribe(received.append)
         ov.force_notify()
         self.assertEqual([5], received)
+
+    def test_bound_feature_handler_auto_tracks_subscription_for_release(self):
+        class _DemoFeature(Feature):
+            def __init__(self):
+                super().__init__("demo")
+                self.values = []
+
+            def _on_value(self, value):
+                self.values.append(value)
+
+        feature = _DemoFeature()
+        ov = ObservableValue("cold")
+        ov.subscribe(feature._on_value)
+        self.assertEqual(1, ov.observer_count)
+
+        feature._release_runtime_subscriptions()
+        self.assertEqual(0, ov.observer_count)
+
+        ov.value = "warm"
+        self.assertEqual([], feature.values)
+
+    def test_bound_feature_handler_tracks_into_runtime_scope_when_present(self):
+        class _DemoFeature(Feature):
+            def __init__(self):
+                super().__init__("demo")
+                self.runtime_scope = FeatureRuntimeScope()
+                self.values = []
+
+            def _on_value(self, value):
+                self.values.append(value)
+
+        feature = _DemoFeature()
+        ov = ObservableValue(1)
+        ov.subscribe(feature._on_value)
+        self.assertEqual(1, ov.observer_count)
+
+        # Ownership is delegated to runtime scope, not the feature fallback list.
+        feature._release_runtime_subscriptions()
+        self.assertEqual(1, ov.observer_count)
+
+        feature.runtime_scope.dispose()
+        self.assertEqual(0, ov.observer_count)
 
 
 # ---------------------------------------------------------------------------
