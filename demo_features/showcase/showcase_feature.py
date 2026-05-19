@@ -44,7 +44,6 @@ from .showcase_specs import (
     SHOWCASE_IMAGE_PATH,
     SHOWCASE_LABEL_GAP,
     SHOWCASE_LABEL_HEIGHT,
-    SHOWCASE_MENU_BAR_HEIGHT,
     SHOWCASE_MENU_TOOLS_EXCLUDE_LABELS,
     SHOWCASE_ROOT_MARGIN_BOTTOM,
     SHOWCASE_ROOT_MARGIN_TOP,
@@ -158,7 +157,6 @@ class ShowcaseFeature(Feature):
             host,
             MenuStripSpec(
                 control_id="control_showcase_menu_bar",
-                rect=Rect(0, 0, host.control_showcase_root.rect.width, SHOWCASE_MENU_BAR_HEIGHT),
                 scene_name="control_showcase",
                 scenes_shown=True,
                 windows_shown=False,

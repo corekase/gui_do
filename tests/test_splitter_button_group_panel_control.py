@@ -426,7 +426,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_drag_clamps_to_scene_menu_bar_boundary_and_preserves_title_anchor(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        menu = MenuStripControl("scene_menu", Rect(0, 0, 800, 28), entries=[])
+        menu = MenuStripControl("scene_menu", entries=[])
         window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
         panel.add(menu)
         panel.add(window)

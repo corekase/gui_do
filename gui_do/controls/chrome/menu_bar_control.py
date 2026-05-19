@@ -9,6 +9,7 @@ import pygame
 from pygame import Rect
 
 from ...events.gui_event import EventType, GuiEvent
+from ...app.error_handling import logical_error
 from ...overlays.context_menu_manager import ContextMenuItem
 from ...overlays.menu_overlay_panel_base import _MenuOverlayPanelBase
 from ..base.ui_node import UiNode
@@ -111,7 +112,6 @@ class MenuStripControl(UiNode):
     def __init__(
         self,
         control_id: str,
-        rect: Rect,
         entries: Optional[List[MenuEntry]] = None,
         *,
         app: Optional["GuiApplication"] = None,
@@ -124,7 +124,7 @@ class MenuStripControl(UiNode):
         on_window_toggled: Optional[Callable[[UiNode, bool], None]] = None,
         window_presentation: Optional[object] = None,
     ) -> None:
-        super().__init__(control_id, rect)
+        super().__init__(control_id, Rect(0, 0, 0, self.__class__.preferred_height()))
         self._app = app
         self._scene_name = scene_name
         self._scene_menu = scene_menu if scene_menu is not None else SceneMenuOptions(shown=False)
@@ -150,9 +150,41 @@ class MenuStripControl(UiNode):
         self._window_order_next_by_scene: Dict[str, int] = {}
         self.refresh_entries()
 
+    def on_mount(self, parent: "UiNode | None") -> None:
+        """Infer position and width from parent on attachment."""
+        if parent is not None:
+            existing = next(
+                (c for c in parent.children if isinstance(c, MenuStripControl) and c is not self),
+                None,
+            )
+            if existing is not None:
+                raise logical_error(
+                    "can only have one menu bar in this scope",
+                    subsystem="controls",
+                    operation="add_child",
+                    details={"scope": getattr(parent, "control_id", repr(parent)), "existing": existing.control_id},
+                    source_skip_frames=1,
+                )
+            self.rect.topleft = (0, 0)
+            self.rect.width = parent.rect.width
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    @classmethod
+    def preferred_height(cls) -> int:
+        """Return the standard height for a menu strip bar.
+
+        Menu strips are always positioned at (0, 0) and fill the full width of
+        their parent panel or window — both are inferred automatically on mount.
+        The height alone needs no caller input (it is set from this value), but
+        the classmethod is exposed so layout code can reserve the right vertical
+        space before the control is added::
+
+            MenuStripControl("my_menu", entries=[...])
+        """
+        return 28
 
     def set_entries(self, entries: List[MenuEntry]) -> None:
         self._base_entries = list(entries)

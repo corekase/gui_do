@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pygame
-from pygame import Rect
 
 from gui_do.features.data_driven_runtime import (
     ActionHotkeySpec,
@@ -110,9 +109,9 @@ MAIN_MENU_BAR_HEIGHT = 28
 
 
 def build_main_menu_strip_spec(screen_width: int, on_window_toggled) -> MenuStripSpec:
+    _ = screen_width
     return MenuStripSpec(
         control_id="desktop_menu_bar",
-        rect=Rect(0, 0, int(screen_width), MAIN_MENU_BAR_HEIGHT),
         scene_name="main",
         scenes_shown=True,
         windows_shown=True,

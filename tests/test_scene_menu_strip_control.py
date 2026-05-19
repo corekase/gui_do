@@ -136,7 +136,6 @@ class TestMenuStripControl(unittest.TestCase):
 
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=True),
             scene_items_provider=_scene_items,
@@ -151,7 +150,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
             scene_menu=SceneMenuOptions(shown=True),
@@ -164,7 +162,6 @@ class TestMenuStripControl(unittest.TestCase):
 
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
             window_items_provider=lambda: [ContextMenuItem("Systems")],
@@ -186,7 +183,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=True),
         )
@@ -210,7 +206,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([window]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_name="main",
             window_menu=WindowMenuOptions(shown=True),
@@ -234,7 +229,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([window]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_name="main",
             window_menu=WindowMenuOptions(shown=True),
@@ -262,7 +256,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=True),
         )
@@ -303,7 +296,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp()
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
             scene_menu=SceneMenuOptions(shown=True),
@@ -326,7 +318,6 @@ class TestMenuStripControl(unittest.TestCase):
         calls = []
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main", action=lambda: calls.append("main"))],
             scene_menu=SceneMenuOptions(shown=True),
@@ -373,7 +364,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp()
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_items_provider=lambda: [ContextMenuItem("Main")],
             scene_menu=SceneMenuOptions(shown=True),
@@ -432,7 +422,6 @@ class TestMenuStripControl(unittest.TestCase):
 
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=True),
             scene_items_provider=_scene_items,
@@ -461,7 +450,6 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             entries=[
                 MenuEntry(
                     "A very very long top level menu label",
@@ -497,7 +485,6 @@ class TestMenuStripControl(unittest.TestCase):
 
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_name="main",
             window_menu=WindowMenuOptions(shown=True),
@@ -516,7 +503,6 @@ class TestMenuStripControl(unittest.TestCase):
 
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_name="main",
             window_menu=WindowMenuOptions(shown=True),
@@ -537,7 +523,6 @@ class TestMenuStripControl(unittest.TestCase):
         selected = []
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=True),
             on_scene_selected=lambda scene_name: selected.append(str(scene_name)),
@@ -556,11 +541,11 @@ class TestMenuStripControl(unittest.TestCase):
         app.scene_names = lambda: ["main"]
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=True),
             window_menu=WindowMenuOptions(shown=False),
         )
+        menu.rect.width = 500
 
         scene_index = next(i for i, entry in enumerate(menu.entries) if entry.label == "Scene")
         scene_rect = menu._entry_rects(app.theme)[scene_index]
@@ -584,11 +569,11 @@ class TestMenuStripControl(unittest.TestCase):
         app = _StubApp(scene=_StubScene([_StubPlainNode()]))
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 500, 28),
             app=app,
             scene_menu=SceneMenuOptions(shown=False),
             window_menu=WindowMenuOptions(shown=True),
         )
+        menu.rect.width = 500
 
         window_index = next(i for i, entry in enumerate(menu.entries) if entry.label == "Window")
         window_rect = menu._entry_rects(app.theme)[window_index]
@@ -617,7 +602,6 @@ class TestMenuStripControl(unittest.TestCase):
             window,
             host,
             control_id="menu",
-            rect=Rect(0, 0, 600, 28),
             scene_name="main",
             on_minimize=lambda: None,
             scenes_shown=True,
@@ -630,6 +614,16 @@ class TestMenuStripControl(unittest.TestCase):
         entries_by_label = {entry.label: entry for entry in added.entries}
         self.assertEqual(["Custom Scene"], [item.label for item in entries_by_label["Scene"].items])
         self.assertEqual(["Custom Window"], [item.label for item in entries_by_label["Window"].items])
+
+    def test_adding_second_menu_bar_to_same_parent_raises(self):
+        parent = UiNode("panel", Rect(0, 0, 800, 600))
+        parent.add_child(MenuStripControl("menu_a"))
+        with self.assertRaises(ValueError) as ctx:
+            parent.add_child(MenuStripControl("menu_b"))
+        self.assertIn("can only have one menu bar in this scope", str(ctx.exception))
+
+    def test_adding_menu_bar_without_parent_does_not_raise(self):
+        MenuStripControl("menu_standalone")  # on_mount(None) — should be fine
 
 
 class TestSceneMenuStripMouseClickRegression(unittest.TestCase):
@@ -651,7 +645,6 @@ class TestSceneMenuStripMouseClickRegression(unittest.TestCase):
         fired = []
         menu = MenuStripControl(
             "menu",
-            Rect(0, 0, 800, 28),
             app=app,
             scene_name="control_showcase",
             scene_menu=SceneMenuOptions(shown=True),

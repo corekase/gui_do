@@ -30,7 +30,7 @@ class MenuBarManager:
             ContextMenuItem("Undo", action=on_undo),
         ])
 
-        bar = mgr.build("menubar", rect, app)
+        bar = mgr.build("menubar", app)
         app.add(bar)
     """
 
@@ -93,7 +93,6 @@ class MenuBarManager:
     def build(
         self,
         control_id: str,
-        rect: "Rect",
         app: Optional["GuiApplication"] = None,
     ) -> "MenuStripControl":
         """Build and return a :class:`MenuStripControl` from registered menus."""
@@ -105,7 +104,7 @@ class MenuBarManager:
             )
             for label in self._order
         ]
-        bar = MenuStripControl(control_id, rect, entries)
+        bar = MenuStripControl(control_id, entries)
         return bar
 
     # ------------------------------------------------------------------

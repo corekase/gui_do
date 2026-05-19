@@ -293,7 +293,6 @@ class MenuStripSpec:
     """
 
     control_id: str
-    rect: Rect | tuple[int, int, int, int]
     scene_name: str
     scenes_shown: bool = True
     windows_shown: bool = True
@@ -1219,7 +1218,6 @@ def add_standard_menu_strip(
     host,
     *,
     control_id: str,
-    rect,
     scene_name: str,
     scenes_shown: bool = True,
     windows_shown: bool = True,
@@ -1239,7 +1237,6 @@ def add_standard_menu_strip(
         host,
         MenuStripSpec(
             control_id=str(control_id),
-            rect=rect,
             scene_name=str(scene_name),
             scenes_shown=bool(scenes_shown),
             windows_shown=bool(windows_shown),
@@ -1272,7 +1269,6 @@ def add_menu_strip_from_spec(container, host, spec: MenuStripSpec):
     menu_strip = container.add(
         MenuStripControl(
             str(spec.control_id),
-            Rect(spec.rect),
             static_entries,
             app=host.app,
             scene_name=str(spec.scene_name),

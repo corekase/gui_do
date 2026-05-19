@@ -1073,7 +1073,6 @@ def add_window_menu_strip(
     host,
     *,
     control_id: str,
-    rect,
     scene_name: str,
     on_minimize: Callable[[], None],
     scenes_shown: bool = False,
@@ -1096,7 +1095,6 @@ def add_window_menu_strip(
     return window.add(
         MenuStripControl(
             str(control_id),
-            rect,
             entries,
             app=host.app,
             scene_name=str(scene_name),

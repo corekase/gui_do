@@ -194,29 +194,28 @@ class TestMenuBarManagerBuild(unittest.TestCase):
         return mgr
 
     def test_build_returns_menu_bar_control(self):
-        bar = self._mgr().build("bar", Rect(0, 0, 800, 28))
+        bar = self._mgr().build("bar")
         self.assertIsInstance(bar, MenuStripControl)
 
     def test_build_control_id(self):
-        bar = self._mgr().build("mybar", Rect(0, 0, 800, 28))
+        bar = self._mgr().build("mybar")
         self.assertEqual("mybar", bar.control_id)
 
     def test_build_entries_count(self):
-        bar = self._mgr().build("bar", Rect(0, 0, 800, 28))
+        bar = self._mgr().build("bar")
         self.assertEqual(2, len(bar.entries))
 
     def test_build_entries_labels(self):
-        bar = self._mgr().build("bar", Rect(0, 0, 800, 28))
+        bar = self._mgr().build("bar")
         labels = [e.label for e in bar.entries]
         self.assertEqual(["File", "Edit"], labels)
 
-    def test_build_rect_set(self):
-        r = Rect(0, 0, 1024, 32)
-        bar = self._mgr().build("bar", r)
-        self.assertEqual(r, bar.rect)
+    def test_build_height_matches_preferred(self):
+        bar = self._mgr().build("bar")
+        self.assertEqual(MenuStripControl.preferred_height(), bar.rect.height)
 
     def test_empty_manager_builds_empty_bar(self):
-        bar = MenuBarManager().build("bar", Rect(0, 0, 800, 28))
+        bar = MenuBarManager().build("bar")
         self.assertEqual(0, len(bar.entries))
 
 
