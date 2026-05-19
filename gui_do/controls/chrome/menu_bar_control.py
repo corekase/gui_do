@@ -673,7 +673,7 @@ class MenuStripControl(UiNode):
             opted_in_bindings = {
                 str(getattr(b, "key", "")): b
                 for b in bindings
-                if bool(getattr(b, "window_menu_opt_in", True))
+                if bool(getattr(b, "window_management_opt_in", True))
             }
             # Map windows to their binding keys via the presentation model
             windows_by_key = {}

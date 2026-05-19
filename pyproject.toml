@@ -26,3 +26,8 @@ version = {attr = "gui_do._version.__version__"}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["gui_do*"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--ignore-glob=test_output*.txt",
+]

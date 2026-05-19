@@ -53,34 +53,34 @@ If user specs do not declare a facility, that facility is not created at runtime
 
 ### Unified Window Visibility Management
 
-All three facilities participate in a unified window visibility management system. When multiple facilities are present in a scene, they share synchronized state and consistently respect the `window_menu_opt_in` opt-out flag on window specifications.
+All three facilities participate in a unified window visibility management system. When multiple facilities are present in a scene, they share synchronized state and consistently respect the `window_management_opt_in` opt-out flag on window specifications.
 
 The three components are completely independent and optional:
 - **Task Panel** (via `SceneTaskPanelSpec`): Optional window toggle button group
 - **Scene Menu Strip** (via `MenuStripSpec`): Optional Windows submenu
 - **Command Palette** (via `SceneCommandPaletteSpec`): Optional window entry list
 
-When all three are present, they show the same set of windows. Setting `window_menu_opt_in=False` on any window spec (WindowSpec, AnchoredWindowSpec, or FeatureWindowBundleBindingSpec) excludes that window from all three management systems. By default, windows are included (`window_menu_opt_in=True`). This opt-out pattern ensures that whichever components are present in a scene will all show the same set of manageable windows.
+When all three are present, they show the same set of windows. Setting `window_management_opt_in=False` on any window spec (WindowSpec, AnchoredWindowSpec, or FeatureWindowBundleBindingSpec) excludes that window from all three management systems. By default, windows are included (`window_management_opt_in=True`). This opt-out pattern ensures that whichever components are present in a scene will all show the same set of manageable windows.
 
 Scenes can freely omit any combination of these facilities—the unified state automatically adapts to show only windows from the facilities that are actually present.
 
 ### Task Panel
 
-Declare with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`.  No default items — every button must be added explicitly.  The optional **window toggle group** is declared with `TaskPanelWindowToggleGroupSpec(start_index=N)`, passed to `add_task_panel_window_toggle_group`, which automatically creates one toggle button per registered window with `window_menu_opt_in=True`.  Other controls may coexist before, after, or within the group's slot range.
+Declare with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`.  No default items — every button must be added explicitly.  The optional **window toggle group** is declared with `TaskPanelWindowToggleGroupSpec(start_index=N)`, passed to `add_task_panel_window_toggle_group`, which automatically creates one toggle button per registered window with `window_management_opt_in=True`.  Other controls may coexist before, after, or within the group's slot range.
 
 Key types: `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelFocusToggleSpec`, `TaskPanelWindowToggleGroupSpec`, `RightAnchoredTaskPanelButtonSpec`.
 Key helpers: `ensure_scene_task_panel`, `add_task_panel_buttons`, `add_task_panel_window_toggle_group`, `add_window_toggle_task_panel_controls`, `register_window_toggle_tooltips`.
 
 ### Scene Menu Strip
 
-Declare with `MenuStripSpec` and passed to `add_menu_strip_from_spec()`, `add_standard_menu_strip()`, or `add_window_menu_strip()`. No default menu entries. Two optional sections: `scenes_shown=True` (Scene navigation menu) and `windows_shown=True` (Windows visibility toggles menu). The Windows section automatically filters by `window_menu_opt_in` when `host.window_presentation` is available, showing only opted-in windows. When both menu strip and task panel are present with `window_presentation` available, their window lists remain synchronized through the shared `window_presentation` model. When `window_presentation` is not available, all windows in the scene are shown.
+Declare with `MenuStripSpec` and passed to `add_menu_strip_from_spec()`, `add_standard_menu_strip()`, or `add_window_menu_strip()`. No default menu entries. Two optional sections: `scenes_shown=True` (Scene navigation menu) and `windows_shown=True` (Windows visibility toggles menu). The Windows section automatically filters by `window_management_opt_in` when `host.window_presentation` is available, showing only opted-in windows. When both menu strip and task panel are present with `window_presentation` available, their window lists remain synchronized through the shared `window_presentation` model. When `window_presentation` is not available, all windows in the scene are shown.
 
 Key types: `MenuStripSpec`, `MenuStripControl`, `WindowMenuOptions`, `SceneMenuOptions`.
 Key helpers: `add_menu_strip_from_spec`, `add_standard_menu_strip`, `add_window_menu_strip`.
 
 ### Command Palette
 
-Declare with `SceneCommandPaletteSpec(key=..., scene_name=...)` in `RoutedRuntimeSpec.command_palette`.  `setup_routed_runtime` registers the activation key as a **global key** — tested before focus dispatch, active-window handlers, and screen-event handlers.  This guarantees the palette is always reachable.  Each scene declares its own key; having a command palette is optional per-scene. The palette's window entries list respects `window_menu_opt_in` on each window and shows only opted-in windows.
+Declare with `SceneCommandPaletteSpec(key=..., scene_name=...)` in `RoutedRuntimeSpec.command_palette`.  `setup_routed_runtime` registers the activation key as a **global key** — tested before focus dispatch, active-window handlers, and screen-event handlers.  This guarantees the palette is always reachable.  Each scene declares its own key; having a command palette is optional per-scene. The palette's window entries list respects `window_management_opt_in` on each window and shows only opted-in windows.
 
 Built-in palette entry groups are configured via `PaletteBindingSpec` in `HostApplicationBindingSpec`:
 

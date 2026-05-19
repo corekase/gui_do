@@ -13,7 +13,10 @@ from gui_do.features.data_driven_runtime import (
     setup_routed_runtime,
 )
 
-from .main_build_helpers import build_main_scene as build_main_scene_helper, toggle_help_overlay as toggle_help_overlay_helper
+from .main_build_helpers import (
+    build_main_scene as build_main_scene_helper,
+    toggle_help_overlay as toggle_help_overlay_helper,
+)
 from .main_specs import (
     MAIN_RUNTIME_SPEC as _MAIN_RUNTIME_SPEC,
 )

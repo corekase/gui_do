@@ -194,8 +194,8 @@ The menu-strip system supports explicit opt-in/opt-out fields for both scene and
   - If `scene_menu_opt_in` is `False`, the scene is excluded from the Scene menu section. If not defined, the scene is included by default.
 
 - **Window menu opt-in:**
-  - The `window_menu_opt_in` field (default: `True`) is available in all window spec dataclasses (e.g., `WindowSpec`, `AnchoredWindowSpec`, `FeatureWindowBundleBindingSpec`).
-  - If `window_menu_opt_in` is `False`, the window is excluded from the Window menu section, command palette, and task panel. If not defined, the window is included by default.
+  - The `window_management_opt_in` field (default: `True`) is available in all window spec dataclasses (e.g., `WindowSpec`, `AnchoredWindowSpec`, `FeatureWindowBundleBindingSpec`).
+  - If `window_management_opt_in` is `False`, the window is excluded from the Window menu section, command palette, and task panel. If not defined, the window is included by default.
 
 This behavior ensures that both scene and window menu participation is explicit and consistent. Setting either field to `False` opts out the item; omitting the field opts in by default. This matches the unified menu-strip contract and provides fine-grained control over menu composition.
 
@@ -205,7 +205,7 @@ FeatureWindowBundleBindingSpec(
     feature_attribute_name="_systems_feature",
     factory=SystemsFeature,
     window_key="systems",
-    window_menu_opt_in=False,  # This window will not appear in the Window menu, command palette, or task panel
+    window_management_opt_in=False,  # This window will not appear in the Window menu, command palette, or task panel
 )
 ```
 

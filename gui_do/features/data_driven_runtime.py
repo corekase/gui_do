@@ -184,7 +184,7 @@ class WindowSpec:
     task_panel_slot_index: int | None
     accessibility_label: str
     window_effects: dict = field(default_factory=dict)
-    window_menu_opt_in: bool = True
+    window_management_opt_in: bool = True
 
 
 @dataclass(frozen=True)
@@ -240,7 +240,7 @@ class AnchoredWindowSpec:
     anchor: str
     margin: tuple[int, int]
     use_frame_backdrop: bool = True
-    window_menu_opt_in: bool = True
+    window_management_opt_in: bool = True
 
 
 @dataclass(frozen=True)
@@ -705,7 +705,7 @@ class FeatureWindowBundleBindingSpec:
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
-    window_menu_opt_in: bool = True
+    window_management_opt_in: bool = True
 
 
 

@@ -646,7 +646,7 @@ class FeatureWindowBinding:
     task_panel_slot_index: int | None = None
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
-    window_menu_opt_in: bool = True
+    window_management_opt_in: bool = True
 
 
 class FeatureWindowPresentationModel:
@@ -674,7 +674,7 @@ class FeatureWindowPresentationModel:
         task_panel_slot_index: int | None = None,
         accessibility_label: str | None = None,
         window_effects: dict | None = None,
-        window_menu_opt_in: bool = True,
+        window_management_opt_in: bool = True,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
             key=str(key),
@@ -688,7 +688,7 @@ class FeatureWindowPresentationModel:
             task_panel_slot_index=None if task_panel_slot_index is None else int(task_panel_slot_index),
             accessibility_label=None if accessibility_label is None else str(accessibility_label),
             window_effects=dict(window_effects or {}),
-            window_menu_opt_in=bool(window_menu_opt_in),
+            window_management_opt_in=bool(window_management_opt_in),
         )
         self._bindings[binding.key] = binding
         return binding
@@ -747,7 +747,9 @@ class FeatureWindowPresentationModel:
         return next_visible
 
     def sync_initial_visibility(self, *, visible: bool = False) -> None:
-        for key in self._bindings:
+        for key, binding in self._bindings.items():
+            if not bool(getattr(binding, "window_management_opt_in", True)):
+                continue
             self.set_visible(key, visible)
 
     def toggle_window(self, window) -> bool:

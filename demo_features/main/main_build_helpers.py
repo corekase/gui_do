@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
+import pygame
 from pygame import Rect
 
-from gui_do import PanelControl, TooltipManager
+from gui_do import LabelControl, PanelControl, TooltipManager, WindowControl
 from gui_do.features.data_driven_runtime import (
     RightAnchoredTaskPanelButtonSpec,
     add_right_anchored_task_panel_button,
@@ -30,6 +32,60 @@ from .main_specs import (
 
 if TYPE_CHECKING:
     from .main_feature import MainFeature
+
+
+def _add_opt_out_test_window(host) -> None:
+    text = "This is an unmanaged window"
+    text_w = 0
+    text_h = 0
+    theme = getattr(host.app, "theme", None)
+    font_manager = getattr(theme, "fonts", None)
+    if font_manager is not None and hasattr(font_manager, "font_instance"):
+        try:
+            size = int(font_manager.scaled_size(1.0))
+            font = font_manager.font_instance("body", size=size)
+            text_w, text_h = font.text_surface_size(text)
+        except Exception:
+            text_w = 0
+            text_h = 0
+    if text_w <= 0 or text_h <= 0:
+        text_font = pygame.font.Font(None, 14)
+        text_w, text_h = text_font.size(text)
+    content_pad = 8
+    titlebar_h = 24
+    window_w = int(text_w + (content_pad * 2))
+    window_h = int(titlebar_h + text_h + (content_pad * 2))
+
+    screen_rect = Rect(host.screen_rect)
+    window_rect = Rect(0, 0, window_w, window_h)
+    window_rect.center = screen_rect.center
+
+    host.opt_out_test_window = host.root.add(
+        WindowControl(
+            "opt_out_test_window",
+            window_rect,
+            "Opt-out test",
+            use_frame_backdrop=True,
+        )
+    )
+    host.opt_out_test_window.visible = True
+    content_rect = host.opt_out_test_window.content_rect()
+    host.opt_out_test_window.add(
+        LabelControl(
+            "opt_out_test_label",
+            Rect(content_rect.left + content_pad, content_rect.top + content_pad, int(text_w), int(text_h)),
+            text,
+            align="left",
+        )
+    )
+
+    # Register in presentation with explicit opt-out from window management surfaces.
+    host._opt_out_test_window_feature = SimpleNamespace(window=host.opt_out_test_window)
+    host.window_presentation.register_feature_window(
+        "opt_out_test",
+        feature_attribute_name="_opt_out_test_window_feature",
+        window_management_opt_in=False,
+    )
 
 
 def build_main_scene(feature: MainFeature, host) -> None:
@@ -95,6 +151,7 @@ def build_main_scene(feature: MainFeature, host) -> None:
     register_window_toggle_tooltips(host._main_tooltip_manager, toggle_controls)
 
     host.app.tile_windows()
+    _add_opt_out_test_window(host)
 
 
 def toggle_help_overlay(feature: MainFeature) -> None:
