@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Dict, List, Optional
 
 from .context_menu_manager import ContextMenuItem
 from ..controls.chrome.menu_bar_control import MenuEntry, MenuStripControl
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
-    from pygame import Rect
 
 
 class MenuBarManager:

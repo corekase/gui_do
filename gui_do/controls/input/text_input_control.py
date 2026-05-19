@@ -38,13 +38,14 @@ class TextInputControl(AbstractTextInputControl):
         raw_to_display = [None] * (len(raw) + 1)
         di = 0
         ri = 0
+        raw_chars = set(raw)
         while di < len(display) and ri < len(raw):
             if display[di] == raw[ri]:
                 display_to_raw[di] = ri
                 raw_to_display[ri] = di
                 di += 1
                 ri += 1
-            elif display[di] in raw:
+            elif display[di] in raw_chars:
                 # Try to sync up by advancing raw
                 ri += 1
             else:
@@ -98,8 +99,14 @@ class TextInputControl(AbstractTextInputControl):
             return 0
         lo = 0
         hi = len(display)
+        width_cache: dict[int, int] = {}
+
         def measure(n):
+            cached = width_cache.get(n)
+            if cached is not None:
+                return cached
             px, _ = font.text_size(display[:n])
+            width_cache[n] = int(px)
             return px
         while lo < hi:
             mid = (lo + hi) // 2
@@ -116,9 +123,12 @@ class TextInputControl(AbstractTextInputControl):
                 disp_idx -= 1
         # Map display index to nearest editable raw index
         display_to_raw, _ = self._build_display_raw_mapping()
-        # Find nearest editable position (not None)
-        search_range = list(range(disp_idx, -1, -1)) + list(range(disp_idx + 1, len(display) + 1))
-        for idx in search_range:
+        # Find nearest editable position (not None) without temporary range allocation.
+        for idx in range(disp_idx, -1, -1):
+            raw_idx = display_to_raw[idx]
+            if raw_idx is not None:
+                return raw_idx
+        for idx in range(disp_idx + 1, len(display_to_raw)):
             raw_idx = display_to_raw[idx]
             if raw_idx is not None:
                 return raw_idx

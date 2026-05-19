@@ -2,10 +2,10 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 # Type checking imports for static analysis only
 # ---------------------------------------------------------------------------
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
 from collections.abc import Mapping
-from .font_role_setup import setup_standard_font_roles
-from .lifecycle_models import FrameTimer, PlacedControl
+from .font_role_setup import setup_standard_font_roles as setup_standard_font_roles
+from .lifecycle_models import FrameTimer as FrameTimer, PlacedControl
 from .lifecycle_layout_helpers import calculate_grid_layout as _calculate_grid_layout
 
 if TYPE_CHECKING:

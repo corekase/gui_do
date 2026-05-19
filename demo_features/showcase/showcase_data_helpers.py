@@ -9,7 +9,6 @@ from pygame import Rect
 from gui_do import (
     CanvasControl,
     CanvasViewport,
-    ContextMenuItem,
     DropdownControl,
     DropdownOption,
     FrameControl,

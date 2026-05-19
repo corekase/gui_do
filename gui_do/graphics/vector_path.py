@@ -112,6 +112,10 @@ class VectorPath:
         self._current: Tuple[float, float] = (0.0, 0.0)
         # Bézier/arc tessellation granularity per 100 units
         self._segs_per_100: int = 16
+        self._tessellation_cache: List[List[Tuple[int, int]]] | None = None
+
+    def _invalidate_tessellation(self) -> None:
+        self._tessellation_cache = None
 
     # ------------------------------------------------------------------
     # Path commands
@@ -121,17 +125,20 @@ class VectorPath:
         """Begin a new sub-path at (*x*, *y*)."""
         self._segments.append((_MOVE, float(x), float(y)))
         self._current = (float(x), float(y))
+        self._invalidate_tessellation()
         return self
 
     def line_to(self, x: float, y: float) -> "VectorPath":
         """Draw a line from the current position to (*x*, *y*)."""
         self._segments.append((_LINE, float(x), float(y)))
         self._current = (float(x), float(y))
+        self._invalidate_tessellation()
         return self
 
     def close(self) -> "VectorPath":
         """Close the current sub-path back to its starting point."""
         self._segments.append((_CLOSE,))
+        self._invalidate_tessellation()
         return self
 
     def quadratic_to(
@@ -144,6 +151,7 @@ class VectorPath:
         """Quadratic Bézier from current position through (*cx*, *cy*) to (*x*, *y*)."""
         self._segments.append((_QUAD, float(cx), float(cy), float(x), float(y)))
         self._current = (float(x), float(y))
+        self._invalidate_tessellation()
         return self
 
     def cubic_to(
@@ -160,6 +168,7 @@ class VectorPath:
             (_CUBIC, float(c1x), float(c1y), float(c2x), float(c2y), float(x), float(y))
         )
         self._current = (float(x), float(y))
+        self._invalidate_tessellation()
         return self
 
     def arc(
@@ -178,6 +187,7 @@ class VectorPath:
         )
         end_rad = math.radians(end_angle_deg)
         self._current = (cx + radius * math.cos(end_rad), cy + radius * math.sin(end_rad))
+        self._invalidate_tessellation()
         return self
 
     def rect(self, r: Rect) -> "VectorPath":
@@ -215,6 +225,9 @@ class VectorPath:
 
         Returns a list of sub-paths, each being a list of integer points.
         """
+        if self._tessellation_cache is not None:
+            return self._tessellation_cache
+
         sub_paths: List[List[Tuple[int, int]]] = []
         current_sub: List[Tuple[float, float]] = []
         start_of_sub: Tuple[float, float] = (0.0, 0.0)
@@ -260,6 +273,7 @@ class VectorPath:
 
         if current_sub:
             sub_paths.append([(int(p[0]), int(p[1])) for p in current_sub])
+        self._tessellation_cache = sub_paths
         return sub_paths
 
     def stroke(

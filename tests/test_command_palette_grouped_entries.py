@@ -630,7 +630,6 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         manager.show(app)
         listview = manager._open_listview
         self.assertIsNotNone(listview)
-        item = listview._items[0]
         pos = (listview.rect.x + 1, listview.rect.y + 1)
 
         handled = manager.try_activate_action_at(pos)

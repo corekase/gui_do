@@ -25,7 +25,41 @@ class WindowLayoutHandler:
             return self.scene
         return self.app.scene
 
-    def _scene_windows(self) -> List[object]:
+    def _scene_layout_snapshot(self) -> Dict[str, object]:
+        """Capture one traversal of scene nodes for layout helper reuse."""
+        windows: List[object] = []
+        menu_bottom = 0
+        task_panel_rect: Optional[Rect] = None
+        scene = self._bound_scene()
+        queue: deque = deque(getattr(scene, "nodes", ()))
+        while queue:
+            node = queue.popleft()
+            queue.extend(getattr(node, "children", ()))
+
+            if self._is_window_like(node):
+                windows.append(node)
+
+            class_name = str(getattr(getattr(node, "__class__", object), "__name__", ""))
+            if class_name == "MenuStripControl" and bool(getattr(node, "visible", False)) and bool(getattr(node, "enabled", False)):
+                rect = getattr(node, "rect", Rect(0, 0, 0, 0))
+                menu_bottom = max(menu_bottom, int(rect.bottom))
+
+            if task_panel_rect is None and bool(getattr(node, "visible", False)) and hasattr(node, "is_task_panel"):
+                try:
+                    if node.is_task_panel():
+                        task_panel_rect = Rect(getattr(node, "rect", Rect(0, 0, 0, 0)))
+                except Exception:
+                    pass
+
+        return {
+            "windows": windows,
+            "menu_bottom": int(menu_bottom),
+            "task_panel_rect": task_panel_rect,
+        }
+
+    def _scene_windows(self, snapshot: Optional[Dict[str, object]] = None) -> List[object]:
+        if snapshot is not None:
+            return list(snapshot.get("windows", ()))
         windows: List[object] = []
         queue: deque = deque(self._bound_scene().nodes)
         while queue:
@@ -56,8 +90,10 @@ class WindowLayoutHandler:
     def _visible_windows(self) -> List[object]:
         return self._ordered_windows(include_hidden=False)
 
-    def _menu_strip_bottom(self) -> int:
+    def _menu_strip_bottom(self, snapshot: Optional[Dict[str, object]] = None) -> int:
         """Return bottom y of visible+enabled menu strip controls in the bound scene."""
+        if snapshot is not None:
+            return int(snapshot.get("menu_bottom", 0))
         menu_bottom = 0
         scene = self._bound_scene()
         queue: deque = deque(getattr(scene, "nodes", ()))
@@ -70,8 +106,8 @@ class WindowLayoutHandler:
                 menu_bottom = max(menu_bottom, int(rect.bottom))
         return int(menu_bottom)
 
-    def _ordered_windows(self, *, include_hidden: bool) -> List[object]:
-        windows = self._scene_windows()
+    def _ordered_windows(self, *, include_hidden: bool, snapshot: Optional[Dict[str, object]] = None) -> List[object]:
+        windows = self._scene_windows(snapshot)
         self._ensure_registration(windows)
         if include_hidden:
             ordered = list(windows)
@@ -84,25 +120,35 @@ class WindowLayoutHandler:
         """Return current visible windows in registration order."""
         return tuple(self._visible_windows())
 
-    def _work_area_rect(self) -> Rect:
+    def _work_area_rect(self, snapshot: Optional[Dict[str, object]] = None) -> Rect:
         work = Rect(self.app.surface.get_rect())
-        menu_bottom = self._menu_strip_bottom()
+        menu_bottom = self._menu_strip_bottom(snapshot)
         if menu_bottom > int(work.top):
             work.top = int(menu_bottom)
         if self.avoid_task_panel:
-            queue: deque = deque(self._bound_scene().nodes)
-            while queue:
-                node = queue.popleft()
-                queue.extend(node.children)
-                if node.is_task_panel() and node.visible:
-                    panel_rect = node.rect
-                    if panel_rect.top < work.bottom:
-                        work.height = max(0, panel_rect.top - work.top)
-                    break
+            panel_rect = None
+            if snapshot is not None:
+                panel_rect = snapshot.get("task_panel_rect")
+            if panel_rect is None:
+                queue: deque = deque(self._bound_scene().nodes)
+                while queue:
+                    node = queue.popleft()
+                    queue.extend(node.children)
+                    if node.is_task_panel() and node.visible:
+                        panel_rect = node.rect
+                        break
+            if panel_rect is not None and panel_rect.top < work.bottom:
+                work.height = max(0, panel_rect.top - work.top)
         work.inflate_ip(-(self.padding * 2), -(self.padding * 2))
         return work
 
-    def _fallback_clamp_target(self, window: object, target_x: int, target_y: int) -> tuple[int, int]:
+    def _fallback_clamp_target(
+        self,
+        window: object,
+        target_x: int,
+        target_y: int,
+        snapshot: Optional[Dict[str, object]] = None,
+    ) -> tuple[int, int]:
         """Clamp one window target to visible screen bounds with menu-strip top exclusion."""
         rect = Rect(window.rect)
         surface = getattr(self.app, "surface", None)
@@ -116,7 +162,7 @@ class WindowLayoutHandler:
         max_top = int(screen_rect.bottom - rect.height)
 
         # Match drag semantics: windows cannot cross visible menu strips.
-        top_limit = max(top_limit, self._menu_strip_bottom())
+        top_limit = max(top_limit, self._menu_strip_bottom(snapshot))
 
         clamped_x = int(target_x)
         clamped_y = int(target_y)
@@ -131,7 +177,13 @@ class WindowLayoutHandler:
             clamped_y = max(top_limit, min(clamped_y, max_top))
         return (int(clamped_x), int(clamped_y))
 
-    def _clamp_target(self, window: object, target_x: int, target_y: int) -> tuple[int, int]:
+    def _clamp_target(
+        self,
+        window: object,
+        target_x: int,
+        target_y: int,
+        snapshot: Optional[Dict[str, object]] = None,
+    ) -> tuple[int, int]:
         """Clamp target coordinates using the same logic as window drag bounds when available."""
         parent = getattr(window, "parent", None)
         clamp_fn = getattr(parent, "_clamp_window_drag_target", None)
@@ -141,7 +193,7 @@ class WindowLayoutHandler:
                 return (int(x), int(y))
             except Exception:
                 pass
-        return self._fallback_clamp_target(window, int(target_x), int(target_y))
+        return self._fallback_clamp_target(window, int(target_x), int(target_y), snapshot)
 
     def _animate_window_to(self, window: object, target_x: int, target_y: int, *, duration: float) -> None:
         current = Rect(window.rect)
@@ -243,19 +295,45 @@ class WindowLayoutHandler:
     def _prefer_vertical_packing(windows: List[object], window_rects: Dict[object, Rect]) -> bool:
         """Infer whether current layout intent is primarily vertical.
 
-        Uses nearest-neighbor direction from window centers. If most nearest
-        relationships are vertical, prefer top-to-bottom packing.
+        Fast-path uses spread and adjacent-step dominance over registration
+        order. Ambiguous cases fall back to nearest-neighbor voting.
         """
         if len(windows) < 2:
             return False
 
-        centers = {
+        centers: Dict[object, tuple[int, int]] = {
             w: (int(rect.centerx), int(rect.centery))
             for w, rect in window_rects.items()
         }
+
+        xs = [centers[w][0] for w in windows]
+        ys = [centers[w][1] for w in windows]
+        x_span = int(max(xs) - min(xs))
+        y_span = int(max(ys) - min(ys))
+
+        dominant_scale = 1.20
+        if y_span > int(x_span * dominant_scale):
+            return True
+        if x_span > int(y_span * dominant_scale):
+            return False
+
+        total_step_dx = 0
+        total_step_dy = 0
+        for idx in range(1, len(windows)):
+            prev = windows[idx - 1]
+            cur = windows[idx]
+            px, py = centers[prev]
+            cx, cy = centers[cur]
+            total_step_dx += abs(int(cx - px))
+            total_step_dy += abs(int(cy - py))
+
+        if total_step_dy > int(total_step_dx * dominant_scale):
+            return True
+        if total_step_dx > int(total_step_dy * dominant_scale):
+            return False
+
         vertical_links = 0
         horizontal_links = 0
-
         for window in windows:
             cx, cy = centers[window]
             nearest = None
@@ -270,7 +348,6 @@ class WindowLayoutHandler:
                 if nearest_dist is None or dist < nearest_dist:
                     nearest_dist = dist
                     nearest = (abs(dx), abs(dy))
-
             if nearest is None:
                 continue
             nx, ny = nearest
@@ -289,17 +366,18 @@ class WindowLayoutHandler:
         immediate: bool = False,
         force: bool = False,
     ) -> None:
-        windows = self._ordered_windows(include_hidden=bool(include_hidden))
+        scene_snapshot = self._scene_layout_snapshot()
+        windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
         if (not self.enabled and not force) or not windows:
             return
-        work = self._work_area_rect()
+        work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
             return
         if len(windows) == 1:
             only_window = windows[0]
             target = Rect(0, 0, only_window.rect.width, only_window.rect.height)
             target.center = work.center
-            clamped_x, clamped_y = self._clamp_target(only_window, int(target.x), int(target.y))
+            clamped_x, clamped_y = self._clamp_target(only_window, int(target.x), int(target.y), scene_snapshot)
             if immediate:
                 current = Rect(only_window.rect)
                 only_window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
@@ -317,8 +395,8 @@ class WindowLayoutHandler:
             visible_sorted = sorted(
                 windows,
                 key=lambda w: (
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
+                    int(window_rects[w].y),
+                    int(window_rects[w].x),
                     int(order_idx.get(w, 0)),
                 ),
             )
@@ -328,8 +406,8 @@ class WindowLayoutHandler:
             visible_sorted = sorted(
                 windows,
                 key=lambda w: (
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
+                    int(window_rects[w].x),
+                    int(window_rects[w].y),
                     int(order_idx.get(w, 0)),
                 ),
             )
@@ -542,11 +620,11 @@ class WindowLayoutHandler:
         for window, target_x, target_y in targets:
             if window in center_fallback:
                 centered_x, centered_y = self._center_target(work, window_rects[window])
-                clamped_x, clamped_y = self._clamp_target(window, centered_x, centered_y)
+                clamped_x, clamped_y = self._clamp_target(window, centered_x, centered_y, scene_snapshot)
             elif window in exact_overflow_targets:
                 clamped_x, clamped_y = (int(target_x), int(target_y))
             else:
-                clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y))
+                clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
             if duration <= 0.0:
                 current = Rect(window.rect)
                 window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)

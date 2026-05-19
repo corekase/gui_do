@@ -50,8 +50,14 @@ class TextAreaControl(AbstractTextInputControl):
             return abs_offset
         if not line_text:
             return abs_offset
+        width_cache: dict[int, int] = {}
+
         def measure(n):
+            cached = width_cache.get(n)
+            if cached is not None:
+                return cached
             px, _ = font.text_size(line_text[:n])
+            width_cache[n] = int(px)
             return px
         lo = 0
         hi = len(line_text)
@@ -661,22 +667,43 @@ class TextAreaControl(AbstractTextInputControl):
                 continue
             start = 0
             para_len = len(para)
+            width_cache: dict[tuple[int, int], int] = {}
+
+            def measure_segment(seg_start: int, seg_end: int) -> int:
+                key = (seg_start, seg_end)
+                cached = width_cache.get(key)
+                if cached is not None:
+                    return cached
+                measured = self._text_width(theme, para[seg_start:seg_end])
+                width_cache[key] = int(measured)
+                return int(measured)
+
             while start < para_len:
+                lo = start
+                hi = para_len
                 best_end = start
-                last_space_end = -1
-                overflowed = False
-                for end in range(start + 1, para_len + 1):
-                    candidate = para[start:end]
-                    if self._text_width(theme, candidate) <= max_width:
-                        best_end = end
-                        if candidate.endswith(" "):
-                            last_space_end = end
+                while lo <= hi:
+                    mid = (lo + hi) // 2
+                    if mid <= start:
+                        lo = start + 1
                         continue
-                    overflowed = True
-                    break
+                    if measure_segment(start, mid) <= max_width:
+                        best_end = mid
+                        lo = mid + 1
+                    else:
+                        hi = mid - 1
+
                 if best_end == start:
                     best_end = start + 1
-                wrap_end = last_space_end if overflowed and last_space_end > start else best_end
+
+                overflowed = best_end < para_len
+                wrap_end = best_end
+                if overflowed:
+                    for idx in range(best_end, start, -1):
+                        if para[idx - 1] == " ":
+                            wrap_end = idx
+                            break
+
                 result.append(para[start:wrap_end])
                 start = wrap_end
         return result

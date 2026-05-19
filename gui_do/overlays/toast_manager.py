@@ -80,6 +80,8 @@ class ToastManager:
         self._next_id: int = 1
         self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
         self._draw_font_theme: object = None
+        self._layout_cache_key: Optional[tuple] = None
+        self._layout_cache: list[tuple[_ToastEntry, Rect]] = []
 
     # ------------------------------------------------------------------
     # Public API
@@ -110,6 +112,7 @@ class ToastManager:
             on_click=on_click,
         )
         self._toasts.append(entry)
+        self._invalidate_layout_cache()
         return ToastHandle(toast_id, self)
 
     def show_persistent(
@@ -135,6 +138,7 @@ class ToastManager:
             on_click=on_click,
         )
         self._toasts.append(entry)
+        self._invalidate_layout_cache()
         return ToastHandle(toast_id, self)
 
     def dismiss(self, handle: ToastHandle) -> None:
@@ -143,6 +147,7 @@ class ToastManager:
     def dismiss_all(self) -> int:
         count = len(self._toasts)
         self._toasts.clear()
+        self._invalidate_layout_cache()
         return count
 
     def suspend_for_scene(self, scene_name: str) -> int:
@@ -155,6 +160,7 @@ class ToastManager:
         self._suspended_toasts[scene_name] = _SuspendedToastState(scene_name=scene_name, entries=entries)
         count = len(entries)
         self._toasts.clear()
+        self._invalidate_layout_cache()
         return count
 
     def restore_for_scene(self, scene_name: str) -> int:
@@ -164,6 +170,7 @@ class ToastManager:
         if state is None or not state.entries:
             return 0
         self._toasts = deque(state.entries, maxlen=self._max_visible)
+        self._invalidate_layout_cache()
         return len(self._toasts)
 
     def discard_scene_state(self, scene_name: str) -> None:
@@ -193,7 +200,13 @@ class ToastManager:
                 self._suspended_toasts[scene_name] = _SuspendedToastState(scene_name=scene_name, entries=entries)
             else:
                 self._suspended_toasts.pop(scene_name, None)
+        if removed:
+            self._invalidate_layout_cache()
         return removed
+
+    def _invalidate_layout_cache(self) -> None:
+        self._layout_cache_key = None
+        self._layout_cache = []
 
     # ------------------------------------------------------------------
     # Update / draw
@@ -295,9 +308,25 @@ class ToastManager:
             raise RuntimeError("ToastManager requires theme with centralized font roles.")
         self._draw_font = theme.fonts.font_instance("toast.text", size=18)
         self._draw_font_theme = theme
+        self._invalidate_layout_cache()
         return self._draw_font
 
     def _layout_toasts(self, font) -> list[tuple[_ToastEntry, Rect]]:
+        cache_key = (
+            id(font),
+            int(self._screen_rect.left),
+            int(self._screen_rect.top),
+            int(self._screen_rect.width),
+            int(self._screen_rect.height),
+            str(self._position),
+            int(self._toast_width),
+            int(self._margin),
+            int(self._gap),
+            tuple((int(entry.toast_id), str(entry.title or ""), str(entry.message)) for entry in self._toasts),
+        )
+        if self._layout_cache_key == cache_key:
+            return self._layout_cache
+
         gap = self._gap
         margin = self._margin
         sr = self._screen_rect
@@ -336,7 +365,10 @@ class ToastManager:
             rects.append(Rect(int(x), int(y), int(w), int(h)))
             y_offset += h + gap
 
-        return list(zip(ordered_entries, rects))
+        layout = list(zip(ordered_entries, rects))
+        self._layout_cache_key = cache_key
+        self._layout_cache = layout
+        return layout
 
     def on_event_bus_message(self, payload: Any) -> None:
         """Handle event bus messages with keys: message, title, severity, duration, background_color, outline_color."""
