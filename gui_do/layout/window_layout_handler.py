@@ -243,31 +243,16 @@ class WindowLayoutHandler:
             return
 
         order_idx = self._registration_order
-        if newly_visible is not None:
-            # Visibility-event relayout path: keep visibility-triggered windows first
-            # in registration order so user-requested tile actions snap to canonical layout.
-            newly_set = set(newly_visible)
-            first = [w for w in windows if w in newly_set]
-            first.sort(key=lambda w: int(order_idx.get(w, 0)))
-            rest = [w for w in windows if w not in newly_set]
-            rest.sort(
-                key=lambda w: (
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
-                    int(order_idx.get(w, 0)),
-                )
-            )
-            visible_sorted = first + rest
-        else:
-            # Standard relayout path preserves general locality by current y/x.
-            visible_sorted = sorted(
-                windows,
-                key=lambda w: (
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
-                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
-                    int(order_idx.get(w, 0)),
-                ),
-            )
+        # Spatial preference order: preserve left/right first, then top/bottom,
+        # with registration as a deterministic tie-breaker.
+        visible_sorted = sorted(
+            windows,
+            key=lambda w: (
+                int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
+                int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
+                int(order_idx.get(w, 0)),
+            ),
+        )
 
         window_rects = {w: self._full_window_rect(w) for w in visible_sorted}
 
