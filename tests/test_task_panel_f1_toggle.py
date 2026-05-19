@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 import pygame
 
@@ -212,6 +213,76 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
             (pygame.K_ESCAPE, "exit", "main"),
             host.app.actions.bind_global_calls,
         )
+
+    def test_main_binds_f2_and_f3_as_scene_owned_global_keys(self):
+        host = _StubHost()
+        feature = MainFeature()
+
+        with patch("gui_do.setup_routed_runtime"):
+            feature.bind_runtime(host)
+
+        self.assertIn(
+            (pygame.K_F2, "toggle_automatic_layout", "main"),
+            host.app.actions.bind_global_calls,
+        )
+        self.assertIn(
+            (pygame.K_F3, "tile_now", "main"),
+            host.app.actions.bind_global_calls,
+        )
+
+    def test_main_feature_toggle_automatic_layout_updates_scene_state_and_toast(self):
+        feature = MainFeature()
+        toast_calls = []
+
+        class _ToastStub:
+            def show(self, message, **kwargs):
+                toast_calls.append((message, kwargs))
+
+        class _AppStub:
+            def __init__(self):
+                self.toasts = _ToastStub()
+                self.toggle_calls = []
+
+            def toggle_window_tiling_enabled(self, *, relayout=True, scene_name=None):
+                self.toggle_calls.append((bool(relayout), scene_name))
+                return False
+
+        host = SimpleNamespace(app=_AppStub())
+
+        enabled = feature._toggle_automatic_layout(host)
+
+        self.assertFalse(enabled)
+        self.assertEqual([(True, "main")], host.app.toggle_calls)
+        self.assertEqual(1, len(toast_calls))
+        self.assertEqual("Turned automatic window layout off for this scene.", toast_calls[0][0])
+
+    def test_main_feature_tile_windows_now_executes_and_toast(self):
+        feature = MainFeature()
+        toast_calls = []
+
+        class _ToastStub:
+            def show(self, message, **kwargs):
+                toast_calls.append((message, kwargs))
+
+        class _AppStub:
+            def __init__(self):
+                self.toasts = _ToastStub()
+                self.tile_calls = []
+
+            def tile_windows(self, *args, **kwargs):
+                self.tile_calls.append((args, kwargs))
+
+        host = SimpleNamespace(app=_AppStub())
+
+        result = feature._tile_windows_now(host)
+
+        self.assertTrue(result)
+        self.assertEqual(
+            [((), {"as_visibility_event": True, "force": True})],
+            host.app.tile_calls,
+        )
+        self.assertEqual(1, len(toast_calls))
+        self.assertEqual("Tiled all visible windows in this scene.", toast_calls[0][0])
 
     def test_accessibility_tab_is_consumed_by_focused_control(self):
         scene = _StubScene()

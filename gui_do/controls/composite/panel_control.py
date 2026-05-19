@@ -52,7 +52,11 @@ class PanelControl(UiNode):
         # Re-apply window layout from post-drag positions.
         if app is not None:
             tile_windows = getattr(app, "tile_windows", None)
-            if callable(tile_windows):
+            is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
+            auto_layout_enabled = True
+            if callable(is_window_tiling_enabled):
+                auto_layout_enabled = bool(is_window_tiling_enabled())
+            if auto_layout_enabled and callable(tile_windows):
                 tile_windows()
         return True
 

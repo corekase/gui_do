@@ -879,7 +879,10 @@ class CommandPaletteManager:
         window.visible = next_visible
         tile_windows = getattr(app, "tile_windows", None)
         if callable(tile_windows):
-            tile_windows()
+            if next_visible:
+                tile_windows(newly_visible=(window,), as_visibility_event=True)
+            else:
+                tile_windows()
 
     @staticmethod
     def _resolve_builtin_visibility_setter(app: "GuiApplication", window):

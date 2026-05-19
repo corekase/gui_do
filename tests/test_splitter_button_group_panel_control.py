@@ -353,6 +353,7 @@ class _StubApp:
         self._logical_pointer_pos = (0, 0)
         self.sync_calls = []
         self.tile_windows_calls = 0
+        self.window_tiling_enabled = True
 
     @property
     def logical_pointer_pos(self):
@@ -372,6 +373,9 @@ class _StubApp:
 
     def tile_windows(self, *args, **kwargs):
         self.tile_windows_calls += 1
+
+    def is_window_tiling_enabled(self):
+        return bool(self.window_tiling_enabled)
 
 
 class TestPanelControlWindowDrag(unittest.TestCase):
@@ -446,6 +450,21 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 90), raw_pos=(150, 12), button=1)
         self.assertTrue(panel.on_event_capture(up, app))
         self.assertEqual([(150, 38)], app.sync_calls)
+
+    def test_drag_end_skips_automatic_tiling_when_disabled(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(100, 80, 260, 180), "Window")
+        panel.add(window)
+        panel._drag_window = window
+        panel._drag_last_pos = (140, 110)
+
+        app = _StubApp()
+        app.window_tiling_enabled = False
+
+        ended = panel.end_window_drag(app)
+
+        self.assertTrue(ended)
+        self.assertEqual(0, app.tile_windows_calls)
 
     def test_drag_end_triggers_window_relayout(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))

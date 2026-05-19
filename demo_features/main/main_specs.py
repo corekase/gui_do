@@ -6,6 +6,7 @@ import pygame
 from pygame import Rect
 
 from gui_do.features.data_driven_runtime import (
+    ActionHotkeySpec,
     AutoSizedStyledLabelSpec,
     MenuStripSpec,
     PaletteInputBindSpec,
@@ -22,8 +23,32 @@ from gui_do.features.data_driven_runtime import (
 )
 
 
+def _toggle_automatic_layout_action(feature, host, _event) -> bool:
+    return bool(feature._toggle_automatic_layout(host))
+
+
+def _tile_windows_now_action(feature, host, _event) -> bool:
+    return bool(feature._tile_windows_now(host))
+
+
 MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
     scene_name="main",
+    action_hotkeys=(
+        ActionHotkeySpec(
+            action_name="toggle_automatic_layout",
+            handler=_toggle_automatic_layout_action,
+            key=pygame.K_F2,
+            scene_name="main",
+            global_key=True,
+        ),
+        ActionHotkeySpec(
+            action_name="tile_now",
+            handler=_tile_windows_now_action,
+            key=pygame.K_F3,
+            scene_name="main",
+            global_key=True,
+        ),
+    ),
     shortcut_overlays=(
         ShortcutOverlaySpec(
             attr_name="_help_overlay",
@@ -37,7 +62,8 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
                 "F1: Raise/Lower Task Panel",
                 "F5: Toggle Command Palette",
                 "F9: Display this help",
-                "F2: Tile all windows",
+                "F2: Toggle Automatic Layout",
+                "F3: Tile all windows now",
                 "Mouse Wheel Click: Toggle Window Entry In Palette",
                 "Tab/Shift-Tab: cycle controls",
                 "Control-Tab/Shift-Control-Tab: cycle windows",

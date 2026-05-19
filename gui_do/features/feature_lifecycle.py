@@ -623,7 +623,13 @@ def set_window_visible_state(
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
         toggle.pushed = is_visible
     if tile_windows is not None:
-        tile_windows()
+        if is_visible and window is not None:
+            try:
+                tile_windows(newly_visible=(window,), as_visibility_event=True)
+            except TypeError:
+                tile_windows()
+        else:
+            tile_windows()
     # Call host setter if provided
     if host is not None and host_setter_name:
         setter = getattr(host, host_setter_name, None)

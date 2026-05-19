@@ -34,6 +34,7 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
                 pretty_name="Desktop Demo",
                 transition_style=SceneTransitionStyle.SLIDE_RIGHT,
                 transition_duration=0.5,
+                tiling_enabled=True,
                 pristine_asset="demo_features/data/images/backdrop.jpg",
                 prewarm=True,
                 emit_nav_action_spec=True,

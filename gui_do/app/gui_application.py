@@ -71,8 +71,7 @@ class GuiApplication:
     def _register_builtin_actions(self):
         # Register built-in tile_now action for global tiling hotkey.
         def _tile_now_action(_event=None):
-            self.set_window_tiling_enabled(True, relayout=False)
-            self.tile_windows(as_visibility_event=True)
+            self.tile_windows(as_visibility_event=True, force=True)
             return True
         self.actions.register_action("tile_now", _tile_now_action)
         self.events = EventBus()
@@ -1420,6 +1419,19 @@ class GuiApplication:
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         tiling.set_enabled(enabled, relayout=relayout)
 
+    def is_window_tiling_enabled(self, scene_name: Optional[str] = None) -> bool:
+        tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
+        return bool(getattr(tiling, "enabled", False))
+
+    def toggle_window_tiling_enabled(self, *, relayout: bool = True, scene_name: Optional[str] = None) -> bool:
+        next_enabled = not self.is_window_tiling_enabled(scene_name=scene_name)
+        self.set_window_tiling_enabled(
+            next_enabled,
+            relayout=bool(relayout and next_enabled),
+            scene_name=scene_name,
+        )
+        return next_enabled
+
     def configure_window_tiling(
         self,
         *,
@@ -1439,12 +1451,18 @@ class GuiApplication:
             relayout=relayout,
         )
 
-    def tile_windows(self, newly_visible=None, *, as_visibility_event: bool = False) -> None:
+    def tile_windows(self, newly_visible=None, *, as_visibility_event: bool = False, force: bool = False) -> None:
         if as_visibility_event and newly_visible is None:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
             if callable(snapshot_fn):
                 newly_visible = snapshot_fn()
-        self.window_tiling.arrange_windows(newly_visible=newly_visible)
+        if not force and not self.is_window_tiling_enabled():
+            if newly_visible is not None:
+                center_windows = getattr(self.window_tiling, "center_windows", None)
+                if callable(center_windows):
+                    center_windows(tuple(newly_visible))
+            return
+        self.window_tiling.arrange_windows(newly_visible=newly_visible, force=bool(force))
 
     def register_font_role(
         self,

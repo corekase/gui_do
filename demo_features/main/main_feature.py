@@ -5,6 +5,7 @@ from __future__ import annotations
 from gui_do import (
     Feature,
     ShortcutHelpOverlay,
+    ToastSeverity,
 )
 from gui_do.features.data_driven_runtime import (
     bind_feature_runtime,
@@ -63,3 +64,25 @@ class MainFeature(Feature):
 
     def _toggle_help_overlay(self) -> None:
         toggle_help_overlay_helper(self)
+
+    def _toggle_automatic_layout(self, host) -> bool:
+        enabled = bool(host.app.toggle_window_tiling_enabled(relayout=True, scene_name="main"))
+        toast_manager = getattr(host.app, "toasts", None)
+        if toast_manager is not None and hasattr(toast_manager, "show"):
+            toast_manager.show(
+                "Turned automatic window layout on for this scene."
+                if enabled
+                else "Turned automatic window layout off for this scene.",
+                severity=ToastSeverity.INFO,
+            )
+        return enabled
+
+    def _tile_windows_now(self, host) -> bool:
+        host.app.tile_windows(as_visibility_event=True, force=True)
+        toast_manager = getattr(host.app, "toasts", None)
+        if toast_manager is not None and hasattr(toast_manager, "show"):
+            toast_manager.show(
+                "Tiled all visible windows in this scene.",
+                severity=ToastSeverity.INFO,
+            )
+        return True

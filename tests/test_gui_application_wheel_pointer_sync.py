@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pygame
 
 from gui_do.app.gui_application import GuiApplication
+from gui_do.controls.chrome.window_control import WindowControl
 
 
 pygame.init()
@@ -19,6 +20,17 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
             app.process_event(wheel)
 
         self.assertEqual((123, 77), app.logical_pointer_pos)
+
+    def test_visibility_event_centers_new_window_when_tiling_disabled(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        window = WindowControl("w", pygame.Rect(5, 7, 100, 80), "Window")
+        window.visible = True
+        app.scene.add(window)
+        app.set_window_tiling_enabled(False, relayout=False)
+
+        app.tile_windows(newly_visible=(window,), as_visibility_event=True)
+
+        self.assertEqual((110, 80), window.rect.topleft)
 
 
 if __name__ == "__main__":

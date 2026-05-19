@@ -199,6 +199,12 @@ class WindowLayoutHandler:
         dy = target.y - current.y
         window.move_by(dx, dy)
 
+    def center_windows(self, windows: Iterable[object]) -> None:
+        for window in windows:
+            if window is None:
+                continue
+            self._center_window(window)
+
     def set_enabled(self, enabled: bool, relayout: bool = True) -> None:
         self.enabled = bool(enabled)
         if relayout:
@@ -281,9 +287,10 @@ class WindowLayoutHandler:
         *,
         include_hidden: bool = False,
         immediate: bool = False,
+        force: bool = False,
     ) -> None:
         windows = self._ordered_windows(include_hidden=bool(include_hidden))
-        if not self.enabled or not windows:
+        if (not self.enabled and not force) or not windows:
             return
         work = self._work_area_rect()
         if work.width <= 0 or work.height <= 0:
@@ -532,4 +539,4 @@ class WindowLayoutHandler:
 
     def initialize_window_positions(self) -> None:
         """Seed scene window internal positions using immediate tiling targets."""
-        self.arrange_windows(include_hidden=True, immediate=True)
+        self.arrange_windows(include_hidden=True, immediate=True, force=True)

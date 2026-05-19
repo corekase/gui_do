@@ -24,7 +24,7 @@ class _StubApp:
     def __init__(self):
         self.tile_windows_calls = 0
 
-    def tile_windows(self) -> None:
+    def tile_windows(self, *args, **kwargs) -> None:
         self.tile_windows_calls += 1
 
 

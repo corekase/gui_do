@@ -805,7 +805,10 @@ class MenuStripControl(UiNode):
         if self._app is not None:
             tile_windows = getattr(self._app, "tile_windows", None)
             if callable(tile_windows):
-                tile_windows()
+                if next_visible:
+                    tile_windows(newly_visible=(window,), as_visibility_event=True)
+                else:
+                    tile_windows()
 
     def _resolve_scene(self):
         if self._app is None:
