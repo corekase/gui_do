@@ -98,6 +98,10 @@ class _PaletteAppStub(_AppStub):
         self.overlay = overlay
         self.focus = _FocusStub()
 
+    def switch_scene(self, scene_name: str):
+        self.active_scene_name = str(scene_name)
+        self.overlay.hide("__command_palette__")
+
 
 class _FocusStub:
     def __init__(self):
@@ -479,6 +483,111 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         self.assertTrue(manager.is_open)
         self.assertEqual(["layout"], calls)
         self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_action_bind_activation_does_not_require_multiple_left_clicks_for_command_button(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+
+        manager.register(
+            CommandEntry(
+                entry_id="command:main:layout_now",
+                title="Layout Windows Now",
+                action=lambda: calls.append("layout"),
+                category="Commands",
+                scene_name="main",
+                render_kind="command_button",
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        # Action-bind path should not suppress a later distinct left-click select.
+        handled = manager.try_activate_action_at(pos, suppress_followup_select=False)
+        self.assertTrue(handled)
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["layout"], calls)
+
+        listview._on_select(0, item)
+
+        self.assertFalse(manager.is_open)
+        self.assertEqual(["layout", "layout"], calls)
+        self.assertEqual(1, len(overlay.hide_calls))
+
+    def test_mouse_activation_default_entry_stays_open(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+
+        manager.register(
+            CommandEntry(
+                entry_id="scene:control_showcase",
+                title="Control Showcase",
+                action=lambda: calls.append("scene"),
+                category="Scenes",
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        handled = manager.try_activate_action_at(pos)
+
+        self.assertTrue(handled)
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["scene"], calls)
+
+        listview._on_select(0, item)
+
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["scene"], calls)
+        self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_mouse_activation_scene_change_does_not_reopen_or_leave_stale_suppression(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+
+        manager.register(
+            CommandEntry(
+                entry_id="scene:control_showcase",
+                title="Control Showcase",
+                action=lambda: (calls.append("scene"), app.switch_scene("control_showcase")),
+                category="Scenes",
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        handled = manager.try_activate_action_at(pos)
+
+        self.assertTrue(handled)
+        self.assertFalse(manager.is_open)
+        self.assertEqual(["scene"], calls)
+        self.assertEqual("control_showcase", app.active_scene_name)
+
+        manager.show(app)
+        reopened_listview = manager._open_listview
+        self.assertIsNotNone(reopened_listview)
+        reopened_item = reopened_listview._items[0]
+        reopened_listview._on_select(0, reopened_item)
+
+        self.assertEqual(["scene", "scene"], calls)
+        self.assertFalse(manager.is_open)
 
     def test_selecting_non_window_entry_still_closes_palette(self):
         overlay = _OverlayLifecycleStub()

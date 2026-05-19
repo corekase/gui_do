@@ -1417,8 +1417,8 @@ def setup_scene_command_palette_bindings(app, palette_manager, spec: "SceneComma
     """Register command palette toggle/action binds from one scene-level spec.
 
     Toggle bind: toggles the overall palette visibility.
-    Action bind: consumes the event and activates only stay-open palette entries
-    under pointer; other entries are consumed with no action.
+    Action bind: consumes the event and, when palette is open, activates the
+    entry under pointer while keeping the palette open.
     """
     app_actions = getattr(app, "actions", None)
     if app_actions is None:
@@ -1447,10 +1447,10 @@ def setup_scene_command_palette_bindings(app, palette_manager, spec: "SceneComma
             if not palette_manager.is_open:
                 palette_manager.show(app)
                 return True
-            # Try to activate a stay-open palette entry at pointer position only if palette was already open
+            # Activate the pointer-targeted entry while preserving open palette state.
             pos = _resolve_pointer_activation_pos(event, app)
             if pos is not None:
-                palette_manager.try_activate_action_at(pos)
+                palette_manager.try_activate_action_at(pos, suppress_followup_select=False)
             return True
 
         app_actions.register_action(action_action_name, _action)
@@ -1669,10 +1669,10 @@ def register_global_pointer_actions(app_actions, specs: Sequence[GlobalPointerAc
 
 
 def bind_palette_window_action_bind(host, app_actions, *, action_name: str = "command_palette_action") -> None:
-    """Register an action bind that only toggles window entries in an open palette.
+    """Register an action bind that activates entries in an open palette.
 
     The event is consumed in all cases; if the palette is closed or pointer is not
-    over a window entry, no side effect is applied.
+    over an entry, no side effect is applied.
     """
     if app_actions is None:
         return
@@ -1688,7 +1688,7 @@ def bind_palette_window_action_bind(host, app_actions, *, action_name: str = "co
             return True
         pos = _resolve_pointer_activation_pos(event, app)
         if pos is not None:
-            palette_manager.try_activate_action_at(pos)
+            palette_manager.try_activate_action_at(pos, suppress_followup_select=False)
         return True
 
     app_actions.register_action(action_name, _handler)

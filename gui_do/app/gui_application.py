@@ -484,6 +484,11 @@ class GuiApplication:
                 source_skip_frames=1,
             )
         with collector.span("gui_application", "switch_scene", metadata={"scene_name": str(name)}):
+            overlay = getattr(self, "overlay", None)
+            has_overlay = getattr(overlay, "has_overlay", None)
+            hide_overlay = getattr(overlay, "hide", None)
+            if callable(has_overlay) and callable(hide_overlay) and has_overlay("__command_palette__"):
+                hide_overlay("__command_palette__")
             outgoing_scene = self.scene
             if self.task_panel_focus.is_active:
                 # Exit task-panel focus mode before swapping runtime references so

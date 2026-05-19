@@ -363,6 +363,7 @@ class CommandPaletteManager:
         self._include_window_entries: bool = True
         self._group_order: tuple[str, ...] = ("scenes", "windows", "custom")
         self._custom_entries_provider: Optional[Callable[..., Sequence[CommandEntry]]] = None
+        self._suppressed_select_entry_id: Optional[str] = None
         self._suppressed_window_select_entry_id: Optional[str] = None
         self._suppressed_command_toggle_select_entry_id: Optional[str] = None
         self._suppressed_command_button_select_entry_id: Optional[str] = None
@@ -586,6 +587,9 @@ class CommandPaletteManager:
         # Wire list selection → action + close
         def _on_select(idx: int, item: ListItem) -> None:
             entry = item.data
+            if isinstance(entry, CommandEntry) and str(entry.entry_id) == str(self._suppressed_select_entry_id or ""):
+                self._suppressed_select_entry_id = None
+                return
             if (
                 isinstance(entry, CommandEntry)
                 and entry.render_kind == "window_toggle"
@@ -652,12 +656,20 @@ class CommandPaletteManager:
         self._handle = None
         self._open_listview = None
         self._open_rect = None
+        self._suppressed_select_entry_id = None
         self._suppressed_window_select_entry_id = None
         self._suppressed_command_toggle_select_entry_id = None
         self._suppressed_command_button_select_entry_id = None
 
-    def try_activate_action_at(self, pos: tuple) -> bool:
-        """Activate a stay-open palette action under *pos* without closing the palette."""
+    def try_activate_action_at(self, pos: tuple, *, suppress_followup_select: bool = True) -> bool:
+        """Activate a palette entry under *pos* without closing the palette.
+
+        ``suppress_followup_select`` is used by callers that may route the same
+        physical click through both action-bind activation and list selection.
+        Set it ``False`` when activation is triggered from a distinct input path
+        (for example, a non-left-click action bind) so the next left-click
+        selection behaves normally.
+        """
         if not self.is_open or self._open_listview is None:
             return False
         listview = self._open_listview
@@ -672,21 +684,28 @@ class CommandPaletteManager:
         if not isinstance(entry, CommandEntry):
             return False
         if entry.render_kind == "window_toggle":
-            handled = self._activate_window_toggle_at(idx, entry)
+            handled = self._activate_window_toggle_at(idx, entry, suppress_followup_select=suppress_followup_select)
         elif entry.render_kind == "command_toggle":
-            handled = self._activate_command_toggle_at(idx, entry)
+            handled = self._activate_command_toggle_at(idx, entry, suppress_followup_select=suppress_followup_select)
         elif entry.render_kind == "command_button":
-            handled = self._activate_command_button_at(idx, entry)
+            handled = self._activate_command_button_at(idx, entry, suppress_followup_select=suppress_followup_select)
         else:
-            handled = False
+            handled = self._activate_default_entry_at(idx, entry, suppress_followup_select=suppress_followup_select)
         if handled:
             listview.selected_index = idx
             listview.scroll_to_item(idx)
         return handled
 
-    def _activate_window_toggle_at(self, idx: int, entry: CommandEntry) -> bool:
+    def _activate_window_toggle_at(
+        self,
+        idx: int,
+        entry: CommandEntry,
+        *,
+        suppress_followup_select: bool = True,
+    ) -> bool:
         reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
         reopen_app = self._app
+        scene_before = str(getattr(reopen_app, "active_scene_name", "") or "")
         if callable(self._entry_selected_callback):
             try:
                 self._entry_selected_callback(entry)
@@ -697,18 +716,32 @@ class CommandPaletteManager:
                 entry.action()
             except Exception:
                 pass
+        scene_after = str(getattr(reopen_app, "active_scene_name", "") or "")
+        if suppress_followup_select:
+            self._suppressed_select_entry_id = str(entry.entry_id)
         entry.window_visible = not entry.window_visible
-        self._suppressed_window_select_entry_id = str(entry.entry_id)
+        if suppress_followup_select:
+            self._suppressed_window_select_entry_id = str(entry.entry_id)
 
-        if not self.is_open and reopen_app is not None:
+        if not self.is_open and reopen_app is not None and scene_before == scene_after:
             self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
+        elif not self.is_open:
+            self._suppressed_select_entry_id = None
+            self._suppressed_window_select_entry_id = None
 
         return True
 
-    def _activate_command_toggle_at(self, idx: int, entry: CommandEntry) -> bool:
+    def _activate_command_toggle_at(
+        self,
+        idx: int,
+        entry: CommandEntry,
+        *,
+        suppress_followup_select: bool = True,
+    ) -> bool:
         _ = idx
         reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
         reopen_app = self._app
+        scene_before = str(getattr(reopen_app, "active_scene_name", "") or "")
         if callable(self._entry_selected_callback):
             try:
                 self._entry_selected_callback(entry)
@@ -719,6 +752,7 @@ class CommandPaletteManager:
                 entry.action()
             except Exception:
                 pass
+        scene_after = str(getattr(reopen_app, "active_scene_name", "") or "")
         if callable(entry.refresh_after_action):
             try:
                 entry.refresh_after_action(entry)
@@ -726,17 +760,29 @@ class CommandPaletteManager:
                 pass
         else:
             entry.toggle_state = not entry.toggle_state
-        self._suppressed_command_toggle_select_entry_id = str(entry.entry_id)
+        if suppress_followup_select:
+            self._suppressed_select_entry_id = str(entry.entry_id)
+            self._suppressed_command_toggle_select_entry_id = str(entry.entry_id)
 
-        if not self.is_open and reopen_app is not None:
+        if not self.is_open and reopen_app is not None and scene_before == scene_after:
             self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
+        elif not self.is_open:
+            self._suppressed_select_entry_id = None
+            self._suppressed_command_toggle_select_entry_id = None
 
         return True
 
-    def _activate_command_button_at(self, idx: int, entry: CommandEntry) -> bool:
+    def _activate_command_button_at(
+        self,
+        idx: int,
+        entry: CommandEntry,
+        *,
+        suppress_followup_select: bool = True,
+    ) -> bool:
         _ = idx
         reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
         reopen_app = self._app
+        scene_before = str(getattr(reopen_app, "active_scene_name", "") or "")
         if callable(self._entry_selected_callback):
             try:
                 self._entry_selected_callback(entry)
@@ -747,10 +793,53 @@ class CommandPaletteManager:
                 entry.action()
             except Exception:
                 pass
-        self._suppressed_command_button_select_entry_id = str(entry.entry_id)
+        scene_after = str(getattr(reopen_app, "active_scene_name", "") or "")
+        if suppress_followup_select:
+            self._suppressed_select_entry_id = str(entry.entry_id)
+            self._suppressed_command_button_select_entry_id = str(entry.entry_id)
 
-        if not self.is_open and reopen_app is not None:
+        if not self.is_open and reopen_app is not None and scene_before == scene_after:
             self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
+        elif not self.is_open:
+            self._suppressed_select_entry_id = None
+            self._suppressed_command_button_select_entry_id = None
+
+        return True
+
+    def _activate_default_entry_at(
+        self,
+        idx: int,
+        entry: CommandEntry,
+        *,
+        suppress_followup_select: bool = True,
+    ) -> bool:
+        _ = idx
+        reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
+        reopen_app = self._app
+        scene_before = str(getattr(reopen_app, "active_scene_name", "") or "")
+        if callable(self._entry_selected_callback):
+            try:
+                self._entry_selected_callback(entry)
+            except Exception:
+                pass
+        if callable(entry.action):
+            try:
+                entry.action()
+            except Exception:
+                pass
+        scene_after = str(getattr(reopen_app, "active_scene_name", "") or "")
+        if callable(entry.refresh_after_action):
+            try:
+                entry.refresh_after_action(entry)
+            except Exception:
+                pass
+        if suppress_followup_select:
+            self._suppressed_select_entry_id = str(entry.entry_id)
+
+        if not self.is_open and reopen_app is not None and scene_before == scene_after:
+            self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
+        elif not self.is_open:
+            self._suppressed_select_entry_id = None
 
         return True
 
@@ -805,6 +894,7 @@ class CommandPaletteManager:
         self._open_listview = None
         self._open_rect = None
         self._previous_focus = None
+        self._suppressed_select_entry_id = None
         self._suppressed_window_select_entry_id = None
         self._suppressed_command_toggle_select_entry_id = None
         self._suppressed_command_button_select_entry_id = None

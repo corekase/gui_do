@@ -38,8 +38,8 @@ class _StubPaletteManager:
         self.show_calls.append(app)
         self.is_open = True
 
-    def try_activate_action_at(self, pos: tuple[int, int]) -> bool:
-        self.activations.append((int(pos[0]), int(pos[1])))
+    def try_activate_action_at(self, pos: tuple[int, int], *, suppress_followup_select: bool = True) -> bool:
+        self.activations.append(((int(pos[0]), int(pos[1])), bool(suppress_followup_select)))
         return True
 
 
@@ -71,7 +71,7 @@ class SceneCommandPaletteBindingTests(unittest.TestCase):
 
         self.assertTrue(handled)
         self.assertEqual([(2, "command_palette_action", "main")], app.actions.global_pointer_binds)
-        self.assertEqual([(137, 241)], palette_manager.activations)
+        self.assertEqual([((137, 241), False)], palette_manager.activations)
 
     def test_bind_palette_window_action_bind_uses_logical_pointer_fallback(self):
         app = _StubApp(logical_pointer_pos=(410, 96))
@@ -83,7 +83,7 @@ class SceneCommandPaletteBindingTests(unittest.TestCase):
         handled = app.actions.handlers["command_palette_action"](SimpleNamespace(pos=None))
 
         self.assertTrue(handled)
-        self.assertEqual([(410, 96)], palette_manager.activations)
+        self.assertEqual([((410, 96), False)], palette_manager.activations)
 
 
 if __name__ == "__main__":

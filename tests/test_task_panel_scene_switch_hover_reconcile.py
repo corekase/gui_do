@@ -121,6 +121,26 @@ class TestTaskPanelSceneSwitchHoverReconcile(unittest.TestCase):
         app.update(0.2)
         self.assertEqual(0, app.toasts.visible_count)
 
+    def test_switch_scene_closes_open_command_palette_overlay(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        app.create_scene("scene_a")
+        app.create_scene("scene_b")
+        app.switch_scene("scene_a")
+
+        hide_calls = []
+
+        app.overlay.has_overlay = lambda owner_id: str(owner_id) == "__command_palette__"
+
+        def _hide(owner_id):
+            hide_calls.append(str(owner_id))
+            return None
+
+        app.overlay.hide = _hide
+
+        app.switch_scene("scene_b")
+
+        self.assertEqual(["__command_palette__"], hide_calls)
+
 
 if __name__ == "__main__":
     unittest.main()
