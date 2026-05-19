@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch
 from pygame import Rect
 
+from gui_do.controls.input.window_toggle_button_control import WindowToggleButtonControl
+from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     AnchoredWindowSpec,
@@ -233,12 +235,24 @@ class _StubWindowPresentation:
     def __init__(self, bindings):
         self._bindings = tuple(bindings)
         self.visible_calls = []
+        self._windows = {}
 
     def bindings(self):
         return self._bindings
 
+    def get_window(self, key: str):
+        return self._windows.get(str(key))
+
     def set_visible(self, key: str, visible: bool, *, from_toggle: bool):
         self.visible_calls.append((str(key), bool(visible), bool(from_toggle)))
+        window = self._windows.get(str(key))
+        if window is not None:
+            window.visible = bool(visible)
+
+
+class _StubVisibilityWindow:
+    def __init__(self, *, visible: bool = False):
+        self.visible = bool(visible)
 
 
 class _StubTooltipManager:
@@ -716,6 +730,40 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             ],
             window_presentation.visible_calls,
         )
+
+    def test_window_toggle_button_uses_open_ignore_close_mouse_semantics(self):
+        presentation = _StubWindowPresentation(())
+        presentation._windows["logs"] = _StubVisibilityWindow(visible=False)
+
+        class _StubApp:
+            def __init__(self, window_presentation):
+                self.window_presentation = window_presentation
+
+        app = _StubApp(presentation)
+        control = WindowToggleButtonControl(
+            "show_logs",
+            Rect(0, 0, 120, 30),
+            "logs",
+            "Logs",
+            "Logs",
+            pushed=False,
+            on_toggle=lambda pushed: None,
+        )
+
+        left_click = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=1, pos=(10, 10), button=1)
+        self.assertTrue(control.handle_event(left_click, app))
+        self.assertTrue(control.pushed)
+        self.assertEqual([("logs", True, True)], presentation.visible_calls)
+
+        presentation.visible_calls.clear()
+        self.assertTrue(control.handle_event(left_click, app))
+        self.assertEqual([], presentation.visible_calls)
+        self.assertTrue(control.pushed)
+
+        right_click = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=1, pos=(10, 10), button=3)
+        self.assertTrue(control.handle_event(right_click, app))
+        self.assertFalse(control.pushed)
+        self.assertEqual([("logs", False, True)], presentation.visible_calls)
 
     def test_register_window_toggle_tooltips_uses_binding_labels(self):
         tooltip_manager = _StubTooltipManager()

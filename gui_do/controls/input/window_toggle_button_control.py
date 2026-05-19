@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+from typing import Optional, TYPE_CHECKING
+from pygame import Rect
+from ...events.gui_event import GuiEvent
+from .toggle_control import ToggleControl
+
+if TYPE_CHECKING:
+    from ...app.gui_application import GuiApplication
+
+
+class WindowToggleButtonControl(ToggleControl):
+    """
+    Specialized toggle button for managed window controls in the task panel.
+    Uses the shared window presentation model for visibility state.
+    """
+    def __init__(
+        self,
+        control_id: str,
+        rect: Rect,
+        window_id: str,
+        text_on: str,
+        text_off: Optional[str] = None,
+        pushed: bool = False,
+        on_toggle=None,
+        style: str = "box",
+        font_role: str = "body",
+    ) -> None:
+        super().__init__(control_id, rect, text_on, text_off, pushed, on_toggle, style, font_role)
+        self.window_id = window_id
+
+    def handle_event(self, event: GuiEvent, app: GuiApplication, theme=None) -> bool:
+        if not self.visible or not self.enabled:
+            self.hovered = False
+            return False
+
+        raw = event.pos
+        inside = isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw)
+        if isinstance(raw, tuple) and len(raw) == 2:
+            self.hovered = inside
+
+        window_presentation = getattr(app, "window_presentation", None)
+        get_window = getattr(window_presentation, "get_window", None)
+        window = get_window(self.window_id) if callable(get_window) else None
+        is_visible = bool(getattr(window, "visible", False))
+        is_open = bool(is_visible or self.pushed)
+
+        if event.is_mouse_down(1) and inside:
+            if not is_visible:
+                self.pushed = True
+                if self.on_toggle is not None:
+                    self.on_toggle(True)
+                if window_presentation is not None:
+                    window_presentation.set_visible(self.window_id, True, from_toggle=True)
+            return True
+
+        if event.is_mouse_down(3) and inside:
+            if is_open:
+                self.pushed = False
+                if self.on_toggle is not None:
+                    self.on_toggle(False)
+                if window_presentation is not None:
+                    window_presentation.set_visible(self.window_id, False, from_toggle=True)
+            return True
+
+        if event.is_key_down():
+            if not is_visible:
+                self.pushed = True
+                if self.on_toggle is not None:
+                    self.on_toggle(True)
+                if window_presentation is not None:
+                    window_presentation.set_visible(self.window_id, True, from_toggle=True)
+            return True
+
+        return False

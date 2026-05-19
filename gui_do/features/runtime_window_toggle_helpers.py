@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from ..controls.input.toggle_control import ToggleControl
+from ..controls.input.window_toggle_button_control import WindowToggleButtonControl
 
 
 def sorted_window_bindings(bindings):
@@ -75,16 +75,19 @@ def add_window_toggle_task_panel_controls(
         next_auto_slot = max(next_auto_slot, slot_index + 1)
         max_seen_slot_index = max(max_seen_slot_index, slot_index)
         toggle = task_panel.add(
-            ToggleControl(
+            WindowToggleButtonControl(
                 binding.task_panel_toggle_button_id or f"show_{binding.key}",
                 app_layout.slot_rect(slot_index),
+                binding.key,  # window_id
                 binding.task_panel_label or binding.key.title(),
                 binding.task_panel_label or binding.key.title(),
                 pushed=False,
-                on_toggle=lambda pushed, _key=binding.key: window_presentation.set_visible(
-                    _key,
-                    bool(pushed),
-                    from_toggle=True,
+                on_toggle=(
+                    lambda pushed, _key=binding.key: window_presentation.set_visible(
+                        _key,
+                        bool(pushed),
+                        from_toggle=True,
+                    )
                 ),
                 style=binding.task_panel_style,
             )
