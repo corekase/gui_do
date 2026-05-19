@@ -239,7 +239,7 @@ class WindowLayoutHandler:
                 current = Rect(only_window.rect)
                 only_window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
             else:
-                self._animate_window_to(only_window, int(clamped_x), int(clamped_y), duration=0.8)
+                self._animate_window_to(only_window, int(clamped_x), int(clamped_y), duration=0.5)
             return
 
         order_idx = self._registration_order
@@ -376,7 +376,7 @@ class WindowLayoutHandler:
                 targets.append((window, target_x, target_y))
 
         # Clamp targets to drag-safe bounds, then animate to new positions.
-        duration = 0.0 if immediate else 0.8
+        duration = 0.0 if immediate else 0.5
         for window, target_x, target_y in targets:
             clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y))
             if duration <= 0.0:
