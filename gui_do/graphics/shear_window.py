@@ -217,8 +217,8 @@ class ShearWindowController:
             self._auto_quality_hold_frames = self._auto_hold_upgrade_frames
             self._tile_cache_key = None
 
-    @staticmethod
     def _scaled_quality_for_window(
+        self,
         w: int,
         h: int,
         tile_h: int,
@@ -229,24 +229,38 @@ class ShearWindowController:
         if area < 120_000:
             return tile_h, tile_w, overlap_px
 
+        level = max(0, min(2, int(self._auto_quality_level)))
         if area < 220_000:
-            return (
-                max(2, int(round(tile_h * 1.15))),
-                max(2, int(round(tile_w * 1.10))),
-                max(0, overlap_px - 1),
-            )
+            tier = 0
+        elif area < 360_000:
+            tier = 1
+        else:
+            tier = 2
 
-        if area < 360_000:
-            return (
-                max(2, int(round(tile_h * 1.30))),
-                max(2, int(round(tile_w * 1.25))),
-                max(0, overlap_px - 1),
-            )
+        band_scale = (
+            (0.96, 0.90, 0.84),
+            (1.00, 0.95, 0.90),
+            (1.02, 0.98, 0.94),
+        )[level][tier]
+        width_scale = (
+            (1.18, 1.34, 1.52),
+            (1.24, 1.42, 1.62),
+            (1.34, 1.56, 1.78),
+        )[level][tier]
+        overlap_drop = (1, 1, 2)[tier]
+
+        scaled_tile_h = max(2, int(round(tile_h * band_scale)))
+        scaled_tile_w = max(2, int(round(tile_w * width_scale)))
+
+        # Keep enough vertical rows on large windows to limit visible striping.
+        min_rows_target = (52, 44, 36)[level]
+        max_tile_h_for_rows = max(2, int(math.ceil(float(h) / float(min_rows_target))))
+        scaled_tile_h = min(scaled_tile_h, max_tile_h_for_rows)
 
         return (
-            max(2, int(round(tile_h * 1.55))),
-            max(2, int(round(tile_w * 1.40))),
-            max(0, overlap_px - 2),
+            scaled_tile_h,
+            scaled_tile_w,
+            max(0, overlap_px - overlap_drop),
         )
 
     def _should_use_per_pixel_shear(self, h: int, tile_h: int, max_shear_extent: int, area: int) -> bool:

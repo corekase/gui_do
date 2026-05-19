@@ -176,16 +176,25 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
 
 
 class TestShearWindowControllerPerformanceGating(unittest.TestCase):
-    def test_area_scaled_quality_increases_tile_sizes_for_large_windows(self):
+    def test_area_scaled_quality_preserves_finer_vertical_bands_on_large_windows(self):
         window = _StubWindow()
         controller = ShearWindowController(window)
 
         base_tile_h, base_tile_w, base_overlap, _ = controller._current_quality_params()
         scaled = controller._scaled_quality_for_window(900, 500, base_tile_h, base_tile_w, base_overlap)
 
-        self.assertGreaterEqual(scaled[0], base_tile_h)
+        self.assertLessEqual(scaled[0], base_tile_h)
         self.assertGreaterEqual(scaled[1], base_tile_w)
         self.assertLessEqual(scaled[2], base_overlap)
+
+    def test_area_scaled_quality_caps_tile_height_to_banding_target(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        controller._auto_quality_level = 0
+
+        scaled = controller._scaled_quality_for_window(900, 500, tile_h=24, tile_w=16, overlap_px=4)
+        max_tile_h = 10  # ceil(500 / 52)
+        self.assertLessEqual(scaled[0], max_tile_h)
 
     def test_per_pixel_shear_disabled_for_large_windows(self):
         window = _StubWindow()
