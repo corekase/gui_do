@@ -164,6 +164,18 @@ class _CommandPaletteListView(ListViewControl):
                     pygame.draw.rect(surface, selected_border_color, row_rect, width=1)
                 continue
 
+            if isinstance(entry, CommandEntry) and entry.render_kind == "command_toggle":
+                self._draw_command_toggle_row(surface, theme, row_rect, entry)
+                if is_selected:
+                    pygame.draw.rect(surface, selected_border_color, row_rect, width=1)
+                continue
+
+            if isinstance(entry, CommandEntry) and entry.render_kind == "command_button":
+                self._draw_command_button_row(surface, theme, row_rect, entry)
+                if is_selected:
+                    pygame.draw.rect(surface, selected_border_color, row_rect, width=1)
+                continue
+
             self._draw_standard_row(surface, theme, row_rect, item, selected=is_selected)
             if is_selected:
                 pygame.draw.rect(surface, selected_border_color, row_rect, width=1)
@@ -227,6 +239,42 @@ class _CommandPaletteListView(ListViewControl):
         )
         surface.blit(selected, button_rect)
 
+    def _draw_command_toggle_row(self, surface: "pygame.Surface", theme, row_rect: Rect, entry: "CommandEntry") -> None:
+        factory = theme.graphics_factory
+        font_revision = factory.font_revision()
+        button_rect = Rect(row_rect.x + 2, row_rect.y + 2, max(1, row_rect.width - 4), max(1, row_rect.height - 4))
+        visual_key = (entry.title, button_rect.width, button_rect.height, font_revision, "command_toggle")
+        visuals = self._toggle_visual_cache.get(visual_key)
+        if visuals is None:
+            visuals = factory.build_interactive_visuals("box", entry.title, button_rect, font_role="body")
+            self._toggle_visual_cache[visual_key] = visuals
+        selected = factory.resolve_visual_state(
+            visuals,
+            visible=True,
+            enabled=True,
+            armed=bool(entry.toggle_state),
+            hovered=False,
+        )
+        surface.blit(selected, button_rect)
+
+    def _draw_command_button_row(self, surface: "pygame.Surface", theme, row_rect: Rect, entry: "CommandEntry") -> None:
+        factory = theme.graphics_factory
+        font_revision = factory.font_revision()
+        button_rect = Rect(row_rect.x + 2, row_rect.y + 2, max(1, row_rect.width - 4), max(1, row_rect.height - 4))
+        visual_key = (entry.title, button_rect.width, button_rect.height, font_revision, "command_button")
+        visuals = self._toggle_visual_cache.get(visual_key)
+        if visuals is None:
+            visuals = factory.build_interactive_visuals("box", entry.title, button_rect, font_role="body")
+            self._toggle_visual_cache[visual_key] = visuals
+        selected = factory.resolve_visual_state(
+            visuals,
+            visible=True,
+            enabled=True,
+            armed=False,
+            hovered=False,
+        )
+        surface.blit(selected, button_rect)
+
 
 @dataclass
 class CommandEntry:
@@ -245,8 +293,11 @@ class CommandEntry:
     action: Callable[[], None]
     description: str = ""
     category: str = ""
+    scene_name: str = ""
     render_kind: str = ""
     window_visible: bool = False
+    toggle_state: bool = False
+    refresh_after_action: Optional[Callable[["CommandEntry"], None]] = None
 
 
 class CommandPaletteHandle:
@@ -313,6 +364,8 @@ class CommandPaletteManager:
         self._group_order: tuple[str, ...] = ("scenes", "windows", "custom")
         self._custom_entries_provider: Optional[Callable[..., Sequence[CommandEntry]]] = None
         self._suppressed_window_select_entry_id: Optional[str] = None
+        self._suppressed_command_toggle_select_entry_id: Optional[str] = None
+        self._suppressed_command_button_select_entry_id: Optional[str] = None
 
     def _invalidate_entry_projection(self) -> None:
         self._entries_dirty = True
@@ -322,7 +375,8 @@ class CommandPaletteManager:
 
     def _project_entries(self) -> tuple[List[CommandEntry], List[ListItem], Dict[str, int]]:
         if self._entries_dirty:
-            entries = list(self._entries.values())
+            app = self._app
+            entries = [entry for entry in self._entries.values() if self._entry_is_visible_for_scene(entry, app)]
             self._entry_snapshot = entries
             self._entry_items = self._build_items(entries)
             self._entry_index_by_id = {
@@ -374,8 +428,9 @@ class CommandPaletteManager:
         return len(self._entries)
 
     def entries(self) -> List[CommandEntry]:
-        """Return a snapshot list of currently registered entries."""
-        return list(self._entries.values())
+        """Return a snapshot list of entries visible in the active scene."""
+        app = self._app
+        return [entry for entry in self._entries.values() if self._entry_is_visible_for_scene(entry, app)]
 
     def set_before_show(self, callback: Optional[Callable[[], None]]) -> None:
         """Set a callback invoked immediately before the palette opens."""
@@ -439,6 +494,7 @@ class CommandPaletteManager:
         sequence of :class:`CommandEntry` objects. It may accept zero arguments
         or a single ``app`` argument.
         """
+        self._app = app
         self._window_presentation = window_presentation
         self._include_scene_entries = bool(include_scene_entries)
         self._include_window_entries = bool(include_window_entries)
@@ -537,6 +593,20 @@ class CommandPaletteManager:
             ):
                 self._suppressed_window_select_entry_id = None
                 return
+            if (
+                isinstance(entry, CommandEntry)
+                and entry.render_kind == "command_toggle"
+                and str(entry.entry_id) == str(self._suppressed_command_toggle_select_entry_id or "")
+            ):
+                self._suppressed_command_toggle_select_entry_id = None
+                return
+            if (
+                isinstance(entry, CommandEntry)
+                and entry.render_kind == "command_button"
+                and str(entry.entry_id) == str(self._suppressed_command_button_select_entry_id or "")
+            ):
+                self._suppressed_command_button_select_entry_id = None
+                return
             if entry is not None and callable(self._entry_selected_callback):
                 try:
                     self._entry_selected_callback(entry)
@@ -583,12 +653,11 @@ class CommandPaletteManager:
         self._open_listview = None
         self._open_rect = None
         self._suppressed_window_select_entry_id = None
+        self._suppressed_command_toggle_select_entry_id = None
+        self._suppressed_command_button_select_entry_id = None
 
-    def try_activate_window_at(self, pos: tuple) -> bool:
-        """If *pos* is over a window entry in the open palette list, activate it
-        without closing the palette and update the palette selection to that item.
-        Non-window entries at *pos* are ignored.
-        """
+    def try_activate_action_at(self, pos: tuple) -> bool:
+        """Activate a stay-open palette action under *pos* without closing the palette."""
         if not self.is_open or self._open_listview is None:
             return False
         listview = self._open_listview
@@ -600,8 +669,22 @@ class CommandPaletteManager:
             return False
         item = listview._items[idx]
         entry = item.data
-        if not isinstance(entry, CommandEntry) or entry.render_kind != "window_toggle":
+        if not isinstance(entry, CommandEntry):
             return False
+        if entry.render_kind == "window_toggle":
+            handled = self._activate_window_toggle_at(idx, entry)
+        elif entry.render_kind == "command_toggle":
+            handled = self._activate_command_toggle_at(idx, entry)
+        elif entry.render_kind == "command_button":
+            handled = self._activate_command_button_at(idx, entry)
+        else:
+            handled = False
+        if handled:
+            listview.selected_index = idx
+            listview.scroll_to_item(idx)
+        return handled
+
+    def _activate_window_toggle_at(self, idx: int, entry: CommandEntry) -> bool:
         reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
         reopen_app = self._app
         if callable(self._entry_selected_callback):
@@ -620,8 +703,55 @@ class CommandPaletteManager:
         if not self.is_open and reopen_app is not None:
             self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
 
-        listview.selected_index = idx
-        listview.scroll_to_item(idx)
+        return True
+
+    def _activate_command_toggle_at(self, idx: int, entry: CommandEntry) -> bool:
+        _ = idx
+        reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
+        reopen_app = self._app
+        if callable(self._entry_selected_callback):
+            try:
+                self._entry_selected_callback(entry)
+            except Exception:
+                pass
+        if callable(entry.action):
+            try:
+                entry.action()
+            except Exception:
+                pass
+        if callable(entry.refresh_after_action):
+            try:
+                entry.refresh_after_action(entry)
+            except Exception:
+                pass
+        else:
+            entry.toggle_state = not entry.toggle_state
+        self._suppressed_command_toggle_select_entry_id = str(entry.entry_id)
+
+        if not self.is_open and reopen_app is not None:
+            self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
+
+        return True
+
+    def _activate_command_button_at(self, idx: int, entry: CommandEntry) -> bool:
+        _ = idx
+        reopen_rect = Rect(self._open_rect) if self._open_rect is not None else None
+        reopen_app = self._app
+        if callable(self._entry_selected_callback):
+            try:
+                self._entry_selected_callback(entry)
+            except Exception:
+                pass
+        if callable(entry.action):
+            try:
+                entry.action()
+            except Exception:
+                pass
+        self._suppressed_command_button_select_entry_id = str(entry.entry_id)
+
+        if not self.is_open and reopen_app is not None:
+            self.show(reopen_app, rect=reopen_rect, selected_entry_id=str(entry.entry_id))
+
         return True
 
     def bind_toggle_key(
@@ -676,6 +806,8 @@ class CommandPaletteManager:
         self._open_rect = None
         self._previous_focus = None
         self._suppressed_window_select_entry_id = None
+        self._suppressed_command_toggle_select_entry_id = None
+        self._suppressed_command_button_select_entry_id = None
 
     def _register_configured_builtin_entries(
         self,
@@ -811,6 +943,15 @@ class CommandPaletteManager:
         if entries is None:
             return []
         return [entry for entry in tuple(entries) if isinstance(entry, CommandEntry)]
+
+    @staticmethod
+    def _entry_is_visible_for_scene(entry: CommandEntry, app: "Optional[GuiApplication]") -> bool:
+        entry_scene_name = str(getattr(entry, "scene_name", "") or "")
+        if not entry_scene_name:
+            return True
+        if app is None:
+            return False
+        return entry_scene_name == str(getattr(app, "active_scene_name", "") or "")
 
     @staticmethod
     def _normalize_group_order(group_order: Sequence[str]) -> tuple[str, ...]:

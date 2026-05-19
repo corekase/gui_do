@@ -38,7 +38,7 @@ class _StubPaletteManager:
         self.show_calls.append(app)
         self.is_open = True
 
-    def try_activate_window_at(self, pos: tuple[int, int]) -> bool:
+    def try_activate_action_at(self, pos: tuple[int, int]) -> bool:
         self.activations.append((int(pos[0]), int(pos[1])))
         return True
 

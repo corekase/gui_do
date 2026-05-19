@@ -24,11 +24,13 @@ from gui_do.features.data_driven_runtime import (
 
 
 def _toggle_automatic_layout_action(feature, host, _event) -> bool:
-    return bool(feature._toggle_automatic_layout(host))
+    _ = host
+    return bool(feature.toggle_automatic_layout())
 
 
 def _tile_windows_now_action(feature, host, _event) -> bool:
-    return bool(feature._tile_windows_now(host))
+    _ = host
+    return bool(feature.layout_windows_now())
 
 
 MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(

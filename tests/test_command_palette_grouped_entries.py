@@ -228,6 +228,40 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         entry_ids = [entry.entry_id for entry in manager.entries()]
         self.assertEqual(["custom:retile"], entry_ids)
 
+    def test_scene_scoped_entries_are_filtered_to_active_scene(self):
+        manager = CommandPaletteManager(_OverlayStub())
+        app = _AppStub()
+
+        manager.configure_builtin_entry_groups(
+            app,
+            include_scene_entries=False,
+            include_window_entries=False,
+            group_order=("custom",),
+            custom_entries_provider=lambda _app: (
+                CommandEntry(
+                    entry_id="custom:main_only",
+                    title="Main Only",
+                    action=lambda: None,
+                    category="Custom",
+                    scene_name="main",
+                ),
+                CommandEntry(
+                    entry_id="custom:showcase_only",
+                    title="Showcase Only",
+                    action=lambda: None,
+                    category="Custom",
+                    scene_name="control_showcase",
+                ),
+            ),
+        )
+
+        manager._before_show_callback()
+        self.assertEqual(["custom:main_only"], [entry.entry_id for entry in manager.entries()])
+
+        app.active_scene_name = "control_showcase"
+        manager._invalidate_entry_projection()
+        self.assertEqual(["custom:showcase_only"], [entry.entry_id for entry in manager.entries()])
+
     def test_selecting_window_toggle_entry_dismisses_palette(self):
         overlay = _OverlayLifecycleStub()
         app = _PaletteAppStub(overlay)
@@ -279,7 +313,7 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         item = listview._items[0]
         pos = (listview.rect.x + 1, listview.rect.y + 1)
 
-        handled = manager.try_activate_window_at(pos)
+        handled = manager.try_activate_action_at(pos)
         self.assertTrue(handled)
         self.assertEqual(["toggle"], calls)
         self.assertTrue(bool(item.data.window_visible))
@@ -319,7 +353,7 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         item = listview._items[0]
         pos = (listview.rect.x + 1, listview.rect.y + 1)
 
-        handled = manager.try_activate_window_at(pos)
+        handled = manager.try_activate_action_at(pos)
 
         self.assertTrue(handled)
         self.assertTrue(manager.is_open)
@@ -327,6 +361,124 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         self.assertTrue(bool(item.data.window_visible))
         self.assertEqual(2, len(overlay.show_calls))
         self.assertEqual(["__command_palette__"], overlay.hide_calls)
+
+    def test_selecting_command_toggle_entry_dismisses_palette(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        state = {"enabled": False}
+        calls = []
+
+        def _toggle():
+            state["enabled"] = not state["enabled"]
+            calls.append("toggle")
+
+        manager.register(
+            CommandEntry(
+                entry_id="command:main:automatic_layout",
+                title="Automatic Layout Off",
+                action=_toggle,
+                category="Commands",
+                scene_name="main",
+                render_kind="command_toggle",
+                toggle_state=False,
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+
+        listview._on_select(0, item)
+
+        self.assertFalse(manager.is_open)
+        self.assertEqual(["toggle"], calls)
+        self.assertTrue(state["enabled"])
+        self.assertEqual(1, len(overlay.hide_calls))
+
+    def test_mouse_activation_command_toggle_stays_open_and_refreshes_state(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        state = {"enabled": False}
+        calls = []
+
+        def _toggle():
+            state["enabled"] = not state["enabled"]
+            calls.append("toggle")
+
+        def _refresh(entry: CommandEntry) -> None:
+            entry.toggle_state = state["enabled"]
+            entry.title = "Automatic Layout On" if state["enabled"] else "Automatic Layout Off"
+
+        manager.register(
+            CommandEntry(
+                entry_id="command:main:automatic_layout",
+                title="Automatic Layout Off",
+                action=_toggle,
+                category="Commands",
+                scene_name="main",
+                render_kind="command_toggle",
+                toggle_state=False,
+                refresh_after_action=_refresh,
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        handled = manager.try_activate_action_at(pos)
+        self.assertTrue(handled)
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["toggle"], calls)
+        self.assertTrue(state["enabled"])
+        self.assertTrue(bool(item.data.toggle_state))
+        self.assertEqual("Automatic Layout On", item.data.title)
+
+        listview._on_select(0, item)
+
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["toggle"], calls)
+        self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_mouse_activation_command_button_stays_open(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+
+        manager.register(
+            CommandEntry(
+                entry_id="command:main:layout_now",
+                title="Layout Windows Now",
+                action=lambda: calls.append("layout"),
+                category="Commands",
+                scene_name="main",
+                render_kind="command_button",
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+        pos = (listview.rect.x + 1, listview.rect.y + 1)
+
+        handled = manager.try_activate_action_at(pos)
+
+        self.assertTrue(handled)
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["layout"], calls)
+
+        listview._on_select(0, item)
+
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["layout"], calls)
+        self.assertEqual(0, len(overlay.hide_calls))
 
     def test_selecting_non_window_entry_still_closes_palette(self):
         overlay = _OverlayLifecycleStub()

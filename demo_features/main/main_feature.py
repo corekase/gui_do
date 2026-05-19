@@ -38,12 +38,15 @@ class MainFeature(Feature):
     def __init__(self) -> None:
         super().__init__("main_demo", scene_name="main")
         self._help_overlay: ShortcutHelpOverlay | None = None
+        self._host = None
 
     def build(self, host) -> None:
+        self._host = host
         build_main_scene_helper(self, host)
 
     def bind_runtime(self, host) -> None:
         """Wire runtime overlays and hotkeys from the declarative runtime spec."""
+        self._host = host
         bind_feature_runtime(
             self,
             host,
@@ -65,7 +68,14 @@ class MainFeature(Feature):
     def _toggle_help_overlay(self) -> None:
         toggle_help_overlay_helper(self)
 
-    def _toggle_automatic_layout(self, host) -> bool:
+    def _require_host(self):
+        host = self._host
+        if host is None:
+            raise RuntimeError("MainFeature host is unavailable.")
+        return host
+
+    def toggle_automatic_layout(self) -> bool:
+        host = self._require_host()
         enabled = bool(host.app.toggle_window_tiling_enabled(relayout=True, scene_name="main"))
         toast_manager = getattr(host.app, "toasts", None)
         if toast_manager is not None and hasattr(toast_manager, "show"):
@@ -77,7 +87,8 @@ class MainFeature(Feature):
             )
         return enabled
 
-    def _tile_windows_now(self, host) -> bool:
+    def layout_windows_now(self) -> bool:
+        host = self._require_host()
         host.app.tile_windows(as_visibility_event=True, force=True)
         toast_manager = getattr(host.app, "toasts", None)
         if toast_manager is not None and hasattr(toast_manager, "show"):

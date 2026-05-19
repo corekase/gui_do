@@ -7,6 +7,7 @@ from demo_features.systems.systems_feature import SystemsFeature
 
 from gui_do import (
     ActionBindingSpec,
+    CommandEntry,
     CursorBindingSpec,
     FeatureWindowBundleBindingSpec,
     FontRoleBindingSpec,
@@ -17,6 +18,51 @@ from gui_do import (
     TelemetryConfig,
     build_host_application_config,
 )
+
+
+def _build_demo_palette_entries(app):
+    feature_manager = getattr(app, "features", None)
+    get_feature = getattr(feature_manager, "get", None)
+    if not callable(get_feature):
+        return ()
+    main_feature = get_feature("main_demo")
+    if main_feature is None:
+        return ()
+
+    tiling_enabled = False
+    is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
+    if callable(is_window_tiling_enabled):
+        tiling_enabled = bool(is_window_tiling_enabled(scene_name="main"))
+
+    def _refresh_automatic_layout_entry(entry: CommandEntry) -> None:
+        enabled = False
+        if callable(is_window_tiling_enabled):
+            enabled = bool(is_window_tiling_enabled(scene_name="main"))
+        entry.toggle_state = enabled
+        entry.title = "Automatic Layout On" if enabled else "Automatic Layout Off"
+
+    return (
+        CommandEntry(
+            entry_id="command:main:toggle_automatic_layout",
+            title="Automatic Layout On" if tiling_enabled else "Automatic Layout Off",
+            action=main_feature.toggle_automatic_layout,
+            description="Toggle automatic window layout for the main scene.",
+            category="Commands",
+            scene_name="main",
+            render_kind="command_toggle",
+            toggle_state=tiling_enabled,
+            refresh_after_action=_refresh_automatic_layout_entry,
+        ),
+        CommandEntry(
+            entry_id="command:main:layout_now",
+            title="Layout Windows Now",
+            action=main_feature.layout_windows_now,
+            description="Tile all visible windows in the main scene immediately.",
+            category="Commands",
+            scene_name="main",
+            render_kind="command_button",
+        ),
+    )
 
 
 DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
@@ -117,7 +163,8 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
             enable_builtin_entries=True,
             include_scene_entries=True,
             include_window_entries=True,
-            group_order=("windows", "scenes"),
+            group_order=("windows", "scenes", "custom"),
+            custom_entries_provider=_build_demo_palette_entries,
             connect_window_presentation=True,
         ),
     )

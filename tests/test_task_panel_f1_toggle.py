@@ -248,8 +248,9 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
                 return False
 
         host = SimpleNamespace(app=_AppStub())
+        feature._host = host
 
-        enabled = feature._toggle_automatic_layout(host)
+        enabled = feature.toggle_automatic_layout()
 
         self.assertFalse(enabled)
         self.assertEqual([(True, "main")], host.app.toggle_calls)
@@ -273,8 +274,9 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
                 self.tile_calls.append((args, kwargs))
 
         host = SimpleNamespace(app=_AppStub())
+        feature._host = host
 
-        result = feature._tile_windows_now(host)
+        result = feature.layout_windows_now()
 
         self.assertTrue(result)
         self.assertEqual(

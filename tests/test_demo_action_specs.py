@@ -2,7 +2,7 @@
 from unittest.mock import patch
 
 from gui_do import declare_host_actions
-from demo_features.demo_config import ACTION_SPECS
+from demo_features.demo_config import ACTION_SPECS, DEMO_BOOTSTRAP_CONFIG
 
 
 class _StubActionRegistry:
@@ -137,6 +137,60 @@ class TestDemoActionSpecs(unittest.TestCase):
             self.assertFalse(by_id["palette_toggle"]["handler"](None, None))
 
         ensure_mock.assert_called_once_with(host, palette_requested=True)
+
+    def test_demo_palette_custom_entries_are_main_scene_only_and_invoke_main_feature_commands(self):
+        palette_spec = DEMO_BOOTSTRAP_CONFIG.palette_spec
+        provider = palette_spec.custom_entries_provider
+        calls = []
+
+        class _FeatureStub:
+            def toggle_automatic_layout(self):
+                calls.append("toggle")
+                return True
+
+            def layout_windows_now(self):
+                calls.append("layout")
+                return True
+
+        class _FeatureManagerStub:
+            def __init__(self):
+                self._feature = _FeatureStub()
+
+            def get(self, name: str):
+                if str(name) == "main_demo":
+                    return self._feature
+                return None
+
+        class _AppStub:
+            def __init__(self):
+                self.active_scene_name = "main"
+                self.features = _FeatureManagerStub()
+
+            def is_window_tiling_enabled(self, *, scene_name=None):
+                return str(scene_name) == "main"
+
+        app = _AppStub()
+        entries = list(provider(app))
+
+        self.assertEqual(
+            ["Automatic Layout On", "Layout Windows Now"],
+            [entry.title for entry in entries],
+        )
+        self.assertEqual(
+            ["main", "main"],
+            [entry.scene_name for entry in entries],
+        )
+        self.assertEqual(
+            ["command_toggle", "command_button"],
+            [entry.render_kind for entry in entries],
+        )
+        self.assertEqual([True, False], [bool(entries[0].toggle_state), bool(entries[1].toggle_state)])
+        self.assertTrue(callable(entries[0].refresh_after_action))
+
+        entries[0].action()
+        entries[1].action()
+
+        self.assertEqual(["toggle", "layout"], calls)
 
 
 if __name__ == "__main__":
