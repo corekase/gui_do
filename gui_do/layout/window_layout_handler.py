@@ -173,6 +173,12 @@ class WindowLayoutHandler:
         rect = Rect(window.rect)
         return Rect(rect.x, rect.y, rect.width, rect.height)
 
+    @staticmethod
+    def _center_target(bounds: Rect, window_rect: Rect) -> tuple[int, int]:
+        target = Rect(0, 0, int(window_rect.width), int(window_rect.height))
+        target.center = bounds.center
+        return (int(target.x), int(target.y))
+
     def _center_window(self, window: object, work_area: Optional[Rect] = None) -> None:
         bounds = Rect(self.app.surface.get_rect()) if work_area is None else Rect(work_area)
         rect = self._full_window_rect(window)
@@ -320,6 +326,7 @@ class WindowLayoutHandler:
         used_height = 0
         overflow: list[object] = []
         row_source_top: int | None = None
+        row_source_first_height: int | None = None
 
         for window in visible_sorted:
             wr = window_rects[window]
@@ -327,16 +334,18 @@ class WindowLayoutHandler:
             wh = max(1, int(wr.height))
             add_w = ww if not row else (self.gap + ww)
 
-            # In vertical-intent mode, if source y moves into a new visual band,
-            # start a new row even when width still fits.
+            # Preserve strong above/below intent without making small cascade
+            # offsets "sticky" across subsequent relayouts.
             force_new_row = False
-            if prefer_vertical and row and row_source_top is not None:
-                band_tolerance = max(self.gap, 12)
-                if int(wr.y) > int(row_source_top + band_tolerance):
+            if prefer_vertical and row and row_source_top is not None and row_source_first_height is not None:
+                source_dy = int(wr.y) - int(row_source_top)
+                vertical_split_threshold = max(48, int(min(row_source_first_height, wh) * 0.5))
+                if source_dy >= vertical_split_threshold:
                     force_new_row = True
 
-            # New shelf when width would overflow current row or vertical intent
-            # indicates this item belongs to the next row band.
+            # New shelf when width would overflow current row.
+            # Always allow full repack so previously cascaded layouts can
+            # separate back into normal tiled rows when visibility changes.
             if row and (force_new_row or (row_width + add_w > int(work.width))):
                 if used_height + row_height > int(work.height):
                     overflow.extend(w for w, _ww, _wh in row)
@@ -347,6 +356,7 @@ class WindowLayoutHandler:
                 row_width = 0
                 row_height = 0
                 row_source_top = None
+                row_source_first_height = None
                 add_w = ww
 
             if row and (row_width + add_w > int(work.width)):
@@ -363,6 +373,7 @@ class WindowLayoutHandler:
             row_height = next_row_h
             if row_source_top is None:
                 row_source_top = int(wr.y)
+                row_source_first_height = int(wh)
 
         if row:
             if used_height + row_height <= int(work.height):
@@ -395,6 +406,7 @@ class WindowLayoutHandler:
             cy += int(row_height) + self.gap
 
         # Overflow windows: repeated cascades from top-left of packed area.
+        center_fallback: set[object] = set()
         if overflow:
             avg_w = max(1, int(sum(window_rects[w].width for w in overflow) / len(overflow)))
             avg_h = max(1, int(sum(window_rects[w].height for w in overflow) / len(overflow)))
@@ -426,12 +438,27 @@ class WindowLayoutHandler:
                 # and repeat the same cascade pattern.
                 target_x = int(base_x + initial_offset_x + (step * step_x))
                 target_y = int(base_y + initial_offset_y + (step * step_y))
+
+                # Large-window fallback: if the cascaded slot still cannot contain
+                # this window in the work area, place it centered on screen instead.
+                wr = window_rects[window]
+                overflows_work = (
+                    int(target_x) < int(work.left)
+                    or int(target_y) < int(work.top)
+                    or int(target_x + int(wr.width)) > int(work.right)
+                    or int(target_y + int(wr.height)) > int(work.bottom)
+                )
+                if self.center_on_failure and overflows_work:
+                    center_fallback.add(window)
                 targets.append((window, target_x, target_y))
 
         # Clamp targets to drag-safe bounds, then animate to new positions.
         duration = 0.0 if immediate else 0.5
         for window, target_x, target_y in targets:
-            clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y))
+            if window in center_fallback:
+                clamped_x, clamped_y = self._center_target(self.app.surface.get_rect(), window_rects[window])
+            else:
+                clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y))
             if duration <= 0.0:
                 current = Rect(window.rect)
                 window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)

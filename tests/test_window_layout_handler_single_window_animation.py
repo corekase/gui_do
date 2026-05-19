@@ -114,6 +114,37 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         expected_next_row_top = top_row[0].rect.y + max(top_row[0].rect.height, top_row[1].rect.height) + handler.gap
         self.assertEqual(expected_next_row_top, bottom_row[0].rect.y)
 
+    def test_large_overflow_window_falls_back_to_screen_center(self):
+        small = _WindowNode(20, 20, 120, 90, visible=True)
+        large = _WindowNode(200, 60, 360, 280, visible=True)
+        scene = _Scene([small, large])
+        app = _App(Rect(0, 0, 400, 300), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        self.assertEqual(app.surface.get_rect().center, large.rect.center)
+
+    def test_visibility_change_retiles_windows_out_of_previous_cascade(self):
+        w1 = _WindowNode(20, 20, 170, 150, visible=True)
+        w2 = _WindowNode(210, 28, 170, 150, visible=True)
+        w3 = _WindowNode(24, 196, 170, 150, visible=True)
+        scene = _Scene([w1, w2, w3])
+        app = _App(Rect(0, 0, 420, 300), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Initial layout overflows height and places one window in cascade.
+        handler.arrange_windows(immediate=True)
+
+        # Hide one window so remaining windows can fit a regular tiled row.
+        w3.visible = False
+        handler.arrange_windows(immediate=True)
+
+        self.assertEqual(w1.rect.y, w2.rect.y)
+        self.assertNotEqual(w1.rect.x, w2.rect.x)
+
 
 if __name__ == "__main__":
     unittest.main()
