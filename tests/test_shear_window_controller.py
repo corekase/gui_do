@@ -175,5 +175,60 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
         self.assertFalse(controller.dragging)
 
 
+class TestShearWindowControllerPerformanceGating(unittest.TestCase):
+    def test_area_scaled_quality_increases_tile_sizes_for_large_windows(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+
+        base_tile_h, base_tile_w, base_overlap, _ = controller._current_quality_params()
+        scaled = controller._scaled_quality_for_window(900, 500, base_tile_h, base_tile_w, base_overlap)
+
+        self.assertGreaterEqual(scaled[0], base_tile_h)
+        self.assertGreaterEqual(scaled[1], base_tile_w)
+        self.assertLessEqual(scaled[2], base_overlap)
+
+    def test_per_pixel_shear_disabled_for_large_windows(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        controller._auto_quality_level = 0
+
+        self.assertFalse(
+            controller._should_use_per_pixel_shear(
+                h=520,
+                tile_h=10,
+                max_shear_extent=96,
+                area=520 * 820,
+            )
+        )
+
+    def test_per_pixel_shear_disabled_when_auto_quality_not_high(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        controller._auto_quality_level = 1
+
+        self.assertFalse(
+            controller._should_use_per_pixel_shear(
+                h=180,
+                tile_h=10,
+                max_shear_extent=96,
+                area=180 * 260,
+            )
+        )
+
+    def test_per_pixel_shear_allowed_for_small_high_quality_windows(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        controller._auto_quality_level = 0
+
+        self.assertTrue(
+            controller._should_use_per_pixel_shear(
+                h=180,
+                tile_h=10,
+                max_shear_extent=96,
+                area=180 * 220,
+            )
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

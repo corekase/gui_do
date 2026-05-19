@@ -217,6 +217,49 @@ class ShearWindowController:
             self._auto_quality_hold_frames = self._auto_hold_upgrade_frames
             self._tile_cache_key = None
 
+    @staticmethod
+    def _scaled_quality_for_window(
+        w: int,
+        h: int,
+        tile_h: int,
+        tile_w: int,
+        overlap_px: int,
+    ) -> tuple[int, int, int]:
+        area = max(1, int(w) * int(h))
+        if area < 120_000:
+            return tile_h, tile_w, overlap_px
+
+        if area < 220_000:
+            return (
+                max(2, int(round(tile_h * 1.15))),
+                max(2, int(round(tile_w * 1.10))),
+                max(0, overlap_px - 1),
+            )
+
+        if area < 360_000:
+            return (
+                max(2, int(round(tile_h * 1.30))),
+                max(2, int(round(tile_w * 1.25))),
+                max(0, overlap_px - 1),
+            )
+
+        return (
+            max(2, int(round(tile_h * 1.55))),
+            max(2, int(round(tile_w * 1.40))),
+            max(0, overlap_px - 2),
+        )
+
+    def _should_use_per_pixel_shear(self, h: int, tile_h: int, max_shear_extent: int, area: int) -> bool:
+        # Per-pixel rows are visually smoother for short windows under strong shear,
+        # but are significantly more expensive. Keep them for small/high-quality cases only.
+        if area >= 160_000:
+            return False
+        if self._auto_quality_level > 0:
+            return False
+        num_bands = max(1, h // max(1, tile_h))
+        distort_per_band = float(max_shear_extent) / float(max(1, num_bands))
+        return h <= 240 and distort_per_band > 2.0
+
     def start_drag(self, mouse_pos, surface: Optional[pygame.Surface] = None):
         self.active = True
         self.dragging = True
@@ -614,6 +657,7 @@ class ShearWindowController:
         local_bounds: Optional[pygame.Rect] = None,
     ) -> None:
         tile_h, tile_w, overlap_px, _ = self._current_quality_params()
+        tile_h, tile_w, overlap_px = self._scaled_quality_for_window(w, h, tile_h, tile_w, overlap_px)
         self._ensure_tile_cache(w, h, tile_w, tile_h)
 
         x_start = 0
@@ -641,12 +685,12 @@ class ShearWindowController:
         )
         max_distort = self.max_distort_px
 
-        # Calculate the number of vertical bands (steps) in the effect
-        num_bands = max(1, h // tile_h)
-        max_shear_extent = abs(int(shear_common))
+        area = max(1, int(w) * int(h))
+        max_shear_extent = min(max_distort, abs(int(shear_common)))
+        use_per_pixel = self._should_use_per_pixel_shear(h, tile_h, max_shear_extent, area)
 
         # If the window is too short for smooth bands, use per-pixel vertical lines
-        if h <= max_shear_extent or num_bands < max_shear_extent:
+        if use_per_pixel:
             # Per-pixel vertical lines for smoothest effect
             for y in range(y_start, y_end):
                 vertical_offset = (float(y) + 0.5) / max(1.0, float(h)) - anchor_ratio
