@@ -405,58 +405,112 @@ class WindowLayoutHandler:
                 cx += int(ww) + self.gap
             cy += int(row_height) + self.gap
 
-        # Overflow windows: repeated cascades from top-left of packed area.
+        # Overflow windows: repeat the same tiled layer pattern and center each
+        # layer's overall rect in the work area as it is processed.
         center_fallback: set[object] = set()
+        exact_overflow_targets: set[object] = set()
         if overflow:
-            avg_w = max(1, int(sum(window_rects[w].width for w in overflow) / len(overflow)))
-            avg_h = max(1, int(sum(window_rects[w].height for w in overflow) / len(overflow)))
+            overflow_queue = list(overflow)
+            while overflow_queue:
+                pending = list(overflow_queue)
+                overflow_queue = []
 
-            # Use one titlebar height as the shared diagonal cascade unit.
-            # This applies equally to +x and +y for first overflow offset and stride.
-            titlebar_height = max(14, int(getattr(overflow[0], "titlebar_height", 24)))
-            step_x = int(titlebar_height)
-            step_y = int(titlebar_height)
-            initial_offset_x = int(step_x)
-            initial_offset_y = int(step_y)
+                provisional: list[tuple[object, int, int]] = []
+                min_x = None
+                min_y = None
+                max_x = None
+                max_y = None
 
-            # Keep cascade steps moderate and bounded by the work area.
-            max_steps_x = max(
-                0,
-                (int(work.width) - max(1, avg_w) - initial_offset_x) // max(1, step_x),
-            )
-            max_steps_y = max(
-                0,
-                (int(work.height) - max(1, avg_h) - initial_offset_y) // max(1, step_y),
-            )
-            cascade_capacity = max(1, min(max_steps_x, max_steps_y) + 1)
+                # Build one centered layer from the current queue in row shelves.
+                rows: list[list[tuple[object, int, int]]] = []
+                row: list[tuple[object, int, int]] = []
+                row_width = 0
+                row_height = 0
+                for window in pending:
+                    wr = window_rects[window]
+                    ww = max(1, int(wr.width))
+                    wh = max(1, int(wr.height))
+                    add_w = ww if not row else (self.gap + ww)
+                    if row and (row_width + add_w > int(work.width)):
+                        rows.append(row)
+                        row = []
+                        row_width = 0
+                        row_height = 0
+                        add_w = ww
+                    row.append((window, ww, wh))
+                    row_width += add_w
+                    row_height = max(row_height, wh)
+                if row:
+                    rows.append(row)
 
-            base_x = int(packed_left)
-            base_y = int(packed_top)
-            for idx, window in enumerate(overflow):
-                step = int(idx % cascade_capacity)
-                # After each cascade pass overflows, restart from top-left offset
-                # and repeat the same cascade pattern.
-                target_x = int(base_x + initial_offset_x + (step * step_x))
-                target_y = int(base_y + initial_offset_y + (step * step_y))
+                cy_local = 0
+                for r in rows:
+                    cx_local = 0
+                    row_h = max(item[2] for item in r) if r else 0
+                    for window, ww, _wh in r:
+                        tx = int(cx_local)
+                        ty = int(cy_local)
+                        wr = window_rects[window]
+                        provisional.append((window, tx, ty))
 
-                # Large-window fallback: if the cascaded slot still cannot contain
-                # this window in the work area, place it centered on screen instead.
-                wr = window_rects[window]
-                overflows_work = (
-                    int(target_x) < int(work.left)
-                    or int(target_y) < int(work.top)
-                    or int(target_x + int(wr.width)) > int(work.right)
-                    or int(target_y + int(wr.height)) > int(work.bottom)
-                )
-                if self.center_on_failure and overflows_work:
-                    center_fallback.add(window)
-                targets.append((window, target_x, target_y))
+                        left = int(tx)
+                        top = int(ty)
+                        right = int(tx + int(wr.width))
+                        bottom = int(ty + int(wr.height))
+                        min_x = left if min_x is None else min(min_x, left)
+                        min_y = top if min_y is None else min(min_y, top)
+                        max_x = right if max_x is None else max(max_x, right)
+                        max_y = bottom if max_y is None else max(max_y, bottom)
+
+                        cx_local += int(ww) + self.gap
+                    cy_local += int(row_h) + self.gap
+
+                if min_x is None or min_y is None or max_x is None or max_y is None:
+                    break
+
+                layer_width = int(max_x - min_x)
+                layer_height = int(max_y - min_y)
+                centered_left = int(work.x + max(0, (int(work.width) - layer_width) // 2))
+                centered_top = int(work.y + max(0, (int(work.height) - layer_height) // 2))
+                shift_x = int(centered_left - min_x)
+                shift_y = int(centered_top - min_y)
+
+                deferred: list[object] = []
+                for window, tx, ty in provisional:
+                    target_x = int(tx + shift_x)
+                    target_y = int(ty + shift_y)
+                    wr = window_rects[window]
+                    overflows_work = (
+                        int(target_x) < int(work.left)
+                        or int(target_y) < int(work.top)
+                        or int(target_x + int(wr.width)) > int(work.right)
+                        or int(target_y + int(wr.height)) > int(work.bottom)
+                    )
+
+                    too_large_for_work = int(wr.width) > int(work.width) or int(wr.height) > int(work.height)
+                    if overflows_work and too_large_for_work and self.center_on_failure:
+                        center_fallback.add(window)
+                        targets.append((window, 0, 0))
+                        continue
+
+                    if overflows_work:
+                        deferred.append(window)
+                        continue
+
+                    exact_overflow_targets.add(window)
+                    targets.append((window, target_x, target_y))
+
+                if not deferred:
+                    break
+                overflow_queue = deferred
 
         # Clamp targets to drag-safe bounds, then animate to new positions.
         duration = 0.0 if immediate else 0.5
         for window, target_x, target_y in targets:
             if window in center_fallback:
                 clamped_x, clamped_y = self._center_target(self.app.surface.get_rect(), window_rects[window])
+            elif window in exact_overflow_targets:
+                clamped_x, clamped_y = (int(target_x), int(target_y))
             else:
                 clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y))
             if duration <= 0.0:

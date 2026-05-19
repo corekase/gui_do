@@ -145,6 +145,67 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         self.assertEqual(w1.rect.y, w2.rect.y)
         self.assertNotEqual(w1.rect.x, w2.rect.x)
 
+    def test_overflow_uses_repeated_tiled_layers_not_diagonal_cascade(self):
+        w1 = _WindowNode(20, 20, 150, 120, visible=True)
+        w2 = _WindowNode(210, 20, 150, 120, visible=True)
+        w3 = _WindowNode(20, 160, 150, 120, visible=True)
+        w4 = _WindowNode(210, 160, 150, 120, visible=True)
+        w5 = _WindowNode(20, 300, 150, 120, visible=True)
+        scene = _Scene([w1, w2, w3, w4, w5])
+        app = _App(Rect(0, 0, 420, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        # Overflow layer 1 fills both base row slots at the same y.
+        self.assertEqual(w3.rect.y, w4.rect.y)
+        self.assertLess(w3.rect.x, w4.rect.x)
+
+        # Overflow layer 2 (single-window layer) is centered for that layer.
+        self.assertEqual(app.surface.get_rect().centerx, w5.rect.centerx)
+
+    def test_multiple_overflow_layers_keep_row_titlebar_alignment(self):
+        windows = [
+            _WindowNode(20 + (i % 2) * 190, 20 + (i // 2) * 120, 150, 100, visible=True)
+            for i in range(8)
+        ]
+        scene = _Scene(windows)
+        app = _App(Rect(0, 0, 420, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        # Base layer provides two row slots; each additional layer should keep
+        # those same row-top alignments as it repeats with layer offsets.
+        y_values = sorted({w.rect.y for w in windows})
+        counts = {y: 0 for y in y_values}
+        for w in windows:
+            counts[w.rect.y] += 1
+
+        # Per-layer centering means repeated full layers reuse the same aligned
+        # row tops, so each distinct row y appears once per layer.
+        self.assertEqual(2, len(y_values))
+        self.assertTrue(all(counts[y] == 4 for y in y_values))
+
+    def test_large_centered_overflow_does_not_shift_next_overflow_row_slots(self):
+        base_a = _WindowNode(20, 20, 170, 110, visible=True)
+        base_b = _WindowNode(210, 20, 170, 110, visible=True)
+        systems = _WindowNode(260, 20, 360, 250, visible=True)
+        life = _WindowNode(270, 20, 170, 110, visible=True)
+        mandel = _WindowNode(280, 20, 170, 110, visible=True)
+        scene = _Scene([base_a, base_b, systems, life, mandel])
+        app = _App(Rect(0, 0, 420, 230), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        self.assertEqual(app.surface.get_rect().center, systems.rect.center)
+        self.assertEqual(life.rect.y, mandel.rect.y)
+        self.assertLess(life.rect.x, mandel.rect.x)
+
 
 if __name__ == "__main__":
     unittest.main()
