@@ -6,11 +6,11 @@ from typing import Any, Set, Tuple
 
 from gui_do import FeatureMessage, RoutedFeature, WindowControl
 from gui_do.features.data_driven_runtime import (
+    bind_feature_runtime,
     create_feature_presented_window,
-    setup_routed_runtime,
-    shutdown_routed_runtime,
+    register_feature_companions,
+    shutdown_feature_runtime,
 )
-from gui_do.features.runtime_routed_helpers import RoutedFeatureLifecycleBuilder
 from .life_runtime_helpers import (
     life_reset as life_reset_helper,
     normalize_life_cells_payload as normalize_life_cells_payload_helper,
@@ -59,10 +59,10 @@ class LifeFeature(RoutedFeature):
 
     def on_register(self, host) -> None:
         """Auto-register the companion logic feature when this feature is registered."""
-        (
-            RoutedFeatureLifecycleBuilder()
-            .extend(_LIFE_LIFECYCLE_SPEC.companion_providers)
-            .register_on(self, host=host)
+        register_feature_companions(
+            self,
+            host,
+            companion_providers=_LIFE_LIFECYCLE_SPEC.companion_providers,
         )
 
     def build(self, host) -> None:
@@ -84,21 +84,25 @@ class LifeFeature(RoutedFeature):
             runtime_spec = _LIFE_LIFECYCLE_SPEC.runtime_spec_factory(self, host)
         if runtime_spec is None:
             raise ValueError("LifeFeature requires a routed runtime spec")
-        self._runtime_spec = runtime_spec
-        setup_routed_runtime(self, host, runtime_spec)
-
         scheduler_attr = _LIFE_LIFECYCLE_SPEC.scheduler_attr_name or runtime_spec.scheduler_attr_name
+        bind_feature_runtime(
+            self,
+            host,
+            runtime_spec=runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+            scheduler_attr_name=str(scheduler_attr),
+        )
         self.scheduler = getattr(self, str(scheduler_attr), None)
         self._send_life_logic_command("snapshot")
 
     def shutdown_runtime(self, host) -> None:
-        runtime_spec = self._runtime_spec
-        if runtime_spec is None:
-            runtime_spec = _LIFE_LIFECYCLE_SPEC.runtime_spec
-        if runtime_spec is None:
-            return
-        shutdown_routed_runtime(self, host, runtime_spec)
-        self._runtime_spec = None
+        shutdown_feature_runtime(
+            self,
+            host,
+            runtime_spec=self._runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+            scheduler_attr_name=_LIFE_LIFECYCLE_SPEC.scheduler_attr_name,
+        )
         self.scheduler = None
 
     def message_handlers(self):

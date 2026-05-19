@@ -23,14 +23,12 @@ from gui_do import (
     WindowControl,
 )
 from gui_do.features.data_driven_runtime import (
-    bind_routed_feature_lifecycle,
+    bind_feature_runtime,
     create_feature_presented_window,
     EventSubscriptionSpec,
+    register_feature_companions,
     RoutedRuntimeSpec,
-    shutdown_routed_feature_lifecycle,
-)
-from gui_do.features.runtime_routed_helpers import (
-    RoutedFeatureLifecycleBuilder
+    shutdown_feature_runtime,
 )
 from gui_do.scheduling.staged_task_queue import StagedTaskQueue
 
@@ -116,11 +114,11 @@ class MandelbrotFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def on_register(self, host) -> None:
-        # Use generalized lifecycle builder
-        lifecycle = RoutedFeatureLifecycleBuilder()
-        for provider in _LIFECYCLE_SPEC.companion_providers:
-            lifecycle.add_companion(provider)
-        lifecycle.register_on(self, host=host)
+        register_feature_companions(
+            self,
+            host,
+            companion_providers=_LIFECYCLE_SPEC.companion_providers,
+        )
 
     def build(self, host) -> None:
         self.window = create_feature_presented_window(
@@ -133,7 +131,14 @@ class MandelbrotFeature(RoutedFeature):
 
     def bind_runtime(self, host) -> None:
         self.demo = host
-        self.scheduler = bind_routed_feature_lifecycle(self, host, _LIFECYCLE_SPEC)
+        runtime_spec = self._build_runtime_spec(host)
+        self.scheduler = bind_feature_runtime(
+            self,
+            host,
+            runtime_spec=runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+            scheduler_attr_name=_LIFECYCLE_SPEC.scheduler_attr_name,
+        )
         if self.scheduler is not None:
             if hasattr(self.scheduler, "get_message_dispatch_limit"):
                 self._idle_dispatch_limit = self.scheduler.get_message_dispatch_limit()
@@ -157,7 +162,13 @@ class MandelbrotFeature(RoutedFeature):
         )
 
     def shutdown_runtime(self, host) -> None:
-        shutdown_routed_feature_lifecycle(self, host, _LIFECYCLE_SPEC)
+        shutdown_feature_runtime(
+            self,
+            host,
+            runtime_spec=self._runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+            scheduler_attr_name=_LIFECYCLE_SPEC.scheduler_attr_name,
+        )
         self._pending_tasks.clear()
         self._set_busy(False)
 

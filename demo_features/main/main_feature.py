@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import pygame
-
 from gui_do import (
     Feature,
     ShortcutHelpOverlay,
 )
 from gui_do.features.data_driven_runtime import (
-    shutdown_routed_runtime,
-    setup_routed_runtime,
+    bind_feature_runtime,
+    shutdown_feature_runtime,
 )
 
 from .main_build_helpers import (
@@ -45,19 +43,23 @@ class MainFeature(Feature):
 
     def bind_runtime(self, host) -> None:
         """Wire runtime overlays and hotkeys from the declarative runtime spec."""
-        setup_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
-        app_actions = getattr(host.app, "actions", None)
-        bind_global_key = getattr(app_actions, "bind_global_key", None)
-        if callable(bind_global_key):
-            bind_global_key(pygame.K_ESCAPE, "exit", scene="main")
+        bind_feature_runtime(
+            self,
+            host,
+            runtime_spec=_MAIN_RUNTIME_SPEC,
+            runtime_spec_attr_name="",
+            bind_escape_to_exit_scene="main",
+        )
 
 
     def shutdown_runtime(self, host) -> None:
-        shutdown_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
-        app_actions = getattr(host.app, "actions", None)
-        unbind_global_key = getattr(app_actions, "unbind_global_key", None)
-        if callable(unbind_global_key):
-            unbind_global_key(pygame.K_ESCAPE, "exit", scene="main")
+        shutdown_feature_runtime(
+            self,
+            host,
+            runtime_spec=_MAIN_RUNTIME_SPEC,
+            runtime_spec_attr_name="",
+            bind_escape_to_exit_scene="main",
+        )
 
     def _toggle_help_overlay(self) -> None:
         toggle_help_overlay_helper(self)

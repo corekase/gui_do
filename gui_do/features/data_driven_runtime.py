@@ -2467,6 +2467,82 @@ def shutdown_routed_feature_lifecycle(feature, host, lifecycle_spec: RoutedFeatu
     return True
 
 
+def register_feature_companions(feature, host, *, companion_providers=()) -> tuple[object, ...]:
+    """Register companion features/providers on the owning feature manager.
+
+    Entries in *companion_providers* can be provider instances or zero-arg factories.
+    """
+    if not companion_providers:
+        return ()
+    manager = getattr(feature, "_feature_manager", None)
+    if manager is None:
+        return ()
+    providers: list[object] = []
+    for provider_entry in companion_providers:
+        provider = provider_entry() if callable(provider_entry) else provider_entry
+        if provider is None:
+            continue
+        providers.append(provider)
+    if providers:
+        register_companion_logic_features(manager, host, providers)
+    return tuple(providers)
+
+
+def bind_feature_runtime(
+    feature,
+    host,
+    *,
+    runtime_spec: RoutedRuntimeSpec,
+    runtime_spec_attr_name: str = "_runtime_spec",
+    scheduler_attr_name: str | None = None,
+    bind_escape_to_exit_scene: str | None = None,
+):
+    """Bind routed runtime and optional Escape->exit action wiring.
+
+    This composes setup_routed_runtime with common feature-side attribute storage
+    so feature bind_runtime methods stay short and declarative.
+    """
+    scheduler = setup_routed_runtime(feature, host, runtime_spec)
+    if runtime_spec_attr_name:
+        setattr(feature, str(runtime_spec_attr_name), runtime_spec)
+    if scheduler_attr_name:
+        setattr(feature, str(scheduler_attr_name), scheduler)
+    if bind_escape_to_exit_scene is not None:
+        app_actions = getattr(getattr(host, "app", None), "actions", None)
+        bind_global_key = getattr(app_actions, "bind_global_key", None)
+        if callable(bind_global_key):
+            bind_global_key(pygame.K_ESCAPE, "exit", scene=str(bind_escape_to_exit_scene))
+    return scheduler
+
+
+def shutdown_feature_runtime(
+    feature,
+    host,
+    *,
+    runtime_spec: RoutedRuntimeSpec | None = None,
+    runtime_spec_attr_name: str = "_runtime_spec",
+    scheduler_attr_name: str | None = None,
+    bind_escape_to_exit_scene: str | None = None,
+) -> bool:
+    """Shutdown routed runtime and optional Escape->exit action unbinding."""
+    resolved_runtime_spec = runtime_spec
+    if resolved_runtime_spec is None and runtime_spec_attr_name:
+        resolved_runtime_spec = getattr(feature, str(runtime_spec_attr_name), None)
+    if resolved_runtime_spec is None:
+        return False
+    shutdown_routed_runtime(feature, host, resolved_runtime_spec)
+    if runtime_spec_attr_name:
+        setattr(feature, str(runtime_spec_attr_name), None)
+    if scheduler_attr_name:
+        setattr(feature, str(scheduler_attr_name), None)
+    if bind_escape_to_exit_scene is not None:
+        app_actions = getattr(getattr(host, "app", None), "actions", None)
+        unbind_global_key = getattr(app_actions, "unbind_global_key", None)
+        if callable(unbind_global_key):
+            unbind_global_key(pygame.K_ESCAPE, "exit", scene=str(bind_escape_to_exit_scene))
+    return True
+
+
 def bind_task_panel_focus_toggle(
     app_actions,
     app,

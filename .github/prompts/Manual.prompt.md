@@ -258,6 +258,25 @@ Include a dedicated subsection in the relevant manual chapter that is verbose, c
 - How to choose `add_all` versus `opt_in` scene mode and how to maintain opt-in lists over time.
 - How current-scene exclusion affects navigation UX and why it prevents redundant no-op actions.
 - How to wire callbacks/signals for static `ContextMenuItem` actions and dynamic scene/window actions.
+
+## Unified Window-Visibility Management Coverage Requirement
+
+The manual pipeline must include a dedicated section explaining how the three user-facing window-management surfaces work together:
+- unified menu strip Window section,
+- command palette window entries,
+- scene task-panel window toggles.
+
+This section must explain, with discovered API names and concrete examples, that:
+- windows opt in to unified visibility management by default,
+- setting `window_management_opt_in=False` on the appropriate window/binding spec opts a window out of all three management surfaces,
+- opt-out is intentional for manually managed windows (for example, auxiliary/debug/utility windows) that users want to control outside automatic menu/palette/task-panel handling.
+
+The section must also describe synchronization semantics:
+- toggling visibility from any one surface updates the shared window visibility state,
+- the other two surfaces reflect that state (same source of truth, not independent toggles),
+- opt-out windows remain fully functional but are excluded from automatic visibility orchestration.
+
+Place this section in the scene/window/task-panel chapter (8.9) and cross-link from the command palette and menu-strip discussions.
 - How this API is used in the demo scenes (main and control_showcase) and control showcase control gallery.
 
 ### Required Examples

@@ -26,6 +26,7 @@ from gui_do.features.data_driven_runtime import (
     apply_accessibility_sequence,
     apply_accessibility_sequence_from_attrs,
     bind_input_map_actions,
+    bind_feature_runtime,
     configure_routed_feature_runtime,
     build_tab_builder_specs,
     build_tools_menu_entries,
@@ -51,9 +52,11 @@ from gui_do.features.data_driven_runtime import (
     register_tooltip_specs,
     register_descriptors,
     register_companion_logic_features,
+    register_feature_companions,
     register_window_toggle_tooltips,
     resolve_canvas_local_point,
     setup_feature_presenter_tabs,
+    shutdown_feature_runtime,
     register_tab_update_handlers,
     ActiveTabUpdateRouter,
     TabLayoutContext,
@@ -284,6 +287,23 @@ class _StubBindActions:
 
     def bind_key(self, key, action_name: str, *, scene: str):
         self.calls.append((key, str(action_name), str(scene)))
+
+
+class _StubGlobalActions:
+    def __init__(self):
+        self.bound = []
+        self.unbound = []
+
+    def bind_global_key(self, key, action_name: str, *, scene: str):
+        self.bound.append((int(key), str(action_name), str(scene)))
+
+    def unbind_global_key(self, key, action_name: str, *, scene: str):
+        self.unbound.append((int(key), str(action_name), str(scene)))
+
+
+class _StubGlobalActionHost:
+    def __init__(self):
+        self.app = type("_App", (), {"actions": _StubGlobalActions()})()
 
 
 class _StubPrewarmApp:
@@ -532,6 +552,58 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
 
         self.assertEqual("existing.provider", feature.bound_logic_name(alias="primary"))
         self.assertEqual("secondary.provider", feature.bound_logic_name(alias="secondary"))
+
+    def test_register_feature_companions_registers_factories(self):
+        feature = type("_Feature", (), {"_feature_manager": _StubFeatureManager()})()
+        host = object()
+
+        registered = register_feature_companions(
+            feature,
+            host,
+            companion_providers=(lambda: "logic.a", lambda: "logic.b"),
+        )
+
+        self.assertEqual(("logic.a", "logic.b"), registered)
+        self.assertEqual(
+            [("logic.a", host), ("logic.b", host)],
+            feature._feature_manager.register_calls,
+        )
+
+    def test_bind_and_shutdown_feature_runtime_manage_attrs_and_escape_binding(self):
+        feature = type("_Feature", (), {})()
+        host = _StubGlobalActionHost()
+        runtime_spec = object()
+
+        with patch("gui_do.features.data_driven_runtime.setup_routed_runtime", return_value="sched") as setup_runtime:
+            scheduler = bind_feature_runtime(
+                feature,
+                host,
+                runtime_spec=runtime_spec,
+                runtime_spec_attr_name="_runtime_spec",
+                scheduler_attr_name="scheduler",
+                bind_escape_to_exit_scene="main",
+            )
+
+        self.assertEqual("sched", scheduler)
+        self.assertIs(runtime_spec, feature._runtime_spec)
+        self.assertEqual("sched", feature.scheduler)
+        self.assertEqual([(27, "exit", "main")], host.app.actions.bound)
+        setup_runtime.assert_called_once_with(feature, host, runtime_spec)
+
+        with patch("gui_do.features.data_driven_runtime.shutdown_routed_runtime") as shutdown_runtime:
+            did_shutdown = shutdown_feature_runtime(
+                feature,
+                host,
+                runtime_spec_attr_name="_runtime_spec",
+                scheduler_attr_name="scheduler",
+                bind_escape_to_exit_scene="main",
+            )
+
+        self.assertTrue(did_shutdown)
+        self.assertIsNone(feature._runtime_spec)
+        self.assertIsNone(feature.scheduler)
+        self.assertEqual([(27, "exit", "main")], host.app.actions.unbound)
+        shutdown_runtime.assert_called_once_with(feature, host, runtime_spec)
 
     def test_collect_window_toggle_controls_returns_sorted_existing_controls(self):
         host = _StubToggleHost()

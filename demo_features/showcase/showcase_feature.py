@@ -1,18 +1,17 @@
 """Controls showcase feature — tabbed gallery of all gui_do controls."""
 from __future__ import annotations
 
-import pygame
 from gui_do import *
 from pygame import Rect
 from gui_do.features.data_driven_runtime import (
+    bind_feature_runtime,
     ObservableEffectSpec,
     RoutedRuntimeSpec,
     MenuStripSpec,
     add_menu_strip_from_spec,
     build_tab_builder_specs,
     create_tab_control_from_specs,
-    shutdown_routed_runtime,
-    setup_routed_runtime,
+    shutdown_feature_runtime,
 )
 from gui_do.features.control_spec import ControlDefinition
 from gui_do.features.feature_lifecycle import ControlPlacementSpec
@@ -248,7 +247,7 @@ class ShowcaseFeature(Feature):
         self._pending_initial_focus = True
 
     def bind_runtime(self, host) -> None:
-        self._runtime_spec = RoutedRuntimeSpec(
+        runtime_spec = RoutedRuntimeSpec(
             scene_name=_CONTROLS_RUNTIME_SPEC.scene_name,
             task_panel_focus_toggles=tuple(_CONTROLS_RUNTIME_SPEC.task_panel_focus_toggles),
             command_palette=_CONTROLS_RUNTIME_SPEC.command_palette,
@@ -261,21 +260,23 @@ class ShowcaseFeature(Feature):
                 ),
             ),
         )
-        setup_routed_runtime(self, host, self._runtime_spec)
-        app_actions = getattr(host.app, "actions", None)
-        bind_global_key = getattr(app_actions, "bind_global_key", None)
-        if callable(bind_global_key):
-            bind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
+        bind_feature_runtime(
+            self,
+            host,
+            runtime_spec=runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+            bind_escape_to_exit_scene="control_showcase",
+        )
 
 
     def shutdown_runtime(self, host) -> None:
-        if self._runtime_spec is not None:
-            shutdown_routed_runtime(self, host, self._runtime_spec)
-            self._runtime_spec = None
-        app_actions = getattr(host.app, "actions", None)
-        unbind_global_key = getattr(app_actions, "unbind_global_key", None)
-        if callable(unbind_global_key):
-            unbind_global_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
+        shutdown_feature_runtime(
+            self,
+            host,
+            runtime_spec=self._runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+            bind_escape_to_exit_scene="control_showcase",
+        )
 
     def on_update(self, host) -> None:
         dt = self._frame_timer.tick()

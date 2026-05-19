@@ -33,6 +33,8 @@ You are an agent tasked with creating or updating the Command Palette section wi
    - Link to the Specifications appendix where appropriate
    - Discuss lifecycle, dismissal behavior (left-click dismisses, action-bind does not), and event routing
    - Cover scene scoping and how to omit the palette from a scene if not needed
+   - Include a dedicated paragraph explaining that command-palette window toggles are one surface in the shared window-visibility system with menu strip and task panel
+   - Explain that windows with `window_management_opt_in=False` are intentionally excluded from palette window entries (and from menu/task-panel auto-management)
 
 4. **Code Examples**: All examples must:
    - Be discovered from or derived from the current source code
@@ -131,6 +133,8 @@ Use this structure for the command palette subsection:
    - Palette with both key and button on same bind
    - Omitting palette from a scene
 10. **Cross-Links**: Actions/Input Mapping (8.3), Overlays (8.8 parent), Task Panel (8.9).
+
+Also cross-link to the 8.9 subsection that documents unified window-visibility orchestration across menu strip, command palette, and task panel.
 
 Write with verbose clarity. A reader should understand:
 - Why the two-bind model is superior to a single "open" action

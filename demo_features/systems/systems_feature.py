@@ -90,6 +90,7 @@ from gui_do import (
     TweenManager,
 )
 from gui_do.features.data_driven_runtime import (
+    bind_feature_runtime,
     CheckpointDomainSpec,
     CheckpointSpec,
     ContractMigrationSpec,
@@ -120,8 +121,7 @@ from gui_do.features.data_driven_runtime import (
     StoreSubscriptionSpec,
     WorkloadBudgetClassSpec,
     WorkloadBudgetSpec,
-    setup_routed_runtime,
-    shutdown_routed_runtime,
+    shutdown_feature_runtime,
 )
 from gui_do.layout.constraint_layout import AnchorConstraint
 from .systems_data_helpers import (
@@ -850,17 +850,25 @@ class SystemsFeature(Feature):
 
     def bind_runtime(self, host) -> None:
         self.demo = host
-        self._runtime_spec = self._build_runtime_spec(host)
-        setup_routed_runtime(self, host, self._runtime_spec)
+        runtime_spec = self._build_runtime_spec(host)
+        bind_feature_runtime(
+            self,
+            host,
+            runtime_spec=runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+        )
         if callable(self._backlog_unsub) and self.runtime_scope is not None:
             self.runtime_scope.add_cleanup(self._backlog_unsub)
         if self.runtime_scope is not None:
             self.runtime_scope.add_cleanup(lambda: self._theme_invalidation_bus.unregister(self))
 
     def shutdown_runtime(self, host) -> None:
-        if self._runtime_spec is not None:
-            shutdown_routed_runtime(self, host, self._runtime_spec)
-            self._runtime_spec = None
+        shutdown_feature_runtime(
+            self,
+            host,
+            runtime_spec=self._runtime_spec,
+            runtime_spec_attr_name="_runtime_spec",
+        )
         self._task_scheduler.shutdown()
         self._sound_event_bus.stop_all()
         self._backlog_unsub = None

@@ -87,6 +87,21 @@ and `ScenePresentationModel.handle_window_toggle` wired to the scene menu strip.
 task panel button state with window visibility; creating windows in `bind_runtime` instead of
 `build` (window controls must exist when sibling features bind).
 
+**Required subsection in 8.9 (must be explicit and standalone):**
+Add a dedicated subsection that explains unified window-visibility management across:
+- menu strip Window menu entries,
+- command palette window entries,
+- task-panel window toggles.
+
+This subsection must explicitly document that window participation is opt-in by default, and
+that `window_management_opt_in=False` opts the window out of all automatic visibility surfaces.
+Also explain the purpose of opt-out: keeping manually controlled auxiliary windows outside
+automatic handling while preserving normal window functionality.
+
+Include at least one concrete discovered example that shows an opted-out window spec/binding.
+State that visibility changes from any participating surface share one visibility state so the
+other surfaces stay in sync.
+
 Also include operation-bus usage guidance for scene-local window/task-panel actions that need
 retry/timeout/failure publication semantics.
 
