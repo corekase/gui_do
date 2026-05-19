@@ -578,6 +578,7 @@ class ShortcutOverlaySpec:
     toggle_action_name: str | None = None
     toggle_key: int | None = None
     toggle_scene_name: str | None = None
+    toggle_global_key: bool = False
     manual_shortcut_lines: Sequence[str] = field(default_factory=tuple)
     manual_section_title: str = "Keyboard"
     prepend_manual_shortcuts: bool = False
@@ -2419,10 +2420,20 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
                 action_name = str(overlay_spec.toggle_action_name)
                 app_actions.register_action(action_name, _make_toggle(overlay))
                 if overlay_spec.toggle_key is not None:
-                    if overlay_spec.toggle_scene_name is not None:
-                        app_actions.bind_key(int(overlay_spec.toggle_key), action_name, scene=str(overlay_spec.toggle_scene_name))
+                    if bool(overlay_spec.toggle_global_key) and hasattr(app_actions, "bind_global_key"):
+                        if overlay_spec.toggle_scene_name is not None:
+                            app_actions.bind_global_key(
+                                int(overlay_spec.toggle_key),
+                                action_name,
+                                scene=str(overlay_spec.toggle_scene_name),
+                            )
+                        else:
+                            app_actions.bind_global_key(int(overlay_spec.toggle_key), action_name)
                     else:
-                        app_actions.bind_key(int(overlay_spec.toggle_key), action_name)
+                        if overlay_spec.toggle_scene_name is not None:
+                            app_actions.bind_key(int(overlay_spec.toggle_key), action_name, scene=str(overlay_spec.toggle_scene_name))
+                        else:
+                            app_actions.bind_key(int(overlay_spec.toggle_key), action_name)
 
     # Register command palette first so task panel focus toggle can override if needed
     if spec.command_palette is not None and app is not None:

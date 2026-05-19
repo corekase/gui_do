@@ -60,6 +60,7 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
             toggle_action_name="show_help",
             toggle_key=pygame.K_F9,
             toggle_scene_name="main",
+            toggle_global_key=True,
             manual_shortcut_lines=(
                 "F1: Raise/Lower Task Panel",
                 "F5: Toggle Command Palette",

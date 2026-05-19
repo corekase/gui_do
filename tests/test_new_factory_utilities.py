@@ -770,6 +770,7 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
         self.assertIsNone(spec.toggle_action_name)
         self.assertIsNone(spec.toggle_key)
         self.assertIsNone(spec.toggle_scene_name)
+        self.assertFalse(spec.toggle_global_key)
 
     def test_shortcut_overlay_spec_toggle_fields_set(self):
         from gui_do import ShortcutOverlaySpec
@@ -778,10 +779,12 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
             toggle_action_name="show_help",
             toggle_key=280,
             toggle_scene_name="main",
+            toggle_global_key=True,
         )
         self.assertEqual(spec.toggle_action_name, "show_help")
         self.assertEqual(spec.toggle_key, 280)
         self.assertEqual(spec.toggle_scene_name, "main")
+        self.assertTrue(spec.toggle_global_key)
 
     def test_RoutedRuntimeSpec_task_panel_focus_toggles_defaults_empty(self):
         from gui_do import RoutedRuntimeSpec
@@ -994,6 +997,37 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
 
         host.app.actions.register_action.assert_called_with("show_help", unittest.mock.ANY)
         host.app.actions.bind_key.assert_called_with(280, "show_help", scene="main")
+
+    def test_setup_routed_runtime_registers_overlay_toggle_global_key_when_requested(self):
+        from gui_do import RoutedRuntimeSpec, ShortcutOverlaySpec, setup_routed_runtime
+
+        feature = MagicMock()
+        host = MagicMock()
+        overlay_mock = MagicMock()
+        runtime_spec = RoutedRuntimeSpec(
+            shortcut_overlays=(
+                ShortcutOverlaySpec(
+                    attr_name="_help_overlay",
+                    toggle_action_name="show_help",
+                    toggle_key=280,
+                    toggle_scene_name="main",
+                    toggle_global_key=True,
+                ),
+            ),
+        )
+
+        with unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.configure_routed_feature_runtime",
+            return_value=object(),
+        ), unittest.mock.patch(
+            "gui_do.features.data_driven_runtime.create_shortcut_help_overlay",
+            return_value=overlay_mock,
+        ):
+            setup_routed_runtime(feature, host, runtime_spec)
+
+        host.app.actions.register_action.assert_called_with("show_help", unittest.mock.ANY)
+        host.app.actions.bind_global_key.assert_called_with(280, "show_help", scene="main")
+        host.app.actions.bind_key.assert_not_called()
 
     def test_setup_routed_runtime_registers_task_panel_focus_toggles(self):
         from gui_do import RoutedRuntimeSpec, TaskPanelFocusToggleSpec, setup_routed_runtime

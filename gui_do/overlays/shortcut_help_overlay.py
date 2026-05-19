@@ -564,19 +564,19 @@ class ShortcutHelpOverlay:
         text_col_w = max(120, max_w - chord_col_w - col_gap)
 
         estimated = pad_y
-        estimated += title_font.get_height() + 8
+        estimated += _font_line_height(title_font) + 8
         estimated += 1 + 8
         if not sections:
-            estimated += body_font.get_height()
+            estimated += _font_line_height(body_font)
         else:
             for section in sections:
-                estimated += section_font.get_height() + 6
+                estimated += _font_line_height(section_font) + 6
                 for entry in section.entries:
                     label = str(getattr(entry, "label", "")).strip()
                     detail = str(getattr(entry, "description", "")).strip()
                     text_body = label if not detail else f"{label} - {detail}"
                     wrapped = _wrap_text(body_font, text_body, text_col_w) or [text_body]
-                    row_h = max(body_font.get_height(), len(wrapped) * (_font_line_height(body_font) + line_gap) - line_gap)
+                    row_h = max(_font_line_height(body_font), len(wrapped) * (_font_line_height(body_font) + line_gap) - line_gap)
                     estimated += row_h + 6
                 estimated += section_gap
         estimated += pad_y

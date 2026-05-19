@@ -460,6 +460,33 @@ class TestShortcutHelpOverlayVisibility(unittest.TestCase):
         ov.hide()
         self.assertIs(focus.focused_node, clicked)
 
+    def test_show_supports_line_height_only_font_instance(self):
+        class _LineHeightOnlyFont:
+            line_height = 18
+
+            def size(self, text):
+                return (max(1, len(str(text))) * 8, int(self.line_height))
+
+            def render(self, text, antialias, color):
+                _ = antialias, color
+                return pygame.Surface(self.size(text), pygame.SRCALPHA)
+
+        class _StubFonts:
+            def font_instance(self, role, size=16):
+                _ = role, size
+                return _LineHeightOnlyFont()
+
+        app = SimpleNamespace(theme=SimpleNamespace(fonts=_StubFonts()))
+        ov = ShortcutHelpOverlay(
+            _StubOverlayManager(),
+            app=app,
+            manual_shortcut_lines=("F9: Display this help",),
+        )
+
+        # Regression guard: show() should not require font.get_height().
+        ov.show()
+        self.assertTrue(ov.is_open)
+
 
 if __name__ == "__main__":
     unittest.main()
