@@ -428,6 +428,7 @@ class WindowLayoutHandler:
         exact_overflow_targets: set[object] = set()
         if overflow:
             overflow_queue = list(overflow)
+            too_large_layer_retried: set[object] = set()
             while overflow_queue:
                 pending = list(overflow_queue)
                 overflow_queue = []
@@ -493,6 +494,7 @@ class WindowLayoutHandler:
                 shift_y = int(centered_top - min_y)
 
                 deferred: list[object] = []
+                layer_center_fallback: list[object] = []
                 for window, tx, ty in provisional:
                     target_x = int(tx + shift_x)
                     target_y = int(ty + shift_y)
@@ -505,9 +507,15 @@ class WindowLayoutHandler:
                     )
 
                     too_large_for_work = int(wr.width) > int(work.width) or int(wr.height) > int(work.height)
-                    if overflows_work and too_large_for_work and self.center_on_failure:
-                        center_fallback.add(window)
-                        targets.append((window, 0, 0))
+                    if overflows_work and too_large_for_work:
+                        # Retry once when multiple windows in the same layer
+                        # would all center-stack on fallback.
+                        if self.center_on_failure and window not in too_large_layer_retried:
+                            layer_center_fallback.append(window)
+                            continue
+                        # After one retry, preserve tiled offsets and use final
+                        # clamping to keep as much non-overlap as possible.
+                        targets.append((window, target_x, target_y))
                         continue
 
                     if overflows_work:
@@ -516,6 +524,14 @@ class WindowLayoutHandler:
 
                     exact_overflow_targets.add(window)
                     targets.append((window, target_x, target_y))
+
+                if len(layer_center_fallback) > 1:
+                    too_large_layer_retried.update(layer_center_fallback)
+                    deferred.extend(layer_center_fallback)
+                else:
+                    for window in layer_center_fallback:
+                        center_fallback.add(window)
+                        targets.append((window, 0, 0))
 
                 if not deferred:
                     break

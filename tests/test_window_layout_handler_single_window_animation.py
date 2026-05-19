@@ -222,6 +222,23 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         self.assertEqual(life.rect.y, mandel.rect.y)
         self.assertLess(life.rect.x, mandel.rect.x)
 
+    def test_multi_window_too_large_overflow_layer_retries_tiling_before_center_fallback(self):
+        base_a = _WindowNode(20, 20, 170, 110, visible=True)
+        base_b = _WindowNode(210, 20, 170, 110, visible=True)
+        tall_a = _WindowNode(40, 170, 170, 250, visible=True)
+        tall_b = _WindowNode(230, 170, 170, 250, visible=True)
+        scene = _Scene([base_a, base_b, tall_a, tall_b])
+        app = _App(Rect(0, 0, 420, 230), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        # Both tall windows exceed work-area height, but the overflow layer can
+        # still tile them horizontally. They should not center-stack.
+        self.assertNotEqual(tall_a.rect.x, tall_b.rect.x)
+        self.assertEqual(tall_a.rect.y, tall_b.rect.y)
+
     def test_visibility_order_life_mandel_system_does_not_overlap_menu_strip(self):
         menu = MenuStripControl(Rect(0, 0, 420, 32), visible=True, enabled=True)
         life = _WindowNode(20, 20, 170, 110, visible=True)
