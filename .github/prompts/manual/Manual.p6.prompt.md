@@ -36,25 +36,58 @@ Advanced pattern · Common mistakes · Cross-links · `[Back to Table of Content
 ## 8.9 — Scene, Window, and Task-Panel Presentation Models
 
 **What/why:** Scenes define broad interaction contexts; windows define focused work surfaces
-within a scene; task panels expose discoverable commands. This system coordinates what is
-visible, what has focus, and which actions are available at any moment.
+within a scene; the menu bar, command palette, and task panel are optional surfaces that
+orchestrate those windows rather than replacing them. This system coordinates what is
+visible, what has focus, and which actions are available at any moment while keeping all
+three surfaces synchronized to the same underlying window visibility state.
 
-control showcase). Within a scene, windows are floating or docked UI surfaces that can be
-individually shown/hidden. The task panel is a persistent chrome element that houses toggle
-buttons for windows and navigation. Menu strips expose scene-navigation and window commands.
+Within a scene, windows are floating or docked UI surfaces that can be individually shown or
+hidden. The menu bar exposes built-in scene and window menu items for discoverability. The
+command palette exposes scene control, user-defined commands, and window management in a
+searchable command surface. The task panel is a persistent chrome element that houses window
+toggle buttons and navigation affordances. All three surfaces are optional: if a scene or
+window does not need one of them, it can be omitted without affecting the rest of the runtime.
 
 **APIs (Tier 1 Spec types and Tier 18 helpers from `gui_do/__init__.py`):**
 Use the window/scene spec types from TIER 1 (`ScenePresentationModel`, `WindowPresenter`,
 `WindowSpec`, `AnchoredWindowSpec`, `SceneTaskPanelSpec`, `TaskPanelButtonSpec`,
 `TaskPanelFocusToggleSpec`, `FeatureWindowBundleBindingSpec`, `WindowToggleBindingSpec`,
-`TabbedPresenterSpec`, `TabBuilderSpec`) and the window presentation helpers from TIER 18
+`TabbedPresenterSpec`, `TabBuilderSpec`, `MenuStripSpec`, `MenuEntry`, `SceneMenuOptions`,
+`WindowMenuOptions`) and the window presentation helpers from TIER 18
 (`set_window_visible_state`, `toggle_window_visibility`, `create_anchored_feature_window`,
-`create_feature_presented_window`, `add_window_scene_menu_strip`, `ensure_scene_task_panel`,
+`create_feature_presented_window`, `add_window_scene_menu_strip`, `add_menu_strip_from_spec`,
+`add_standard_menu_strip`, `add_window_menu_strip`, `ensure_scene_task_panel`,
 `ActiveTabUpdateRouter`, `TabLayoutContext`, etc.). Always verify names in `__init__.py`
-\u2014 new helpers may have been added.
+— new helpers may have been added.
 
 **`ScenePresentationModel`:** Tracks which windows are registered in a scene and their
 visibility state. Provides `handle_window_toggle` for menu strip integration.
+
+**`MenuStripSpec` and menu-strip helpers:** The menu bar is the unified menu-strip surface,
+not a separate legacy menu system. Document the built-in scene and window sections as opt-in
+by default: `scene_menu_opt_in` controls whether a scene appears in the Scene menu, and
+`window_management_opt_in` controls whether a window appears in the Window menu. The
+generated section must explain that both lists are included automatically unless explicitly
+opted out, and that opt-out is per scene and per window. The Scene menu should describe the
+current-scene exclusion rule, the available insert indices for built-in sections, and any
+user-configurable labels or ordering that the source code exposes. The Window menu should
+describe how it surfaces the same visibility state as the task panel and command palette so
+the three surfaces stay synchronized.
+
+**`SceneTaskPanelSpec` and task-panel buttons:** The task panel must be documented as a
+window-visibility surface, not just a decorative sidebar. Explain how task-panel window
+buttons are inserted into the panel's item list at a caller-chosen index, how that index
+affects ordering relative to other task-panel items, and why ordering matters for discoverable
+navigation. Explain button interaction semantics clearly: left-click makes the window visible
+and raises it, while right-click makes the window not visible. The subsection must describe
+how those interactions map to the shared visibility state so the menu bar and command palette
+reflect the same result without extra synchronization code.
+
+**`SceneCommandPaletteSpec`:** The command palette is optional and uses the same underlying
+window state. Document that it can expose scene control and user-defined commands in addition
+to window management, and that its window entries participate in the same opt-in/opt-out
+contract as the menu bar and task panel. Explain why this is useful: one state source, three
+entry points, no duplicated visibility bookkeeping.
 
 **`WindowPresenter`:** Base class for window-level UI construction. Subclass it to own the
 layout and control creation for a floating window. The Feature class instantiates it in
@@ -76,6 +109,9 @@ and registers the appropriate action and hotkey.
 2. Implement `WindowPresenter` subclass for window-internal layout.
 3. Use `FeatureWindowBundleBindingSpec` to wire feature + window + task panel in one spec.
 4. Set `TaskPanelFocusToggleSpec` in `RoutedRuntimeSpec` to auto-manage focus on toggle.
+5. When a scene needs menu or palette participation, add the scene menu-strip or command-
+   palette spec at the scene level and use the per-scene/per-window opt-out fields only when
+   the default automatic inclusion is not desired.
 
 **Minimal example:** `create_feature_presented_window` call showing a simple anchored window.
 
@@ -83,24 +119,43 @@ and registers the appropriate action and hotkey.
 tabbed content inside each window, `ActiveTabUpdateRouter` for efficient tab-change routing,
 and `ScenePresentationModel.handle_window_toggle` wired to the scene menu strip.
 
+**Unified visibility subsection requirement:** Add a dedicated subsection that explains the
+shared visibility system across the menu bar, command palette, and task panel. This subsection
+must be verbose, comprehensive, and non-redundant. It must cover:
+
+- Why the three surfaces are optional and how each can be omitted independently.
+- How the menu bar's built-in scene and window entries work, including the fact that both
+   built-in lists are opt-in by default but can be opted out per scene and per window.
+- How the command palette contributes scene control, user-defined commands, and window
+   management in addition to its window-entry toggles.
+- How task-panel window buttons are inserted at a chosen index in the overall item list and
+   why that index matters for the user's mental model and menu order.
+- How left-click on a task-panel window button raises and shows the window, while right-click
+   makes it not visible.
+- How all three surfaces write to the same underlying window visibility state so they remain
+   synchronized without manual mirror logic.
+- How the source code should be inspected as part of discovery so code examples reflect the
+   current control/spec names, insertion-index fields, and opt-in/opt-out options.
+
+The subsection should explain the "how" and "why" of usage, not just the surface behavior.
+It should help a reader choose between automatic inclusion, explicit opt-out, and fully
+manual visibility management for specialized windows.
+
 **Mistakes:** Mismatching scene scope and window scope for action handlers; not synchronizing
 task panel button state with window visibility; creating windows in `bind_runtime` instead of
 `build` (window controls must exist when sibling features bind).
 
 **Required subsection in 8.9 (must be explicit and standalone):**
-Add a dedicated subsection that explains unified window-visibility management across:
-- menu strip Window menu entries,
-- command palette window entries,
-- task-panel window toggles.
+Add a dedicated subsection that explains unified window-visibility management across the menu
+bar, command palette, and task panel. The subsection must explicitly document that window
+participation is opt-in by default, that `window_management_opt_in=False` opts the window out
+of all automatic visibility surfaces, and that `scene_menu_opt_in=False` opts a scene out of
+the scene menu built-in list. Explain why opt-out exists: it keeps manually controlled or
+special-purpose windows outside automatic handling while preserving normal window behavior.
 
-This subsection must explicitly document that window participation is opt-in by default, and
-that `window_management_opt_in=False` opts the window out of all automatic visibility surfaces.
-Also explain the purpose of opt-out: keeping manually controlled auxiliary windows outside
-automatic handling while preserving normal window functionality.
-
-Include at least one concrete discovered example that shows an opted-out window spec/binding.
-State that visibility changes from any participating surface share one visibility state so the
-other surfaces stay in sync.
+Include at least one concrete discovered example that shows an opted-out scene and an opted-out
+window spec/binding. State that visibility changes from any participating surface share one
+visibility state so the other surfaces stay in sync.
 
 Also include operation-bus usage guidance for scene-local window/task-panel actions that need
 retry/timeout/failure publication semantics.

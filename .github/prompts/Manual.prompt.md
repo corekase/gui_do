@@ -139,35 +139,19 @@ After all assigned steps are done:
 - **pygame-ce cleanup.** Search `MANUAL.md` for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 - Report: steps executed, line count of final MANUAL.md, any sections that were skipped and why.
 
-## New Runtime Facilities Coverage Requirement
+## Runtime Facilities Coverage Requirement
 
 Across the full manual pipeline, ensure explicit coverage of routed runtime facilities and lifecycle-safe teardown:
 
 - Runtime scope ownership model (`FeatureRuntimeScope`) and why setup/cleanup must pair across lifecycle phases.
-- Automatic feature subscription ownership for observable subscriptions, including framework-driven cleanup during feature runtime shutdown.
+- Automatic feature subscription ownership for observable subscriptions, including framework-driven cleanup during feature runtime shutdown. This must be documented as its own section in the theory chapter, because it is a lifecycle-safety mechanism rather than a convenience feature.
 - Declarative service wiring (`ServiceBindingSpec`, `ServiceConsumerSpec`).
 - Declarative reactive wiring (`StoreSubscriptionSpec`, `StoreSelectorSpec`, `ObservableEffectSpec`, `SignalEffectSpec`).
 - Operation orchestration and resilience (`FeatureOperationSpec`, `FailurePolicySpec`, `FeatureOperationBus`).
-- Higher-level routed runtime faculties implemented as sibling declarative specs and runtime managers:
-  - Dependency validation (`FeatureDependencySpec`).
-  - Runtime policy/admission control (`RuntimePolicySpec`, `PolicyDecision`, `RuntimePolicyEngine`).
-  - Effect lifetime ownership (`EffectBindingSpec`, `EffectLifetimeOrchestrator`).
-  - Routed event stream pipelines (`EventPipelineStageSpec`, `EventPipelineSpec`, `EventPipelineRuntime`).
-  - Durable operation queue/recovery (`DurableOperationBindingSpec`, `DurableOperationQueueSpec`, `DurableQueueRecord`, `DurableOperationQueueRuntime`).
-  - Capability contracts/negotiation (`CapabilityProviderSpec`, `CapabilityRequirementSpec`, `CapabilityContractRuntime`).
-  - Incremental projections (`ProjectionNodeSpec`, `ProjectionSpec`, `ProjectionRuntime`).
-  - Workflow orchestration (`WorkflowStepSpec`, `WorkflowSpec`, `WorkflowCoordinator`).
-  - Derived-state recompute orchestration (`RecomputeNodeSpec`, `RecomputeOrchestrator`).
-  - Runtime QoS/backpressure policy (`QoSPolicySpec`, `QoSPolicyRuntime`).
-  - Feature health/degradation monitoring (`HealthProbeSpec`, `FeatureHealthRuntime`).
-  - Replay and diagnostics capture (`ReplaySpec`, `RuntimeReplayHarness`).
-  - Hot-swap/rebind policy (`ReplacePolicySpec`, `FeatureHotSwapManager`).
-  - A dedicated manual section that explains automatic subscription handling in verbose, comprehensive, and non-redundant prose:
-    - why automatic ownership exists and what consistency/lifecycle guarantees it enforces,
-    - what automation reduces for authors (manual unsubscribe bookkeeping and teardown drift),
-    - the resource-error class it mitigates (subscription leaks, retained feature instances, post-shutdown callbacks, duplicate notifications, and partial teardown failures).
 - Clear anti-pattern notes for leaks and partial teardown when `shutdown_runtime` does not unwind routed runtime resources.
 - In Section 4 (Conceptual Foundations / Theory), include these higher-level routed runtime faculties as a significant architectural pillar (not a footnote), including why they exist as declarative control-plane/runtime-plane composition.
+- Do not keep a hardcoded long list of every higher-level faculty in this prompt. At generation time, introspect the current `gui_do/__init__.py` tier exports and the relevant docs/tests, then generate a markdown table for each discovered spec family. Each table must list the spec name, purpose, key fields/options, field defaults/notes, and the manual appendix or chapter that explains it. Use that table output to decide whether a topic belongs in the theory chapter, a system chapter, or the specifications appendix.
+- If a spec family grows too large for one subsection, split it into its own subprompt or a dedicated subsection instead of flattening the content into a single bullet list.
 
 ## Unified Menu Strip Coverage Requirement
 
@@ -220,7 +204,7 @@ MenuStripSpec(
 )
 ```
 
-See the [Specifications Appendix](#specifications-and-option-reference) for all available fields and their defaults.
+See the [Specifications Appendix](#appendix-f-specifications-and-option-reference) for all available fields and their defaults.
 
 ### Required Behavioral Semantics
 

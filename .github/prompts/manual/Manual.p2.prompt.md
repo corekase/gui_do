@@ -112,6 +112,34 @@ Write comprehensive prose covering all of these points:
   `shutdown_runtime` or equivalent teardown. Failing to unsubscribe causes memory leaks and
   callbacks on dead objects.
 
+#### Automatic Subscription Ownership and Cleanup
+
+This subsection is required and must be verbose, comprehensive, and non-redundant. Explain
+that automatic subscription ownership is a lifecycle-safety mechanism, not a convenience.
+When a feature or routed-runtime binding creates observable subscriptions, the runtime owns
+those subscriptions for the lifetime of that feature/runtime scope and releases them during
+teardown. The point is to keep setup and cleanup symmetric even when the feature author does
+not manually thread every subscription handle through the code.
+
+Describe the operational benefits in concrete terms. Automatic ownership removes manual
+unsubscribe bookkeeping, prevents teardown drift between `bind_runtime` and `shutdown_runtime`,
+and reduces the chance that one new subscription is added without the matching cleanup path.
+It also mitigates the failure class that shows up in real applications: subscription leaks,
+retained feature instances after teardown, callbacks firing against dead UI objects, duplicate
+notifications after repeated bind cycles, and partial cleanup when scene transitions or shutdown
+paths are interrupted.
+
+The prose should explain why the behavior is automatic: the runtime can track the created
+subscription in the same lifecycle scope that created it, so teardown can deterministically
+dispose the whole owned set. That is stronger than a manual pattern because it keeps ownership
+localized to the feature/runtime that created the observable work. Include a concise contrast
+between a fragile manual-subscription pattern and the lifecycle-owned automatic path.
+
+This section should also state the boundary clearly: automatic ownership complements explicit
+lifecycle discipline, but does not replace it. Authors still need to create subscriptions in the
+correct phase and call shutdown logic cleanly; the framework simply guarantees that owned
+observable work follows the feature/runtime lifecycle instead of leaking past it.
+
 - **Control binding model**: Controls accept either a plain value or an observable. When bound to
   an observable, the control registers an internal subscription and refreshes its display on
   change. Feature code only changes the observable; the control updates itself.

@@ -1,3 +1,9 @@
+---
+name: Manual.p4
+description: Expand Main Systems chapters 5–8 (Controls, Layout, Focus/Accessibility, Overlays)
+---
+
+
 # General Usage of gui_do Systems (Expanded)
 
 ## General Usage

@@ -19,7 +19,8 @@ This step is responsible for running a discovery-based enrichment pass over MANU
    - Read relevant specs from docs as needed to confirm terminology and option names.
 2. **Write/Update:**
    - Add concise, verified code examples to material that explains behavior but currently has no example.
-   - Add and maintain an appendix section named `### Appendix F: Specifications and Option Reference`, organized by specification type families. For each spec, include name, purpose, key options/fields, defaults/notes, and cross-reference links.
+   - Add and maintain an appendix section named `### Appendix F: Specifications and Option Reference`, organized by specification type families. For each discovered spec family, generate a markdown table that lists each spec, its purpose, its key fields/options, and a field-by-field explanation of what each option controls. Include defaults/notes where known, and cross-reference links.
+   - Use table layout markdown for the appendix entries rather than flat prose inventories. Each spec row should make the field purpose obvious at a glance, and any complex spec should get its own dedicated table if a single combined table would be hard to read.
    - Add links from specification-heavy sections to Appendix F entries.
    - Normalize markdown display for double-underscore identifiers so names like `__init__.py`, `__version__`, and `__demo__` are not misparsed as emphasis.
    - Remove obsolete or outdated information from these sections.
@@ -80,13 +81,14 @@ Create or update:
 Inside Appendix F:
 1. Organize by specification type families (for example: bootstrap specs, feature specs,
    action/input specs, window/presentation specs, overlay specs, persistence/migration specs).
-2. For each spec entry include:
+2. For each spec family, include one or more markdown tables with these columns:
    - Spec name
-   - Purpose (1-2 sentences)
-   - Key options/fields and what they control
-   - Defaults/notes if known from code/docs
+   - Field / option name
+   - Purpose of the field
+   - Default / notable behavior
    - Cross-reference links to chapters that use the spec
-3. Keep entries concise and practical; avoid repeating long chapter prose.
+3. Keep the narrative around the tables concise and practical; avoid repeating long chapter prose.
+4. When a spec has many fields, split it into multiple tables by concern instead of forcing one oversized table.
 
 ## Linking Requirements
 

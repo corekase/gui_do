@@ -35,6 +35,8 @@ You are an agent tasked with creating or updating the Command Palette section wi
    - Cover scene scoping and how to omit the palette from a scene if not needed
    - Include a dedicated paragraph explaining that command-palette window toggles are one surface in the shared window-visibility system with menu strip and task panel
    - Explain that windows with `window_management_opt_in=False` are intentionally excluded from palette window entries (and from menu/task-panel auto-management)
+   - Explain that the command palette can also surface scene control and user-defined commands, not just window visibility toggles
+   - Require the generated prose to explain why the palette is optional and how it shares the same underlying window state as the menu bar and task panel
 
 4. **Code Examples**: All examples must:
    - Be discovered from or derived from the current source code
@@ -126,13 +128,14 @@ Use this structure for the command palette subsection:
 6. **Single-Event Open Behavior**: Explain why action bind on first trigger (palette closed) opens and stops without also processing pointer position
 7. **Scene Scoping**: How scene_name constrains bind registration.
 8. **Flexibility**: Both binds can independently use key, button, or both; any combination is valid.
-9. **Examples**:
+9. **Shared Visibility Model**: How the palette participates in the same underlying window-visibility state as the menu bar and task panel, and why that matters for consistency.
+10. **Examples**:
    - Minimal palette with F5 toggle and middle-click action
    - Palette with only keyboard toggles (no mouse actions)
    - Palette with custom action names
    - Palette with both key and button on same bind
    - Omitting palette from a scene
-10. **Cross-Links**: Actions/Input Mapping (8.3), Overlays (8.8 parent), Task Panel (8.9).
+11. **Cross-Links**: Actions/Input Mapping (8.3), Overlays (8.8 parent), Task Panel (8.9).
 
 Also cross-link to the 8.9 subsection that documents unified window-visibility orchestration across menu strip, command palette, and task panel.
 

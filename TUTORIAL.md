@@ -2,60 +2,74 @@
 
 ## 1. Introduction
 
-gui_do is a data-driven GUI framework for Python applications built on pygame. Instead of wiring every manager manually, you describe scenes, features, actions, and runtime behavior through specs, then let bootstrap assemble the runtime consistently. The result is a clear separation between declarative app structure and imperative feature behavior.
+gui_do is a data-driven GUI framework for Python that runs on pygame. You describe your app with specs, then let bootstrap assemble scenes, features, actions, and runtime systems in a consistent way. Feature code stays normal Python, but the repetitive integration work is automated.
 
-In this tutorial, we will build a multi-feature application called **PulseBoard**. It has a counter feature, an activity-log feature, reactive shared state, typed feature messaging, and keyboard shortcuts with a routed shortcut-help overlay. By the end, you will have a complete project structure you can extend into a real tool.
+In this tutorial, you will build a complete two-panel Dashboard and Activity Log application. The first feature is a counter panel with buttons and keyboard actions. The second feature is a routed activity log that receives typed feature messages, displays live updates, and demonstrates routed runtime wiring.
 
 Prerequisites:
 
-- Python and pip
-- `pygame`
-- `numpy`
-- No prior GUI-framework experience required
+- Python 3.10+
+- pip
+- pygame
+- numpy
+- Basic Python classes/functions knowledge (no prior GUI framework experience required)
 
-For deeper system theory while you read, keep [MANUAL.md](MANUAL.md) open.
+For deeper theory and full system reference while you work, use [MANUAL.md](MANUAL.md).
 
 ## 2. Core Concepts
 
-Before writing code, align on the three ideas that make gui_do predictable.
+Before writing code, lock in three ideas that make gui_do predictable.
 
 ### Declarative specs vs imperative wiring
 
-In many GUI stacks, startup logic becomes a long, order-sensitive imperative script. gui_do shifts that to declarative specs such as `HostApplicationBindingSpec`, `FeatureSpec`, and `SceneBundleBindingSpec`. You describe *what* should exist, and bootstrap handles *how* to build and connect it.
+In many GUI frameworks, startup becomes a long imperative script where every scene, key binding, and cross-system hook is manually connected. gui_do uses spec objects to declare app structure first, then bootstrap realizes that structure.
 
 Why this matters:
 
-- You can reason about app structure from data objects.
-- Feature code stays local and focused.
-- Bootstrap ordering stays deterministic as projects grow.
+- Specs are easy to diff and test.
+- Wiring becomes deterministic.
+- Features do not need to know each other’s internals.
+- You can reorganize feature internals without changing bootstrap contracts.
 
 ### Reactive state
 
-`ObservableValue` is a value container that notifies subscribers when `.value` changes. That means UI updates can be direct and event-driven instead of polled each frame.
+Reactive state means the UI updates because data changes, not because you poll and repaint manually.
+
+- ObservableValue handles one value.
+- ObservableList and ObservableDict handle collections.
+- ComputedValue derives data from other observables.
+
+The key pattern is subscribe and unsubscribe:
 
 ```python
 from gui_do import ObservableValue
 
 count = ObservableValue(0)
-unsubscribe = count.subscribe(lambda value: print(f"count changed to {value}"))
+unsubscribe = count.subscribe(lambda value: print(f"Count changed to {value}"))
 count.value = 1
 unsubscribe()
 ```
 
-You also have `ObservableList` and `ObservableDict` for collections, and `ComputedValue` for derived state.
+Why this matters:
+
+- You remove polling loops.
+- Data flow is explicit.
+- Teardown remains safe when features leave a scene.
 
 ### Feature lifecycle
 
-A standard `Feature` can participate in these phases:
+The standard feature lifecycle is:
 
-- `build(host)`: construct control tree and static structure.
-- `bind_runtime(host)`: attach runtime wiring such as subscriptions, action handlers, and service hooks.
-- `handle_event(host, event)`: consume targeted events.
-- `on_update(host)`: per-frame update logic.
-- `draw(host, surface, theme)`: custom drawing path when needed.
-- `shutdown_runtime(host)`: release subscriptions/resources.
+- build(host): Construct controls and initial structure.
+- bind_runtime(host): Attach subscriptions, runtime resources, actions, and services.
+- handle_event(host, event): Optional event interception.
+- on_update(host): Per-frame logic.
+- draw(host, surface, theme): Optional direct drawing.
+- shutdown_runtime(host): Tear down runtime subscriptions/resources.
 
-Framework guarantee: all scene features finish `build` before any `bind_runtime` begins. This ensures runtime wiring sees complete structure. Subscriptions should be created in `bind_runtime` and torn down in `shutdown_runtime`.
+Important framework guarantee: all features in a scene complete build before any bind_runtime runs. That means your control tree exists before runtime subscriptions begin.
+
+Current update/draw signatures are on_update(host) and draw(host, surface, theme), which match the public lifecycle class definitions.
 
 ## 3. Installation and Setup
 
@@ -67,111 +81,129 @@ python -m pip install -e . --no-deps
 
 Dependencies:
 
-- `pygame`
-- `numpy` (used internally for pixel-buffer operations)
+- pygame
+- numpy
 
-Verify the install:
+Verify installation:
 
 ```bash
 python -c "import gui_do; print(gui_do.__version__)"
 ```
 
-Minimal imports to start a declarative app:
+Minimal startup imports:
 
 ```python
-from gui_do import HostApplicationBindingSpec, build_host_application_config, bootstrap_host_application, Feature
+from gui_do import (
+    Feature,
+    HostApplicationBindingSpec,
+    build_host_application_config,
+    bootstrap_host_application,
+)
 ```
 
-Two startup paths exist:
+Startup paths:
 
-- Declarative bootstrap via `HostApplicationBindingSpec` and `build_host_application_config` (recommended here)
-- Manual `GuiApplication` assembly (advanced; see [MANUAL.md](MANUAL.md))
+- Recommended: declarative bootstrap with HostApplicationBindingSpec, build_host_application_config, and bootstrap_host_application.
+- Advanced: manual GuiApplication construction and explicit runtime wiring (see [MANUAL.md](MANUAL.md)).
 
 ## 4. Your First Feature
 
-Now we build the first PulseBoard feature: a counter panel.
+Now build the first part of the project: a counter panel.
 
 ### Step 1. Define the feature class
 
-`Feature` is the standard starting point because it includes the full lifecycle. We begin with an empty `build` method.
+Feature is the default choice for UI features with normal lifecycle hooks.
 
 ```python
 from gui_do import Feature
 
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
 
-    def build(self, host) -> None:
+    def build(self, host):
         pass
 ```
 
-### Step 2. Add a control
+Why Feature here:
 
-Controls are layout nodes inside a feature region, not independent windows. `host.screen_rect` gives the available canvas dimensions.
+- You want standard lifecycle hooks.
+- You want controls plus runtime subscriptions.
+- You do not need direct low-level draw/event bypass behavior.
+
+### Step 2. Add a control tree
+
+Controls live in feature-owned regions. Here we create a panel and one label.
 
 ```python
 from pygame import Rect
 from gui_do import LabelControl, PanelControl
 
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.root_panel = None
-        self.counter_label = None
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("main_root", Rect(0, 0, host.screen_rect.width, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.counter_label = self.root_panel.add(
-            LabelControl("counter_label", Rect(24, 24, 360, 36), "Count: 0")
-        )
+    def build(self, host):
+        panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
+        self.title = self.panel.add(LabelControl("counter_title", Rect(16, 16, 320, 28), "Counter Panel"))
 ```
 
-### Step 3. Declare the config
+### Step 3. Declare host config
 
-`HostApplicationBindingSpec` describes app-level structure. `SceneBundleBindingSpec` gives scene setup defaults. `FeatureSpec` connects a host attribute to a feature factory.
+Use declarative specs to define scene and feature registration.
 
 ```python
-from gui_do import FeatureSpec, HostApplicationBindingSpec, SceneBundleBindingSpec, build_host_application_config
+from gui_do import (
+    FeatureSpec,
+    HostApplicationBindingSpec,
+    SceneBundleBindingSpec,
+    build_host_application_config,
+)
 
 config = build_host_application_config(
     HostApplicationBindingSpec(
-        display_size=(1100, 700),
-        window_title="PulseBoard",
-        fonts={"default": "arial"},
+        display_size=(1100, 680),
+        window_title="gui_do Tutorial App",
+        fonts={"default": {"file": None, "size": 16}},
         initial_scene_name="main",
         scene_bundle_entries=(
             SceneBundleBindingSpec(scene_name="main", make_initial=True),
         ),
         feature_entries=(
-            FeatureSpec("counter_feature", CounterFeature),
+            FeatureSpec("counterFeature", CounterFeature),
         ),
     )
 )
 ```
 
+What each part means:
+
+- HostApplicationBindingSpec: top-level declaration for app bootstrapping.
+- SceneBundleBindingSpec: scene lifecycle/startup declaration.
+- FeatureSpec: host attribute slot and feature factory binding.
+
 ### Step 4. Bootstrap and run
 
-`bootstrap_host_application(host, config)` creates display, app, scenes, features, actions, and runtime wiring from the config. `run_entrypoint` starts the frame loop.
+Bootstrap populates host fields and wires all declared runtime systems.
 
 ```python
 from gui_do import bootstrap_host_application
 
-class PulseBoardHost:
+class Host:
     pass
 
-host = PulseBoardHost()
+host = Host()
 bootstrap_host_application(host, config)
-host.app.run_entrypoint(target_fps=config.target_fps)
+host.app.run_entrypoint(target_fps=60)
 ```
 
 ### Step 5. Full listing so far
 
 ```python
+import pygame
 from pygame import Rect
+
 from gui_do import (
     Feature,
     FeatureSpec,
@@ -183,107 +215,98 @@ from gui_do import (
     build_host_application_config,
 )
 
-
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.root_panel = None
-        self.counter_label = None
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("main_root", Rect(0, 0, host.screen_rect.width, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.counter_label = self.root_panel.add(
-            LabelControl("counter_label", Rect(24, 24, 360, 36), "Count: 0")
-        )
+    def build(self, host):
+        panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
+        self.panel.add(LabelControl("counter_title", Rect(16, 16, 320, 28), "Counter Panel"))
 
-
-config = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1100, 700),
-        window_title="PulseBoard",
-        fonts={"default": "arial"},
-        initial_scene_name="main",
-        scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
-        feature_entries=(FeatureSpec("counter_feature", CounterFeature),),
-    )
-)
-
-
-class PulseBoardHost:
+class Host:
     pass
 
-
-if __name__ == "__main__":
-    host = PulseBoardHost()
-    bootstrap_host_application(host, config)
-    host.app.run_entrypoint(target_fps=config.target_fps)
+host = Host()
+config = build_host_application_config(
+    HostApplicationBindingSpec(
+        display_size=(1100, 680),
+        window_title="gui_do Tutorial App",
+        fonts={"default": {"file": None, "size": 16}},
+        initial_scene_name="main",
+        scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
+        feature_entries=(FeatureSpec("counterFeature", CounterFeature),),
+    )
+)
+bootstrap_host_application(host, config)
+host.app.run_entrypoint(target_fps=60)
 ```
 
 ## 5. Reactive State: Making the UI Respond
 
-Now we make the counter interactive and reactive.
+Now make the first feature interactive.
 
-### Step 1. Introduce `ObservableValue`
-
-`ObservableValue` stores ordinary data, but assigning `.value` notifies subscribers.
+### Step 1. Add ObservableValue
 
 ```python
 from gui_do import ObservableValue
 
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count_value = ObservableValue(0)
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
+        self.count = ObservableValue(0)
+        self.countSubscription = None
 ```
 
-### Step 2. Add a button
-
-The button callback mutates the observable.
+### Step 2. Add a button to mutate state
 
 ```python
 from gui_do import ButtonControl
 
-self.increment_button = self.root_panel.add(
-    ButtonControl(
-        "increment_button",
-        Rect(24, 72, 220, 36),
-        "Increment",
-        on_click=lambda: setattr(self.count_value, "value", self.count_value.value + 1),
+def build(self, host):
+    panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+    self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
+    self.valueLabel = self.panel.add(LabelControl("count_label", Rect(16, 60, 320, 30), "Count: 0"))
+    self.incrementButton = self.panel.add(
+        ButtonControl("increment_button", Rect(16, 104, 160, 34), "Increment", on_click=self.incrementCount)
     )
-)
+
+def incrementCount(self):
+    self.count.value = int(self.count.value) + 1
 ```
 
-### Step 3. Wire observable to label in `bind_runtime`
+### Step 3. Subscribe in bind_runtime
 
-`bind_runtime` is where feature runtime wiring belongs. By this point, controls are fully built.
+Subscribe when the runtime is live and controls are present.
 
 ```python
-def bind_runtime(self, host) -> None:
-    def sync_count(value) -> None:
-        self.counter_label.text = f"Count: {value}"
-
-    self.count_subscription = self.count_value.subscribe(sync_count)
-    sync_count(self.count_value.value)
+def bind_runtime(self, host):
+    self.countSubscription = self.count.subscribe(
+        lambda value: setattr(self.valueLabel, "text", f"Count: {value}")
+    )
 ```
 
-### Step 4. Unsubscribe in `shutdown_runtime`
-
-Subscriptions hold callable references, so always unsubscribe during teardown.
+### Step 4. Unsubscribe in shutdown_runtime
 
 ```python
-def shutdown_runtime(self, host) -> None:
-    if self.count_subscription is not None:
-        self.count_subscription()
-        self.count_subscription = None
+def shutdown_runtime(self, host):
+    if self.countSubscription is not None:
+        self.countSubscription()
+        self.countSubscription = None
 ```
 
-### Step 5. Full listing after reactive wiring
+Why this cleanup matters:
+
+- Prevents stale callbacks after feature removal.
+- Prevents leaked references.
+- Keeps scene transitions safe.
+
+### Step 5. Full updated listing
 
 ```python
+import pygame
 from pygame import Rect
+
 from gui_do import (
     ButtonControl,
     Feature,
@@ -297,154 +320,149 @@ from gui_do import (
     build_host_application_config,
 )
 
-
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.root_panel = None
-        self.counter_label = None
-        self.increment_button = None
-        self.count_value = ObservableValue(0)
-        self.count_subscription = None
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
+        self.count = ObservableValue(0)
+        self.countSubscription = None
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("main_root", Rect(0, 0, host.screen_rect.width, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.counter_label = self.root_panel.add(
-            LabelControl("counter_label", Rect(24, 24, 360, 36), "Count: 0")
-        )
-        self.increment_button = self.root_panel.add(
-            ButtonControl(
-                "increment_button",
-                Rect(24, 72, 220, 36),
-                "Increment",
-                on_click=lambda: setattr(self.count_value, "value", self.count_value.value + 1),
-            )
+    def build(self, host):
+        panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
+        self.panel.add(LabelControl("counter_title", Rect(16, 16, 320, 28), "Counter Panel"))
+        self.valueLabel = self.panel.add(LabelControl("count_label", Rect(16, 60, 320, 30), "Count: 0"))
+        self.incrementButton = self.panel.add(
+            ButtonControl("increment_button", Rect(16, 104, 160, 34), "Increment", on_click=self.incrementCount)
         )
 
-    def bind_runtime(self, host) -> None:
-        def sync_count(value) -> None:
-            self.counter_label.text = f"Count: {value}"
+    def bind_runtime(self, host):
+        self.countSubscription = self.count.subscribe(
+            lambda value: setattr(self.valueLabel, "text", f"Count: {value}")
+        )
 
-        self.count_subscription = self.count_value.subscribe(sync_count)
-        sync_count(self.count_value.value)
+    def shutdown_runtime(self, host):
+        if self.countSubscription is not None:
+            self.countSubscription()
+            self.countSubscription = None
 
-    def shutdown_runtime(self, host) -> None:
-        if self.count_subscription is not None:
-            self.count_subscription()
-            self.count_subscription = None
+    def incrementCount(self):
+        self.count.value = int(self.count.value) + 1
 
-
-config = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1100, 700),
-        window_title="PulseBoard",
-        fonts={"default": "arial"},
-        initial_scene_name="main",
-        scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
-        feature_entries=(FeatureSpec("counter_feature", CounterFeature),),
-    )
-)
-
-
-class PulseBoardHost:
+class Host:
     pass
 
-
-if __name__ == "__main__":
-    host = PulseBoardHost()
-    bootstrap_host_application(host, config)
-    host.app.run_entrypoint(target_fps=config.target_fps)
+host = Host()
+config = build_host_application_config(
+    HostApplicationBindingSpec(
+        display_size=(1100, 680),
+        window_title="gui_do Tutorial App",
+        fonts={"default": {"file": None, "size": 16}},
+        initial_scene_name="main",
+        scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
+        feature_entries=(FeatureSpec("counterFeature", CounterFeature),),
+    )
+)
+bootstrap_host_application(host, config)
+host.app.run_entrypoint(target_fps=60)
 ```
 
 ## 6. Feature Types
 
-Use feature types by responsibility, not habit.
+Use feature types by intent, not by habit.
 
-- `Feature`: Default choice for visual feature logic with lifecycle hooks.
-- `DirectFeature`: High-control option when you want explicit lifecycle control without default behavior assumptions.
-- `LogicFeature`: Non-visual logic component for background processing and coordination.
-- `RoutedFeature`: A `Feature` variant designed for declarative routing via `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec`.
+- Feature: default choice for most visual features with full standard lifecycle.
+- DirectFeature: high-control path for direct event/update/draw hooks when bypassing the usual control pipeline is intentional.
+- LogicFeature: non-visual background coordination and domain logic without a control tree.
+- RoutedFeature: Feature subtype with topic-routed message handling and declarative runtime wiring through RoutedRuntimeSpec and RoutedFeatureLifecycleSpec.
 
-For deeper type-level behavior and lifecycle semantics, see [MANUAL.md](MANUAL.md#82-feature-lifecycle-and-feature-types).
+Practical rule:
+
+- Start with Feature.
+- Use RoutedFeature when runtime wiring and message routing become substantial.
+- Use LogicFeature for pure computation/coordinator roles.
+- Use DirectFeature only for explicit low-level rendering/event control paths.
+
+For full lifecycle semantics and selection guidance, see [MANUAL.md](MANUAL.md).
 
 ## 7. A Second Feature and Feature Communication
 
-Now PulseBoard gets a second feature: an activity log panel.
+Now add the Activity Log feature so the project has two distinct responsibilities.
 
-### Step 1. Define the second feature
+### Step 1. Define second feature
 
-The log panel has a separate region and responsibility: showing event history.
+The log panel shows events and gives users visibility into app behavior.
 
 ```python
-class ActivityLogFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("activity_log", scene_name="main")
-        self.root_panel = None
-        self.log_label = None
-        self.log_lines = []
+from pygame import Rect
+from gui_do import LabelControl, ObservableList, PanelControl, RoutedFeature
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("log_root", Rect(400, 0, 700, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.log_label = self.root_panel.add(
-            LabelControl("log_label", Rect(20, 24, 620, 420), "Activity log is empty")
-        )
+class ActivityLogFeature(RoutedFeature):
+    def __init__(self):
+        super().__init__("activity_log", scene_name="main")
+        self.items = ObservableList([])
+        self.itemsSubscription = None
+
+    def build(self, host):
+        panelRect = Rect(host.screen_rect.width // 2 + 10, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("log_panel", panelRect, draw_background=True), scene_name="main")
+        self.title = self.panel.add(LabelControl("log_title", Rect(16, 16, 320, 28), "Activity Log"))
+        self.latest = self.panel.add(LabelControl("log_latest", Rect(16, 60, 420, 30), "Latest: (none)"))
 ```
 
-### Step 2. Shared state with `ObservableValue`
+### Step 2. Shared observable approach
 
-Both features can read/write one observable through the host.
+Simple case: publish shared ObservableValue from one feature and read it in another.
 
 ```python
-# in CounterFeature.build
-host.shared_count = self.count_value
+def build(self, host):
+    host.sharedCount = self.count
 
-# in ActivityLogFeature.bind_runtime
-self.shared_subscription = host.shared_count.subscribe(
-    lambda value: self.log_lines.append(f"Observable count now {value}")
+# In ActivityLogFeature.bind_runtime
+self.sharedCountSubscription = host.sharedCount.subscribe(
+    lambda value: setattr(self.latest, "text", f"Latest shared count: {value}")
 )
 ```
 
-Use this when the dependency is explicit and simple.
+Use this when features are intentionally coupled around shared state.
 
-### Step 3. Feature messaging with `FeatureMessage`
+### Step 3. Typed message approach with FeatureMessage subclass
 
-Use messaging when features should remain decoupled.
+Use message passing when you want looser coupling.
 
 ```python
 from gui_do import FeatureMessage
 
-class IncrementMessage(FeatureMessage):
+class CounterIncrementedMessage(FeatureMessage):
     @classmethod
-    def create(cls, sender: str, target: str, amount: int):
-        return cls(sender=sender, target=target, payload={"event": "increment", "amount": amount})
+    def create(cls, sender, target, value):
+        return cls(
+            sender=sender,
+            target=target,
+            payload={"topic": "activity", "event": "incremented", "value": int(value)},
+        )
 
-# publish from CounterFeature
-message = IncrementMessage.create(self.name, "activity_log", 1)
-self.send_message("activity_log", message.payload)
-
-# consume in ActivityLogFeature.on_update
-def on_update(self, host) -> None:
-    while self.has_messages():
-        message = self.pop_message()
-        if message is None:
-            continue
-        if message.event == "increment":
-            amount = int(message.payload.get("amount", 0))
-            self.log_lines.append(f"Message: increment by {amount}")
-            self.log_label.text = "\n".join(self.log_lines[-8:])
+# In CounterFeature
+message = CounterIncrementedMessage.create(self.name, "activity_log", self.count.value)
+self.send_message(message.target, message.payload)
 ```
 
-### Step 4. Full listing with both features
+Then the routed log feature handles topic activity:
+
+```python
+def message_handlers(self):
+    return {"activity": self.handleActivityMessage}
+
+def handleActivityMessage(self, host, message):
+    if message.event == "incremented":
+        self.items.append(f"Counter changed to {message.get('value')}")
+```
+
+### Step 4. Full updated listing with two features
 
 ```python
 import pygame
 from pygame import Rect
+
 from gui_do import (
     ButtonControl,
     Feature,
@@ -452,234 +470,226 @@ from gui_do import (
     FeatureSpec,
     HostApplicationBindingSpec,
     LabelControl,
+    ObservableList,
     ObservableValue,
     PanelControl,
+    RoutedFeature,
     SceneBundleBindingSpec,
     bootstrap_host_application,
     build_host_application_config,
 )
 
-
-class IncrementMessage(FeatureMessage):
+class CounterIncrementedMessage(FeatureMessage):
     @classmethod
-    def create(cls, sender: str, target: str, amount: int):
-        return cls(sender=sender, target=target, payload={"event": "increment", "amount": amount})
-
+    def create(cls, sender, target, value):
+        return cls(sender=sender, target=target, payload={"topic": "activity", "event": "incremented", "value": int(value)})
 
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.root_panel = None
-        self.counter_label = None
-        self.increment_button = None
-        self.count_value = ObservableValue(0)
-        self.count_subscription = None
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
+        self.count = ObservableValue(0)
+        self.countSubscription = None
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("main_root", Rect(0, 0, 380, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.counter_label = self.root_panel.add(LabelControl("counter_label", Rect(24, 24, 320, 36), "Count: 0"))
+    def build(self, host):
+        host.sharedCount = self.count
+        panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
+        self.valueLabel = self.panel.add(LabelControl("count_label", Rect(16, 60, 320, 30), "Count: 0"))
+        self.incrementButton = self.panel.add(ButtonControl("increment_button", Rect(16, 104, 160, 34), "Increment", on_click=self.incrementCount))
 
-        def increment() -> None:
-            self.count_value.value += 1
-            message = IncrementMessage.create(self.name, "activity_log", 1)
-            self.send_message("activity_log", message.payload)
+    def bind_runtime(self, host):
+        self.countSubscription = self.count.subscribe(lambda value: setattr(self.valueLabel, "text", f"Count: {value}"))
 
-        self.increment_button = self.root_panel.add(
-            ButtonControl("increment_button", Rect(24, 72, 220, 36), "Increment", on_click=increment)
-        )
-        host.shared_count = self.count_value
+    def shutdown_runtime(self, host):
+        if self.countSubscription is not None:
+            self.countSubscription()
+            self.countSubscription = None
 
-    def bind_runtime(self, host) -> None:
-        def sync_count(value) -> None:
-            self.counter_label.text = f"Count: {value}"
+    def incrementCount(self):
+        self.count.value = int(self.count.value) + 1
+        message = CounterIncrementedMessage.create(self.name, "activity_log", self.count.value)
+        self.send_message(message.target, message.payload)
 
-        self.count_subscription = self.count_value.subscribe(sync_count)
-        sync_count(self.count_value.value)
-
-    def shutdown_runtime(self, host) -> None:
-        if self.count_subscription is not None:
-            self.count_subscription()
-            self.count_subscription = None
-
-
-class ActivityLogFeature(Feature):
-    def __init__(self) -> None:
+class ActivityLogFeature(RoutedFeature):
+    def __init__(self):
         super().__init__("activity_log", scene_name="main")
-        self.root_panel = None
-        self.log_label = None
-        self.log_lines = []
-        self.shared_subscription = None
+        self.items = ObservableList([])
+        self.itemsSubscription = None
+        self.sharedCountSubscription = None
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("log_root", Rect(390, 0, 700, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.log_label = self.root_panel.add(
-            LabelControl("log_label", Rect(20, 24, 640, 420), "Activity log is empty")
-        )
+    def build(self, host):
+        panelRect = Rect(host.screen_rect.width // 2 + 10, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("log_panel", panelRect, draw_background=True), scene_name="main")
+        self.latest = self.panel.add(LabelControl("log_latest", Rect(16, 60, 420, 30), "Latest: (none)"))
 
-    def bind_runtime(self, host) -> None:
-        def on_shared_count(value) -> None:
-            self.log_lines.append(f"Observable count now {value}")
-            self.log_label.text = "\n".join(self.log_lines[-8:])
+    def bind_runtime(self, host):
+        self.itemsSubscription = self.items.subscribe(lambda values: setattr(self.latest, "text", f"Latest: {values[-1] if values else '(none)'}"))
+        self.sharedCountSubscription = host.sharedCount.subscribe(lambda value: self.items.append(f"Shared count observed: {value}"))
 
-        self.shared_subscription = host.shared_count.subscribe(on_shared_count)
+    def shutdown_runtime(self, host):
+        if self.itemsSubscription is not None:
+            self.itemsSubscription()
+            self.itemsSubscription = None
+        if self.sharedCountSubscription is not None:
+            self.sharedCountSubscription()
+            self.sharedCountSubscription = None
 
-    def on_update(self, host) -> None:
-        while self.has_messages():
-            message = self.pop_message()
-            if message is None:
-                continue
-            if message.event == "increment":
-                amount = int(message.payload.get("amount", 0))
-                self.log_lines.append(f"Message: increment by {amount}")
-                self.log_label.text = "\n".join(self.log_lines[-8:])
+    def message_handlers(self):
+        return {"activity": self.handleActivityMessage}
 
-    def shutdown_runtime(self, host) -> None:
-        if self.shared_subscription is not None:
-            self.shared_subscription()
-            self.shared_subscription = None
+    def handleActivityMessage(self, host, message):
+        if message.event == "incremented":
+            self.items.append(f"Counter changed to {message.get('value')}")
 
+class Host:
+    pass
 
+host = Host()
 config = build_host_application_config(
     HostApplicationBindingSpec(
-        display_size=(1100, 700),
-        window_title="PulseBoard",
-        fonts={"default": "arial"},
+        display_size=(1100, 680),
+        window_title="gui_do Tutorial App",
+        fonts={"default": {"file": None, "size": 16}},
         initial_scene_name="main",
         scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
         feature_entries=(
-            FeatureSpec("counter_feature", CounterFeature),
-            FeatureSpec("log_feature", ActivityLogFeature),
+            FeatureSpec("counterFeature", CounterFeature),
+            FeatureSpec("logFeature", ActivityLogFeature),
         ),
     )
 )
-
-
-class PulseBoardHost:
-    pass
-
-
-if __name__ == "__main__":
-    pygame.init()
-    host = PulseBoardHost()
-    bootstrap_host_application(host, config)
-    host.app.run_entrypoint(target_fps=config.target_fps)
+bootstrap_host_application(host, config)
+host.app.run_entrypoint(target_fps=60)
 ```
 
 ## 8. Actions and Keyboard Shortcuts
 
-Now we add keyboard-driven behavior.
+Now wire keyboard shortcuts to project behavior.
 
-### Step 1. Declare `ActionSpec`
+### Step 1. Declare ActionSpec and ActionHotkeySpec
 
-`ActionSpec` belongs in `HostApplicationBindingSpec.action_entries` and can attach a key directly.
+ActionSpec declares host-level actions. ActionHotkeySpec declares per-feature hotkeys in routed runtime wiring.
 
 ```python
 import pygame
-from gui_do import ActionSpec
+from gui_do import ActionHotkeySpec, ActionSpec, RoutedRuntimeSpec
 
-action_entries = (
-    ActionSpec(action_id="exit", label="Exit", kind="exit", key=pygame.K_ESCAPE),
-    ActionSpec(action_id="palette_toggle", label="Toggle Palette", kind="palette_toggle", key=pygame.K_F1),
-)
-```
-
-### Step 2. Plain `Feature` action callback
-
-Earlier docs sometimes describe this as `host.actions.bind(action_id, callback)`. In current runtime code, the concrete app action dispatcher is `host.app.actions`, so plain features should use `register_action`/`unregister_action`.
-
-```python
-def bind_runtime(self, host) -> None:
-    def reset_handler(event) -> bool:
-        self.count_value.value = 0
-        return True
-
-    self.reset_action_name = "counter_reset"
-    host.app.actions.register_action(self.reset_action_name, reset_handler)
-    host.app.actions.bind_key(pygame.K_r, self.reset_action_name, scene="main")
-```
-
-```python
-def shutdown_runtime(self, host) -> None:
-    if self.reset_action_name:
-        host.app.actions.unregister_action(self.reset_action_name)
-```
-
-### Step 3. `RoutedFeature` shortcut path
-
-For routed features, declare shortcut behavior in `RoutedRuntimeSpec` and let lifecycle helpers manage setup and teardown.
-
-```python
-from gui_do import (
-    ActionHotkeySpec,
-    RoutedFeature,
-    RoutedFeatureLifecycleSpec,
-    RoutedRuntimeSpec,
-    bind_routed_feature_lifecycle,
-    shutdown_routed_feature_lifecycle,
+hostActionEntries = (
+    ActionSpec(action_id="exit", label="Exit", kind="exit", category="File", key=pygame.K_ESCAPE),
+    ActionSpec(action_id="palette_toggle", label="Toggle Command Palette", kind="palette_toggle", key=pygame.K_BACKQUOTE),
 )
 
-class ShortcutFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("shortcuts", scene_name="main")
-        self.runtime_lifecycle = RoutedFeatureLifecycleSpec(
-            runtime_spec_factory=lambda feature, host: RoutedRuntimeSpec(
-                scene_name="main",
-                action_hotkeys=(
-                    ActionHotkeySpec(action_name="log_ping", handler=feature.on_log_ping, key=pygame.K_p, scene_name="main"),
-                ),
-            ),
-            runtime_spec_attr_name="runtime_spec",
-            scheduler_attr_name="scheduler",
-        )
-
-    def bind_runtime(self, host) -> None:
-        bind_routed_feature_lifecycle(self, host, self.runtime_lifecycle)
-
-    def shutdown_runtime(self, host) -> None:
-        shutdown_routed_feature_lifecycle(self, host, self.runtime_lifecycle)
-```
-
-### Step 4. Shortcut help overlay with `ShortcutOverlaySpec`
-
-Add a discoverable overlay users can toggle from keyboard.
-
-```python
-from gui_do import ShortcutOverlaySpec
-
-RoutedRuntimeSpec(
+routedRuntimeSpec = RoutedRuntimeSpec(
     scene_name="main",
-    shortcut_overlays=(
-        ShortcutOverlaySpec(
-            attr_name="shortcut_help",
-            toggle_action_name="toggle_shortcuts",
-            toggle_key=pygame.K_F9,
-            toggle_scene_name="main",
-            manual_shortcut_lines=("R: reset count", "P: add log ping", "F9: toggle help"),
+    action_hotkeys=(
+        ActionHotkeySpec(
+            action_name="activity.clear",
+            key=pygame.K_l,
+            scene_name="main",
         ),
     ),
 )
 ```
 
-### Step 5. Full listing with keyboard shortcuts
+### Step 2. Bind action callback in a plain Feature
+
+In standard Feature, register/unregister callbacks in runtime hooks.
+
+```python
+import pygame
+
+class CounterFeature(Feature):
+    def bind_runtime(self, host):
+        self.countSubscription = self.count.subscribe(lambda value: setattr(self.valueLabel, "text", f"Count: {value}"))
+        host.app.actions.register_action("counter.increment", lambda event: (self.incrementCount() or True))
+        host.app.actions.bind_key(pygame.K_SPACE, "counter.increment", scene="main")
+
+    def shutdown_runtime(self, host):
+        host.app.actions.unbind_key(pygame.K_SPACE, "counter.increment", scene="main")
+        host.app.actions.unregister_action("counter.increment")
+        if self.countSubscription is not None:
+            self.countSubscription()
+            self.countSubscription = None
+```
+
+### Step 3. RoutedFeature shortcut lifecycle
+
+Routed feature runtime can own declarative hotkey setup/teardown.
+
+```python
+import pygame
+from gui_do import (
+    ActionHotkeySpec,
+    RoutedFeatureLifecycleSpec,
+    RoutedRuntimeSpec,
+    bind_routed_feature_lifecycle,
+    shutdown_routed_feature_lifecycle,
+)
+
+class ActivityLogFeature(RoutedFeature):
+    def __init__(self):
+        super().__init__("activity_log", scene_name="main")
+        self.lifecycleSpec = RoutedFeatureLifecycleSpec(
+            runtime_spec=RoutedRuntimeSpec(
+                scene_name="main",
+                action_hotkeys=(
+                    ActionHotkeySpec(
+                        action_name="activity.clear",
+                        handler=self.clearLogAction,
+                        key=pygame.K_l,
+                        scene_name="main",
+                    ),
+                ),
+            )
+        )
+
+    def bind_runtime(self, host):
+        bind_routed_feature_lifecycle(self, host, self.lifecycleSpec)
+
+    def shutdown_runtime(self, host):
+        shutdown_routed_feature_lifecycle(self, host, self.lifecycleSpec)
+```
+
+### Step 4. Add shortcut help overlay
+
+```python
+import pygame
+from gui_do import ShortcutOverlaySpec
+
+runtimeSpec = RoutedRuntimeSpec(
+    scene_name="main",
+    shortcut_overlays=(
+        ShortcutOverlaySpec(
+            attr_name="shortcutOverlay",
+            toggle_action_name="show_shortcuts",
+            toggle_key=pygame.K_F1,
+            toggle_scene_name="main",
+            manual_shortcut_lines=(
+                "Space: Increment counter",
+                "L: Clear activity log",
+                "F1: Toggle this shortcut overlay",
+            ),
+        ),
+    ),
+)
+```
+
+### Step 5. Updated full listing with actions and shortcuts
 
 ```python
 import pygame
 from pygame import Rect
+
 from gui_do import (
-    ActionSpec,
     ActionHotkeySpec,
+    ActionSpec,
     ButtonControl,
     Feature,
     FeatureMessage,
     FeatureSpec,
     HostApplicationBindingSpec,
     LabelControl,
+    ObservableList,
     ObservableValue,
     PanelControl,
     RoutedFeature,
@@ -687,266 +697,255 @@ from gui_do import (
     RoutedRuntimeSpec,
     SceneBundleBindingSpec,
     ShortcutOverlaySpec,
-    bind_routed_feature_lifecycle,
     bootstrap_host_application,
+    bind_routed_feature_lifecycle,
     build_host_application_config,
     shutdown_routed_feature_lifecycle,
 )
 
-
-class IncrementMessage(FeatureMessage):
+class CounterIncrementedMessage(FeatureMessage):
     @classmethod
-    def create(cls, sender: str, target: str, amount: int):
-        return cls(sender=sender, target=target, payload={"event": "increment", "amount": amount})
-
+    def create(cls, sender, target, value):
+        return cls(sender=sender, target=target, payload={"topic": "activity", "event": "incremented", "value": int(value)})
 
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.root_panel = None
-        self.counter_label = None
-        self.increment_button = None
-        self.count_value = ObservableValue(0)
-        self.count_subscription = None
-        self.reset_action_name = "counter_reset"
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
+        self.count = ObservableValue(0)
+        self.countSubscription = None
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("main_root", Rect(0, 0, 380, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.counter_label = self.root_panel.add(LabelControl("counter_label", Rect(24, 24, 320, 36), "Count: 0"))
+    def build(self, host):
+        host.sharedCount = self.count
+        panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
+        self.valueLabel = self.panel.add(LabelControl("count_label", Rect(16, 60, 320, 30), "Count: 0"))
+        self.incrementButton = self.panel.add(ButtonControl("increment_button", Rect(16, 104, 200, 34), "Increment (Space)", on_click=self.incrementCount))
 
-        def increment() -> None:
-            self.count_value.value += 1
-            message = IncrementMessage.create(self.name, "activity_log", 1)
-            self.send_message("activity_log", message.payload)
+    def bind_runtime(self, host):
+        self.countSubscription = self.count.subscribe(lambda value: setattr(self.valueLabel, "text", f"Count: {value}"))
+        host.app.actions.register_action("counter.increment", lambda event: (self.incrementCount() or True))
+        host.app.actions.bind_key(pygame.K_SPACE, "counter.increment", scene="main")
 
-        self.increment_button = self.root_panel.add(
-            ButtonControl("increment_button", Rect(24, 72, 220, 36), "Increment", on_click=increment)
-        )
-        host.shared_count = self.count_value
+    def shutdown_runtime(self, host):
+        host.app.actions.unbind_key(pygame.K_SPACE, "counter.increment", scene="main")
+        host.app.actions.unregister_action("counter.increment")
+        if self.countSubscription is not None:
+            self.countSubscription()
+            self.countSubscription = None
 
-    def bind_runtime(self, host) -> None:
-        def sync_count(value) -> None:
-            self.counter_label.text = f"Count: {value}"
+    def incrementCount(self):
+        self.count.value = int(self.count.value) + 1
+        message = CounterIncrementedMessage.create(self.name, "activity_log", self.count.value)
+        self.send_message(message.target, message.payload)
 
-        self.count_subscription = self.count_value.subscribe(sync_count)
-        sync_count(self.count_value.value)
-
-        def reset_handler(event) -> bool:
-            self.count_value.value = 0
-            return True
-
-        host.app.actions.register_action(self.reset_action_name, reset_handler)
-        host.app.actions.bind_key(pygame.K_r, self.reset_action_name, scene="main")
-
-    def shutdown_runtime(self, host) -> None:
-        if self.count_subscription is not None:
-            self.count_subscription()
-            self.count_subscription = None
-        host.app.actions.unregister_action(self.reset_action_name)
-
-
-class ActivityLogFeature(Feature):
-    def __init__(self) -> None:
+class ActivityLogFeature(RoutedFeature):
+    def __init__(self):
         super().__init__("activity_log", scene_name="main")
-        self.root_panel = None
-        self.log_label = None
-        self.log_lines = []
-        self.shared_subscription = None
-
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("log_root", Rect(390, 0, 700, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.log_label = self.root_panel.add(LabelControl("log_label", Rect(20, 24, 640, 420), "Activity log is empty"))
-
-    def bind_runtime(self, host) -> None:
-        def on_shared_count(value) -> None:
-            self.log_lines.append(f"Observable count now {value}")
-            self.log_label.text = "\n".join(self.log_lines[-8:])
-
-        self.shared_subscription = host.shared_count.subscribe(on_shared_count)
-
-    def on_update(self, host) -> None:
-        while self.has_messages():
-            message = self.pop_message()
-            if message is None:
-                continue
-            if message.event == "increment":
-                amount = int(message.payload.get("amount", 0))
-                self.log_lines.append(f"Message: increment by {amount}")
-            if message.event == "ping":
-                self.log_lines.append("Routed hotkey ping received")
-            self.log_label.text = "\n".join(self.log_lines[-8:])
-
-    def shutdown_runtime(self, host) -> None:
-        if self.shared_subscription is not None:
-            self.shared_subscription()
-            self.shared_subscription = None
-
-
-class ShortcutFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("shortcuts", scene_name="main")
-        self.runtime_lifecycle = RoutedFeatureLifecycleSpec(
-            runtime_spec_factory=lambda feature, host: RoutedRuntimeSpec(
+        self.items = ObservableList([])
+        self.itemsSubscription = None
+        self.lifecycleSpec = RoutedFeatureLifecycleSpec(
+            runtime_spec=RoutedRuntimeSpec(
                 scene_name="main",
                 action_hotkeys=(
-                    ActionHotkeySpec(action_name="log_ping", handler=feature.on_log_ping, key=pygame.K_p, scene_name="main"),
+                    ActionHotkeySpec(
+                        action_name="activity.clear",
+                        handler=self.clearLogAction,
+                        key=pygame.K_l,
+                        scene_name="main",
+                    ),
                 ),
                 shortcut_overlays=(
                     ShortcutOverlaySpec(
-                        attr_name="shortcut_help",
-                        toggle_action_name="toggle_shortcuts",
-                        toggle_key=pygame.K_F9,
+                        attr_name="shortcutOverlay",
+                        toggle_action_name="show_shortcuts",
+                        toggle_key=pygame.K_F1,
                         toggle_scene_name="main",
-                        manual_shortcut_lines=("R: reset count", "P: add log ping", "F9: toggle help"),
+                        manual_shortcut_lines=(
+                            "Space: Increment counter",
+                            "L: Clear activity log",
+                            "F1: Toggle shortcut overlay",
+                        ),
                     ),
                 ),
-            ),
-            runtime_spec_attr_name="runtime_spec",
-            scheduler_attr_name="scheduler",
+            )
         )
 
-    def on_log_ping(self, event) -> bool:
-        self.send_message("activity_log", {"event": "ping"})
+    def build(self, host):
+        panelRect = Rect(host.screen_rect.width // 2 + 10, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("log_panel", panelRect, draw_background=True), scene_name="main")
+        self.latest = self.panel.add(LabelControl("log_latest", Rect(16, 60, 420, 30), "Latest: (none)"))
+
+    def bind_runtime(self, host):
+        self.itemsSubscription = self.items.subscribe(lambda values: setattr(self.latest, "text", f"Latest: {values[-1] if values else '(none)'}"))
+        bind_routed_feature_lifecycle(self, host, self.lifecycleSpec)
+
+    def shutdown_runtime(self, host):
+        shutdown_routed_feature_lifecycle(self, host, self.lifecycleSpec)
+        if self.itemsSubscription is not None:
+            self.itemsSubscription()
+            self.itemsSubscription = None
+
+    def message_handlers(self):
+        return {"activity": self.handleActivityMessage}
+
+    def handleActivityMessage(self, host, message):
+        if message.event == "incremented":
+            self.items.append(f"Counter changed to {message.get('value')}")
+
+    def clearLogAction(self, event):
+        self.items.clear()
+        self.items.append("Log cleared by keyboard action")
         return True
 
-    def bind_runtime(self, host) -> None:
-        bind_routed_feature_lifecycle(self, host, self.runtime_lifecycle)
+class Host:
+    pass
 
-    def shutdown_runtime(self, host) -> None:
-        shutdown_routed_feature_lifecycle(self, host, self.runtime_lifecycle)
-
-
+host = Host()
 config = build_host_application_config(
     HostApplicationBindingSpec(
-        display_size=(1100, 700),
-        window_title="PulseBoard",
-        fonts={"default": "arial"},
+        display_size=(1100, 680),
+        window_title="gui_do Tutorial App",
+        fonts={"default": {"file": None, "size": 16}},
         initial_scene_name="main",
         scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
-        feature_entries=(
-            FeatureSpec("counter_feature", CounterFeature),
-            FeatureSpec("log_feature", ActivityLogFeature),
-            FeatureSpec("shortcut_feature", ShortcutFeature),
-        ),
         action_entries=(
-            ActionSpec(action_id="exit", label="Exit", kind="exit", key=pygame.K_ESCAPE),
-            ActionSpec(action_id="palette_toggle", label="Toggle Palette", kind="palette_toggle", key=pygame.K_F1),
+            ActionSpec(action_id="exit", label="Exit", kind="exit", category="File", key=pygame.K_ESCAPE),
+            ActionSpec(action_id="palette_toggle", label="Toggle Command Palette", kind="palette_toggle", key=pygame.K_BACKQUOTE),
+        ),
+        feature_entries=(
+            FeatureSpec("counterFeature", CounterFeature),
+            FeatureSpec("logFeature", ActivityLogFeature),
         ),
     )
 )
-
-
-class PulseBoardHost:
-    pass
-
-
-if __name__ == "__main__":
-    pygame.init()
-    host = PulseBoardHost()
-    bootstrap_host_application(host, config)
-    host.app.run_entrypoint(target_fps=config.target_fps)
+bootstrap_host_application(host, config)
+host.app.run_entrypoint(target_fps=60)
 ```
 
 ## 9. Spec Reference for Builders
 
-This is a concise builder-facing map. For full depth, use [MANUAL.md](MANUAL.md), especially [8.1](MANUAL.md#81-application-bootstrap-and-host-configuration), [8.2](MANUAL.md#82-feature-lifecycle-and-feature-types), [8.3](MANUAL.md#83-events-actions-input-mapping-and-routing), [8.4](MANUAL.md#84-state-and-observables), and [8.16](MANUAL.md#816-telemetry-introspection-and-operational-hooks).
+This section is a concise builder reference. For full behavior, defaults, and integration rules, use [MANUAL.md](MANUAL.md).
 
-### `FeatureSpec`
+### FeatureSpec
 
-Declares feature class participation in bootstrap and scene behavior through factory registration.
-
-```python
-FeatureSpec("counter_feature", CounterFeature)
-```
-
-### `FeatureSpec` (attribute slot + factory)
-
-Declares the host attribute slot plus factory used by bootstrap.
+Declares one feature host slot and factory.
 
 ```python
-FeatureSpec("log_feature", ActivityLogFeature)
-```
-
-### `SceneBundleBindingSpec`
-
-Declares a scene bundle with transition/runtime/root/action emission options.
-
-```python
-SceneBundleBindingSpec(scene_name="main", make_initial=True)
-```
-
-### `ActionSpec` + `ActionHotkeySpec`
-
-`ActionSpec` defines host-level actions; `ActionHotkeySpec` declares routed hotkeys.
-
-```python
-ActionSpec(action_id="exit", label="Exit", kind="exit", key=pygame.K_ESCAPE)
-ActionHotkeySpec(action_name="log_ping", handler=self.on_log_ping, key=pygame.K_p, scene_name="main")
-```
-
-### `ShortcutOverlaySpec`
-
-Configures discoverable keyboard-help overlays.
-
-```python
-ShortcutOverlaySpec(attr_name="shortcut_help", toggle_action_name="toggle_shortcuts", toggle_key=pygame.K_F9)
-```
-
-### `RoutedRuntimeSpec` + `RoutedFeatureLifecycleSpec`
-
-Defines declarative runtime wiring for `RoutedFeature` and lifecycle attachment/teardown behavior.
-
-```python
-RoutedFeatureLifecycleSpec(
-    runtime_spec=RoutedRuntimeSpec(scene_name="main", action_hotkeys=(ActionHotkeySpec(...),)),
-    runtime_spec_attr_name="runtime_spec",
+from gui_do import FeatureSpec
+featureSpecs = (
+    FeatureSpec("counterFeature", CounterFeature),
 )
+```
+
+### SceneBundleBindingSpec
+
+Declares one named scene, transitions, and optional scene/root/nav emission.
+
+```python
+from gui_do import SceneBundleBindingSpec
+sceneBundles = (
+    SceneBundleBindingSpec(scene_name="main", make_initial=True),
+)
+```
+
+### ActionSpec and ActionHotkeySpec
+
+ActionSpec is host-level action declaration. ActionHotkeySpec is routed runtime hotkey declaration.
+
+```python
+import pygame
+from gui_do import ActionHotkeySpec, ActionSpec
+hostActions = (
+    ActionSpec(action_id="exit", label="Exit", kind="exit", key=pygame.K_ESCAPE),
+)
+routedHotkeys = (
+    ActionHotkeySpec(action_name="activity.clear", key=pygame.K_l, scene_name="main"),
+)
+```
+
+### ShortcutOverlaySpec
+
+Declares a feature-scoped shortcut help overlay and toggle binding.
+
+```python
+import pygame
+from gui_do import ShortcutOverlaySpec
+overlaySpecs = (
+    ShortcutOverlaySpec(attr_name="shortcutOverlay", toggle_action_name="show_shortcuts", toggle_key=pygame.K_F1, toggle_scene_name="main"),
+)
+```
+
+### RoutedRuntimeSpec and RoutedFeatureLifecycleSpec
+
+Bundle routed runtime wiring and lifecycle setup/teardown.
+
+```python
+from gui_do import RoutedFeatureLifecycleSpec, RoutedRuntimeSpec
+lifecycleSpec = RoutedFeatureLifecycleSpec(runtime_spec=RoutedRuntimeSpec(scene_name="main"))
 ```
 
 ### Higher-level runtime faculties
 
-Use `RoutedRuntimeSpec` fields to opt in to advanced faculties:
-
-- Policy/admission: `RuntimePolicySpec`, `RuntimePolicyEngine`
-- Effect lifetime: `EffectBindingSpec`, `EffectLifetimeOrchestrator`
-- Event pipelines: `EventPipelineSpec`, `EventPipelineRuntime`
-- Durable queues: `DurableOperationQueueSpec`, `DurableOperationQueueRuntime`
-- Capability contracts: `CapabilityProviderSpec`, `CapabilityContractRuntime`
-- Projections: `ProjectionSpec`, `ProjectionRuntime`
-- Dependency/workflow/recompute/QoS/health/replay/hot-swap: `FeatureDependencySpec`, `WorkflowSpec`, `RecomputeNodeSpec`, `QoSPolicySpec`, `HealthProbeSpec`, `ReplaySpec`, `ReplacePolicySpec`
-
-See [Main Systems Reference](MANUAL.md#main-systems-reference) and [8.16](MANUAL.md#816-telemetry-introspection-and-operational-hooks).
-
-### `ToastManager`
-
-Show transient notifications through the host app's toasts facility.
+RoutedRuntimeSpec can declaratively wire policy/effects/pipelines/durable queue/capability/projection and dependency/workflow/recompute/QoS/health/replay/hot-swap systems.
 
 ```python
-host.toasts.show("Saved", severity="info")
+from gui_do import RoutedRuntimeSpec
+runtimeSpec = RoutedRuntimeSpec(
+    scene_name="main",
+    policy_specs=(),
+    effect_bindings=(),
+    event_pipelines=(),
+    durable_queue_spec=None,
+    capability_providers=(),
+    capability_requirements=(),
+    projection_spec=None,
+    feature_dependencies=(),
+    workflow_specs=(),
+    recompute_nodes=(),
+    qos_policies=(),
+    health_probes=(),
+    replay_spec=None,
+    replace_policy=None,
+)
 ```
 
-See [MANUAL overlays chapter](MANUAL.md#88-overlays-dialogs-notifications-and-command-surfaces) for options.
+### ToastManager
+
+ToastManager is available on host.app for transient user feedback.
+
+```python
+from gui_do import ToastSeverity
+host.app.toasts.show("Saved", severity=ToastSeverity.INFO)
+```
+
+For details and full option matrices, use [MANUAL.md](MANUAL.md) and especially sections 8.1, 8.2, 8.3, and 8.4.
 
 ## 10. Complete Project Listing
 
+The listing below is a full runnable project with:
+
+- Two features with distinct responsibilities.
+- Observable state driving labels.
+- Keyboard actions with ActionSpec and routed action hotkeys.
+- One RoutedFeature using RoutedRuntimeSpec.
+- Clean subscription and runtime teardown.
+
 ```python
+# Standard library and pygame imports for runtime and rect geometry.
 import pygame
 from pygame import Rect
+
+# All gui_do imports come from the public root surface.
 from gui_do import (
-    ActionSpec,
     ActionHotkeySpec,
+    ActionSpec,
     ButtonControl,
     Feature,
     FeatureMessage,
     FeatureSpec,
     HostApplicationBindingSpec,
     LabelControl,
+    ObservableList,
     ObservableValue,
     PanelControl,
     RoutedFeature,
@@ -954,202 +953,197 @@ from gui_do import (
     RoutedRuntimeSpec,
     SceneBundleBindingSpec,
     ShortcutOverlaySpec,
-    bind_routed_feature_lifecycle,
     bootstrap_host_application,
+    bind_routed_feature_lifecycle,
     build_host_application_config,
     shutdown_routed_feature_lifecycle,
 )
 
-
-# Typed message helper keeps payload shape consistent between sender and receiver.
-class IncrementMessage(FeatureMessage):
+# Typed message envelope keeps cross-feature communication explicit.
+class CounterIncrementedMessage(FeatureMessage):
     @classmethod
-    def create(cls, sender: str, target: str, amount: int):
-        return cls(sender=sender, target=target, payload={"event": "increment", "amount": amount})
+    def create(cls, sender, target, value):
+        return cls(
+            sender=sender,
+            target=target,
+            payload={"topic": "activity", "event": "incremented", "value": int(value)},
+        )
 
-
-# Counter feature owns reactive count state and user-triggered increment/reset behavior.
+# Counter feature owns increment behavior and shared counter state.
 class CounterFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.root_panel = None
-        self.counter_label = None
-        self.increment_button = None
-        self.count_value = ObservableValue(0)
-        self.count_subscription = None
-        self.reset_action_name = "counter_reset"
+    def __init__(self):
+        super().__init__("counter_feature", scene_name="main")
+        self.count = ObservableValue(0)
+        self.countSubscription = None
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("counter_root", Rect(0, 0, 380, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.counter_label = self.root_panel.add(
-            LabelControl("counter_label", Rect(24, 24, 320, 36), "Count: 0")
-        )
+    def build(self, host):
+        host.sharedCount = self.count
+        panelRect = Rect(20, 20, host.screen_rect.width // 2 - 30, host.screen_rect.height - 40)
+        self.panel = host.app.add(PanelControl("counter_panel", panelRect, draw_background=True), scene_name="main")
 
-        def increment() -> None:
-            self.count_value.value += 1
-            msg = IncrementMessage.create(self.name, "activity_log", 1)
-            self.send_message("activity_log", msg.payload)
+        self.panel.add(LabelControl("counter_title", Rect(16, 16, 360, 28), "Counter Dashboard"))
+        self.valueLabel = self.panel.add(LabelControl("count_label", Rect(16, 60, 360, 30), "Count: 0"))
+        self.hintLabel = self.panel.add(LabelControl("counter_hint", Rect(16, 92, 380, 30), "Use button or Space key."))
 
-        self.increment_button = self.root_panel.add(
-            ButtonControl("increment_button", Rect(24, 72, 220, 36), "Increment", on_click=increment)
+        self.incrementButton = self.panel.add(
+            ButtonControl(
+                "increment_button",
+                Rect(16, 130, 220, 36),
+                "Increment (Space)",
+                on_click=self.incrementCount,
+                style="round",
+            )
         )
 
-        host.shared_count = self.count_value
+    def bind_runtime(self, host):
+        self.countSubscription = self.count.subscribe(
+            lambda value: setattr(self.valueLabel, "text", f"Count: {value}")
+        )
 
-    def bind_runtime(self, host) -> None:
-        def sync_count(value) -> None:
-            self.counter_label.text = f"Count: {value}"
+        host.app.actions.register_action(
+            "counter.increment",
+            lambda event: (self.incrementCount() or True),
+        )
+        host.app.actions.bind_key(pygame.K_SPACE, "counter.increment", scene="main")
 
-        self.count_subscription = self.count_value.subscribe(sync_count)
-        sync_count(self.count_value.value)
+    def shutdown_runtime(self, host):
+        host.app.actions.unbind_key(pygame.K_SPACE, "counter.increment", scene="main")
+        host.app.actions.unregister_action("counter.increment")
 
-        def reset_handler(event) -> bool:
-            self.count_value.value = 0
-            self.send_message("activity_log", {"event": "reset"})
-            return True
+        if self.countSubscription is not None:
+            self.countSubscription()
+            self.countSubscription = None
 
-        host.app.actions.register_action(self.reset_action_name, reset_handler)
-        host.app.actions.bind_key(pygame.K_r, self.reset_action_name, scene="main")
+    def incrementCount(self):
+        self.count.value = int(self.count.value) + 1
+        typedMessage = CounterIncrementedMessage.create(
+            self.name,
+            "activity_log",
+            self.count.value,
+        )
+        self.send_message(typedMessage.target, typedMessage.payload)
 
-    def shutdown_runtime(self, host) -> None:
-        if self.count_subscription is not None:
-            self.count_subscription()
-            self.count_subscription = None
-        host.app.actions.unregister_action(self.reset_action_name)
-
-
-# Activity-log feature shows observable changes and inter-feature messages.
-class ActivityLogFeature(Feature):
-    def __init__(self) -> None:
+# Routed log feature receives topic-based messages and manages shortcut helpers.
+class ActivityLogFeature(RoutedFeature):
+    def __init__(self):
         super().__init__("activity_log", scene_name="main")
-        self.root_panel = None
-        self.log_label = None
-        self.log_lines = []
-        self.shared_subscription = None
+        self.items = ObservableList([])
+        self.itemsSubscription = None
+        self.sharedCountSubscription = None
 
-    def build(self, host) -> None:
-        self.root_panel = host.app.add(
-            PanelControl("log_root", Rect(390, 0, 700, host.screen_rect.height)),
-            scene_name="main",
-        )
-        self.log_label = self.root_panel.add(
-            LabelControl("log_label", Rect(20, 24, 640, 420), "Activity log is empty")
-        )
-
-    def bind_runtime(self, host) -> None:
-        def on_shared_count(value) -> None:
-            self.log_lines.append(f"Observable count now {value}")
-            self.log_label.text = "\n".join(self.log_lines[-10:])
-
-        self.shared_subscription = host.shared_count.subscribe(on_shared_count)
-
-    def on_update(self, host) -> None:
-        while self.has_messages():
-            message = self.pop_message()
-            if message is None:
-                continue
-            if message.event == "increment":
-                amount = int(message.payload.get("amount", 0))
-                self.log_lines.append(f"Message: increment by {amount}")
-            elif message.event == "reset":
-                self.log_lines.append("Message: counter reset")
-            elif message.event == "ping":
-                self.log_lines.append("Message: routed hotkey ping")
-            self.log_label.text = "\n".join(self.log_lines[-10:])
-
-    def shutdown_runtime(self, host) -> None:
-        if self.shared_subscription is not None:
-            self.shared_subscription()
-            self.shared_subscription = None
-
-
-# Routed feature declares hotkeys and a shortcut-help overlay through runtime specs.
-class ShortcutFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("shortcuts", scene_name="main")
-        self.runtime_lifecycle = RoutedFeatureLifecycleSpec(
-            runtime_spec_factory=lambda feature, host: RoutedRuntimeSpec(
+        self.lifecycleSpec = RoutedFeatureLifecycleSpec(
+            runtime_spec=RoutedRuntimeSpec(
                 scene_name="main",
                 action_hotkeys=(
-                    ActionHotkeySpec(action_name="log_ping", handler=feature.on_log_ping, key=pygame.K_p, scene_name="main"),
+                    ActionHotkeySpec(
+                        action_name="activity.clear",
+                        handler=self.clearLogAction,
+                        key=pygame.K_l,
+                        scene_name="main",
+                    ),
                 ),
                 shortcut_overlays=(
                     ShortcutOverlaySpec(
-                        attr_name="shortcut_help",
-                        toggle_action_name="toggle_shortcuts",
-                        toggle_key=pygame.K_F9,
+                        attr_name="shortcutOverlay",
+                        toggle_action_name="show_shortcuts",
+                        toggle_key=pygame.K_F1,
                         toggle_scene_name="main",
                         manual_shortcut_lines=(
-                            "Increment button: click",
-                            "R: reset counter",
-                            "P: add ping entry",
-                            "F9: toggle shortcut help",
-                            "Esc: exit",
+                            "Space: Increment counter",
+                            "L: Clear activity log",
+                            "F1: Toggle shortcut help",
+                            "Escape: Exit application",
                         ),
                     ),
                 ),
-            ),
-            runtime_spec_attr_name="runtime_spec",
-            scheduler_attr_name="scheduler",
+            )
         )
 
-    def on_log_ping(self, event) -> bool:
-        self.send_message("activity_log", {"event": "ping"})
+    def build(self, host):
+        panelRect = Rect(
+            host.screen_rect.width // 2 + 10,
+            20,
+            host.screen_rect.width // 2 - 30,
+            host.screen_rect.height - 40,
+        )
+        self.panel = host.app.add(PanelControl("log_panel", panelRect, draw_background=True), scene_name="main")
+
+        self.panel.add(LabelControl("log_title", Rect(16, 16, 420, 28), "Activity Log"))
+        self.latest = self.panel.add(LabelControl("log_latest", Rect(16, 60, 460, 30), "Latest: (none)"))
+        self.countMirror = self.panel.add(LabelControl("count_mirror", Rect(16, 92, 460, 30), "Shared count: 0"))
+
+    def bind_runtime(self, host):
+        self.itemsSubscription = self.items.subscribe(
+            lambda values: setattr(self.latest, "text", f"Latest: {values[-1] if values else '(none)'}")
+        )
+        self.sharedCountSubscription = host.sharedCount.subscribe(
+            lambda value: setattr(self.countMirror, "text", f"Shared count: {value}")
+        )
+
+        bind_routed_feature_lifecycle(self, host, self.lifecycleSpec)
+
+    def shutdown_runtime(self, host):
+        shutdown_routed_feature_lifecycle(self, host, self.lifecycleSpec)
+
+        if self.itemsSubscription is not None:
+            self.itemsSubscription()
+            self.itemsSubscription = None
+
+        if self.sharedCountSubscription is not None:
+            self.sharedCountSubscription()
+            self.sharedCountSubscription = None
+
+    def message_handlers(self):
+        return {"activity": self.handleActivityMessage}
+
+    def handleActivityMessage(self, host, message):
+        if message.event == "incremented":
+            self.items.append(f"Counter changed to {message.get('value')}")
+
+    def clearLogAction(self, event):
+        self.items.clear()
+        self.items.append("Log cleared by routed keyboard action")
         return True
 
-    def bind_runtime(self, host) -> None:
-        bind_routed_feature_lifecycle(self, host, self.runtime_lifecycle)
+# Host container receives runtime attributes during bootstrap.
+class Host:
+    pass
 
-    def shutdown_runtime(self, host) -> None:
-        shutdown_routed_feature_lifecycle(self, host, self.runtime_lifecycle)
-
-
-# Declarative host config wires scenes, features, and global actions.
+# Declarative app setup keeps startup wiring centralized and testable.
+host = Host()
 config = build_host_application_config(
     HostApplicationBindingSpec(
-        display_size=(1100, 700),
-        window_title="PulseBoard",
-        fonts={"default": "arial"},
+        display_size=(1200, 720),
+        window_title="gui_do Dashboard and Activity Log",
+        fonts={"default": {"file": None, "size": 16}},
         initial_scene_name="main",
-        scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
-        feature_entries=(
-            FeatureSpec("counter_feature", CounterFeature),
-            FeatureSpec("log_feature", ActivityLogFeature),
-            FeatureSpec("shortcut_feature", ShortcutFeature),
+        scene_bundle_entries=(
+            SceneBundleBindingSpec(scene_name="main", make_initial=True),
         ),
         action_entries=(
-            ActionSpec(action_id="exit", label="Exit", kind="exit", key=pygame.K_ESCAPE),
-            ActionSpec(action_id="palette_toggle", label="Toggle Palette", kind="palette_toggle", key=pygame.K_F1),
+            ActionSpec(action_id="exit", label="Exit", kind="exit", category="File", key=pygame.K_ESCAPE),
+            ActionSpec(action_id="palette_toggle", label="Toggle Command Palette", kind="palette_toggle", key=pygame.K_BACKQUOTE),
+        ),
+        feature_entries=(
+            FeatureSpec("counterFeature", CounterFeature),
+            FeatureSpec("logFeature", ActivityLogFeature),
         ),
     )
 )
 
-
-# Host container is an empty object that bootstrap populates with runtime attributes.
-class PulseBoardHost:
-    pass
-
-
-# Entrypoint starts pygame and runs the gui_do application loop.
-if __name__ == "__main__":
-    pygame.init()
-    host = PulseBoardHost()
-    bootstrap_host_application(host, config)
-    host.app.run_entrypoint(target_fps=config.target_fps)
+# Bootstrap all declared systems, then enter the frame loop.
+bootstrap_host_application(host, config)
+host.app.run_entrypoint(target_fps=60)
 ```
 
 ## 11. Next Steps
 
-Read [MANUAL.md](MANUAL.md) next, then inspect [demo_features/](demo_features) as living package-level patterns. The most relevant chapters for immediate expansion are:
+You now have a complete, data-driven multi-feature app built on the public gui_do root API. The best next move is to use [MANUAL.md](MANUAL.md) as your system reference while iterating on your own project.
 
-- [8.1 Application Bootstrap and Host Configuration](MANUAL.md#81-application-bootstrap-and-host-configuration)
-- [8.2 Feature Lifecycle and Feature Types](MANUAL.md#82-feature-lifecycle-and-feature-types)
-- [8.3 Events, Actions, Input Mapping, and Routing](MANUAL.md#83-events-actions-input-mapping-and-routing)
-- [8.4 State and Observables](MANUAL.md#84-state-and-observables)
+Recommended path:
 
-Then explore overlays, persistence, scene navigation, telemetry, and graphics facilities as you scale your app.
+1. Read [MANUAL.md](MANUAL.md) sections 8.1, 8.2, 8.3, and 8.4 to deepen your bootstrap, lifecycle, actions, and state model.
+2. Explore [demo_features/](demo_features) as living package-layout patterns (one folder per feature package, package root as public import surface).
+3. Expand this app with overlays, persistence, scene navigation, telemetry spans, and graphics helpers.
 
-If you want to demystify bootstrap internals, read `data_driven_runtime.py` and `feature_lifecycle.py` directly after this tutorial; they are designed to be readable and map closely to the public API surface.
+If you want to demystify the runtime internals, read data_driven_runtime.py and feature_lifecycle.py in the library source. They are designed to be readable and map directly to the concepts you just used.
