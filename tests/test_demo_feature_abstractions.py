@@ -235,6 +235,7 @@ class _StubWindowPresentation:
     def __init__(self, bindings):
         self._bindings = tuple(bindings)
         self.visible_calls = []
+        self.show_calls = []
         self._windows = {}
 
     def bindings(self):
@@ -249,10 +250,33 @@ class _StubWindowPresentation:
         if window is not None:
             window.visible = bool(visible)
 
+    def show(self, key: str):
+        self.show_calls.append(str(key))
+        window = self._windows.get(str(key))
+        if window is None:
+            return
+        if window.visible and callable(getattr(getattr(window, "parent", None), "_raise_window", None)):
+            window.parent._raise_window(window)
+            return
+        self.set_visible(key, True, from_toggle=True)
+
+
+class _StubAppWithoutWindowPresentation:
+    pass
+
 
 class _StubVisibilityWindow:
     def __init__(self, *, visible: bool = False):
         self.visible = bool(visible)
+        self.parent = None
+
+
+class _StubRaiseParent:
+    def __init__(self):
+        self.raised = []
+
+    def _raise_window(self, window):
+        self.raised.append(window)
 
 
 class _StubTooltipManager:
@@ -733,7 +757,10 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
 
     def test_window_toggle_button_uses_open_ignore_close_mouse_semantics(self):
         presentation = _StubWindowPresentation(())
-        presentation._windows["logs"] = _StubVisibilityWindow(visible=False)
+        window = _StubVisibilityWindow(visible=False)
+        raise_parent = _StubRaiseParent()
+        window.parent = raise_parent
+        presentation._windows["logs"] = window
 
         class _StubApp:
             def __init__(self, window_presentation):
@@ -758,12 +785,33 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         presentation.visible_calls.clear()
         self.assertTrue(control.handle_event(left_click, app))
         self.assertEqual([], presentation.visible_calls)
+        self.assertEqual(["logs"], presentation.show_calls)
         self.assertTrue(control.pushed)
+        self.assertEqual([window], raise_parent.raised)
 
         right_click = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=1, pos=(10, 10), button=3)
         self.assertTrue(control.handle_event(right_click, app))
         self.assertFalse(control.pushed)
         self.assertEqual([("logs", False, True)], presentation.visible_calls)
+
+    def test_window_toggle_button_uses_explicit_show_callback_when_app_has_no_window_presentation(self):
+        raised = []
+
+        control = WindowToggleButtonControl(
+            "show_logs",
+            Rect(0, 0, 120, 30),
+            "logs",
+            "Logs",
+            "Logs",
+            pushed=True,
+            on_show=lambda: raised.append("logs"),
+        )
+
+        left_click = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=1, pos=(10, 10), button=1)
+
+        self.assertTrue(control.handle_event(left_click, _StubAppWithoutWindowPresentation()))
+        self.assertEqual(["logs"], raised)
+        self.assertTrue(control.pushed)
 
     def test_register_window_toggle_tooltips_uses_binding_labels(self):
         tooltip_manager = _StubTooltipManager()

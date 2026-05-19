@@ -23,11 +23,13 @@ class WindowToggleButtonControl(ToggleControl):
         text_off: Optional[str] = None,
         pushed: bool = False,
         on_toggle=None,
+        on_show=None,
         style: str = "box",
         font_role: str = "body",
     ) -> None:
         super().__init__(control_id, rect, text_on, text_off, pushed, on_toggle, style, font_role)
         self.window_id = window_id
+        self.on_show = on_show
 
     def handle_event(self, event: GuiEvent, app: GuiApplication, theme=None) -> bool:
         if not self.visible or not self.enabled:
@@ -44,9 +46,17 @@ class WindowToggleButtonControl(ToggleControl):
         window = get_window(self.window_id) if callable(get_window) else None
         is_visible = bool(getattr(window, "visible", False))
         is_open = bool(is_visible or self.pushed)
+        should_raise_visible = bool(is_visible or (window_presentation is None and self.pushed))
 
         if event.is_mouse_down(1) and inside:
-            if not is_visible:
+            if should_raise_visible:
+                self.pushed = True
+                show_window = getattr(window_presentation, "show", None)
+                if callable(show_window):
+                    show_window(self.window_id)
+                elif callable(self.on_show):
+                    self.on_show()
+            else:
                 self.pushed = True
                 if self.on_toggle is not None:
                     self.on_toggle(True)

@@ -759,15 +759,26 @@ class PanelControl(UiNode):
             controller = getattr(window, "shear_controller", None)
             return bool(getattr(controller, "dragging", False))
 
-        # Identify the focused window child (if any) to draw it last
-        focused_window = None
+        # Identify the highest-priority window child to draw last. Prefer the
+        # currently active window because z-order changes update active state;
+        # fall back to the focused window when no active window is tracked.
+        prioritized_window = None
         hint_window = None
-        if app is not None and hasattr(app, 'focus') and app.focus is not None:
+        active_window = self._active_window
+        if (
+            active_window is not None
+            and active_window in self.children
+            and self._is_window_like(active_window)
+            and active_window.visible
+            and not _is_actively_shear_dragging(active_window)
+        ):
+            prioritized_window = active_window
+        if prioritized_window is None and app is not None and hasattr(app, 'focus') and app.focus is not None:
             focused_node = app.focus.focused_node
             if focused_node is not None and focused_node in self.children and self._is_window_like(focused_node):
-                focused_window = focused_node
-                if _is_actively_shear_dragging(focused_window):
-                    focused_window = None
+                prioritized_window = focused_node
+                if _is_actively_shear_dragging(prioritized_window):
+                    prioritized_window = None
         if app is not None and hasattr(app, "focus_visualizer"):
             resolve_hint_window = getattr(app.focus_visualizer, "focused_hint_window", None)
             if callable(resolve_hint_window):
@@ -777,7 +788,7 @@ class PanelControl(UiNode):
         for child in self.children:
             if not self._is_window_like(child):
                 continue
-            if child is focused_window:
+            if child is prioritized_window:
                 # Skip focused window for now; draw it last
                 continue
             if not child.visible:
@@ -787,9 +798,9 @@ class PanelControl(UiNode):
                 if hint_window is None or child is hint_window:
                     app.focus_visualizer.draw_hint_for_window(surface, theme, child)
 
-        # Draw the focused window last so its extra rendering stays on top
-        if focused_window is not None and focused_window.visible:
-            focused_window.draw(surface, theme)
+        # Draw the prioritized window last so its extra rendering stays on top
+        if prioritized_window is not None and prioritized_window.visible:
+            prioritized_window.draw(surface, theme)
             if app is not None:
-                if hint_window is None or focused_window is hint_window:
-                    app.focus_visualizer.draw_hint_for_window(surface, theme, focused_window)
+                if hint_window is None or prioritized_window is hint_window:
+                    app.focus_visualizer.draw_hint_for_window(surface, theme, prioritized_window)

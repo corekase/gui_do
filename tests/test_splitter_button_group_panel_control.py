@@ -659,6 +659,20 @@ class TestPanelControlFocusedWindowDrawOrder(unittest.TestCase):
 
         self.assertEqual(["other", "focused"], draw_order)
 
+    def test_active_window_drawn_last_even_when_another_window_is_focused(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
+        draw_order: list[str] = []
+        focused = _OrderTrackingWindow("focused", draw_order)
+        raised = _OrderTrackingWindow("raised", draw_order)
+        panel.children.extend([focused, raised])
+        panel._set_active_window(raised)
+        app = _StubAppForDrawOrder(focused_node=focused)
+
+        surface = pygame.Surface((800, 600))
+        panel.draw_window_phase(surface, theme=None, app=app)
+
+        self.assertEqual(["focused", "raised"], draw_order)
+
     def test_focused_window_not_forced_last_during_active_shear_drag(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
         draw_order: list[str] = []

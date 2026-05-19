@@ -89,6 +89,9 @@ def add_window_toggle_task_panel_controls(
                         from_toggle=True,
                     )
                 ),
+                on_show=(
+                    lambda _key=binding.key: window_presentation.show(_key)
+                ),
                 style=binding.task_panel_style,
             )
         )

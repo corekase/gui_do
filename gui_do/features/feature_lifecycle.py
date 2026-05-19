@@ -637,6 +637,33 @@ def set_window_visible_state(
             setter(is_visible)
 
 
+def raise_window_in_parent(window) -> bool:
+    if window is None:
+        return False
+    parent = getattr(window, "parent", None)
+    raise_window = getattr(parent, "_raise_window", None)
+    if not callable(raise_window):
+        return False
+    raise_window(window)
+    return True
+
+
+def relayout_raised_window_if_enabled(host, tile_windows: Optional[Callable[[], None]] = None) -> bool:
+    app = getattr(host, "app", None)
+    if app is None:
+        return False
+    is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
+    if not callable(is_window_tiling_enabled):
+        return False
+    if not bool(is_window_tiling_enabled()):
+        return False
+    relayout = tile_windows if callable(tile_windows) else getattr(app, "tile_windows", None)
+    if not callable(relayout):
+        return False
+    relayout()
+    return True
+
+
 @dataclass(frozen=True)
 class FeatureWindowBinding:
     """Declarative presentation metadata for a feature-owned demo window."""
@@ -744,6 +771,11 @@ class FeatureWindowPresentationModel:
         )
 
     def show(self, key: str) -> None:
+        window = self.get_window(key)
+        if window is not None and getattr(window, "visible", False):
+            if raise_window_in_parent(window):
+                relayout_raised_window_if_enabled(self.host, self._tile_windows)
+            return
         self.set_visible(key, True)
 
     def toggle(self, key: str, *, from_toggle: bool = False) -> bool:

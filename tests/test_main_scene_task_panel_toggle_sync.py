@@ -4,10 +4,19 @@ from gui_do_demo import GuiDoDemo
 from gui_do.features.feature_lifecycle import FeatureWindowPresentationModel
 
 
+class _StubWindowParent:
+    def __init__(self):
+        self.raised = []
+
+    def _raise_window(self, window):
+        self.raised.append(window)
+
+
 class _StubWindow:
     def __init__(self, control_id: str):
         self.control_id = str(control_id)
         self.visible = False
+        self.parent = _StubWindowParent()
 
 
 class _StubFeature:
@@ -21,17 +30,21 @@ class _StubToggle:
 
 
 class _StubApp:
-    def __init__(self):
+    def __init__(self, *, tiling_enabled: bool = False):
         self.tile_windows_calls = 0
+        self._tiling_enabled = bool(tiling_enabled)
 
     def tile_windows(self, *args, **kwargs) -> None:
         self.tile_windows_calls += 1
 
+    def is_window_tiling_enabled(self, scene_name=None) -> bool:
+        return self._tiling_enabled
+
 
 class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
-    def _make_demo(self):
+    def _make_demo(self, *, tiling_enabled: bool = False):
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.app = _StubApp()
+        demo.app = _StubApp(tiling_enabled=tiling_enabled)
         demo._life_feature = _StubFeature("life_window")
         demo._mandel_feature = _StubFeature("mandelbrot_window")
         demo._extra_feature = _StubFeature("extra_window")
@@ -88,6 +101,28 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         self.assertTrue(handled)
         self.assertTrue(demo._extra_feature.window.visible)
         self.assertTrue(demo.extra_toggle_window.pushed)
+
+    def test_show_raises_already_visible_window_in_parent(self):
+        demo = self._make_demo()
+        window = demo._life_feature.window
+        window.visible = True
+
+        demo.window_presentation.show("life")
+
+        self.assertEqual([window], window.parent.raised)
+        self.assertEqual(0, demo.app.tile_windows_calls)
+        self.assertFalse(demo.life_toggle_window.pushed)
+
+    def test_show_raises_and_relayouts_already_visible_window_when_tiling_enabled(self):
+        demo = self._make_demo(tiling_enabled=True)
+        window = demo._life_feature.window
+        window.visible = True
+
+        demo.window_presentation.show("life")
+
+        self.assertEqual([window], window.parent.raised)
+        self.assertEqual(1, demo.app.tile_windows_calls)
+        self.assertFalse(demo.life_toggle_window.pushed)
 
 
 if __name__ == "__main__":
