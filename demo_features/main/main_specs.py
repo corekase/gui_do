@@ -6,7 +6,6 @@ import pygame
 from pygame import Rect
 
 from gui_do.features.data_driven_runtime import (
-    ActionHotkeySpec,
     AutoSizedStyledLabelSpec,
     MenuStripSpec,
     PaletteInputBindSpec,
@@ -56,15 +55,6 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
                 "Show System Window",
                 "Show Life Window",
             ),
-        ),
-    ),
-    action_hotkeys=(
-        # Bind F2 to tile windows
-        ActionHotkeySpec(
-            action_name="tile_now",
-            key=pygame.K_F2,
-            global_key=True,
-            scene_name="main",
         ),
     ),
     task_panel_focus_toggles=(

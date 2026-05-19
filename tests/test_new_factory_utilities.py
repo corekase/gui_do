@@ -399,18 +399,11 @@ class TestRegisterActionHotkeys(unittest.TestCase):
         app_actions.bind_global_key.assert_called_once_with(42, "a", scene="main", mod=64)
         app_actions.bind_key.assert_not_called()
 
-    def test_main_runtime_tile_now_hotkey_is_global_f2(self):
-        import pygame
-
+    def test_main_runtime_does_not_declare_manual_tile_now_hotkey(self):
         from demo_features.main.main_specs import MAIN_RUNTIME_SPEC
 
         matching = [s for s in MAIN_RUNTIME_SPEC.action_hotkeys if str(getattr(s, "action_name", "")) == "tile_now"]
-        self.assertEqual(1, len(matching))
-        spec = matching[0]
-        self.assertEqual(pygame.K_F2, int(spec.key))
-        self.assertIsNone(spec.mod)
-        self.assertTrue(bool(spec.global_key))
-        self.assertEqual("main", str(spec.scene_name))
+        self.assertEqual(0, len(matching))
 
 
 # ===========================================================================
