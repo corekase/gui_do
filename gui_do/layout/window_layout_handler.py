@@ -217,6 +217,48 @@ class WindowLayoutHandler:
             "center_on_failure": self.center_on_failure,
         }
 
+    @staticmethod
+    def _prefer_vertical_packing(windows: List[object], window_rects: Dict[object, Rect]) -> bool:
+        """Infer whether current layout intent is primarily vertical.
+
+        Uses nearest-neighbor direction from window centers. If most nearest
+        relationships are vertical, prefer top-to-bottom packing.
+        """
+        if len(windows) < 2:
+            return False
+
+        centers = {
+            w: (int(rect.centerx), int(rect.centery))
+            for w, rect in window_rects.items()
+        }
+        vertical_links = 0
+        horizontal_links = 0
+
+        for window in windows:
+            cx, cy = centers[window]
+            nearest = None
+            nearest_dist = None
+            for other in windows:
+                if other is window:
+                    continue
+                ox, oy = centers[other]
+                dx = int(ox - cx)
+                dy = int(oy - cy)
+                dist = (dx * dx) + (dy * dy)
+                if nearest_dist is None or dist < nearest_dist:
+                    nearest_dist = dist
+                    nearest = (abs(dx), abs(dy))
+
+            if nearest is None:
+                continue
+            nx, ny = nearest
+            if ny > nx:
+                vertical_links += 1
+            elif nx > ny:
+                horizontal_links += 1
+
+        return vertical_links > horizontal_links
+
     def arrange_windows(
         self,
         newly_visible: Optional[Iterable[object]] = None,
@@ -243,27 +285,41 @@ class WindowLayoutHandler:
             return
 
         order_idx = self._registration_order
-        # Spatial preference order: preserve left/right first, then top/bottom,
-        # with registration as a deterministic tie-breaker.
-        visible_sorted = sorted(
-            windows,
-            key=lambda w: (
-                int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
-                int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
-                int(order_idx.get(w, 0)),
-            ),
-        )
+        window_rects = {w: self._full_window_rect(w) for w in windows}
+        prefer_vertical = self._prefer_vertical_packing(windows, window_rects)
 
-        window_rects = {w: self._full_window_rect(w) for w in visible_sorted}
+        if prefer_vertical:
+            # Vertical-aware preference order: preserve top/bottom first,
+            # then left/right, with registration as deterministic tie-breaker.
+            visible_sorted = sorted(
+                windows,
+                key=lambda w: (
+                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
+                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
+                    int(order_idx.get(w, 0)),
+                ),
+            )
+        else:
+            # Spatial preference order: preserve left/right first, then top/bottom,
+            # with registration as a deterministic tie-breaker.
+            visible_sorted = sorted(
+                windows,
+                key=lambda w: (
+                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).x),
+                    int(getattr(w, "rect", Rect(0, 0, 0, 0)).y),
+                    int(order_idx.get(w, 0)),
+                ),
+            )
 
-        # Tight shelf packing: each row is only as tall as its tallest member;
-        # x advances by each window width + gap (no max-cell inflation).
+        # Tight shelf packing in row tracks: each row shares one top y for all
+        # windows in that row; next row starts at (row_top + tallest_row_height + gap).
         rows: list[list[tuple[object, int, int]]] = []
         row: list[tuple[object, int, int]] = []
         row_width = 0
         row_height = 0
         used_height = 0
         overflow: list[object] = []
+        row_source_top: int | None = None
 
         for window in visible_sorted:
             wr = window_rects[window]
@@ -271,8 +327,17 @@ class WindowLayoutHandler:
             wh = max(1, int(wr.height))
             add_w = ww if not row else (self.gap + ww)
 
-            # New shelf when width would overflow current row.
-            if row and (row_width + add_w > int(work.width)):
+            # In vertical-intent mode, if source y moves into a new visual band,
+            # start a new row even when width still fits.
+            force_new_row = False
+            if prefer_vertical and row and row_source_top is not None:
+                band_tolerance = max(self.gap, 12)
+                if int(wr.y) > int(row_source_top + band_tolerance):
+                    force_new_row = True
+
+            # New shelf when width would overflow current row or vertical intent
+            # indicates this item belongs to the next row band.
+            if row and (force_new_row or (row_width + add_w > int(work.width))):
                 if used_height + row_height > int(work.height):
                     overflow.extend(w for w, _ww, _wh in row)
                 else:
@@ -281,6 +346,7 @@ class WindowLayoutHandler:
                 row = []
                 row_width = 0
                 row_height = 0
+                row_source_top = None
                 add_w = ww
 
             if row and (row_width + add_w > int(work.width)):
@@ -295,6 +361,8 @@ class WindowLayoutHandler:
             row.append((window, ww, wh))
             row_width += add_w
             row_height = next_row_h
+            if row_source_top is None:
+                row_source_top = int(wr.y)
 
         if row:
             if used_height + row_height <= int(work.height):
