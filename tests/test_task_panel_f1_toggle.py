@@ -124,6 +124,8 @@ class _StubApp:
         self.task_panel_focus = task_panel_focus
         self.focus = _StubFocus()
         self._scheduler = _StubScheduler()
+        # Add a dummy surface attribute for overlay creation
+        self.surface = pygame.Surface((800, 600))
 
     def get_scene_scheduler(self, scene_name: str):
         return self._scheduler
@@ -203,7 +205,7 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
         host = _StubHost()
         feature = MainFeature()
 
-        with patch("demo_features.main.main_feature.setup_routed_runtime"):
+        with patch("gui_do.setup_routed_runtime"):
             feature.bind_runtime(host)
 
         self.assertIn(

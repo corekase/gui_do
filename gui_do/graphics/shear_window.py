@@ -614,34 +614,61 @@ class ShearWindowController:
         )
         max_distort = self.max_distort_px
 
-        for y, src_h, center_ratio in self._tile_rows:
-            if y < y_start or y >= y_end:
-                continue
+        # Calculate the number of vertical bands (steps) in the effect
+        num_bands = max(1, h // tile_h)
+        max_shear_extent = abs(int(shear_common))
 
-            vertical_offset = center_ratio - anchor_ratio
-            shear_x = shear_common * vertical_offset
-            off_x = int(max(-max_distort, min(max_distort, shear_x)))
-
-            sy = max(0, y - overlap_px)
-            ey = min(h, y + src_h + overlap_px)
-            blit_h = ey - sy
-            if blit_h <= 0:
-                continue
-
-            for x, src_w in self._tile_cols:
-                if x < x_start or x >= x_end:
+        # If the window is too short for smooth bands, use per-pixel vertical lines
+        if h <= max_shear_extent or num_bands < max_shear_extent:
+            # Per-pixel vertical lines for smoothest effect
+            for y in range(y_start, y_end):
+                vertical_offset = (float(y) + 0.5) / max(1.0, float(h)) - anchor_ratio
+                shear_x = shear_common * vertical_offset
+                off_x = int(max(-max_distort, min(max_distort, shear_x)))
+                # Blit a single horizontal line
+                for x, src_w in self._tile_cols:
+                    if x < x_start or x >= x_end:
+                        continue
+                    sx = max(0, x - overlap_px)
+                    ex = min(w, x + src_w + overlap_px)
+                    blit_w = ex - sx
+                    if blit_w <= 0:
+                        continue
+                    surface.blit(
+                        source,
+                        (base_x + sx + off_x, base_y + y),
+                        (sx, y, blit_w, 1),
+                    )
+        else:
+            # Default banded approach for tall windows
+            for y, src_h, center_ratio in self._tile_rows:
+                if y < y_start or y >= y_end:
                     continue
 
-                sx = max(0, x - overlap_px)
-                ex = min(w, x + src_w + overlap_px)
-                blit_w = ex - sx
-                if blit_w <= 0:
+                vertical_offset = center_ratio - anchor_ratio
+                shear_x = shear_common * vertical_offset
+                off_x = int(max(-max_distort, min(max_distort, shear_x)))
+
+                sy = max(0, y - overlap_px)
+                ey = min(h, y + src_h + overlap_px)
+                blit_h = ey - sy
+                if blit_h <= 0:
                     continue
-                surface.blit(
-                    source,
-                    (base_x + sx + off_x, base_y + sy),
-                    (sx, sy, blit_w, blit_h),
-                )
+
+                for x, src_w in self._tile_cols:
+                    if x < x_start or x >= x_end:
+                        continue
+
+                    sx = max(0, x - overlap_px)
+                    ex = min(w, x + src_w + overlap_px)
+                    blit_w = ex - sx
+                    if blit_w <= 0:
+                        continue
+                    surface.blit(
+                        source,
+                        (base_x + sx + off_x, base_y + sy),
+                        (sx, sy, blit_w, blit_h),
+                    )
 
     def blit_sheared_overlay(
         self,
