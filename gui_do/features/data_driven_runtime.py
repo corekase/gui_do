@@ -1260,6 +1260,9 @@ def add_menu_strip_from_spec(container, host, spec: MenuStripSpec):
         )
     )
 
+    # Window presentation is optional; when available, enables window opt-in filtering
+    window_presentation = getattr(host, "window_presentation", None)
+
     menu_strip = container.add(
         MenuStripControl(
             str(spec.control_id),
@@ -1282,6 +1285,7 @@ def add_menu_strip_from_spec(container, host, spec: MenuStripSpec):
             ),
             on_scene_selected=resolve_scene_selection_callback(host),
             on_window_toggled=spec.on_window_toggled,
+            window_presentation=window_presentation,
         )
     )
     menu_strip.set_tab_index(int(spec.tab_index))

@@ -122,6 +122,7 @@ class MenuStripControl(UiNode):
         window_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
         on_scene_selected: Optional[Callable[[str], None]] = None,
         on_window_toggled: Optional[Callable[[UiNode, bool], None]] = None,
+        window_presentation: Optional[object] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self._app = app
@@ -132,6 +133,7 @@ class MenuStripControl(UiNode):
         self._window_items_provider = window_items_provider
         self._on_scene_selected = on_scene_selected
         self._on_window_toggled = on_window_toggled
+        self._window_presentation = window_presentation
 
         self._base_entries: List[MenuEntry] = list(entries) if entries else []
         self._entries: List[MenuEntry] = []
@@ -661,7 +663,29 @@ class MenuStripControl(UiNode):
         if scene is None:
             self._set_dynamic_flyout_min_width(self._window_menu.label, [])
             return []
+
+        # Get all windows from the scene
         windows: List[UiNode] = [node for node in scene._walk_nodes() if node.is_window()]  # noqa: SLF001
+
+        # Filter by opt-in flag if presentation model is available; otherwise include all
+        if self._window_presentation is not None and hasattr(self._window_presentation, "bindings"):
+            bindings = getattr(self._window_presentation, "bindings")() or ()
+            opted_in_bindings = {
+                str(getattr(b, "key", "")): b
+                for b in bindings
+                if bool(getattr(b, "window_menu_opt_in", True))
+            }
+            # Map windows to their binding keys via the presentation model
+            windows_by_key = {}
+            for binding_key, binding in opted_in_bindings.items():
+                get_window = getattr(self._window_presentation, "get_window", None)
+                if callable(get_window):
+                    window = get_window(binding_key)
+                    if window is not None:
+                        windows_by_key[id(window)] = window
+            # Only include windows that are in the opted-in set
+            windows = [w for w in windows if id(w) in windows_by_key]
+
         scene_order_key = self._window_scene_order_key(scene)
         windows.sort(key=lambda window: self._window_order_rank(scene_order_key, window))
         items: List[ContextMenuItem] = []

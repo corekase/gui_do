@@ -32,6 +32,8 @@ def register_window_presentation_specs(window_presentation, window_specs) -> Non
         }
         if hasattr(spec, "window_effects"):
             kwargs["window_effects"] = dict(spec.window_effects or {})
+        if hasattr(spec, "window_menu_opt_in"):
+            kwargs["window_menu_opt_in"] = bool(spec.window_menu_opt_in)
         window_presentation.register_feature_window(spec.key, **kwargs)
 
 

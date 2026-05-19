@@ -646,6 +646,7 @@ class FeatureWindowBinding:
     task_panel_slot_index: int | None = None
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
+    window_menu_opt_in: bool = True
 
 
 class FeatureWindowPresentationModel:
@@ -673,6 +674,7 @@ class FeatureWindowPresentationModel:
         task_panel_slot_index: int | None = None,
         accessibility_label: str | None = None,
         window_effects: dict | None = None,
+        window_menu_opt_in: bool = True,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
             key=str(key),
@@ -686,6 +688,7 @@ class FeatureWindowPresentationModel:
             task_panel_slot_index=None if task_panel_slot_index is None else int(task_panel_slot_index),
             accessibility_label=None if accessibility_label is None else str(accessibility_label),
             window_effects=dict(window_effects or {}),
+            window_menu_opt_in=bool(window_menu_opt_in),
         )
         self._bindings[binding.key] = binding
         return binding
@@ -1048,6 +1051,8 @@ def add_window_menu_strip(
 ):
     """Attach a MenuStripControl to a window using standard scene fallback wiring."""
     entries = list(static_entries) if static_entries else minimize_window_menu_entries(on_minimize)
+    # Window presentation is optional; when available, enables window opt-in filtering
+    window_presentation = getattr(host, "window_presentation", None)
     return window.add(
         MenuStripControl(
             str(control_id),
@@ -1071,6 +1076,7 @@ def add_window_menu_strip(
             scene_items_provider=scene_items_provider,
             window_items_provider=window_items_provider,
             on_scene_selected=resolve_scene_selection_callback(host),
+            window_presentation=window_presentation,
         )
     )
 
