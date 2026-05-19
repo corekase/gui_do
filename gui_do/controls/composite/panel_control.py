@@ -33,12 +33,13 @@ class PanelControl(UiNode):
         self._drag_blocked_last = False
         self._drag_shear_gutter_px = 5
 
-    def end_window_drag(self, app: "GuiApplication | None" = None) -> bool:
+    def end_window_drag(self, app: "GuiApplication | None" = None, *, release_pos=None) -> bool:
         """End active title-bar dragging and release pointer capture when owned."""
         if self._drag_window is None:
             return False
         if hasattr(self._drag_window, "on_titlebar_drag_end"):
-            self._drag_window.on_titlebar_drag_end(self._drag_last_pos, blocked=self._drag_blocked_last)
+            drag_end_pos = release_pos if release_pos is not None else self._drag_last_pos
+            self._drag_window.on_titlebar_drag_end(drag_end_pos, blocked=self._drag_blocked_last)
         if app is not None and hasattr(app, "pointer_capture"):
             if app.pointer_capture.is_owned_by(self._drag_window.control_id):
                 app.pointer_capture.end(self._drag_window.control_id)
@@ -47,6 +48,12 @@ class PanelControl(UiNode):
         self._drag_offset = None
         self._drag_pointer_sync_pending = False
         self._drag_blocked_last = False
+
+        # Re-apply window layout from post-drag positions.
+        if app is not None:
+            tile_windows = getattr(app, "tile_windows", None)
+            if callable(tile_windows):
+                tile_windows()
         return True
 
     def _scene_menu_bar_rect(self) -> Optional[Rect]:
@@ -612,11 +619,9 @@ class PanelControl(UiNode):
 
         # Mouse up: end drag
         if event.is_mouse_up(1) and self._drag_window is not None:
-            if hasattr(self._drag_window, "on_titlebar_drag_end"):
-                self._drag_window.on_titlebar_drag_end(raw, blocked=self._drag_blocked_last)
             pointer_capture_owned = app.pointer_capture.is_owned_by(self._drag_window.control_id)
             was_relative_capture = bool(pointer_capture_owned and app.pointer_capture.use_relative_motion)
-            app.pointer_capture.end(self._drag_window.control_id)
+            self.end_window_drag(app, release_pos=raw)
             if was_relative_capture:
                 logical_pointer = getattr(app, "logical_pointer_pos", None)
                 raw_pointer = event.raw_pos if isinstance(event.raw_pos, tuple) and len(event.raw_pos) == 2 else raw
@@ -628,11 +633,6 @@ class PanelControl(UiNode):
                 ):
                     if hasattr(app, "sync_pointer_to_logical_position") and callable(app.sync_pointer_to_logical_position):
                         app.sync_pointer_to_logical_position(logical_pointer)
-            self._drag_window = None
-            self._drag_last_pos = None
-            self._drag_offset = None
-            self._drag_pointer_sync_pending = False
-            self._drag_blocked_last = False
             event.prevent_default()
             event.stop_propagation()
             return True

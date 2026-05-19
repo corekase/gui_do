@@ -352,6 +352,7 @@ class _StubApp:
         self.focus = _StubFocusManager()
         self._logical_pointer_pos = (0, 0)
         self.sync_calls = []
+        self.tile_windows_calls = 0
 
     @property
     def logical_pointer_pos(self):
@@ -368,6 +369,9 @@ class _StubApp:
         logical = (int(pos[0]), int(pos[1]))
         self._logical_pointer_pos = logical
         self.sync_calls.append(logical)
+
+    def tile_windows(self, *args, **kwargs):
+        self.tile_windows_calls += 1
 
 
 class TestPanelControlWindowDrag(unittest.TestCase):
@@ -442,6 +446,19 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 90), raw_pos=(150, 12), button=1)
         self.assertTrue(panel.on_event_capture(up, app))
         self.assertEqual([(150, 38)], app.sync_calls)
+
+    def test_drag_end_triggers_window_relayout(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
+        panel.add(window)
+        app = _StubApp()
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 90), button=1)
+        self.assertTrue(panel.on_event_capture(down, app))
+
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 90), button=1)
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertEqual(1, app.tile_windows_calls)
 
     def test_drag_clamps_at_task_panel_reserved_strip_and_preserves_title_anchor(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))

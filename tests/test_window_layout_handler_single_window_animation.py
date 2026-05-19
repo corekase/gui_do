@@ -19,6 +19,20 @@ class _Scene:
         self.nodes = list(nodes)
 
 
+class MenuStripControl:
+    def __init__(self, rect: Rect, *, visible: bool = True, enabled: bool = True):
+        self.rect = Rect(rect)
+        self.visible = bool(visible)
+        self.enabled = bool(enabled)
+        self.children = []
+
+    def is_window(self) -> bool:
+        return False
+
+    def is_task_panel(self) -> bool:
+        return False
+
+
 class _WindowNode:
     def __init__(self, x: int, y: int, w: int, h: int, *, visible: bool = True):
         self.rect = Rect(x, y, w, h)
@@ -124,7 +138,8 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         handler.arrange_windows(immediate=True)
 
-        self.assertEqual(app.surface.get_rect().center, large.rect.center)
+        self.assertEqual(app.surface.get_rect().centerx, large.rect.centerx)
+        self.assertGreaterEqual(large.rect.top, app.surface.get_rect().top)
 
     def test_visibility_change_retiles_windows_out_of_previous_cascade(self):
         w1 = _WindowNode(20, 20, 170, 150, visible=True)
@@ -202,9 +217,28 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         handler.arrange_windows(immediate=True)
 
-        self.assertEqual(app.surface.get_rect().center, systems.rect.center)
+        self.assertEqual(app.surface.get_rect().centerx, systems.rect.centerx)
+        self.assertGreaterEqual(systems.rect.top, app.surface.get_rect().top)
         self.assertEqual(life.rect.y, mandel.rect.y)
         self.assertLess(life.rect.x, mandel.rect.x)
+
+    def test_visibility_order_life_mandel_system_does_not_overlap_menu_strip(self):
+        menu = MenuStripControl(Rect(0, 0, 420, 32), visible=True, enabled=True)
+        life = _WindowNode(20, 20, 170, 110, visible=True)
+        mandel = _WindowNode(210, 20, 170, 110, visible=True)
+        systems = _WindowNode(260, 20, 360, 250, visible=True)
+        # Match reported visibility order.
+        scene = _Scene([menu, life, mandel, systems])
+        app = _App(Rect(0, 0, 420, 230), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        menu_bottom = menu.rect.bottom
+        self.assertGreaterEqual(life.rect.top, menu_bottom)
+        self.assertGreaterEqual(mandel.rect.top, menu_bottom)
+        self.assertGreaterEqual(systems.rect.top, menu_bottom)
 
 
 if __name__ == "__main__":

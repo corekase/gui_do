@@ -56,6 +56,20 @@ class WindowLayoutHandler:
     def _visible_windows(self) -> List[object]:
         return self._ordered_windows(include_hidden=False)
 
+    def _menu_strip_bottom(self) -> int:
+        """Return bottom y of visible+enabled menu strip controls in the bound scene."""
+        menu_bottom = 0
+        scene = self._bound_scene()
+        queue: deque = deque(getattr(scene, "nodes", ()))
+        while queue:
+            node = queue.popleft()
+            queue.extend(getattr(node, "children", ()))
+            class_name = str(getattr(getattr(node, "__class__", object), "__name__", ""))
+            if class_name == "MenuStripControl" and bool(getattr(node, "visible", False)) and bool(getattr(node, "enabled", False)):
+                rect = getattr(node, "rect", Rect(0, 0, 0, 0))
+                menu_bottom = max(menu_bottom, int(rect.bottom))
+        return int(menu_bottom)
+
     def _ordered_windows(self, *, include_hidden: bool) -> List[object]:
         windows = self._scene_windows()
         self._ensure_registration(windows)
@@ -72,6 +86,9 @@ class WindowLayoutHandler:
 
     def _work_area_rect(self) -> Rect:
         work = Rect(self.app.surface.get_rect())
+        menu_bottom = self._menu_strip_bottom()
+        if menu_bottom > int(work.top):
+            work.top = int(menu_bottom)
         if self.avoid_task_panel:
             queue: deque = deque(self._bound_scene().nodes)
             while queue:
@@ -98,15 +115,8 @@ class WindowLayoutHandler:
         top_limit = int(screen_rect.top)
         max_top = int(screen_rect.bottom - rect.height)
 
-        # Match drag semantics: if a menu strip is present, windows cannot cross it.
-        scene = self._bound_scene()
-        queue: deque = deque(getattr(scene, "nodes", ()))
-        while queue:
-            node = queue.popleft()
-            queue.extend(getattr(node, "children", ()))
-            class_name = str(getattr(getattr(node, "__class__", object), "__name__", ""))
-            if class_name == "MenuStripControl" and bool(getattr(node, "visible", False)) and bool(getattr(node, "enabled", False)):
-                top_limit = max(top_limit, int(getattr(node, "rect", Rect(0, 0, 0, 0)).bottom))
+        # Match drag semantics: windows cannot cross visible menu strips.
+        top_limit = max(top_limit, self._menu_strip_bottom())
 
         clamped_x = int(target_x)
         clamped_y = int(target_y)
@@ -508,7 +518,8 @@ class WindowLayoutHandler:
         duration = 0.0 if immediate else 0.5
         for window, target_x, target_y in targets:
             if window in center_fallback:
-                clamped_x, clamped_y = self._center_target(self.app.surface.get_rect(), window_rects[window])
+                centered_x, centered_y = self._center_target(work, window_rects[window])
+                clamped_x, clamped_y = self._clamp_target(window, centered_x, centered_y)
             elif window in exact_overflow_targets:
                 clamped_x, clamped_y = (int(target_x), int(target_y))
             else:
