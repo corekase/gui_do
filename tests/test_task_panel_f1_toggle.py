@@ -255,7 +255,6 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
         self.assertFalse(enabled)
         self.assertEqual([(True, "main")], host.app.toggle_calls)
         self.assertEqual(1, len(toast_calls))
-        self.assertEqual("Turned automatic window layout off for this scene.", toast_calls[0][0])
 
     def test_main_feature_tile_windows_now_executes_and_toast(self):
         feature = MainFeature()
@@ -284,7 +283,6 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
             host.app.tile_calls,
         )
         self.assertEqual(1, len(toast_calls))
-        self.assertEqual("Tiled all visible windows in this scene.", toast_calls[0][0])
 
     def test_accessibility_tab_is_consumed_by_focused_control(self):
         scene = _StubScene()

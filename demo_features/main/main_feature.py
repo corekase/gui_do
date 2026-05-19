@@ -80,9 +80,9 @@ class MainFeature(Feature):
         toast_manager = getattr(host.app, "toasts", None)
         if toast_manager is not None and hasattr(toast_manager, "show"):
             toast_manager.show(
-                "Turned automatic window layout on for this scene."
+                "Automatic layout ON."
                 if enabled
-                else "Turned automatic window layout off for this scene.",
+                else "Automatic layout OFF.",
                 severity=ToastSeverity.INFO,
             )
         return enabled
@@ -93,7 +93,7 @@ class MainFeature(Feature):
         toast_manager = getattr(host.app, "toasts", None)
         if toast_manager is not None and hasattr(toast_manager, "show"):
             toast_manager.show(
-                "Tiled all visible windows in this scene.",
+                "Tiled all visible windows.",
                 severity=ToastSeverity.INFO,
             )
         return True
