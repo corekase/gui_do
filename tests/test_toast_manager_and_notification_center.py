@@ -241,6 +241,31 @@ class TestToastManagerClickHandling(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertEqual([], fired)
 
+    def test_suspend_and_restore_preserves_remaining_duration_and_isolates_callback(self):
+        fired = []
+        handle = self.mgr.show("hello", duration_seconds=5.0, on_click=lambda: fired.append("ok"))
+        self.mgr.update(2.0)
+
+        self.assertEqual(1, self.mgr.suspend_for_scene("scene_a"))
+        self.assertEqual(0, self.mgr.visible_count)
+        self.assertFalse(handle.is_visible)
+
+        consumed_while_suspended = self._click(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24)
+        self.assertFalse(consumed_while_suspended)
+        self.assertEqual([], fired)
+
+        self.assertEqual(1, self.mgr.restore_for_scene("scene_a"))
+        self.assertTrue(handle.is_visible)
+
+        consumed_after_restore = self._click(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24)
+        self.assertTrue(consumed_after_restore)
+        self.assertEqual(["ok"], fired)
+
+        self.mgr.update(2.9)
+        self.assertEqual(1, self.mgr.visible_count)
+        self.mgr.update(0.2)
+        self.assertEqual(0, self.mgr.visible_count)
+
 
 # ===========================================================================
 # NotificationCenter

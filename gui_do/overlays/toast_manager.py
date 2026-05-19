@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Any, Callable, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -48,6 +48,12 @@ class _ToastEntry:
     alpha: float = 1.0
 
 
+@dataclass
+class _SuspendedToastState:
+    scene_name: str
+    entries: list[_ToastEntry]
+
+
 class ToastManager:
     """App-level service for showing transient toast notifications."""
 
@@ -70,8 +76,10 @@ class ToastManager:
         self._margin = int(margin)
         self._gap = int(gap)
         self._toasts: Deque[_ToastEntry] = deque(maxlen=self._max_visible)
+        self._suspended_toasts: dict[str, _SuspendedToastState] = {}
         self._next_id: int = 1
         self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
+        self._draw_font_theme: object = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -130,15 +138,37 @@ class ToastManager:
         return ToastHandle(toast_id, self)
 
     def dismiss(self, handle: ToastHandle) -> None:
-        self._toasts = deque(
-            (t for t in self._toasts if t.toast_id != handle.toast_id),
-            maxlen=self._max_visible,
-        )
+        self._remove_toast(handle.toast_id)
 
     def dismiss_all(self) -> int:
         count = len(self._toasts)
         self._toasts.clear()
         return count
+
+    def suspend_for_scene(self, scene_name: str) -> int:
+        """Save the active toasts for *scene_name* and clear the visible list."""
+        scene_name = str(scene_name)
+        entries = list(self._toasts)
+        if not entries:
+            self._suspended_toasts.pop(scene_name, None)
+            return 0
+        self._suspended_toasts[scene_name] = _SuspendedToastState(scene_name=scene_name, entries=entries)
+        count = len(entries)
+        self._toasts.clear()
+        return count
+
+    def restore_for_scene(self, scene_name: str) -> int:
+        """Restore any toasts previously suspended for *scene_name*."""
+        scene_name = str(scene_name)
+        state = self._suspended_toasts.pop(scene_name, None)
+        if state is None or not state.entries:
+            return 0
+        self._toasts = deque(state.entries, maxlen=self._max_visible)
+        return len(self._toasts)
+
+    def discard_scene_state(self, scene_name: str) -> None:
+        """Forget suspended toast state for a scene that is going away."""
+        self._suspended_toasts.pop(str(scene_name), None)
 
     @property
     def visible_count(self) -> int:
@@ -146,6 +176,24 @@ class ToastManager:
 
     def _has_toast(self, toast_id: int) -> bool:
         return any(t.toast_id == toast_id for t in self._toasts)
+
+    def _remove_toast(self, toast_id: int) -> bool:
+        removed = False
+        filtered = [entry for entry in self._toasts if entry.toast_id != toast_id]
+        if len(filtered) != len(self._toasts):
+            self._toasts = deque(filtered, maxlen=self._max_visible)
+            removed = True
+
+        for scene_name, state in list(self._suspended_toasts.items()):
+            entries = [entry for entry in state.entries if entry.toast_id != toast_id]
+            if len(entries) == len(state.entries):
+                continue
+            removed = True
+            if entries:
+                self._suspended_toasts[scene_name] = _SuspendedToastState(scene_name=scene_name, entries=entries)
+            else:
+                self._suspended_toasts.pop(scene_name, None)
+        return removed
 
     # ------------------------------------------------------------------
     # Update / draw
@@ -241,11 +289,12 @@ class ToastManager:
         return False
 
     def _ensure_draw_font(self, theme):
-        if self._draw_font is not None:
+        if self._draw_font is not None and self._draw_font_theme is theme:
             return self._draw_font
         if not hasattr(theme, "fonts"):
             raise RuntimeError("ToastManager requires theme with centralized font roles.")
         self._draw_font = theme.fonts.font_instance("toast.text", size=18)
+        self._draw_font_theme = theme
         return self._draw_font
 
     def _layout_toasts(self, font) -> list[tuple[_ToastEntry, Rect]]:

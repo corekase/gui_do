@@ -491,6 +491,7 @@ class GuiApplication:
                 self.task_panel_focus.exit(outgoing_scene, self)
             self._reconcile_task_panel_hover_state(outgoing_scene, force_idle=True)
             self._snap_autohide_task_panels_lowered(outgoing_scene)
+            self.toasts.suspend_for_scene(self._active_scene_name)
             self._active_scene_name = name
             self._sync_scene_scheduler_activity(name)
             self.scene = runtime.scene
@@ -513,6 +514,7 @@ class GuiApplication:
                     self.font_roles.apply(self, scene_name=name)
                 except Exception:
                     pass  # Don't block scene switch if font role registration fails
+            self.toasts.restore_for_scene(name)
             self._reconcile_task_panel_hover_state(self.scene, pointer_pos=self._logical_pointer_pos)
             self._apply_screen_lifecycle_chain()
 
@@ -611,6 +613,7 @@ class GuiApplication:
                 details={"scene_name": name},
                 source_skip_frames=1,
             )
+        self.toasts.discard_scene_state(name)
         return True
 
     def get_scene_scheduler(self, name: str) -> TaskScheduler:

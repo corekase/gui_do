@@ -8,6 +8,7 @@ from gui_do.app.gui_application import GuiApplication
 from gui_do.controls.base.ui_node import UiNode
 from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.input.button_control import ButtonControl
+from gui_do.events.gui_event import EventType, GuiEvent
 
 
 pygame.init()
@@ -85,6 +86,40 @@ class TestTaskPanelSceneSwitchHoverReconcile(unittest.TestCase):
 
         self.assertIsNone(app.focus.focused_node)
         self.assertEqual([], draw_calls)
+
+    def test_switch_scene_suspends_and_restores_toasts(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        app.create_scene("scene_a")
+        app.create_scene("scene_b")
+
+        fired = []
+
+        app.switch_scene("scene_a")
+        handle = app.toasts.show("toast", duration_seconds=5.0, on_click=lambda: fired.append("ok"))
+        app.update(2.0)
+
+        app.switch_scene("scene_b")
+        self.assertFalse(handle.is_visible)
+        self.assertEqual(0, app.toasts.visible_count)
+
+        suspended_click = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=pygame.MOUSEBUTTONDOWN,
+            pos=(app.surface.get_width() - 24, app.surface.get_height() - 24),
+            button=1,
+        )
+        self.assertFalse(app.toasts.route_event(suspended_click, app))
+        self.assertEqual([], fired)
+
+        app.update(10.0)
+        app.switch_scene("scene_a")
+        self.assertTrue(handle.is_visible)
+        self.assertEqual(1, app.toasts.visible_count)
+
+        app.update(2.9)
+        self.assertEqual(1, app.toasts.visible_count)
+        app.update(0.2)
+        self.assertEqual(0, app.toasts.visible_count)
 
 
 if __name__ == "__main__":
