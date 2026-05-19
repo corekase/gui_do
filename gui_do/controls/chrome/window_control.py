@@ -421,7 +421,20 @@ class WindowControl(UiNode):
                 return True
         return False
 
+    def _is_position_in_window_bounds(self, event: GuiEvent) -> bool:
+        """Return True when the event carries a position that falls inside this window's rect.
+
+        Windows are opaque to position-based mouse input: any mouse event whose
+        position is within ``self.rect`` must be consumed by this window so that it
+        does not fall through to windows rendered underneath.
+        """
+        raw = event.pos
+        return isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw)
+
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        # Capture phase: propagate normally without opaque-window clamping.
+        # Returning True here would prevent the scene from ever reaching the target
+        # phase, so child controls would never receive events.
         if not self._accepts_event_scope(event, app):
             return False
         if not self._accepts_content_scope(event, app):
@@ -433,11 +446,16 @@ class WindowControl(UiNode):
             return False
         if self._dispatch_window_handler(event):
             return True
+        in_bounds = self._is_position_in_window_bounds(event)
         if not self._accepts_content_scope(event, app):
-            return False
-        return self._dispatch_children(event, app, reverse=True, theme=theme)
+            # Chrome/titlebar area: consume position-based events to prevent fall-through.
+            return in_bounds
+        child_handled = self._dispatch_children(event, app, reverse=True, theme=theme)
+        return child_handled or in_bounds
 
     def on_event_bubble(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        # Bubble phase: propagate normally without opaque-window clamping.
+        # The target phase (handle_event) already ensures fall-through prevention.
         if not self._accepts_event_scope(event, app):
             return False
         if not self._accepts_content_scope(event, app):

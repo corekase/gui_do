@@ -146,7 +146,10 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         titlebar_event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(130, 125), button=1)
         consumed = window.handle_event(titlebar_event, app)
 
-        self.assertFalse(consumed)
+        # The window is opaque to position-based mouse input: it consumes the
+        # event to prevent fall-through to windows underneath, even though the
+        # click landed in the titlebar/chrome area where children are not reached.
+        self.assertTrue(consumed)
         self.assertEqual(0, target.event_calls)
 
         content_event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(130, 175), button=1)
