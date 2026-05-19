@@ -1430,7 +1430,11 @@ class GuiApplication:
             relayout=relayout,
         )
 
-    def tile_windows(self, newly_visible=None) -> None:
+    def tile_windows(self, newly_visible=None, *, as_visibility_event: bool = False) -> None:
+        if as_visibility_event and newly_visible is None:
+            snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
+            if callable(snapshot_fn):
+                newly_visible = snapshot_fn()
         self.window_tiling.arrange_windows(newly_visible=newly_visible)
 
     def register_font_role(
@@ -1622,11 +1626,17 @@ class GuiApplication:
         with collector.span("gui_application", "build_features"):
             self.features.build_features(host)
             self._prime_scene_window_tiling_registrations()
+            self._initialize_scene_window_positions()
 
     def _prime_scene_window_tiling_registrations(self) -> None:
         """Prime per-scene window registration order without forcing relayout."""
         for runtime in self._scenes.values():
             runtime.window_tiling.prime_registration()
+
+    def _initialize_scene_window_positions(self) -> None:
+        """Seed per-scene window internal positions from immediate tiling targets."""
+        for runtime in self._scenes.values():
+            runtime.window_tiling.initialize_window_positions()
 
     def bind_features_runtime(self, host) -> None:
         """Call optional bind_runtime(host) on all registered features."""

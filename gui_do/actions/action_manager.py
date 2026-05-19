@@ -26,6 +26,7 @@ class KeyBinding:
     key: int
     scene: Optional[str] = None
     window_only: bool = False
+    mod: int = 0
 
 
 @dataclass(frozen=True)
@@ -40,17 +41,49 @@ class ActionManager:
     def __init__(self) -> None:
         self._actions: dict[str, ActionHandler] = {}
         self._keymap: dict[KeyBinding, list[str]] = defaultdict(list)
-        self._keymap_fast: dict[tuple[int, str | None, bool], list[str]] = {}
+        self._keymap_fast: dict[tuple[int, str | None, bool, int], list[str]] = {}
         self._bindings_by_action: dict[str, list[KeyBinding]] = defaultdict(list)
         self._global_keymap: dict[KeyBinding, list[str]] = defaultdict(list)
-        self._global_keymap_fast: dict[tuple[int, str | None, bool], list[str]] = {}
+        self._global_keymap_fast: dict[tuple[int, str | None, bool, int], list[str]] = {}
         self._global_pointer_map: dict[PointerBinding, list[str]] = defaultdict(list)
         self._global_pointer_map_fast: dict[tuple[int, str | None], list[str]] = {}
         self._middlewares: List[ActionMiddleware] = []
 
     @staticmethod
-    def _binding_key(binding: KeyBinding) -> tuple[int, str | None, bool]:
-        return (int(binding.key), binding.scene, bool(binding.window_only))
+    def _binding_key(binding: KeyBinding) -> tuple[int, str | None, bool, int]:
+        return (int(binding.key), binding.scene, bool(binding.window_only), int(binding.mod))
+
+    @staticmethod
+    def _mod_matches(required: int, event_mod: int) -> bool:
+        required = int(required)
+        if required == 0:
+            return True
+        if (int(event_mod) & required) == required:
+            return True
+        try:
+            live_mod = int(pygame.key.get_mods())
+        except Exception:
+            live_mod = 0
+        return (live_mod & required) == required
+
+    @staticmethod
+    def _key_matches(bound_key: int, event_key: int) -> bool:
+        """Return True when event key should satisfy a bound key.
+
+        On some keyboard layouts the physical grave/backquote key can be
+        reported as quote; treat them as equivalent for binding resolution.
+        """
+        bk = int(bound_key)
+        ek = int(event_key)
+        if bk == ek:
+            return True
+        quote_key = int(getattr(pygame, "K_QUOTE", -1))
+        backquote_key = int(getattr(pygame, "K_BACKQUOTE", -1))
+        if bk == backquote_key and ek == quote_key:
+            return True
+        if bk == quote_key and ek == backquote_key:
+            return True
+        return False
 
     @staticmethod
     def _pointer_binding_key(binding: PointerBinding) -> tuple[int, str | None]:
@@ -70,7 +103,15 @@ class ActionManager:
         """Return a sorted list of all registered action names."""
         return sorted(self._actions.keys())
 
-    def bind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> None:
+    def bind_key(
+        self,
+        key: int,
+        action_name: str,
+        *,
+        scene: str | None = None,
+        window_only: bool = False,
+        mod: int = 0,
+    ) -> None:
         key = int(key)
         action_name = str(action_name)
         if key in _RESERVED_ACCESSIBILITY_KEYS:
@@ -81,7 +122,7 @@ class ActionManager:
                 operation="ActionManager.bind_key",
                 source_skip_frames=1,
             )
-        binding = KeyBinding(key, scene=scene, window_only=bool(window_only))
+        binding = KeyBinding(key, scene=scene, window_only=bool(window_only), mod=int(mod))
         names = self._keymap[binding]
         if action_name not in names:
             names.append(action_name)
@@ -90,10 +131,18 @@ class ActionManager:
             if binding not in bindings:
                 bindings.append(binding)
 
-    def unbind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> bool:
+    def unbind_key(
+        self,
+        key: int,
+        action_name: str,
+        *,
+        scene: str | None = None,
+        window_only: bool = False,
+        mod: int = 0,
+    ) -> bool:
         """Remove one specific key→action binding. Returns True if a binding was removed."""
         action_name = str(action_name)
-        binding = KeyBinding(int(key), scene=scene, window_only=bool(window_only))
+        binding = KeyBinding(int(key), scene=scene, window_only=bool(window_only), mod=int(mod))
         names = self._keymap.get(binding)
         if not names or action_name not in names:
             return False
@@ -108,7 +157,7 @@ class ActionManager:
                 del self._bindings_by_action[action_name]
         return True
 
-    def bind_global_key(self, key: int, action_name: str, *, scene: str | None = None) -> None:
+    def bind_global_key(self, key: int, action_name: str, *, scene: str | None = None, mod: int = 0) -> None:
         """Bind a global key tested first in routing — before focus, windows, and all other handlers.
 
         Global keys fire regardless of focused widget or active-window state.
@@ -128,15 +177,15 @@ class ActionManager:
                 operation="ActionManager.bind_global_key",
                 source_skip_frames=1,
             )
-        binding = KeyBinding(key, scene=scene, window_only=False)
+        binding = KeyBinding(key, scene=scene, window_only=False, mod=int(mod))
         names = self._global_keymap[binding]
         if action_name not in names:
             names.append(action_name)
             self._global_keymap_fast[self._binding_key(binding)] = names
 
-    def unbind_global_key(self, key: int, action_name: str, *, scene: str | None = None) -> bool:
+    def unbind_global_key(self, key: int, action_name: str, *, scene: str | None = None, mod: int = 0) -> bool:
         """Remove a global key binding.  Returns ``True`` if it existed."""
-        binding = KeyBinding(int(key), scene=scene, window_only=False)
+        binding = KeyBinding(int(key), scene=scene, window_only=False, mod=int(mod))
         names = self._global_keymap.get(binding)
         if not names or str(action_name) not in names:
             return False
@@ -179,15 +228,32 @@ class ActionManager:
             return False
         scene_name = app.active_scene_name
         key = int(event.key)
-        fast = self._global_keymap_fast
-        for action_name in fast.get((key, scene_name, False), ()):
-            handler = self._actions.get(action_name)
-            if handler is not None and self._dispatch(action_name, handler, event):
-                return True
-        for action_name in fast.get((key, None, False), ()):
-                handler = self._actions.get(action_name)
-                if handler is not None and self._dispatch(action_name, handler, event):
-                    return True
+        event_mod = int(getattr(event, "mod", 0) or 0)
+        if event_mod == 0:
+            try:
+                event_mod = int(pygame.key.get_mods())
+            except Exception:
+                event_mod = 0
+
+        def _run_for_scope(scope_scene: str | None) -> bool:
+            for binding, action_names in self._global_keymap.items():
+                if not self._key_matches(int(binding.key), key):
+                    continue
+                if binding.scene != scope_scene:
+                    continue
+                required = int(getattr(binding, "mod", 0) or 0)
+                if not self._mod_matches(required, event_mod):
+                    continue
+                for action_name in action_names:
+                    handler = self._actions.get(action_name)
+                    if handler is not None and self._dispatch(action_name, handler, event):
+                        return True
+            return False
+
+        if _run_for_scope(scene_name):
+            return True
+        if _run_for_scope(None):
+            return True
         return False
 
     def trigger_global_pointer_from_event(self, event, app) -> bool:
@@ -271,25 +337,41 @@ class ActionManager:
         scene_name = app.active_scene_name
         has_window = bool(app.scene.active_window())
         key = int(event.key)
-        fast = self._keymap_fast
+        event_mod = int(getattr(event, "mod", 0) or 0)
+        if event_mod == 0:
+            try:
+                event_mod = int(pygame.key.get_mods())
+            except Exception:
+                event_mod = 0
+
         if has_window:
-            candidate_keys = (
-                (key, scene_name, True),
-                (key, scene_name, False),
-                (key, None, True),
-                (key, None, False),
+            candidate_scopes = (
+                (scene_name, True),
+                (scene_name, False),
+                (None, True),
+                (None, False),
             )
         else:
-            candidate_keys = (
-                (key, scene_name, False),
-                (key, None, False),
+            candidate_scopes = (
+                (scene_name, False),
+                (None, False),
             )
 
-        for binding_key in candidate_keys:
-            for action_name in fast.get(binding_key, ()):
-                handler = self._actions.get(action_name)
-                if handler is not None and self._dispatch(action_name, handler, event):
-                    return True
+        for scope_scene, scope_window_only in candidate_scopes:
+            for binding, action_names in self._keymap.items():
+                if not self._key_matches(int(binding.key), key):
+                    continue
+                if binding.scene != scope_scene:
+                    continue
+                if bool(binding.window_only) != bool(scope_window_only):
+                    continue
+                required = int(getattr(binding, "mod", 0) or 0)
+                if not self._mod_matches(required, event_mod):
+                    continue
+                for action_name in action_names:
+                    handler = self._actions.get(action_name)
+                    if handler is not None and self._dispatch(action_name, handler, event):
+                        return True
         return False
 
     def _dispatch(self, action_name: str, handler: ActionHandler, event) -> bool:

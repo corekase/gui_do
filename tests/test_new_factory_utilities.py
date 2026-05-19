@@ -364,6 +364,54 @@ class TestRegisterActionHotkeys(unittest.TestCase):
         register_action_hotkeys(app_actions, specs)
         app_actions.bind_key.assert_called_once_with(42, "a")
 
+    def test_registers_action_and_global_first_key_binding_when_requested(self):
+        from gui_do import ActionHotkeySpec, register_action_hotkeys
+        app_actions = MagicMock()
+        handler = MagicMock()
+        specs = (
+            ActionHotkeySpec(
+                action_name="a",
+                handler=handler,
+                key=42,
+                scene_name="main",
+                global_key=True,
+            ),
+        )
+        register_action_hotkeys(app_actions, specs)
+        app_actions.bind_global_key.assert_called_once_with(42, "a", scene="main")
+        app_actions.bind_key.assert_not_called()
+
+    def test_registers_action_and_global_first_key_binding_with_modifier_when_requested(self):
+        from gui_do import ActionHotkeySpec, register_action_hotkeys
+        app_actions = MagicMock()
+        handler = MagicMock()
+        specs = (
+            ActionHotkeySpec(
+                action_name="a",
+                handler=handler,
+                key=42,
+                scene_name="main",
+                mod=64,
+                global_key=True,
+            ),
+        )
+        register_action_hotkeys(app_actions, specs)
+        app_actions.bind_global_key.assert_called_once_with(42, "a", scene="main", mod=64)
+        app_actions.bind_key.assert_not_called()
+
+    def test_main_runtime_tile_now_hotkey_is_global_f2(self):
+        import pygame
+
+        from demo_features.main.main_specs import MAIN_RUNTIME_SPEC
+
+        matching = [s for s in MAIN_RUNTIME_SPEC.action_hotkeys if str(getattr(s, "action_name", "")) == "tile_now"]
+        self.assertEqual(1, len(matching))
+        spec = matching[0]
+        self.assertEqual(pygame.K_F2, int(spec.key))
+        self.assertIsNone(spec.mod)
+        self.assertTrue(bool(spec.global_key))
+        self.assertEqual("main", str(spec.scene_name))
+
 
 # ===========================================================================
 # draw_controls_prewarm
@@ -1039,7 +1087,12 @@ class TestRoutedRuntimeHelpers(unittest.TestCase):
             scheduler_dispatch_limit=128,
             logic_bindings=runtime_spec.logic_bindings,
         )
-        register_hotkeys_mock.assert_called_once_with(host.app.actions, runtime_spec.action_hotkeys)
+        register_hotkeys_mock.assert_called_once_with(
+            host.app.actions,
+            runtime_spec.action_hotkeys,
+            feature=feature,
+            host=host,
+        )
         bind_event_mock.assert_called_once_with(feature, host.app.events, event_spec)
         create_overlay_mock.assert_called_once()
         self.assertTrue(hasattr(feature, "_shortcut_overlay"))

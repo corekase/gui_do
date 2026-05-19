@@ -333,6 +333,8 @@ class ActionHotkeySpec:
     handler: Callable[[object], object]
     key: int | None = None
     scene_name: str | None = None
+    mod: int | None = None
+    global_key: bool = False
 
 
 @dataclass(frozen=True)
@@ -1546,19 +1548,99 @@ def register_tooltip_attr_specs(target, tooltip_manager, specs: Sequence[Tooltip
         tooltip_manager.register(control, str(spec.message))
 
 
-def register_action_hotkeys(app_actions, specs: Sequence[ActionHotkeySpec]) -> None:
+def _invoke_action_hotkey_handler(handler: Callable[..., object], *, event, feature=None, host=None) -> object:
+    """Invoke an action-hotkey handler with compatible arity.
+
+    Supported handler signatures:
+    - handler(event)
+    - handler(feature, event)
+    - handler(feature, host, event)
+    - any callable accepting varargs
+    """
+    try:
+        signature = inspect.signature(handler)
+    except (TypeError, ValueError):
+        return handler(event)
+
+    parameters = tuple(signature.parameters.values())
+    if any(parameter.kind is inspect.Parameter.VAR_POSITIONAL for parameter in parameters):
+        return handler(feature, host, event)
+
+    positional = [
+        parameter
+        for parameter in parameters
+        if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    argc = len(positional)
+    if argc <= 1:
+        return handler(event)
+    if argc == 2:
+        return handler(feature, event)
+    return handler(feature, host, event)
+
+
+def register_action_hotkeys(app_actions, specs: Sequence[ActionHotkeySpec], *, feature=None, host=None) -> None:
     """Register multiple actions and optional key bindings from declarative specs."""
     if app_actions is None:
         return
     for spec in specs:
         action_name = str(spec.action_name)
-        app_actions.register_action(action_name, spec.handler)
+        required_mod = None if spec.mod is None else int(spec.mod)
+        needs_context_wrap = (feature is not None) or (host is not None)
+
+        # Preserve legacy identity semantics when no wrapper behavior is needed.
+        # Modifier checks are handled by ActionManager binding matching.
+        if not needs_context_wrap:
+            app_actions.register_action(action_name, spec.handler)
+        else:
+            def _make_handler(raw_handler):
+                def _handler(event):
+                    return bool(
+                        _invoke_action_hotkey_handler(
+                            raw_handler,
+                            event=event,
+                            feature=feature,
+                            host=host,
+                        )
+                    )
+
+                return _handler
+
+            app_actions.register_action(action_name, _make_handler(spec.handler))
         if spec.key is None:
             continue
+        if bool(spec.global_key) and hasattr(app_actions, "bind_global_key"):
+            if spec.scene_name is None:
+                if required_mod is None:
+                    app_actions.bind_global_key(int(spec.key), action_name)
+                else:
+                    app_actions.bind_global_key(int(spec.key), action_name, mod=int(required_mod))
+            else:
+                if required_mod is None:
+                    app_actions.bind_global_key(int(spec.key), action_name, scene=str(spec.scene_name))
+                else:
+                    app_actions.bind_global_key(
+                        int(spec.key),
+                        action_name,
+                        scene=str(spec.scene_name),
+                        mod=int(required_mod),
+                    )
+            continue
         if spec.scene_name is None:
-            app_actions.bind_key(spec.key, action_name)
+            if required_mod is None:
+                app_actions.bind_key(int(spec.key), action_name)
+            else:
+                app_actions.bind_key(int(spec.key), action_name, mod=int(required_mod))
         else:
-            app_actions.bind_key(spec.key, action_name, scene=str(spec.scene_name))
+            if required_mod is None:
+                app_actions.bind_key(int(spec.key), action_name, scene=str(spec.scene_name))
+            else:
+                app_actions.bind_key(
+                    int(spec.key),
+                    action_name,
+                    scene=str(spec.scene_name),
+                    mod=int(required_mod),
+                )
 
 
 def register_global_pointer_actions(app_actions, specs: Sequence[GlobalPointerActionSpec]) -> None:
@@ -2290,7 +2372,7 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
     app_events = getattr(app, "events", None)
 
     if spec.action_hotkeys and app_actions is not None:
-        register_action_hotkeys(app_actions, tuple(spec.action_hotkeys))
+        register_action_hotkeys(app_actions, tuple(spec.action_hotkeys), feature=feature, host=host)
 
     if spec.global_pointer_actions and app_actions is not None:
         register_global_pointer_actions(app_actions, tuple(spec.global_pointer_actions))
