@@ -508,3 +508,13 @@ class WindowControl(UiNode):
             self.shear_active = self.shear_controller.is_active()
             return
         self._draw_standard(surface, theme)
+
+    def dispose(self) -> None:
+        controller = self.shear_controller
+        if controller is not None:
+            release = getattr(controller, "dispose", None)
+            if callable(release):
+                release()
+        self.shear_controller = None
+        self.shear_active = False
+        super().dispose()

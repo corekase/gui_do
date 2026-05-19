@@ -21,6 +21,7 @@ class ShearWindowController:
         self._prev_mouse_pos: Optional[tuple[int, int]] = None
 
         self.buffer: Optional[pygame.Surface] = None
+        self._buffer_size: tuple[int, int] = (0, 0)
         self._scratch: Optional[pygame.Surface] = None
         self._scratch_size: tuple[int, int] = (0, 0)
         self._tile_cache_key: tuple[int, int, int, int] | None = None
@@ -161,6 +162,31 @@ class ShearWindowController:
             1,
         )
 
+    @staticmethod
+    def _surface_can_fit(capacity: tuple[int, int], needed: tuple[int, int]) -> bool:
+        return capacity[0] >= needed[0] and capacity[1] >= needed[1]
+
+    def _ensure_buffer_capacity(self, needed: tuple[int, int]) -> None:
+        if self.buffer is None or not self._surface_can_fit(self._buffer_size, needed):
+            self.buffer = pygame.Surface(needed, pygame.SRCALPHA)
+            self._buffer_size = needed
+
+    def _ensure_scratch_capacity(self, needed: tuple[int, int]) -> None:
+        if self._scratch is None or not self._surface_can_fit(self._scratch_size, needed):
+            self._scratch = pygame.Surface(needed, pygame.SRCALPHA)
+            self._scratch_size = needed
+
+    def dispose(self) -> None:
+        self.active = False
+        self.dragging = False
+        self.buffer = None
+        self._buffer_size = (0, 0)
+        self._scratch = None
+        self._scratch_size = (0, 0)
+        self._tile_cache_key = None
+        self._tile_rows = []
+        self._tile_cols = []
+
     def _update_auto_quality(self, render_ms: float) -> None:
         if render_ms <= 0.0:
             return
@@ -226,16 +252,17 @@ class ShearWindowController:
         self._drag_idle_influence = 1.0
         self._drag_is_idle = True
 
-        self.buffer = None
-        self._scratch = None
-        self._scratch_size = (0, 0)
         self._tile_cache_key = None
         self._tile_rows = []
         self._tile_cols = []
         if surface is not None:
             rect = self.window.rect.clip(surface.get_rect())
             if rect.width > 0 and rect.height > 0 and rect.size == self.window.rect.size:
-                self.buffer = surface.subsurface(self.window.rect).copy()
+                needed = self.window.rect.size
+                self._ensure_buffer_capacity(needed)
+                assert self.buffer is not None
+                self.buffer.fill((0, 0, 0, 0), pygame.Rect(0, 0, needed[0], needed[1]))
+                self.buffer.blit(surface, (0, 0), self.window.rect)
 
     def update_drag(self, mouse_pos, *, blocked: bool = False):
         if not self.active or not self.dragging:
@@ -387,7 +414,7 @@ class ShearWindowController:
 
     def _draw_window_local_buffer(self, theme, draw_window_standard, window_rect: pygame.Rect) -> None:
         assert self.buffer is not None
-        self.buffer.fill((0, 0, 0, 0))
+        self.buffer.fill((0, 0, 0, 0), pygame.Rect(0, 0, window_rect.width, window_rect.height))
 
         offset_x = -window_rect.left
         offset_y = -window_rect.top
@@ -406,8 +433,9 @@ class ShearWindowController:
 
     def _refresh_buffer(self, surface: pygame.Surface, theme, draw_window_standard) -> None:
         window_rect = pygame.Rect(self.window.rect)
-        if self.buffer is None or self.buffer.get_size() != window_rect.size:
-            self.buffer = pygame.Surface(window_rect.size, pygame.SRCALPHA)
+        self._ensure_buffer_capacity(window_rect.size)
+        assert self.buffer is not None
+        needed_buffer_rect = pygame.Rect(0, 0, window_rect.width, window_rect.height)
 
         surface_rect = surface.get_rect()
         clip = window_rect.clip(surface_rect)
@@ -419,14 +447,13 @@ class ShearWindowController:
             return
 
         size = surface.get_size()
-        if self._scratch is None or self._scratch_size != size:
-            self._scratch = pygame.Surface(size, pygame.SRCALPHA)
-            self._scratch_size = size
+        self._ensure_scratch_capacity(size)
 
         scratch = self._scratch
+        assert scratch is not None
         scratch.fill((0, 0, 0, 0), window_rect)
         draw_window_standard(scratch, theme)
-        self.buffer.fill((0, 0, 0, 0))
+        self.buffer.fill((0, 0, 0, 0), needed_buffer_rect)
 
         if clip.width > 0 and clip.height > 0:
             dst_x = clip.left - window_rect.left
@@ -731,7 +758,7 @@ class ShearWindowController:
 
         factors = self._current_shear_factors(w, h, capture_drag_frame=True)
         if factors is None:
-            surface.blit(self.buffer, (base_x, base_y))
+            surface.blit(self.buffer, (base_x, base_y), pygame.Rect(0, 0, w, h))
             self._update_auto_quality((perf_counter() - render_start) * 1000.0)
             return
 

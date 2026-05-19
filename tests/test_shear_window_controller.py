@@ -114,5 +114,66 @@ class TestShearWindowControllerAutoQuality(unittest.TestCase):
         self.assertLessEqual(perf[3], balanced[3])
 
 
+class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
+    def test_buffer_reuses_when_window_shrinks_and_grows_on_demand(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNotNone(controller.buffer)
+        first_buffer = controller.buffer
+        self.assertEqual((120, 80), controller._buffer_size)
+
+        window.rect.size = (100, 60)
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIs(first_buffer, controller.buffer)
+        self.assertEqual((120, 80), controller._buffer_size)
+
+        window.rect.size = (150, 90)
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNot(first_buffer, controller.buffer)
+        self.assertEqual((150, 90), controller._buffer_size)
+
+    def test_scratch_reuses_when_render_target_shrinks_and_grows_on_demand(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNotNone(controller._scratch)
+        first_scratch = controller._scratch
+        self.assertEqual((300, 200), controller._scratch_size)
+
+        smaller = pygame.Surface((240, 160), pygame.SRCALPHA)
+        controller._refresh_buffer(smaller, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIs(first_scratch, controller._scratch)
+        self.assertEqual((300, 200), controller._scratch_size)
+
+        larger = pygame.Surface((360, 220), pygame.SRCALPHA)
+        controller._refresh_buffer(larger, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNot(first_scratch, controller._scratch)
+        self.assertEqual((360, 220), controller._scratch_size)
+
+    def test_dispose_releases_cached_surfaces(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller.start_drag((30, 30), surface=surface)
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNotNone(controller.buffer)
+        self.assertIsNotNone(controller._scratch)
+
+        controller.dispose()
+
+        self.assertIsNone(controller.buffer)
+        self.assertEqual((0, 0), controller._buffer_size)
+        self.assertIsNone(controller._scratch)
+        self.assertEqual((0, 0), controller._scratch_size)
+        self.assertFalse(controller.active)
+        self.assertFalse(controller.dragging)
+
+
 if __name__ == "__main__":
     unittest.main()

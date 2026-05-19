@@ -94,6 +94,14 @@ class _TrackingPresenter(WindowPresenter):
         return False
 
 
+class _StubShearController:
+    def __init__(self):
+        self.dispose_calls = 0
+
+    def dispose(self):
+        self.dispose_calls += 1
+
+
 class TestWindowLifecyclePresenter(unittest.TestCase):
     def test_add_remove_clear_manage_content_layer_children(self):
         window = WindowControl("w", Rect(20, 30, 220, 160), "Window")
@@ -185,6 +193,18 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         window._fit_titlebar_height_to_font(theme)
 
         self.assertEqual(14, window.titlebar_height)
+
+    def test_dispose_releases_shear_controller(self):
+        window = WindowControl("w", Rect(0, 0, 220, 160), "Window")
+        shear = _StubShearController()
+        window.shear_controller = shear
+        window.shear_active = True
+
+        window.dispose()
+
+        self.assertEqual(1, shear.dispose_calls)
+        self.assertIsNone(window.shear_controller)
+        self.assertFalse(window.shear_active)
 
 
 if __name__ == "__main__":
