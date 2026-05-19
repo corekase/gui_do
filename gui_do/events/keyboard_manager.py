@@ -142,6 +142,13 @@ class KeyboardManager:
         if event.default_prevented or event.propagation_stopped:
             return True
 
+        # When the command palette is open, unhandled keys must not leak to
+        # active-window handlers. Global keys have already been processed above.
+        if has_command_palette:
+            event.prevent_default()
+            event.stop_propagation()
+            return True
+
         active_window = scene.active_window()
         if active_window is not None:
             # Non-accessibility keys route to active window before any screen lifecycle handling.

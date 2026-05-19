@@ -11,8 +11,8 @@ from gui_do.events.keyboard_manager import KeyboardManager
 
 
 class _StubKeyEvent:
-    def __init__(self, *, key: int, mod: int = 0):
-        self.kind = EventType.KEY_DOWN
+    def __init__(self, *, key: int, mod: int = 0, kind=EventType.KEY_DOWN):
+        self.kind = kind
         self.key = int(key)
         self.mod = int(mod)
         self.default_prevented = False
@@ -92,8 +92,11 @@ class _StubFocus:
 
 
 class _StubOverlay:
+    def __init__(self, *, palette_open: bool = False):
+        self._palette_open = bool(palette_open)
+
     def has_overlay(self, overlay_id: str) -> bool:
-        return False
+        return self._palette_open and str(overlay_id) == "__command_palette__"
 
 
 class _StubScene:
@@ -117,11 +120,11 @@ class _StubApp:
     def chain_screen_fallthrough(self, event_handler, *, scene_name=None):
         # No-op stub for test compatibility
         return lambda: True
-    def __init__(self, *, scene_name: str, task_panel_focus):
+    def __init__(self, *, scene_name: str, task_panel_focus, palette_open: bool = False):
         self.active_scene_name = str(scene_name)
         self.scene = object()
         self.actions = _StubActions()
-        self.overlay = _StubOverlay()
+        self.overlay = _StubOverlay(palette_open=palette_open)
         self.task_panel_focus = task_panel_focus
         self.focus = _StubFocus()
         self._scheduler = _StubScheduler()
@@ -417,6 +420,23 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
 
         self.assertTrue(consumed)
         self.assertEqual([True], screen_calls)
+
+    def test_command_palette_open_prevents_keyup_fallthrough_to_active_window(self):
+        window = _StubWindow()
+        scene = _StubScene(active_window=window)
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus, palette_open=True)
+        app.focus.route_result = False
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_F2, kind=EventType.KEY_UP)
+
+        consumed = manager.route_key_event(scene, event, app)
+
+        self.assertTrue(consumed)
+        self.assertTrue(event.default_prevented)
+        self.assertTrue(event.propagation_stopped)
+        self.assertEqual([], window.calls)
 
 
 if __name__ == "__main__":

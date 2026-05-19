@@ -127,6 +127,7 @@ class _CommandPaletteListView(ListViewControl):
     def draw(self, surface: "pygame.Surface", theme) -> None:
         if not self.visible:
             return
+        self._refresh_live_command_toggle_entries()
         r = self.rect
         pygame.draw.rect(surface, theme.medium, r)
 
@@ -187,6 +188,21 @@ class _CommandPaletteListView(ListViewControl):
         if sb_rect is not None and handle_rect is not None:
             pygame.draw.rect(surface, theme.medium, sb_rect)
             pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)
+
+    def _refresh_live_command_toggle_entries(self) -> None:
+        # Keep command-toggle rows in sync when external keybinds mutate state
+        # while the palette remains open.
+        for item in self._items:
+            entry = getattr(item, "data", None)
+            if not isinstance(entry, CommandEntry):
+                continue
+            if entry.render_kind != "command_toggle":
+                continue
+            if callable(entry.refresh_after_action):
+                try:
+                    entry.refresh_after_action(entry)
+                except Exception:
+                    pass
 
     def _draw_standard_row(self, surface: "pygame.Surface", theme, row_rect: Rect, item: ListItem, *, selected: bool = False) -> None:
         entry = item.data

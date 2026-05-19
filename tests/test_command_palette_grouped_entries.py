@@ -1,5 +1,7 @@
 import unittest
 
+import pygame
+
 from gui_do.overlays.command_palette_manager import CommandEntry, CommandPaletteManager
 
 
@@ -112,6 +114,26 @@ class _FocusStub:
         _ = via_keyboard
         self.focused_node = node
         self.calls.append(node)
+
+
+class _PaletteThemeStub:
+    def __init__(self):
+        self.medium = (40, 40, 40)
+        self.highlight = (120, 180, 220)
+        self.text = (230, 230, 230)
+        self.graphics_factory = _GraphicsFactoryStub()
+
+
+class _GraphicsFactoryStub:
+    def font_revision(self):
+        return 1
+
+    def build_interactive_visuals(self, _style, _label, rect, font_role="body"):
+        _ = font_role
+        return pygame.Surface((max(1, rect.width), max(1, rect.height)), pygame.SRCALPHA)
+
+    def resolve_visual_state(self, visuals, **_kwargs):
+        return visuals
 
 
 class TestCommandPaletteGroupedEntries(unittest.TestCase):
@@ -448,6 +470,44 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         self.assertTrue(manager.is_open)
         self.assertEqual(["toggle"], calls)
         self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_draw_refreshes_command_toggle_state_after_external_toggle(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        state = {"enabled": False}
+
+        def _toggle():
+            state["enabled"] = not state["enabled"]
+
+        def _refresh(entry: CommandEntry) -> None:
+            entry.toggle_state = state["enabled"]
+            entry.title = "Automatic Layout On" if state["enabled"] else "Automatic Layout Off"
+
+        manager.register(
+            CommandEntry(
+                entry_id="command:main:automatic_layout",
+                title="Automatic Layout Off",
+                action=_toggle,
+                category="Commands",
+                scene_name="main",
+                render_kind="command_toggle",
+                toggle_state=False,
+                refresh_after_action=_refresh,
+            )
+        )
+
+        manager.show(app)
+        listview = manager._open_listview
+        self.assertIsNotNone(listview)
+        item = listview._items[0]
+
+        state["enabled"] = True
+        surface = pygame.Surface((640, 360), pygame.SRCALPHA)
+        listview.draw(surface, _PaletteThemeStub())
+
+        self.assertTrue(bool(item.data.toggle_state))
+        self.assertEqual("Automatic Layout On", item.data.title)
 
     def test_mouse_activation_command_button_stays_open(self):
         overlay = _OverlayLifecycleStub()
