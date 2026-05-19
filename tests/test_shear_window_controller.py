@@ -115,7 +115,7 @@ class TestShearWindowControllerAutoQuality(unittest.TestCase):
 
 
 class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
-    def test_buffer_reuses_when_window_shrinks_and_grows_on_demand(self):
+    def test_buffer_allocates_growth_headroom_and_reuses_within_capacity(self):
         window = _StubWindow()
         controller = ShearWindowController(window)
         surface = pygame.Surface((300, 200), pygame.SRCALPHA)
@@ -123,19 +123,24 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
         controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIsNotNone(controller.buffer)
         first_buffer = controller.buffer
-        self.assertEqual((120, 80), controller._buffer_size)
+        self.assertEqual((180, 120), controller._buffer_size)
 
         window.rect.size = (100, 60)
         controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIs(first_buffer, controller.buffer)
-        self.assertEqual((120, 80), controller._buffer_size)
+        self.assertEqual((180, 120), controller._buffer_size)
 
         window.rect.size = (150, 90)
         controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
-        self.assertIsNot(first_buffer, controller.buffer)
-        self.assertEqual((150, 90), controller._buffer_size)
+        self.assertIs(first_buffer, controller.buffer)
+        self.assertEqual((180, 120), controller._buffer_size)
 
-    def test_scratch_reuses_when_render_target_shrinks_and_grows_on_demand(self):
+        window.rect.size = (200, 130)
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNot(first_buffer, controller.buffer)
+        self.assertEqual((300, 195), controller._buffer_size)
+
+    def test_scratch_allocates_growth_headroom_and_reuses_within_capacity(self):
         window = _StubWindow()
         controller = ShearWindowController(window)
         surface = pygame.Surface((300, 200), pygame.SRCALPHA)
@@ -143,17 +148,29 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
         controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIsNotNone(controller._scratch)
         first_scratch = controller._scratch
-        self.assertEqual((300, 200), controller._scratch_size)
+        self.assertEqual((450, 300), controller._scratch_size)
 
         smaller = pygame.Surface((240, 160), pygame.SRCALPHA)
         controller._refresh_buffer(smaller, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIs(first_scratch, controller._scratch)
-        self.assertEqual((300, 200), controller._scratch_size)
+        self.assertEqual((450, 300), controller._scratch_size)
 
         larger = pygame.Surface((360, 220), pygame.SRCALPHA)
         controller._refresh_buffer(larger, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIs(first_scratch, controller._scratch)
+        self.assertEqual((450, 300), controller._scratch_size)
+
+        largest = pygame.Surface((520, 340), pygame.SRCALPHA)
+        controller._refresh_buffer(largest, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIsNot(first_scratch, controller._scratch)
-        self.assertEqual((360, 220), controller._scratch_size)
+        self.assertEqual((780, 510), controller._scratch_size)
+
+    def test_expanded_surface_size_uses_growth_factor(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+
+        self.assertEqual((180, 120), controller._expanded_surface_size((120, 80)))
+        self.assertEqual((1, 1), controller._expanded_surface_size((0, 0)))
 
     def test_dispose_releases_cached_surfaces(self):
         window = _StubWindow()

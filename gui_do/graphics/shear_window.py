@@ -69,6 +69,7 @@ class ShearWindowController:
         self.band_height = 10
         self.tile_width = 16
         self.overlap_px = 4
+        self.surface_growth_factor = 1.5
 
         self.time_step = 1.0 / 120.0
         self.simulation_substeps = 3
@@ -166,15 +167,23 @@ class ShearWindowController:
     def _surface_can_fit(capacity: tuple[int, int], needed: tuple[int, int]) -> bool:
         return capacity[0] >= needed[0] and capacity[1] >= needed[1]
 
+    def _expanded_surface_size(self, needed: tuple[int, int]) -> tuple[int, int]:
+        growth = max(1.0, float(self.surface_growth_factor))
+        width = max(1, int(math.ceil(float(needed[0]) * growth)))
+        height = max(1, int(math.ceil(float(needed[1]) * growth)))
+        return width, height
+
     def _ensure_buffer_capacity(self, needed: tuple[int, int]) -> None:
         if self.buffer is None or not self._surface_can_fit(self._buffer_size, needed):
-            self.buffer = pygame.Surface(needed, pygame.SRCALPHA)
-            self._buffer_size = needed
+            allocated = self._expanded_surface_size(needed)
+            self.buffer = pygame.Surface(allocated, pygame.SRCALPHA)
+            self._buffer_size = allocated
 
     def _ensure_scratch_capacity(self, needed: tuple[int, int]) -> None:
         if self._scratch is None or not self._surface_can_fit(self._scratch_size, needed):
-            self._scratch = pygame.Surface(needed, pygame.SRCALPHA)
-            self._scratch_size = needed
+            allocated = self._expanded_surface_size(needed)
+            self._scratch = pygame.Surface(allocated, pygame.SRCALPHA)
+            self._scratch_size = allocated
 
     def dispose(self) -> None:
         self.active = False
