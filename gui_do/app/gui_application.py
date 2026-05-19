@@ -66,6 +66,15 @@ class GuiApplication:
         self.task_panel_focus = TaskPanelFocusManager()
         self._last_active_window = None
         self.actions = ActionManager()
+        self._register_builtin_actions()
+
+    def _register_builtin_actions(self):
+        # Register built-in tile_now action for global tiling hotkey.
+        def _tile_now_action(_event=None):
+            self.set_window_tiling_enabled(True, relayout=False)
+            self.tile_windows(as_visibility_event=True)
+            return True
+        self.actions.register_action("tile_now", _tile_now_action)
         self.events = EventBus()
         self.invalidation = InvalidationTracker()
         self._scenes = {"default": self._create_scene_runtime()}

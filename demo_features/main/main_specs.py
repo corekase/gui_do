@@ -22,15 +22,6 @@ from gui_do.features.data_driven_runtime import (
     TooltipBindingSpec,
 )
 
-def _tile_now_handler(feature, host, *_):
-    # Force a relayout pass for the active scene when user requests tile-now.
-    app = getattr(host, "app", None)
-    if app is not None:
-        set_tiling_enabled = getattr(app, "set_window_tiling_enabled", None)
-        if callable(set_tiling_enabled):
-            set_tiling_enabled(True, relayout=False)
-        app.tile_windows(as_visibility_event=True)
-    return True
 
 MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
     scene_name="main",
@@ -71,9 +62,7 @@ MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
         # Bind F2 to tile windows
         ActionHotkeySpec(
             action_name="tile_now",
-            handler=_tile_now_handler,
             key=pygame.K_F2,
-            mod=None,
             global_key=True,
             scene_name="main",
         ),

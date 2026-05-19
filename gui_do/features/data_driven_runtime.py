@@ -327,10 +327,13 @@ class AutoSizedStyledLabelSpec:
 
 @dataclass(frozen=True)
 class ActionHotkeySpec:
-    """Declarative descriptor for registering one action and optional key binding."""
+    """Declarative descriptor for registering one action and optional key binding.
+
+    If handler is None, the framework will resolve the action by name at runtime (for built-in actions).
+    """
 
     action_name: str
-    handler: Callable[[object], object]
+    handler: Callable[[object], object] | None = None
     key: int | None = None
     scene_name: str | None = None
     mod: int | None = None
@@ -1548,7 +1551,7 @@ def register_tooltip_attr_specs(target, tooltip_manager, specs: Sequence[Tooltip
         tooltip_manager.register(control, str(spec.message))
 
 
-def _invoke_action_hotkey_handler(handler: Callable[..., object], *, event, feature=None, host=None) -> object:
+def _invoke_action_hotkey_handler(handler: Callable[..., object] | None, *, event, feature=None, host=None) -> object:
     """Invoke an action-hotkey handler with compatible arity.
 
     Supported handler signatures:
@@ -1557,6 +1560,9 @@ def _invoke_action_hotkey_handler(handler: Callable[..., object], *, event, feat
     - handler(feature, host, event)
     - any callable accepting varargs
     """
+    if handler is None:
+        return False
+
     try:
         signature = inspect.signature(handler)
     except (TypeError, ValueError):
@@ -1588,25 +1594,28 @@ def register_action_hotkeys(app_actions, specs: Sequence[ActionHotkeySpec], *, f
         required_mod = None if spec.mod is None else int(spec.mod)
         needs_context_wrap = (feature is not None) or (host is not None)
 
-        # Preserve legacy identity semantics when no wrapper behavior is needed.
-        # Modifier checks are handled by ActionManager binding matching.
-        if not needs_context_wrap:
-            app_actions.register_action(action_name, spec.handler)
-        else:
-            def _make_handler(raw_handler):
-                def _handler(event):
-                    return bool(
-                        _invoke_action_hotkey_handler(
-                            raw_handler,
-                            event=event,
-                            feature=feature,
-                            host=host,
+        # If handler is omitted, bind the key to an already-registered action
+        # (e.g. built-in actions like tile_now) without overriding it.
+        if spec.handler is not None:
+            # Preserve legacy identity semantics when no wrapper behavior is needed.
+            # Modifier checks are handled by ActionManager binding matching.
+            if not needs_context_wrap:
+                app_actions.register_action(action_name, spec.handler)
+            else:
+                def _make_handler(raw_handler):
+                    def _handler(event):
+                        return bool(
+                            _invoke_action_hotkey_handler(
+                                raw_handler,
+                                event=event,
+                                feature=feature,
+                                host=host,
+                            )
                         )
-                    )
 
-                return _handler
+                    return _handler
 
-            app_actions.register_action(action_name, _make_handler(spec.handler))
+                app_actions.register_action(action_name, _make_handler(spec.handler))
         if spec.key is None:
             continue
         if bool(spec.global_key) and hasattr(app_actions, "bind_global_key"):
@@ -2867,27 +2876,18 @@ class TabLayoutContext:
         self._y += int(advance) if advance is not None else int(height) + 8
         return result
 
-    # ------------------------------------------------------------------
-    # Cursor management
-    # ------------------------------------------------------------------
-
-    def advance(self, n: int) -> "TabLayoutContext":
-        """Manually advance the y cursor by *n* pixels."""
-        self._y += int(n)
-        return self
+    def advance(self, amount: int) -> int:
+        """Advance the y cursor by *amount* and return the new y."""
+        self._y += int(amount)
+        return self._y
 
     def remaining_height(self, *, margin: int = 0) -> int:
-        """Height from the current cursor to the bottom of the rect minus margin."""
-        return max(0, self._rect.bottom - self._y - int(margin))
-
-    # ------------------------------------------------------------------
-    # Output
-    # ------------------------------------------------------------------
+        """Return remaining vertical space to rect.bottom, minus optional margin."""
+        return int(self._rect.bottom - self._y - int(margin))
 
     def build(self) -> list:
-        """Return the accumulated control list."""
+        """Return a copy of created controls for the caller."""
         return list(self._controls)
-
 
 
 def make_window_toggle_spec(
