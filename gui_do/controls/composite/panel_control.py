@@ -244,6 +244,26 @@ class PanelControl(UiNode):
                 return child
         return None
 
+    def _dispatch_lower_control_event(self, window: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        handle = getattr(window, "handle_lower_control_event", None)
+        if not callable(handle):
+            return False
+        consumed = bool(handle(event, app, theme))
+        consume_click = getattr(window, "consume_lower_control_click_request", None)
+        click_requested = bool(callable(consume_click) and consume_click())
+        if click_requested:
+            self._lower_window(window)
+            new_top = self._top_visible_window()
+            if new_top is None:
+                self._clear_active_windows()
+            else:
+                self._set_active_window(new_top)
+            consumed = True
+        if consumed:
+            event.prevent_default()
+            event.stop_propagation()
+        return consumed
+
     def _set_active_window(self, window: UiNode) -> None:
         is_valid_target = (
             window in self.children and self._is_window_like(window) and window.visible and window.enabled
@@ -544,6 +564,38 @@ class PanelControl(UiNode):
 
         raw = event.pos
 
+        if event.is_mouse_motion() or event.is_mouse_down(1) or event.is_mouse_up(1):
+            pressed_window = None
+            for candidate in reversed(self.children):
+                if not self._is_window_like(candidate):
+                    continue
+                is_pressed = getattr(candidate, "is_lower_control_pressed", None)
+                if callable(is_pressed) and bool(is_pressed()):
+                    pressed_window = candidate
+                    break
+            if pressed_window is not None:
+                if self._dispatch_lower_control_event(pressed_window, event, app, theme):
+                    return True
+
+            if isinstance(raw, tuple) and len(raw) == 2:
+                top_window = self._top_window_at(raw)
+                if top_window is not None and top_window is not pressed_window:
+                    if self._dispatch_lower_control_event(top_window, event, app, theme):
+                        return True
+
+                if event.is_mouse_motion():
+                    for candidate in self.children:
+                        if candidate is top_window:
+                            continue
+                        if not self._is_window_like(candidate):
+                            continue
+                        is_pressed = getattr(candidate, "is_lower_control_pressed", None)
+                        if callable(is_pressed) and bool(is_pressed()):
+                            continue
+                        clear_hover = getattr(candidate, "clear_lower_control_hover", None)
+                        if callable(clear_hover):
+                            clear_hover()
+
         # --- Handle window chrome events before children ---
         # Mouse motion: dragging window
         if event.is_mouse_motion() and self._drag_window is not None:
@@ -649,17 +701,6 @@ class PanelControl(UiNode):
                     continue
                 if window.rect.collidepoint(raw):
                     self._set_active_window(window)
-                    # Lower control
-                    if window.lower_control_rect().collidepoint(raw):
-                        self._lower_window(window)
-                        new_top = self._top_visible_window()
-                        if new_top is None:
-                            self._clear_active_windows()
-                        else:
-                            self._set_active_window(new_top)
-                        event.prevent_default()
-                        event.stop_propagation()
-                        return True
                     # Titlebar drag
                     if window.title_bar_rect().collidepoint(raw):
                         self._raise_window(window)

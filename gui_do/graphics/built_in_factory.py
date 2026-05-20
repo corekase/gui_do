@@ -321,9 +321,9 @@ class BuiltInGraphicsFactory:
         circle(surface, col2, centre, outer_radius, ring_width)
         return surface
 
-    def draw_window_lower_control_bitmap(self, size: int, col1, col2) -> Surface:
+    def draw_window_lower_control_bitmap(self, size: int, col1, col2, *, box_state: str = "idle") -> Surface:
         surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
-        draw_box_bitmap(surface, "idle", Rect(0, 0, size, size), BUILT_IN_COLOURS)
+        draw_box_bitmap(surface, box_state, Rect(0, 0, size, size), BUILT_IN_COLOURS)
         gutter = max(1, int(size * 0.1) // 2)
         panel_size = int(size * 0.45)
         offset = int(size * 0.2)
@@ -336,6 +336,24 @@ class BuiltInGraphicsFactory:
         draw_rect(surface, col2, panel2)
         draw_rect(surface, BUILT_IN_COLOURS["none"], panel2, 1)
         return surface
+
+    def build_window_lower_control_visuals(self, size: int) -> InteractiveVisuals:
+        control_size = max(2, int(size))
+        idle = self.draw_window_lower_control_bitmap(control_size, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"], box_state="idle")
+        hover = self.draw_window_lower_control_bitmap(control_size, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"], box_state="hover")
+        armed = self.draw_window_lower_control_bitmap(control_size, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"], box_state="armed")
+        disabled = self.build_disabled_bitmap(idle)
+        disabled_armed = self.build_disabled_bitmap(armed)
+        hidden = self.build_hidden_bitmap((control_size, control_size))
+        return InteractiveVisuals(
+            idle=idle,
+            hover=hover,
+            armed=armed,
+            disabled=disabled,
+            disabled_armed=disabled_armed,
+            hidden=hidden,
+            hit_rect=Rect(0, 0, control_size, control_size),
+        )
 
     def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str, *, title_font_role: str = "title") -> WindowChromeVisuals:
         start = perf_counter()
@@ -376,7 +394,7 @@ class BuiltInGraphicsFactory:
         inactive.blit(inactive_text, (5, inactive_y))
         active.blit(active_text, (5, active_y))
 
-        lower = self.draw_window_lower_control_bitmap(chrome_height, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"])
+        lower = self.draw_window_lower_control_bitmap(chrome_height, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"], box_state="idle")
 
         first_frame_profiler().record_once(
             "visual.window_chrome",

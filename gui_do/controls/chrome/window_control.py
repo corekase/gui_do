@@ -8,6 +8,7 @@ from pygame.draw import rect as draw_rect
 from ...events.gui_event import GuiEvent
 from ...app.first_frame_profiler import first_frame_profiler
 from ..base.ui_node import UiNode
+from ..input.image_button_control import ImageButtonControl
 from ...graphics import load_pristine_surface
 from ...app.error_handling import logical_error
 
@@ -144,6 +145,17 @@ class WindowControl(UiNode):
         self._pristine_scaled_size = (0, 0)
         self._frame_visuals = None
         self._frame_visual_size = (0, 0)
+        placeholder = pygame.Surface((1, 1), pygame.SRCALPHA)
+        self._lower_control_button = ImageButtonControl(
+            f"{control_id}__lower_order",
+            Rect(0, 0, 1, 1),
+            placeholder,
+            placeholder,
+            placeholder,
+            on_click=self._queue_lower_control_click,
+        )
+        self._lower_control_visual_size = (0, 0)
+        self._lower_control_click_queued = False
         self._content_host = _WindowContentHost(f"{self.control_id}__content", self.content_rect())
         self._content_host_rect_dirty = False
         super().add_child(self._content_host)
@@ -297,12 +309,59 @@ class WindowControl(UiNode):
         )
 
     def lower_control_rect(self) -> Rect:
+        if self._lower_control_button is not None:
+            width = max(1, int(self._lower_control_button.rect.width))
+            height = max(1, int(self._lower_control_button.rect.height))
+            if width > 1 and height > 1:
+                return Rect(self.rect.right - width, self.rect.top, width, height)
         if self._chrome is not None:
             lower_rect = self._chrome.lower_control.get_rect()
             return Rect(self.rect.right - lower_rect.width, self.rect.top, lower_rect.width, lower_rect.height)
         size = max(12, self.titlebar_height)
         top = self.rect.top
         return Rect(self.rect.right - size, top, size, size)
+
+    def _queue_lower_control_click(self) -> None:
+        self._lower_control_click_queued = True
+
+    def consume_lower_control_click_request(self) -> bool:
+        requested = bool(self._lower_control_click_queued)
+        self._lower_control_click_queued = False
+        return requested
+
+    def is_lower_control_pressed(self) -> bool:
+        return bool(getattr(self._lower_control_button, "pressed", False))
+
+    def clear_lower_control_hover(self) -> None:
+        self._lower_control_button.reconcile_hover(False)
+
+    def _sync_lower_control_button_rect(self) -> None:
+        if self._lower_control_button is None:
+            return
+        target = self.lower_control_rect()
+        if self._lower_control_button.rect != target:
+            self._lower_control_button.set_rect(target)
+
+    def _ensure_lower_control_button_visuals(self, theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
+        control_size = max(12, self.titlebar_height)
+        if self._lower_control_visual_size == (control_size, control_size):
+            return
+        visuals = factory.build_window_lower_control_visuals(control_size)
+        self._lower_control_button.set_bitmaps(visuals.idle, visuals.hover, visuals.armed, factory=factory)
+        self._lower_control_visual_size = (control_size, control_size)
+
+    def handle_lower_control_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        if not (self.visible and self.enabled):
+            self._lower_control_button.hovered = False
+            self._lower_control_button.pressed = False
+            return False
+        if theme is not None:
+            self._ensure_lower_control_button_visuals(theme)
+        self._sync_lower_control_button_rect()
+        self._lower_control_button.enabled = self.enabled
+        self._lower_control_button.visible = self.visible
+        return self._lower_control_button.handle_event(event, app, theme)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         if self.presenter is not None:
@@ -496,7 +555,11 @@ class WindowControl(UiNode):
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)
         surface.blit(title_bitmap, title_rect.topleft, source_rect)
         draw_rect(surface, theme.dark, self.rect, 2)
-        surface.blit(self._chrome.lower_control, self.lower_control_rect().topleft)
+        self._ensure_lower_control_button_visuals(theme)
+        self._sync_lower_control_button_rect()
+        self._lower_control_button.enabled = self.enabled
+        self._lower_control_button.visible = self.visible
+        self._lower_control_button.draw(surface, theme)
 
         # Debug overlay removed; normal rendering restored.
 
