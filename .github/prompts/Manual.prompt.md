@@ -6,7 +6,7 @@ agent: agent
 
 # gui_do Manual Generator Program (Monolithic, Serial, Discovery-Only)
 
-This prompt replaces the old multi-subprompt manual pipeline with a single monolithic program.
+This prompt defines a single monolithic program for generating the manual.
 It is intentionally structured as:
 1. Program instructions (how to generate)
 2. Input list (what sections to generate)
@@ -116,7 +116,7 @@ Each system chapter must include:
 8. Cross-links to related chapters
 9. Back-to-TOC link
 
-### Required topical coverage migrated from prior prompts
+### Required topical coverage
 
 The generated manual must include and correctly cross-link:
 1. Data-driven runtime model and lifecycle model
@@ -124,7 +124,7 @@ The generated manual must include and correctly cross-link:
 3. Runtime-scope ownership and teardown discipline
 4. Declarative service/effect/operation specs and failure policies
 5. Higher-level routed runtime faculties discovered at generation time
-6. Unified menu-strip model only (no legacy split narrative)
+6. Unified menu-strip model only (no split narrative)
 7. Command palette two-bind model and behavior details
 8. Unified window-visibility model across menu strip, command palette, task panel
 9. Scene/window opt-in and opt-out behavior using current discovered fields
@@ -214,4 +214,4 @@ Use this as the terse generation input list. Expand each item using the Program 
 
 ## Operating note
 
-This prompt is a one-time conversion target from the old Manual prompt and subprompt set into a single monolithic generator. The subprompt files are legacy reference material only; this prompt is the authoritative entrypoint for generation behavior.
+This prompt is the authoritative entrypoint for manual generation behavior.
