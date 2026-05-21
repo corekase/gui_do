@@ -7,6 +7,7 @@ from gui_do.app.gui_application import GuiApplication
 from gui_do.controls.chrome.menu_bar_control import MenuStripControl
 from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.controls.composite.panel_control import PanelControl
 from gui_do.events.gui_event import EventType, GuiEvent
 
 
@@ -119,6 +120,24 @@ class TestSceneChromeContracts(unittest.TestCase):
         self.assertEqual(MenuStripControl.preferred_height(), bounded.y)
         self.assertEqual(800, bounded.width)
         self.assertEqual(600 - MenuStripControl.preferred_height() - 6, bounded.height)
+
+    def test_window_drag_limits_follow_application_bounded_area_rect(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", Rect(0, 0, 200, 100), "Window")
+        panel.add(window)
+
+        class _BoundedAreaApp:
+            def __init__(self) -> None:
+                self.surface = pygame.Surface((800, 600))
+
+            def bounded_area_rect(self, scene_name=None):
+                return Rect(100, 50, 400, 300)
+
+        app = _BoundedAreaApp()
+
+        self.assertEqual((100, 300, 50, 250), panel._window_drag_limits(window, app))
+        self.assertEqual((100, 50), panel._clamp_window_drag_target(window, -20, -10, app))
+        self.assertEqual((300, 250), panel._clamp_window_drag_target(window, 1000, 1000, app))
 
     def test_scene_root_task_panel_occludes_window_lower_control_pointer_events(self):
         app = GuiApplication(pygame.Surface((800, 600)))

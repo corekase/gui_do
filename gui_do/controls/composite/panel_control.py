@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
@@ -60,74 +60,17 @@ class PanelControl(UiNode):
                 tile_windows()
         return True
 
-    def _scene_menu_bar_rect(self) -> Optional[Rect]:
-        menu_rect: Optional[Rect] = None
-        for child in self.children:
-            class_name = str(getattr(child.__class__, "__name__", ""))
-            is_menu_bar_like = class_name == "MenuStripControl"
-            if (
-                child.visible
-                and child.enabled
-                and not self._is_window_like(child)
-                and is_menu_bar_like
-            ):
-                if menu_rect is None:
-                    menu_rect = Rect(child.rect)
-                else:
-                    menu_rect.union_ip(child.rect)
-        return menu_rect
-
-    @staticmethod
-    def _task_panel_reserved_rect(task_panel: UiNode) -> Optional[Rect]:
-        if not task_panel.visible or not task_panel.enabled or not task_panel.is_task_panel():
-            return None
-        panel_rect = Rect(task_panel.rect)
-        reserved_height = getattr(task_panel, "reserved_height", None)
-        if callable(reserved_height):
-            height = max(0, int(reserved_height()))
-            if height <= 0:
-                return None
-            if bool(getattr(task_panel, "dock_bottom", False)):
-                shown_y = int(getattr(task_panel, "_shown_y", panel_rect.y))
-                return Rect(panel_rect.x, shown_y + panel_rect.height - height, panel_rect.width, height)
-            shown_y = int(getattr(task_panel, "_shown_y", panel_rect.y))
-            return Rect(panel_rect.x, shown_y, panel_rect.width, height)
-
-        if not bool(getattr(task_panel, "auto_hide", False)):
-            return panel_rect
-
-        hidden_peek = max(1, int(getattr(task_panel, "hidden_peek_pixels", 1)))
-        shown_y = int(getattr(task_panel, "_shown_y", panel_rect.y))
-        dock_bottom = bool(getattr(task_panel, "dock_bottom", False))
-        if dock_bottom:
-            return Rect(panel_rect.x, shown_y + panel_rect.height - hidden_peek, panel_rect.width, hidden_peek)
-        return Rect(panel_rect.x, shown_y, panel_rect.width, hidden_peek)
-
-    def _task_panel_reserved_rects(self) -> List[Rect]:
-        reserved_rects: List[Rect] = []
-        for child in self.children:
-            reserved = self._task_panel_reserved_rect(child)
-            if reserved is not None and reserved.width > 0 and reserved.height > 0:
-                reserved_rects.append(reserved)
-        return reserved_rects
-
     def _window_drag_limits(self, window: UiNode, app: "GuiApplication") -> Optional[tuple[int, int, int, int]]:
-        surface = getattr(app, "surface", None)
-        if surface is None:
+        bounded_area_rect = getattr(app, "bounded_area_rect", None)
+        if not callable(bounded_area_rect):
             return None
 
-        screen_rect = surface.get_rect()
-        min_left = int(screen_rect.left)
-        max_left = int(screen_rect.right - window.rect.width)
+        allowed_rect = Rect(bounded_area_rect())
+        min_left = int(allowed_rect.left)
+        max_left = int(allowed_rect.right - window.rect.width)
 
-        top_limit = int(screen_rect.top)
-        bottom_limit = int(screen_rect.bottom)
-
-        menu_rect = self._scene_menu_bar_rect()
-        if menu_rect is not None:
-            top_limit = max(top_limit, int(menu_rect.bottom))
-
-        max_top = int(bottom_limit - window.rect.height)
+        top_limit = int(allowed_rect.top)
+        max_top = int(allowed_rect.bottom - window.rect.height)
         return (min_left, max_left, top_limit, max_top)
 
     def _clamp_window_drag_target(self, window: UiNode, target_x: int, target_y: int, app: "GuiApplication") -> tuple[int, int]:
@@ -151,29 +94,6 @@ class PanelControl(UiNode):
             proposed_rect.top = top_limit
         elif proposed_rect.top > max_top:
             proposed_rect.top = max_top
-
-        task_panel_reserved_rects = self._task_panel_reserved_rects()
-        if task_panel_reserved_rects:
-            for _ in range(4):
-                adjusted = False
-                for reserved in task_panel_reserved_rects:
-                    if not proposed_rect.colliderect(reserved):
-                        continue
-                    move_up = abs(int(proposed_rect.bottom - reserved.top))
-                    move_down = abs(int(reserved.bottom - proposed_rect.top))
-                    if move_up <= move_down:
-                        proposed_rect.bottom = int(reserved.top)
-                    else:
-                        proposed_rect.top = int(reserved.bottom)
-                    if proposed_rect.top < top_limit:
-                        proposed_rect.top = top_limit
-                    if proposed_rect.bottom > bottom_limit:
-                        proposed_rect.bottom = bottom_limit
-                    adjusted = True
-                if not adjusted:
-                    break
-            if any(proposed_rect.colliderect(reserved) for reserved in task_panel_reserved_rects):
-                return (int(window.rect.left), int(window.rect.top))
 
         return (int(proposed_rect.left), int(proposed_rect.top))
 
