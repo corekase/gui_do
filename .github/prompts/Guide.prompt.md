@@ -60,7 +60,8 @@ Before writing either file, collect current facts from:
 3. demo_features/ package layout and package-root __init__.py files
 4. docs/runtime_operating_contracts.md: behavioral guarantees and contract values
 5. MANUAL.md: title and table-of-contents headings for deep-link targets
-6. Existing README.md and TUTORIAL.md when present
+6. pyproject.toml and dependency requirement files (for example requirements-ci.txt) to discover install-time dependencies users must install manually when using --no-deps
+7. Existing README.md and TUTORIAL.md when present
 
 Use discovered data only. Do not assume names from memory.
 
@@ -104,6 +105,9 @@ README.md content rules:
 2. Include a minimal quick-look listing that is runnable and uses verified public APIs.
 3. Link prominently to TUTORIAL.md and MANUAL.md.
 4. Do not include full API catalogs, tier dumps, or exhaustive control lists.
+5. In Installation, explicitly use `python -m pip install -e . --no-deps` rather than creating a virtual environment workflow or a dependency-installing editable install command.
+6. In Installation, list the discovered dependencies users must install manually because `--no-deps` skips dependency installation.
+7. In Installation, state that manual dependency installation is required because building binary dependencies can be problematic on Windows.
 
 ### TUTORIAL.md contract
 
@@ -130,6 +134,9 @@ TUTORIAL.md content rules:
 4. Include lifecycle-safe cleanup in all subscription examples.
 5. Link to MANUAL.md for deeper system and specification coverage.
 6. Do not use private or internal symbols in examples.
+7. In Installation and Setup, explicitly use `python -m pip install -e . --no-deps` and avoid virtual environment creation steps unless the repository itself requires them.
+8. In Installation and Setup, list the discovered dependencies users must install manually because `--no-deps` skips dependency installation.
+9. In Installation and Setup, state that manual dependency installation is required because building binary dependencies can be problematic on Windows.
 
 ### Major systems and runtime faculties coverage
 
@@ -159,6 +166,9 @@ After generating README.md and TUTORIAL.md, verify and fix:
 7. No from gui_do.<submodule> imports in examples.
 8. Replace any occurrence of pygame-ce with pygame.
 9. Normalize double-underscore identifiers with inline code formatting.
+10. Installation commands in both files use `python -m pip install -e . --no-deps` when describing editable installation.
+11. Installation sections in both files include a dependency list discovered from repository dependency files for manual installation.
+12. Installation sections in both files explain the Windows binary dependency rationale for manual dependency installation with `--no-deps`.
 
 ### Final enrichment pass (required and single)
 

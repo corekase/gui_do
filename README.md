@@ -10,83 +10,60 @@
 
 ## Overview
 
-gui_do is a Python GUI framework built on pygame for desktop tools, game interfaces, simulations, and interactive applications. Its primary model is declarative runtime wiring: you describe scenes, features, actions, and runtime facilities with specs, then bootstrap turns those declarations into a running app. Feature behavior stays imperative through lifecycle methods, while the framework automates event routing, overlay dispatch, focus handling, scene transitions, and runtime sequencing. Reactive state primitives such as ObservableValue, ObservableList, and ObservableDict keep UI updates automatic and explicit. If you want a complete hands-on build path, read [TUTORIAL.md](TUTORIAL.md), and for full system detail use [MANUAL.md](MANUAL.md).
+gui_do is a data-driven GUI runtime for building scene-based desktop apps with predictable behavior and testable contracts. You declare features, scenes, windows, actions, and optional runtime facilities, then let `bootstrap_host_application` wire them into a coherent host application.
+
+If you want deep system details, use MANUAL.md. If you want a guided build path, use TUTORIAL.md.
 
 ## Strengths
 
-- Declarative runtime wiring: You declare structure with specs and let bootstrap build the runtime graph deterministically.
-- Feature lifecycle isolation: Each feature owns build, bind_runtime, handle_event, on_update, draw, and shutdown_runtime boundaries.
-- Reactive state: ObservableValue, ObservableList, ObservableDict, and ComputedValue propagate updates without polling loops.
-- Composable overlays: Dialogs, toasts, tooltips, command palette, context menus, and shortcut help share consistent routing behavior.
-- Tiered public surface: 32 tiers expose a clear path from high-level bootstrap APIs down to graphics, audio, and migration layers.
-- Scene management: Scene bundles support transitions, runtime startup policies, per-scene roots, and scene-scoped facilities.
-- Persistence and migration: Workspace snapshots and versioned migration utilities support durable state restoration over time.
-- Accessibility and focus: Semantic accessibility tree support, focus scopes, focus rings, and live announcements are built in.
-- Diagnostics and observability: Telemetry spans, event recording/playback, introspection registries, and inspectors aid debugging.
-- Advanced routed runtime faculties: RoutedRuntimeSpec can declaratively wire policy engines, effect lifetime orchestration, event pipelines, durable queues, capability contracts, projections, dependency validation, workflow orchestration, recompute orchestration, QoS policies, health probes, replay harnesses, and hot-swap management.
-
-See [MANUAL.md](MANUAL.md) for architecture and per-system details, and [TUTORIAL.md](TUTORIAL.md) for a complete project walk-through.
+- Declarative host assembly through `HostApplicationBindingSpec`, scene bundles, and runtime scene specs.
+- Strong lifecycle model with `Feature`, `LogicFeature`, `RoutedFeature`, and runtime-owned cleanup hooks.
+- Reactive data primitives (`ObservableValue`, collection views, bindings, and state store utilities) for predictable UI updates.
+- Rich runtime systems spanning events, actions, focus, scheduling, layout, overlays, controls, forms, persistence, graphics, telemetry, and accessibility.
+- Explicit operating contracts for determinism, optional-facility behavior, bounded scheduling budgets, and restore diagnostics.
 
 ## Use Cases
 
-gui_do fits a broad range of Python applications. It is strong for internal developer tools such as dashboards, inspectors, and operational consoles where reactive state and overlays matter. It also supports game-adjacent UI and HUD workflows with graphics, particles, tile maps, scene graph, and audio cues. For interactive simulations and data exploration, it provides stateful controls, virtualization, and scheduling primitives that keep updates predictable. Multi-window workbench layouts, task-panel workflows, and rapid layout prototyping with constraint and flex systems are all first-class patterns. For deeper design rationale and contracts, use [MANUAL.md](MANUAL.md), then use [TUTORIAL.md](TUTORIAL.md) to build your own end-to-end app.
+- Multi-scene productivity or operations tools with keyboard-driven workflows.
+- Rich data and control surfaces using windows, overlays, command palettes, and docked chrome.
+- Test-heavy GUI systems where lifecycle safety, deterministic routing, and docs-backed contracts matter.
+- Demo-style feature composition where each feature lives in its own package and exposes a clean package root.
 
 ## Quick Look
 
+A minimal runnable entrypoint can be as small as this:
+
 ```python
-import pygame
-from pygame import Rect
+#!/usr/bin/env python3
+from gui_do import bootstrap_host_application
 
-from gui_do import (
-    Feature,
-    FeatureSpec,
-    HostApplicationBindingSpec,
-    LabelControl,
-    ObservableValue,
-    PanelControl,
-    SceneBundleBindingSpec,
-    bootstrap_host_application,
-    build_host_application_config,
-)
+from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
 
-class QuickLookFeature(Feature):
-    def __init__(self):
-        super().__init__("quick_look", scene_name="main")
-        self.count = ObservableValue(0)
 
-    def build(self, host):
-        root = host.app.add(PanelControl("quick_root", Rect(40, 40, 360, 120), draw_background=True), scene_name="main")
-        self.label = root.add(LabelControl("quick_label", Rect(16, 16, 320, 40), "Count: 0"))
+class GuiDoDemo:
+    def __init__(self) -> None:
+        bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
 
-    def bind_runtime(self, host):
-        self.countSubscription = self.count.subscribe(lambda value: setattr(self.label, "text", f"Count: {value}"))
 
-class Host:
-    pass
-
-host = Host()
-config = build_host_application_config(HostApplicationBindingSpec(
-    display_size=(900, 520),
-    window_title="gui_do Quick Look",
-    fonts={"default": {"file": None, "size": 16}},
-    initial_scene_name="main",
-    scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
-    feature_entries=(FeatureSpec("quick_feature", QuickLookFeature),),
-))
-bootstrap_host_application(host, config)
-host.app.run_entrypoint(target_fps=60)
+if __name__ == "__main__":
+    GuiDoDemo().app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
 ```
 
-For a complete multi-feature app, continue to [TUTORIAL.md](TUTORIAL.md). For full API and systems reference, use [MANUAL.md](MANUAL.md).
+The pattern is intentionally compact. Keep your entrypoint thin, keep composition declarative, and keep feature behavior inside feature classes.
 
 ## Documentation
 
-| Document | Purpose |
-|----------|---------|
-| [TUTORIAL.md](TUTORIAL.md) | Step-by-step project tutorial — start here if you are new to gui_do |
-| [MANUAL.md](MANUAL.md) | Complete developer reference for all systems and APIs |
+| What you need | Where to go | Why |
+|---|---|---|
+| Quick orientation and setup | TUTORIAL.md | Step-by-step project walkthrough with runnable milestones |
+| Runtime model and deep system details | MANUAL.md | Full conceptual and operational reference |
+| Runtime operating guarantees | docs/runtime_operating_contracts.md | Determinism, safety rails, and release-gate behavior |
+| Architecture boundaries | docs/architecture.md and docs/architecture_boundary_spec.md | Framework/demo separation and subsystem boundaries |
 
-TUTORIAL.md teaches gui_do by building one complete project from scratch and explaining both how and why each step exists. MANUAL.md is the comprehensive systems reference with API tables, integration patterns, runtime contracts, and appendices.
+Recommended path:
+1. Read TUTORIAL.md first.
+2. Use MANUAL.md sections 5 to 10 for deeper concept and system understanding.
+3. Use MANUAL.md appendix sections for spec-level details when building advanced flows.
 
 ## Installation
 
@@ -96,23 +73,36 @@ From the repository root:
 python -m pip install -e . --no-deps
 ```
 
-Dependency note: gui_do requires pygame and numpy.
+Because editable install is intentionally run with `--no-deps` (to avoid problematic binary dependency builds on Windows), install runtime dependencies manually:
+
+```bash
+python -m pip install pygame numpy
+```
+
+Then run the demo:
+
+```bash
+python gui_do_demo.py
+```
 
 ## Project Structure
 
-- gui_do/: framework library and all tiered public APIs.
-- demo_features/: runnable reference patterns organized as one folder per feature package with package-root import surfaces.
-- tests/: contract and behavioral tests for runtime guarantees, systems, and controls.
-- docs/: architecture and runtime contract specifications.
-- TUTORIAL.md: guided end-to-end learning path.
-- MANUAL.md: complete system and API reference.
+- `gui_do/`: public framework package and runtime systems.
+- `demo_features/`: consumer-side demo features organized one package per feature/scene.
+- `demo_features/data/`: demo assets (fonts, images, cursors, sounds).
+- `docs/`: architecture and contract documentation.
+- `tests/`: behavior and contract test suite.
+- `gui_do_demo.py`: bootstrap entrypoint that consumes `gui_do` as a package client.
 
-For deeper details per subsystem, jump into [MANUAL.md](MANUAL.md).
+Feature-package convention in `demo_features/`:
+- One folder package per feature (`main`, `life`, `systems`, `mandelbrot`, `moving_shapes`, `showcase`).
+- Package-root `__init__.py` provides package metadata/public surface.
+- Internal modules remain focused by concern (feature class, specs, helpers, presenters).
+- Cross-feature imports should target package roots, not internal submodules.
 
 ## See Also
 
-- [TUTORIAL.md](TUTORIAL.md)
-- [MANUAL.md](MANUAL.md)
-- [demo_features/](demo_features)
-- [docs/](docs)
-- [`gui_do/__init__.py`](gui_do/__init__.py)
+- TUTORIAL.md
+- MANUAL.md
+- docs/runtime_operating_contracts.md
+- docs/library_demo_separation_contract.md
