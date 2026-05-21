@@ -318,6 +318,7 @@ class TestPanelControlWindowHelpers(unittest.TestCase):
 class _StubFocusManager:
     def __init__(self):
         self.cleared = False
+        self.focused_node = None
 
     def clear_focus(self):
         self.cleared = True
@@ -507,6 +508,65 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         self.assertTrue(panel.on_event_capture(motion, app))
         self.assertEqual((140, 474), window.rect.topleft)
         self.assertEqual((170, 486), app.logical_pointer_pos)
+
+    def test_drag_release_ends_when_pointer_is_in_lowered_task_panel_occupancy_band(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=8,
+            dock_bottom=True,
+        )
+        window = WindowControl("win", Rect(560, 500, 220, 140), "Window")
+        panel.add(task_panel)
+        panel.add(window)
+        app = _StubApp()
+
+        task_panel.set_focus_mode(False)
+        task_panel.update(0.0)
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(590, 512), button=1)
+        self.assertTrue(panel.on_event_capture(down, app))
+        self.assertIs(panel._drag_window, window)
+        self.assertTrue(app.pointer_capture.is_active)
+
+        release_pos = (590, int(task_panel.rect.top + 2))
+        self.assertTrue(task_panel.pointer_occlusion_rect().collidepoint(release_pos))
+
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=release_pos, raw_pos=release_pos, button=1)
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertIsNone(panel._drag_window)
+        self.assertFalse(app.pointer_capture.is_active)
+
+    def test_hidden_task_panel_does_not_block_titlebar_drag_start_in_would_be_raised_area(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=8,
+            dock_bottom=True,
+        )
+        window = WindowControl("win", Rect(560, 500, 220, 140), "Window")
+        panel.add(task_panel)
+        panel.add(window)
+        app = _StubApp()
+
+        task_panel.set_focus_mode(False)
+        task_panel.update(0.0)
+
+        start_pos = (590, int(task_panel._shown_y + 2))
+        self.assertFalse(task_panel.pointer_occlusion_rect().collidepoint(start_pos))
+        self.assertTrue(Rect(panel.rect).collidepoint(start_pos))
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=start_pos, button=1)
+        consumed = panel.on_event_capture(down, app)
+        self.assertTrue(consumed)
+        self.assertIs(panel._drag_window, window)
+        self.assertTrue(app.pointer_capture.is_active)
 
     def test_drag_clamps_when_window_would_leave_left_or_right_screen_edge(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))

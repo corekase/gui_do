@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from pygame import Rect
 
 from ...events.gui_event import GuiEvent, EventType
+from ...app.error_handling import logical_error
 from ..composite.panel_control import PanelControl
 
 if TYPE_CHECKING:
@@ -50,6 +51,43 @@ class TaskPanelControl(PanelControl):
             return int(self._shown_y + self.rect.height - self.hidden_peek_pixels)
         return int(self._shown_y - self.rect.height + self.hidden_peek_pixels)
 
+    def on_mount(self, parent) -> None:
+        super().on_mount(parent)
+        if parent is None:
+            return
+
+        # Task panels are scene chrome and cannot be mounted under windows.
+        current = parent
+        while current is not None:
+            if current.is_window():
+                raise logical_error(
+                    "task panel cannot be added to a window",
+                    subsystem="controls",
+                    operation="add_child",
+                    details={"scope": getattr(current, "control_id", repr(current))},
+                    source_skip_frames=1,
+                )
+            current = current.parent
+
+        existing = next(
+            (c for c in parent.children if c is not self and c.is_task_panel()),
+            None,
+        )
+        if existing is not None:
+            raise logical_error(
+                "can only have one task panel in this scope",
+                subsystem="controls",
+                operation="add_child",
+                details={"scope": getattr(parent, "control_id", repr(parent)), "existing": existing.control_id},
+                source_skip_frames=1,
+            )
+
+        self.dock_bottom = True
+        self.rect.x = int(parent.rect.x)
+        self.rect.width = int(parent.rect.width)
+        shown_y = int(parent.rect.bottom - self.rect.height)
+        self._sync_autohide_geometry(shown_y)
+
     def _sync_autohide_geometry(self, shown_y: int | None = None) -> None:
         """Recompute shown/hidden targets and align current y to active autohide state."""
         if shown_y is not None:
@@ -65,6 +103,26 @@ class TaskPanelControl(PanelControl):
 
     def is_task_panel(self) -> bool:
         return True
+
+    def pointer_occlusion_rect(self) -> Rect:
+        """Return the current on-screen pointer-occlusion area for this panel."""
+        occlusion = Rect(self.rect)
+        parent = getattr(self, "parent", None)
+        if parent is not None and hasattr(parent, "rect"):
+            occlusion = occlusion.clip(Rect(parent.rect))
+        return occlusion
+
+    def blocks_pointer_at(self, pos) -> bool:
+        if not (self.visible and self.enabled):
+            return False
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return False
+        return bool(self.pointer_occlusion_rect().collidepoint(pos))
+
+    def reserved_height(self) -> int:
+        if self.auto_hide:
+            return max(1, int(self.hidden_peek_pixels))
+        return max(0, int(self.rect.height))
 
     def _reindex_focus_cycle_slots(self) -> None:
         for index, node in enumerate(self._focus_cycle_controls):
@@ -268,10 +326,12 @@ class TaskPanelControl(PanelControl):
         result = super().handle_event(event, app, theme=theme)
         if result:
             return True
-        if not focus_mode_active or event.kind not in self._POINTER_EVENT_KINDS:
+        if event.kind not in self._POINTER_EVENT_KINDS:
             return False
         pointer = raw if isinstance(raw, tuple) and len(raw) == 2 else getattr(app, "logical_pointer_pos", None)
         if isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer):
+            event.prevent_default()
+            event.stop_propagation()
             return True
         return False
 

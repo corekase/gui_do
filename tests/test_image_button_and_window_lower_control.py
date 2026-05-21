@@ -4,6 +4,7 @@ import pygame
 from pygame import Rect
 
 from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.composite.panel_control import PanelControl
 from gui_do.controls.input.image_button_control import ImageButtonControl
 from gui_do.events.gui_event import EventType, GuiEvent
@@ -42,6 +43,8 @@ class _StubTheme:
 
 
 class _StubFocus:
+    focused_node = None
+
     @staticmethod
     def clear_focus() -> None:
         return None
@@ -52,6 +55,7 @@ class _StubApp:
         self.surface = pygame.Surface((800, 600))
         self.pointer_capture = PointerCapture()
         self.focus = _StubFocus()
+        self.logical_pointer_pos = (0, 0)
 
     @staticmethod
     def chain_screen_fallthrough(event_handler, *, scene_name=None):
@@ -129,3 +133,162 @@ class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
         self.assertTrue(panel.on_event_capture(up, app))
         self.assertIs(panel.children[0], window_b)
         self.assertIs(panel.children[-1], window_a)
+
+    def test_task_panel_occludes_underlying_window_lower_control_hover(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("w", Rect(560, 540, 220, 140), "W")
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=200,
+            dock_bottom=True,
+        )
+        panel.add(window)
+        panel.add(task_panel)
+        app = _StubApp()
+
+        # Raise the autohide panel to ensure it overlays the window title area.
+        task_panel.set_focus_mode(True)
+        task_panel.update(0.0)
+
+        lower_rect = window.lower_control_rect()
+        hover_pos = lower_rect.center
+        self.assertTrue(task_panel.rect.collidepoint(hover_pos))
+
+        move = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=hover_pos,
+            rel=(0, 0),
+            raw_rel=(0, 0),
+        )
+
+        consumed = panel.on_event_capture(move, app)
+        self.assertTrue(consumed)
+        self.assertFalse(window._lower_control_button.hovered)
+
+    def test_task_panel_occludes_underlying_window_titlebar_drag_start(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("w", Rect(560, 540, 220, 140), "W")
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=200,
+            dock_bottom=True,
+        )
+        panel.add(window)
+        panel.add(task_panel)
+        app = _StubApp()
+
+        task_panel.set_focus_mode(True)
+        task_panel.update(0.0)
+
+        title_pos = window.title_bar_rect().center
+        self.assertTrue(task_panel.rect.collidepoint(title_pos))
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=title_pos, button=1)
+        consumed = panel.on_event_capture(down, app)
+
+        self.assertTrue(consumed)
+        self.assertIsNone(panel._drag_window)
+        self.assertFalse(app.pointer_capture.is_active)
+
+    def test_task_panel_occludes_underlying_window_lower_control_hover_in_target_phase(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("w", Rect(560, 540, 220, 140), "W")
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=200,
+            dock_bottom=True,
+        )
+        panel.add(window)
+        panel.add(task_panel)
+        app = _StubApp()
+
+        task_panel.set_focus_mode(True)
+        task_panel.update(0.0)
+
+        hover_pos = window.lower_control_rect().center
+        self.assertTrue(task_panel.rect.collidepoint(hover_pos))
+
+        move = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=hover_pos,
+            rel=(0, 0),
+            raw_rel=(0, 0),
+        )
+
+        consumed = panel.handle_event(move, app)
+        self.assertTrue(consumed)
+        self.assertFalse(window._lower_control_button.hovered)
+
+    def test_stale_lower_control_hover_cleared_when_panel_raises_over_stationary_pointer(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("w", Rect(560, 540, 220, 140), "W")
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=200,
+            dock_bottom=True,
+        )
+        panel.add(window)
+        panel.add(task_panel)
+        app = _StubApp()
+
+        hover_pos = window.lower_control_rect().center
+        window._lower_control_button.hovered = True
+
+        task_panel.set_focus_mode(True)
+        task_panel.update(0.0)
+        self.assertTrue(task_panel.rect.collidepoint(hover_pos))
+        app.logical_pointer_pos = hover_pos
+
+        self.assertTrue(panel._clear_occluded_window_hovers_for_pointer(app.logical_pointer_pos))
+        self.assertFalse(window._lower_control_button.hovered)
+
+    def test_lowered_autohide_task_panel_does_not_consume_pointer_outside_current_rect(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("w", Rect(560, 500, 220, 140), "W")
+        task_panel = TaskPanelControl(
+            "task",
+            Rect(0, 520, 800, 80),
+            auto_hide=True,
+            hidden_peek_pixels=6,
+            animation_step_px=8,
+            dock_bottom=True,
+        )
+        panel.add(window)
+        panel.add(task_panel)
+        app = _StubApp()
+
+        task_panel.set_focus_mode(False)
+        task_panel.update(0.0)
+
+        # Point in the would-be raised area but above the current lowered rect.
+        travel_band_point = (window.lower_control_rect().centerx, int(task_panel._shown_y + 4))
+        parent_rect = Rect(panel.rect)
+        self.assertTrue(parent_rect.collidepoint(travel_band_point))
+        self.assertFalse(task_panel.rect.collidepoint(travel_band_point))
+
+        move = GuiEvent(
+            kind=EventType.MOUSE_MOTION,
+            type=0,
+            pos=travel_band_point,
+            rel=(0, 0),
+            raw_rel=(0, 0),
+        )
+
+        consumed = panel.on_event_capture(move, app)
+        self.assertTrue(consumed)
+        self.assertFalse(move.default_prevented)
+        self.assertFalse(move.propagation_stopped)

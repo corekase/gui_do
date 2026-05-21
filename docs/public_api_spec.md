@@ -64,9 +64,25 @@ When all three are present, they show the same set of windows. Setting `window_m
 
 Scenes can freely omit any combination of these facilities—the unified state automatically adapts to show only windows from the facilities that are actually present.
 
+The runtime keeps scene-level window visibility entries synchronized across all present facilities:
+- Task panel window-toggle group
+- Scene menu strip Windows menu
+- Command palette window entries
+
 ### Task Panel
 
 Declare with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`.  No default items — every button must be added explicitly.  The optional **window toggle group** is declared with `TaskPanelWindowToggleGroupSpec(start_index=N)`, passed to `add_task_panel_window_toggle_group`, which automatically creates one toggle button per registered window with `window_management_opt_in=True`.  Other controls may coexist before, after, or within the group's slot range.
+
+Task panel chrome contracts:
+- At most one scene-level task panel per scene.
+- Task panels are scene chrome and cannot be added to windows.
+- Task panels are always full-width and bottom-docked in scene space.
+- Task panels are optional per scene.
+- `SceneTaskPanelSpec.height` controls full panel height.
+- Task panel reserved-height query returns:
+  - hidden peek pixels when auto-hide is enabled;
+  - full panel height when auto-hide is disabled.
+- Pointer events within task-panel bounds are consumed by the task panel to prevent event fall-through.
 
 Key types: `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, `TaskPanelFocusToggleSpec`, `TaskPanelWindowToggleGroupSpec`, `RightAnchoredTaskPanelButtonSpec`.
 Key helpers: `ensure_scene_task_panel`, `add_task_panel_buttons`, `add_task_panel_window_toggle_group`, `add_window_toggle_task_panel_controls`, `register_window_toggle_tooltips`.
@@ -74,6 +90,14 @@ Key helpers: `ensure_scene_task_panel`, `add_task_panel_buttons`, `add_task_pane
 ### Scene Menu Strip
 
 Declare with `MenuStripSpec` and passed to `add_menu_strip_from_spec()`, `add_standard_menu_strip()`, or `add_window_menu_strip()`. No default menu entries. Two optional sections: `scenes_shown=True` (Scene navigation menu) and `windows_shown=True` (Windows visibility toggles menu). The Windows section automatically filters by `window_management_opt_in` when `host.window_presentation` is available, showing only opted-in windows. When both menu strip and task panel are present with `window_presentation` available, their window lists remain synchronized through the shared `window_presentation` model. When `window_presentation` is not available, all windows in the scene are shown.
+
+Menu strip chrome contracts:
+- At most one scene-level menu strip per scene.
+- At most one menu strip per window.
+- Scene-level menu strips are always full-width and top-docked in scene space.
+- Window-level menu strips are always full-width and top-docked within their owning window.
+- Menu strips are optional per scene/window.
+- Menu strip height is directly queryable from the mounted control (`rect.height` / `MenuStripControl.preferred_height()`).
 
 Key types: `MenuStripSpec`, `MenuStripControl`, `WindowMenuOptions`, `SceneMenuOptions`.
 Key helpers: `add_menu_strip_from_spec`, `add_standard_menu_strip`, `add_window_menu_strip`.
@@ -94,6 +118,14 @@ When `connect_window_presentation=True`, built-in Window entries are ordered by 
 Key types: `SceneCommandPaletteSpec`, `PaletteBindingSpec`, `CommandEntry`.
 Key helpers: `setup_scene_command_palette_key`, `setup_routed_runtime` (auto-wires when `command_palette` is set).
 Key `ActionManager` methods: `bind_global_key`, `unbind_global_key`, `trigger_global_key_from_event`.
+
+## Bounded Area API
+
+For scene-level layout concerns that must avoid top/bottom chrome, `GuiApplication.bounded_area_rect(scene_name=None)` returns a full-width screen rect that excludes:
+- scene menu strip height at the top, when present;
+- task panel reserved height at the bottom, when present.
+
+When either facility is absent, only the present chrome contributes to the excluded area.
 
 ## Import Contract
 

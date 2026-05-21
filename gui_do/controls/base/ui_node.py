@@ -82,6 +82,9 @@ class UiNode:
         """
         return self.accepts_focus()
 
+    def is_menu_bar(self) -> bool:
+        return False
+
     def set_accessibility(self, *, role: str | None = None, label: str | None = None) -> None:
         if role is not None:
             self.accessibility_role = str(role)

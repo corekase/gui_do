@@ -445,10 +445,96 @@ class GuiApplication:
 
     def add(self, node, scene_name: Optional[str] = None):
         """Add a root node to the application scene."""
-        if scene_name is None:
-            return self.scene.add(node)
-        target = self._scene_runtime(scene_name)
-        return target.scene.add(node)
+        target_scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
+        self._normalize_scene_chrome_node(node, target_scene)
+        return target_scene.add(node)
+
+    @staticmethod
+    def _is_node_in_window_scope(node) -> bool:
+        current = getattr(node, "parent", None)
+        while current is not None:
+            if current.is_window():
+                return True
+            current = current.parent
+        return False
+
+    def _scene_menu_bar_node(self, scene: Scene):
+        for node in scene._walk_nodes():
+            if node.is_menu_bar() and not self._is_node_in_window_scope(node):
+                return node
+        return None
+
+    def _scene_task_panel_node(self, scene: Scene):
+        for node in scene._walk_nodes():
+            if node.is_task_panel() and not self._is_node_in_window_scope(node):
+                return node
+        return None
+
+    def _normalize_scene_chrome_node(self, node, scene: Scene) -> None:
+        screen_rect = self.surface.get_rect()
+
+        if node.is_menu_bar():
+            existing = self._scene_menu_bar_node(scene)
+            if existing is not None and existing is not node:
+                raise logical_error(
+                    "can only have one menu bar in this scope",
+                    subsystem="gui.application",
+                    operation="GuiApplication.add",
+                    details={"scene": self._active_scene_name, "existing": existing.control_id},
+                    source_skip_frames=1,
+                )
+            bar_height = int(node.rect.height)
+            preferred_height = getattr(node.__class__, "preferred_height", None)
+            if callable(preferred_height):
+                bar_height = int(preferred_height())
+            node.set_rect(Rect(0, 0, int(screen_rect.width), max(1, bar_height)))
+
+        if node.is_task_panel():
+            existing = self._scene_task_panel_node(scene)
+            if existing is not None and existing is not node:
+                raise logical_error(
+                    "can only have one task panel in this scope",
+                    subsystem="gui.application",
+                    operation="GuiApplication.add",
+                    details={"scene": self._active_scene_name, "existing": existing.control_id},
+                    source_skip_frames=1,
+                )
+            if hasattr(node, "dock_bottom"):
+                node.dock_bottom = True
+            panel_height = max(1, int(node.rect.height))
+            node.set_rect(
+                Rect(
+                    0,
+                    int(screen_rect.height) - panel_height,
+                    int(screen_rect.width),
+                    panel_height,
+                )
+            )
+
+    def scene_menu_bar_height(self, scene_name: Optional[str] = None) -> int:
+        target_scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
+        menu_bar = self._scene_menu_bar_node(target_scene)
+        if menu_bar is None or not menu_bar.visible or not menu_bar.enabled:
+            return 0
+        return max(0, int(menu_bar.rect.height))
+
+    def scene_task_panel_height(self, scene_name: Optional[str] = None) -> int:
+        target_scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
+        task_panel = self._scene_task_panel_node(target_scene)
+        if task_panel is None or not task_panel.visible or not task_panel.enabled:
+            return 0
+        reserved_height = getattr(task_panel, "reserved_height", None)
+        if callable(reserved_height):
+            return max(0, int(reserved_height()))
+        return max(0, int(task_panel.rect.height))
+
+    def bounded_area_rect(self, scene_name: Optional[str] = None) -> Rect:
+        """Return full-width screen area excluding scene menu/task panel chrome."""
+        screen_rect = self.surface.get_rect()
+        top_reserved = self.scene_menu_bar_height(scene_name)
+        bottom_reserved = self.scene_task_panel_height(scene_name)
+        bounded_height = max(0, int(screen_rect.height) - int(top_reserved) - int(bottom_reserved))
+        return Rect(0, int(top_reserved), int(screen_rect.width), int(bounded_height))
 
     def style_label(self, label, size: int = 16, role: str = "body"):
         """Apply consistent demo-friendly defaults to a label-like control."""
@@ -741,6 +827,7 @@ class GuiApplication:
             self.scheduler.update()
             self.features.update_direct_features(dt_seconds)
             self.scene.update(dt_seconds)
+            self.scene.reconcile_pointer_occlusion(self._logical_pointer_pos)
             self.invalidation.invalidate_all()
             # Cache the full BFS walk once to use across all revalidation methods.
             # This eliminates redundant O(n_nodes) walks across focus, window_focus,

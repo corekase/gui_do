@@ -72,6 +72,14 @@ class TestRuntimeOperatingContracts(unittest.TestCase):
             content,
         )
 
+    def test_contract_doc_declares_scene_chrome_and_bounded_area_contracts(self):
+        content = self._read_contract_doc()
+
+        self.assertIn("Scene menu strip contract: max one per scene, max one per window", content)
+        self.assertIn("Task panel contract: max one per scene, cannot be added to windows", content)
+        self.assertIn("Task panel reserved-height contract", content)
+        self.assertIn("GuiApplication.bounded_area_rect()", content)
+
 
 if __name__ == "__main__":
     unittest.main()

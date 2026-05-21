@@ -165,8 +165,11 @@ class MenuStripControl(UiNode):
                     details={"scope": getattr(parent, "control_id", repr(parent)), "existing": existing.control_id},
                     source_skip_frames=1,
                 )
-            self.rect.topleft = (0, 0)
+            self.rect.topleft = (int(parent.rect.x), int(parent.rect.y))
             self.rect.width = parent.rect.width
+
+    def is_menu_bar(self) -> bool:
+        return True
 
     # ------------------------------------------------------------------
     # Public API

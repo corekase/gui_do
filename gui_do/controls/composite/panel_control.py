@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect
 
-from ...events.gui_event import GuiEvent
+from ...events.gui_event import GuiEvent, EventType
 from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -82,6 +82,17 @@ class PanelControl(UiNode):
         if not task_panel.visible or not task_panel.enabled or not task_panel.is_task_panel():
             return None
         panel_rect = Rect(task_panel.rect)
+        reserved_height = getattr(task_panel, "reserved_height", None)
+        if callable(reserved_height):
+            height = max(0, int(reserved_height()))
+            if height <= 0:
+                return None
+            if bool(getattr(task_panel, "dock_bottom", False)):
+                shown_y = int(getattr(task_panel, "_shown_y", panel_rect.y))
+                return Rect(panel_rect.x, shown_y + panel_rect.height - height, panel_rect.width, height)
+            shown_y = int(getattr(task_panel, "_shown_y", panel_rect.y))
+            return Rect(panel_rect.x, shown_y, panel_rect.width, height)
+
         if not bool(getattr(task_panel, "auto_hide", False)):
             return panel_rect
 
@@ -243,6 +254,57 @@ class PanelControl(UiNode):
             if child.visible and child.enabled and self._is_window_like(child) and child.rect.collidepoint(pos):
                 return child
         return None
+
+    def _top_task_panel_at(self, pos) -> Optional[UiNode]:
+        for child in reversed(self.children):
+            if not (child.visible and child.enabled and child.is_task_panel()):
+                continue
+            blocks_pointer_at = getattr(child, "blocks_pointer_at", None)
+            if callable(blocks_pointer_at):
+                if blocks_pointer_at(pos):
+                    return child
+                continue
+            if child.rect.collidepoint(pos):
+                return child
+        return None
+
+    def _clear_window_lower_control_hovers(self) -> None:
+        for child in self.children:
+            if not self._is_window_like(child):
+                continue
+            clear_hover = getattr(child, "clear_lower_control_hover", None)
+            if callable(clear_hover):
+                clear_hover()
+
+    def _clear_occluded_window_hovers_for_pointer(self, pointer_pos) -> bool:
+        if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            return False
+        if self._top_task_panel_at(pointer_pos) is None:
+            return False
+        self._clear_window_lower_control_hovers()
+        return True
+
+    def _consume_pointer_for_top_task_panel(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        raw = event.pos
+        if not (isinstance(raw, tuple) and len(raw) == 2):
+            return False
+        if event.kind not in {
+            EventType.MOUSE_MOTION,
+            EventType.MOUSE_BUTTON_DOWN,
+            EventType.MOUSE_BUTTON_UP,
+            EventType.MOUSE_WHEEL,
+        }:
+            return False
+        top_task_panel = self._top_task_panel_at(raw)
+        if top_task_panel is None:
+            return False
+        self._clear_occluded_window_hovers_for_pointer(raw)
+        consumed = bool(top_task_panel.handle_routed_event(event, app, theme=theme))
+        if consumed or event.propagation_stopped or event.default_prevented:
+            return True
+        event.prevent_default()
+        event.stop_propagation()
+        return True
 
     def _dispatch_lower_control_event(self, window: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         handle = getattr(window, "handle_lower_control_event", None)
@@ -564,7 +626,14 @@ class PanelControl(UiNode):
 
         raw = event.pos
 
-        if event.is_mouse_motion() or event.is_mouse_down(1) or event.is_mouse_up(1):
+        drag_pointer_event = bool(
+            self._drag_window is not None
+            and (event.is_mouse_motion() or event.is_mouse_up(1))
+        )
+        if not drag_pointer_event and self._consume_pointer_for_top_task_panel(event, app, theme=theme):
+            return True
+
+        if self._drag_window is None and (event.is_mouse_motion() or event.is_mouse_down(1) or event.is_mouse_up(1)):
             pressed_window = None
             for candidate in reversed(self.children):
                 if not self._is_window_like(candidate):
@@ -737,9 +806,13 @@ class PanelControl(UiNode):
         return self._dispatch_children(event, app, reverse=False, theme=theme)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        if self._consume_pointer_for_top_task_panel(event, app, theme=theme):
+            return True
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def on_event_bubble(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        if self._consume_pointer_for_top_task_panel(event, app, theme=theme):
+            return True
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
@@ -799,6 +872,9 @@ class PanelControl(UiNode):
                 return False
             controller = getattr(window, "shear_controller", None)
             return bool(getattr(controller, "dragging", False))
+
+        if app is not None:
+            self._clear_occluded_window_hovers_for_pointer(getattr(app, "logical_pointer_pos", None))
 
         # Identify the highest-priority window child to draw last. Prefer the
         # currently active window because z-order changes update active state;

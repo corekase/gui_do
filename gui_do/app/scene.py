@@ -1,7 +1,7 @@
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
-from ..events.gui_event import EventPhase, GuiEvent
+from ..events.gui_event import EventPhase, EventType, GuiEvent
 from ..controls.base.ui_node import UiNode
 from ..theme.color_theme import ColorTheme
 
@@ -150,6 +150,8 @@ class Scene:
         return None
 
     def _point_in_window(self, pos) -> bool:
+        if self._top_task_panel_blocking(pos) is not None:
+            return False
         windows, _task_panels = self._window_query_nodes()
         for node in windows:
             if node.visible and node.enabled and node.rect.collidepoint(pos):
@@ -159,11 +161,69 @@ class Scene:
     def top_window_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
+        if self._top_task_panel_blocking(pos) is not None:
+            return None
         windows, _task_panels = self._window_query_nodes()
         for node in reversed(windows):
             if node.visible and node.enabled and node.rect.collidepoint(pos):
                 return node
         return None
+
+    @staticmethod
+    def _task_panel_blocks_pointer(task_panel: UiNode, pos) -> bool:
+        blocks_pointer_at = getattr(task_panel, "blocks_pointer_at", None)
+        if callable(blocks_pointer_at):
+            return bool(blocks_pointer_at(pos))
+        return bool(task_panel.visible and task_panel.enabled and task_panel.rect.collidepoint(pos))
+
+    def _top_task_panel_blocking(self, pos) -> UiNode | None:
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return None
+        _windows, task_panels = self._window_query_nodes()
+        for node in reversed(task_panels):
+            if self._task_panel_blocks_pointer(node, pos):
+                return node
+        return None
+
+    def _clear_window_lower_control_hovers(self) -> None:
+        windows, _task_panels = self._window_query_nodes()
+        for window in windows:
+            clear_hover = getattr(window, "clear_lower_control_hover", None)
+            if callable(clear_hover):
+                clear_hover()
+
+    def reconcile_pointer_occlusion(self, pointer_pos) -> None:
+        if self._top_task_panel_blocking(pointer_pos) is None:
+            return
+        self._clear_window_lower_control_hovers()
+
+    def _consume_pointer_for_task_panel(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        pointer_capture = getattr(app, "pointer_capture", None)
+        if (
+            pointer_capture is not None
+            and bool(getattr(pointer_capture, "is_active", False))
+            and bool(getattr(pointer_capture, "use_relative_motion", False))
+        ):
+            # Active window titlebar drags must receive motion/up to terminate cleanly.
+            return False
+        pos = event.pos
+        if event.kind not in {
+            EventType.MOUSE_MOTION,
+            EventType.MOUSE_BUTTON_DOWN,
+            EventType.MOUSE_BUTTON_UP,
+            EventType.MOUSE_WHEEL,
+        }:
+            return False
+        top_task_panel = self._top_task_panel_blocking(pos)
+        if top_task_panel is None:
+            return False
+        self._clear_window_lower_control_hovers()
+        consumed = bool(top_task_panel.handle_routed_event(event.with_phase(EventPhase.TARGET), app, theme=theme))
+        if consumed or event.propagation_stopped or event.default_prevented:
+            return True
+        event.prevent_default()
+        event.stop_propagation()
+        return True
 
     @staticmethod
     def _is_descendant_of(node: UiNode, ancestor: UiNode) -> bool:
@@ -193,6 +253,8 @@ class Scene:
         # Validate theme once at the scene level before any per-node dispatch.
         if getattr(theme, "fonts", None) is None:
             theme = ColorTheme()
+        if self._consume_pointer_for_task_panel(event, app, theme=theme):
+            return True
         if event.is_mouse_down(1):
             pos = event.pos
             if isinstance(pos, tuple) and len(pos) == 2:
@@ -201,7 +263,7 @@ class Scene:
                 hit_interactive = False
                 windows, task_panels = self._window_query_nodes()
                 for node in task_panels:
-                    if node.visible and node.enabled and node.rect.collidepoint(pos):
+                    if self._task_panel_blocks_pointer(node, pos):
                         hit_interactive = True
                         break
                 if not hit_interactive:
@@ -251,13 +313,15 @@ class Scene:
             windows: Optional pre-queried windows list to avoid redundant window query.
                      If None, windows are queried from scene.
         """
+        blocking_task_panel = self._top_task_panel_blocking(pos)
         if windows is None:
             windows, _task_panels = self._window_query_nodes()
         top_window = None
-        for node in reversed(windows):
-            if node.visible and node.enabled and node.rect.collidepoint(pos):
-                top_window = node
-                break
+        if blocking_task_panel is None:
+            for node in reversed(windows):
+                if node.visible and node.enabled and node.rect.collidepoint(pos):
+                    top_window = node
+                    break
         best: UiNode | None = None
         walk_nodes = self._get_cached_bfs_walk()  # Use cached walk instead of generator
         # The previous forward scan kept the last matching node as `best`.
@@ -270,6 +334,7 @@ class Scene:
                 self._is_effectively_interactive(node)
                 and node.accepts_mouse_focus()
                 and node.hit_test(pos)
+                and (blocking_task_panel is None or self._is_descendant_of(node, blocking_task_panel))
                 and (top_window is None or self._is_descendant_of(node, top_window))
             ):
                 best = node
@@ -289,6 +354,8 @@ class Scene:
         return (top_window is not None, best)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
+        if app is not None and self._top_task_panel_blocking(getattr(app, "logical_pointer_pos", None)) is not None:
+            self._clear_window_lower_control_hovers()
         # Draw all non-focused nodes first, then draw focused node last to ensure it's on top.
         focused_node = None
         if app is not None:

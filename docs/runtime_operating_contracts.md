@@ -13,6 +13,10 @@ The runtime guarantees these behaviors:
 - Deterministic candidate ordering for window focus cycling.
 - Scheduler dispatch budget clamping with fixed min and max bounds.
 - Scene menu strip, task panel, and command palette are optional facilities: each exists only when declared by user program specs for a scene.
+- Scene menu strip contract: max one per scene, max one per window, always top-docked and full-width within its scene/window scope.
+- Task panel contract: max one per scene, cannot be added to windows, always bottom-docked and full-width in scene space.
+- Task panel reserved-height contract: auto-hide panels reserve hidden peek height; non-auto-hide panels reserve full panel height.
+- Bounded-area contract: `GuiApplication.bounded_area_rect()` returns full-width screen space excluding scene menu strip top reservation and task panel bottom reservation when present.
 
 ## 2. Cross-System Behavior Contracts
 
@@ -25,6 +29,7 @@ The runtime must preserve these system interactions:
 - GuiApplication.run_entrypoint reports runtime loop failures and exits with a non-zero code.
 - Missing settings keys are skipped without aborting restore.
 - When a scene omits optional facilities (scene menu strip, task panel, command palette), runtime behavior falls back to baseline screen/window behavior without implicit creation.
+- When multiple optional facilities are present, window visibility entries stay synchronized across task panel, menu strip, and command palette.
 
 ## 3. Determinism and Safety Rails
 
