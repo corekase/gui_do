@@ -12,6 +12,12 @@ import pygame
 class ShearWindowController:
     """Applies a horizontal shear deformation while dragging a window titlebar."""
 
+    _pool_buffer: Optional[pygame.Surface] = None
+    _pool_buffer_size: tuple[int, int] = (0, 0)
+    _pool_scratch: Optional[pygame.Surface] = None
+    _pool_scratch_size: tuple[int, int] = (0, 0)
+    _pool_refcount: int = 0
+
     def __init__(self, window: Any):
         self.window = window
 
@@ -20,10 +26,8 @@ class ShearWindowController:
         self.anchor: Optional[tuple[int, int]] = None
         self._prev_mouse_pos: Optional[tuple[int, int]] = None
 
-        self.buffer: Optional[pygame.Surface] = None
-        self._buffer_size: tuple[int, int] = (0, 0)
-        self._scratch: Optional[pygame.Surface] = None
-        self._scratch_size: tuple[int, int] = (0, 0)
+        self._pool_acquired = False
+        self._acquire_surface_pool()
         self._tile_cache_key: tuple[int, int, int, int] | None = None
         self._tile_rows: list[tuple[int, int, float]] = []
         self._tile_cols: list[tuple[int, int]] = []
@@ -114,6 +118,65 @@ class ShearWindowController:
             ),
         )
 
+    @property
+    def buffer(self) -> Optional[pygame.Surface]:
+        return type(self)._pool_buffer
+
+    @buffer.setter
+    def buffer(self, value: Optional[pygame.Surface]) -> None:
+        type(self)._pool_buffer = value
+
+    @property
+    def _buffer_size(self) -> tuple[int, int]:
+        return type(self)._pool_buffer_size
+
+    @_buffer_size.setter
+    def _buffer_size(self, value: tuple[int, int]) -> None:
+        type(self)._pool_buffer_size = value
+
+    @property
+    def _scratch(self) -> Optional[pygame.Surface]:
+        return type(self)._pool_scratch
+
+    @_scratch.setter
+    def _scratch(self, value: Optional[pygame.Surface]) -> None:
+        type(self)._pool_scratch = value
+
+    @property
+    def _scratch_size(self) -> tuple[int, int]:
+        return type(self)._pool_scratch_size
+
+    @_scratch_size.setter
+    def _scratch_size(self, value: tuple[int, int]) -> None:
+        type(self)._pool_scratch_size = value
+
+    def _acquire_surface_pool(self) -> None:
+        if self._pool_acquired:
+            return
+        type(self)._pool_refcount += 1
+        self._pool_acquired = True
+
+    def _release_surface_pool(self) -> None:
+        if not self._pool_acquired:
+            return
+
+        cls = type(self)
+        if cls._pool_refcount > 0:
+            cls._pool_refcount -= 1
+        self._pool_acquired = False
+
+        if cls._pool_refcount > 0:
+            return
+
+        old_buffer = cls._pool_buffer
+        old_scratch = cls._pool_scratch
+        cls._pool_buffer = None
+        cls._pool_buffer_size = (0, 0)
+        cls._pool_scratch = None
+        cls._pool_scratch_size = (0, 0)
+        del old_buffer
+        del old_scratch
+
     @staticmethod
     def _smoothstep(edge0: float, edge1: float, value: float) -> float:
         if edge1 <= edge0:
@@ -173,25 +236,34 @@ class ShearWindowController:
         height = max(1, int(math.ceil(float(needed[1]) * growth)))
         return width, height
 
+    @staticmethod
+    def _replace_surface(
+        current: Optional[pygame.Surface],
+        allocated: tuple[int, int],
+    ) -> pygame.Surface:
+        # Explicitly drop the previous surface reference as soon as the enlarged
+        # surface is installed so lifecycle ownership is unambiguous.
+        old_surface = current
+        current = pygame.Surface(allocated, pygame.SRCALPHA)
+        del old_surface
+        return current
+
     def _ensure_buffer_capacity(self, needed: tuple[int, int]) -> None:
         if self.buffer is None or not self._surface_can_fit(self._buffer_size, needed):
             allocated = self._expanded_surface_size(needed)
-            self.buffer = pygame.Surface(allocated, pygame.SRCALPHA)
+            self.buffer = self._replace_surface(self.buffer, allocated)
             self._buffer_size = allocated
 
     def _ensure_scratch_capacity(self, needed: tuple[int, int]) -> None:
         if self._scratch is None or not self._surface_can_fit(self._scratch_size, needed):
             allocated = self._expanded_surface_size(needed)
-            self._scratch = pygame.Surface(allocated, pygame.SRCALPHA)
+            self._scratch = self._replace_surface(self._scratch, allocated)
             self._scratch_size = allocated
 
     def dispose(self) -> None:
         self.active = False
         self.dragging = False
-        self.buffer = None
-        self._buffer_size = (0, 0)
-        self._scratch = None
-        self._scratch_size = (0, 0)
+        self._release_surface_pool()
         self._tile_cache_key = None
         self._tile_rows = []
         self._tile_cols = []

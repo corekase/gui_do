@@ -115,6 +115,13 @@ class TestShearWindowControllerAutoQuality(unittest.TestCase):
 
 
 class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
+    def setUp(self):
+        ShearWindowController._pool_buffer = None
+        ShearWindowController._pool_buffer_size = (0, 0)
+        ShearWindowController._pool_scratch = None
+        ShearWindowController._pool_scratch_size = (0, 0)
+        ShearWindowController._pool_refcount = 0
+
     def test_buffer_allocates_growth_headroom_and_reuses_within_capacity(self):
         window = _StubWindow()
         controller = ShearWindowController(window)
@@ -164,6 +171,66 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
         controller._refresh_buffer(largest, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIsNot(first_scratch, controller._scratch)
         self.assertEqual((780, 510), controller._scratch_size)
+
+    def test_buffer_enlarge_drops_old_surface_reference(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        old_buffer = controller.buffer
+        self.assertIsNotNone(old_buffer)
+
+        window.rect.size = (200, 130)
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+
+        self.assertIsNot(controller.buffer, old_buffer)
+        self.assertIsNot(ShearWindowController._pool_buffer, old_buffer)
+
+    def test_scratch_enlarge_drops_old_surface_reference(self):
+        window = _StubWindow()
+        controller = ShearWindowController(window)
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        old_scratch = controller._scratch
+        self.assertIsNotNone(old_scratch)
+
+        larger = pygame.Surface((520, 340), pygame.SRCALPHA)
+        controller._refresh_buffer(larger, theme=object(), draw_window_standard=lambda _s, _t: None)
+
+        self.assertIsNot(controller._scratch, old_scratch)
+        self.assertIsNot(ShearWindowController._pool_scratch, old_scratch)
+
+    def test_surface_pool_is_shared_across_controllers(self):
+        controller_a = ShearWindowController(_StubWindow())
+        controller_b = ShearWindowController(_StubWindow())
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller_a._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+
+        self.assertIs(controller_a.buffer, controller_b.buffer)
+        self.assertIs(controller_a._scratch, controller_b._scratch)
+
+    def test_pool_survives_until_last_controller_is_disposed(self):
+        controller_a = ShearWindowController(_StubWindow())
+        controller_b = ShearWindowController(_StubWindow())
+        surface = pygame.Surface((300, 200), pygame.SRCALPHA)
+
+        controller_a._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        self.assertIsNotNone(controller_a.buffer)
+        self.assertEqual(2, ShearWindowController._pool_refcount)
+
+        controller_a.dispose()
+        self.assertEqual(1, ShearWindowController._pool_refcount)
+        self.assertIsNotNone(controller_b.buffer)
+
+        controller_b.dispose()
+        self.assertEqual(0, ShearWindowController._pool_refcount)
+        self.assertIsNone(ShearWindowController._pool_buffer)
+        self.assertIsNone(ShearWindowController._pool_scratch)
+        self.assertEqual((0, 0), ShearWindowController._pool_buffer_size)
+        self.assertEqual((0, 0), ShearWindowController._pool_scratch_size)
 
     def test_expanded_surface_size_uses_growth_factor(self):
         window = _StubWindow()
