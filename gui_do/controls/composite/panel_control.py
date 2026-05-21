@@ -231,20 +231,96 @@ class PanelControl(UiNode):
         if not callable(handle):
             return False
         consumed = bool(handle(event, app, theme))
+        for request in self._consume_window_titlebar_control_requests(window):
+            if self._dispatch_window_titlebar_control_action(window, request, app):
+                consumed = True
+        if consumed:
+            event.prevent_default()
+            event.stop_propagation()
+        return consumed
+
+    @staticmethod
+    def _consume_window_titlebar_control_requests(window: UiNode) -> tuple[str, ...]:
+        consume_requests = getattr(window, "consume_titlebar_control_requests", None)
+        if callable(consume_requests):
+            requests = consume_requests()
+            if isinstance(requests, tuple):
+                return requests
+            if isinstance(requests, list):
+                return tuple(requests)
+            return ()
+
+        requests: list[str] = []
+        consume_hide_click = getattr(window, "consume_hide_control_click_request", None)
+        if callable(consume_hide_click) and bool(consume_hide_click()):
+            requests.append("hide")
         consume_click = getattr(window, "consume_lower_control_click_request", None)
-        click_requested = bool(callable(consume_click) and consume_click())
-        if click_requested:
+        if callable(consume_click) and bool(consume_click()):
+            requests.append("lower")
+        return tuple(requests)
+
+    def _dispatch_window_titlebar_control_action(self, window: UiNode, request: str, app: "GuiApplication") -> bool:
+        if request == "hide":
+            if not self._set_window_visible_state(window, False, app):
+                window.visible = False
+            return True
+        if request == "lower":
             self._lower_window(window)
             new_top = self._top_visible_window()
             if new_top is None:
                 self._clear_active_windows()
             else:
                 self._set_active_window(new_top)
-            consumed = True
-        if consumed:
-            event.prevent_default()
-            event.stop_propagation()
-        return consumed
+            return True
+        return False
+
+    @staticmethod
+    def _set_window_visible_state(window: UiNode, next_visible: bool, app: "GuiApplication") -> bool:
+        for presentation in PanelControl._iter_window_presentations(app):
+            handle_window_toggle = getattr(presentation, "handle_window_toggle", None)
+            if callable(handle_window_toggle) and bool(handle_window_toggle(window, bool(next_visible))):
+                return True
+        setter = PanelControl._resolve_window_visibility_setter(app, window)
+        if callable(setter):
+            setter(bool(next_visible))
+            return True
+        return False
+
+    @staticmethod
+    def _iter_window_presentations(app: "GuiApplication"):
+        app_presentation = getattr(app, "window_presentation", None)
+        if app_presentation is not None:
+            yield app_presentation
+        features = getattr(app, "features", None)
+        feature_hosts = getattr(features, "_feature_hosts", None)
+        if isinstance(feature_hosts, dict):
+            for host in feature_hosts.values():
+                host_presentation = getattr(host, "window_presentation", None)
+                if host_presentation is not None and host_presentation is not app_presentation:
+                    yield host_presentation
+
+    @staticmethod
+    def _resolve_window_visibility_setter(app: "GuiApplication", window: UiNode):
+        control_id = str(getattr(window, "control_id", "")).strip()
+        if not control_id.endswith("_window"):
+            return None
+        window_key = control_id[: -len("_window")]
+        if not window_key:
+            return None
+        method_name = f"set_{window_key}_window_visible"
+
+        app_method = getattr(app, method_name, None)
+        if callable(app_method):
+            return app_method
+
+        features = getattr(app, "features", None)
+        feature_hosts = getattr(features, "_feature_hosts", None)
+        if isinstance(feature_hosts, dict):
+            for host in feature_hosts.values():
+                host_method = getattr(host, method_name, None)
+                if callable(host_method):
+                    return host_method
+        return None
 
     def _set_active_window(self, window: UiNode) -> None:
         is_valid_target = (

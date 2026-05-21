@@ -355,6 +355,38 @@ class BuiltInGraphicsFactory:
             hit_rect=Rect(0, 0, control_size, control_size),
         )
 
+    def draw_window_hide_control_bitmap(self, size: int, col1, col2, *, box_state: str = "idle") -> Surface:
+        surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
+        draw_box_bitmap(surface, box_state, Rect(0, 0, size, size), BUILT_IN_COLOURS)
+        pad_x = max(1, int(size * 0.2))
+        bar_h = max(1, int(size * 0.25))
+        bar_y = int(size * 0.8) - (bar_h - max(1, int(size * 0.1))) - 1
+        bar_w = max(1, size - (2 * pad_x))
+        if bar_y + bar_h > size:
+            bar_y = max(0, size - bar_h)
+        bar_rect = Rect(pad_x, bar_y, bar_w, bar_h)
+        draw_rect(surface, col1, bar_rect)
+        draw_rect(surface, col2, bar_rect, 1)
+        return surface
+
+    def build_window_hide_control_visuals(self, size: int) -> InteractiveVisuals:
+        control_size = max(2, int(size))
+        idle = self.draw_window_hide_control_bitmap(control_size, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], box_state="idle")
+        hover = self.draw_window_hide_control_bitmap(control_size, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], box_state="hover")
+        armed = self.draw_window_hide_control_bitmap(control_size, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], box_state="armed")
+        disabled = self.build_disabled_bitmap(idle)
+        disabled_armed = self.build_disabled_bitmap(armed)
+        hidden = self.build_hidden_bitmap((control_size, control_size))
+        return InteractiveVisuals(
+            idle=idle,
+            hover=hover,
+            armed=armed,
+            disabled=disabled,
+            disabled_armed=disabled_armed,
+            hidden=hidden,
+            hit_rect=Rect(0, 0, control_size, control_size),
+        )
+
     def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str, *, title_font_role: str = "title") -> WindowChromeVisuals:
         start = perf_counter()
         title_font = self.fonts.get_font(title_font_role)

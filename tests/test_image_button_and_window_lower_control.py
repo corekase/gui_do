@@ -59,6 +59,7 @@ class _StubApp:
         self.locking_object = None
         self.mouse_point_locked = False
         self.lock_point_pos = None
+        self.window_presentation = None
 
     @staticmethod
     def chain_screen_fallthrough(event_handler, *, scene_name=None):
@@ -140,6 +141,96 @@ class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
         self.assertTrue(panel.on_event_capture(up, app))
         self.assertIs(panel.children[0], window_b)
         self.assertIs(panel.children[-1], window_a)
+
+    def test_hide_control_hides_window_on_release(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("w", (220, 140), "W")
+        panel.add(window)
+        app = _StubApp()
+
+        hide_rect = window.hide_control_rect()
+        click_pos = hide_rect.center
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=click_pos, button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=click_pos, button=1)
+
+        self.assertTrue(window.visible)
+        self.assertTrue(panel.on_event_capture(down, app))
+        self.assertTrue(window.visible)
+
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertFalse(window.visible)
+
+    def test_hide_control_uses_window_presentation_for_visibility_sync(self):
+        class _StubWindowPresentation:
+            def __init__(self):
+                self.calls = []
+
+            def handle_window_toggle(self, window, next_visible: bool) -> bool:
+                self.calls.append((window, bool(next_visible)))
+                window.visible = bool(next_visible)
+                return True
+
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("life_window", (220, 140), "Life")
+        panel.add(window)
+        app = _StubApp()
+        presentation = _StubWindowPresentation()
+        app.window_presentation = presentation
+
+        hide_rect = window.hide_control_rect()
+        click_pos = hide_rect.center
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=click_pos, button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=click_pos, button=1)
+
+        self.assertTrue(panel.on_event_capture(down, app))
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertEqual([(window, False)], presentation.calls)
+        self.assertFalse(window.visible)
+
+    def test_hide_control_uses_feature_host_window_presentation_when_app_has_none(self):
+        class _StubWindowPresentation:
+            def __init__(self):
+                self.calls = []
+
+            def handle_window_toggle(self, window, next_visible: bool) -> bool:
+                self.calls.append((window, bool(next_visible)))
+                window.visible = bool(next_visible)
+                return True
+
+        class _StubFeatures:
+            def __init__(self, host):
+                self._feature_hosts = {"main": host}
+
+        class _StubHost:
+            def __init__(self, presentation):
+                self.window_presentation = presentation
+
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("life_window", (220, 140), "Life")
+        panel.add(window)
+        app = _StubApp()
+        app.window_presentation = None
+        presentation = _StubWindowPresentation()
+        app.features = _StubFeatures(_StubHost(presentation))
+
+        hide_rect = window.hide_control_rect()
+        click_pos = hide_rect.center
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=click_pos, button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=click_pos, button=1)
+
+        self.assertTrue(panel.on_event_capture(down, app))
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertEqual([(window, False)], presentation.calls)
+        self.assertFalse(window.visible)
+
+    def test_hide_control_is_immediately_left_of_lower_control(self):
+        window = WindowControl("w", (220, 140), "W", titlebar_height=26)
+        lower_rect = window.lower_control_rect()
+        hide_rect = window.hide_control_rect()
+
+        self.assertEqual(hide_rect.right, lower_rect.left)
+        self.assertEqual(hide_rect.width, max(12, window.titlebar_height))
+        self.assertEqual(hide_rect.height, max(12, window.titlebar_height))
 
     def test_task_panel_occludes_underlying_window_lower_control_hover(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
