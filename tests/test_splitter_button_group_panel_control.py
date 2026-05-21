@@ -522,8 +522,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
             raw_rel=(0, 10),
         )
         self.assertTrue(panel.on_event_capture(motion, app))
-        self.assertEqual((140, 474), window.rect.topleft)
-        self.assertEqual((170, 482), app.logical_pointer_pos)
+        self.assertEqual((140, 450), window.rect.topleft)
+        self.assertEqual((170, 458), app.logical_pointer_pos)
 
     def test_drag_release_ends_when_pointer_is_in_lowered_task_panel_occupancy_band(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
@@ -659,8 +659,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
             raw_rel=(0, 38),
         )
         self.assertTrue(panel.on_event_capture(motion_bottom, app))
-        self.assertEqual((120, 480), window.rect.topleft)
-        self.assertEqual((150, 492), app.logical_pointer_pos)
+        self.assertEqual((120, 456), window.rect.topleft)
+        self.assertEqual((150, 468), app.logical_pointer_pos)
 
     def test_shear_suppression_only_when_drag_pushes_into_edge_gutter(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))

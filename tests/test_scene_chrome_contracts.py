@@ -138,9 +138,9 @@ class TestSceneChromeContracts(unittest.TestCase):
 
         app = _BoundedAreaApp()
 
-        self.assertEqual((100, 300, 50, 250), panel._window_drag_limits(window, app))
+        self.assertEqual((100, 300, 50, 226), panel._window_drag_limits(window, app))
         self.assertEqual((100, 50), panel._clamp_window_drag_target(window, -20, -10, app))
-        self.assertEqual((300, 250), panel._clamp_window_drag_target(window, 1000, 1000, app))
+        self.assertEqual((300, 226), panel._clamp_window_drag_target(window, 1000, 1000, app))
 
     def test_scene_root_task_panel_occludes_window_lower_control_pointer_events(self):
         app = GuiApplication(pygame.Surface((800, 600)))

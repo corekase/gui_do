@@ -21,10 +21,9 @@ _ROW_PAD = 12
 _STATUS_H = 20
 _NUM_BTNS = 5   # Reset + four launch buttons
 _CANVAS_W = _NUM_BTNS * _BTN_W + (_NUM_BTNS - 1) * _BTN_GAP + 2 * _ROW_PAD
-_TITLEBAR_H = 24
 _WINDOW_SIZE = (
     _PAD + _CANVAS_W + _PAD,
-    _TITLEBAR_H + _PAD + _CANVAS_H + 8 + _BTN_H + 6 + _STATUS_H + _PAD,
+    _PAD + _CANVAS_H + 8 + _BTN_H + 6 + _STATUS_H + _PAD,
 )
 
 # ---------------------------------------------------------------------------

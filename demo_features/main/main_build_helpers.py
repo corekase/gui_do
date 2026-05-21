@@ -53,9 +53,8 @@ def _add_opt_out_test_window(host) -> None:
         text_font = pygame.font.Font(None, 14)
         text_w, text_h = text_font.size(text)
     content_pad = 8
-    titlebar_h = 24
     window_w = int(text_w + (content_pad * 2))
-    window_h = int(titlebar_h + text_h + (content_pad * 2))
+    window_h = int(text_h + (content_pad * 2))
 
     host.opt_out_test_window = host.root.add(
         WindowControl(

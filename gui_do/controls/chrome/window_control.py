@@ -129,8 +129,12 @@ class WindowControl(UiNode):
         use_frame_backdrop: bool = False,
         titlebar_controls: dict | object | None = None,
     ) -> None:
-        # Only size is provided; position is managed by the window tiler after creation.
-        rect = Rect(0, 0, *size)
+        # Window size represents content/body size; titlebar height is added on top.
+        content_width = max(1, int(size[0]))
+        content_height = max(1, int(size[1]))
+        self._content_size = (content_width, content_height)
+        total_height = content_height + max(self._TITLEBAR_MIN_HEIGHT, int(titlebar_height))
+        rect = Rect(0, 0, content_width, total_height)
         super().__init__(control_id, rect)
         self.title = title
         self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, int(titlebar_height))
@@ -185,10 +189,22 @@ class WindowControl(UiNode):
     def _sync_content_host_rect(self) -> None:
         if not self._content_host_rect_dirty:
             return
+        previous_rect = Rect(self._content_host.rect)
         content_rect = self.content_rect()
-        if self._content_host.rect != content_rect:
+        if previous_rect != content_rect:
+            delta_x = int(content_rect.x - previous_rect.x)
+            delta_y = int(content_rect.y - previous_rect.y)
+            if delta_x != 0 or delta_y != 0:
+                self._translate_subtree(self._content_host, delta_x, delta_y)
             self._content_host.rect = Rect(content_rect)
         self._content_host_rect_dirty = False
+
+    @staticmethod
+    def _translate_subtree(node: UiNode, dx: int, dy: int) -> None:
+        for child in node.children:
+            child.rect.x += int(dx)
+            child.rect.y += int(dy)
+            WindowControl._translate_subtree(child, dx, dy)
 
     def _notify_presenter_resized(self) -> None:
         if self.presenter is not None and hasattr(self.presenter, "on_resize"):
@@ -196,7 +212,11 @@ class WindowControl(UiNode):
 
     def resize(self, width: int, height: int) -> None:
         previous = Rect(self.rect)
-        super().resize(width, height)
+        content_width = max(1, int(width))
+        content_height = max(1, int(height))
+        self._content_size = (content_width, content_height)
+        total_height = content_height + self.titlebar_height
+        super().resize(content_width, total_height)
         self._mark_content_host_rect_dirty()
         self._sync_content_host_rect()
         if self.rect.size != previous.size:
@@ -331,17 +351,20 @@ class WindowControl(UiNode):
         )
         if fitted_height == self.titlebar_height:
             return
+        previous_total_height = int(self.rect.height)
         self.titlebar_height = fitted_height
+        self.rect.height = int(self._content_size[1] + self.titlebar_height)
         self._mark_content_host_rect_dirty()
         self._sync_content_host_rect()
-        self._notify_presenter_resized()
+        if int(self.rect.height) != previous_total_height:
+            self._notify_presenter_resized()
 
     def content_rect(self) -> Rect:
         return Rect(
             self.rect.left,
             self.rect.top + self.titlebar_height,
-            max(1, self.rect.width),
-            max(1, self.rect.height - self.titlebar_height),
+            max(1, int(self._content_size[0])),
+            max(1, int(self._content_size[1])),
         )
 
     def lower_control_rect(self) -> Rect:
@@ -643,7 +666,6 @@ class WindowControl(UiNode):
 
     def _draw_standard(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         self._sync_content_host_rect()
-        self._fit_titlebar_height_to_font(theme)
         factory = theme.graphics_factory
         font_revision = factory.font_revision()
         if not self.restore_pristine(surface):
@@ -658,10 +680,14 @@ class WindowControl(UiNode):
                 title_font_role=self.title_font_role,
             )
             old_titlebar_height = self.titlebar_height
+            old_total_height = int(self.rect.height)
             chrome_height = self._chrome.title_bar_active.get_height()
             self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, chrome_height)
+            self.rect.height = int(self._content_size[1] + self.titlebar_height)
             if self.titlebar_height != old_titlebar_height:
+                self._mark_content_host_rect_dirty()
                 self._sync_content_host_rect()
+            if self.titlebar_height != old_titlebar_height or int(self.rect.height) != old_total_height:
                 self._notify_presenter_resized()
             self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
             first_frame_profiler().record_once(

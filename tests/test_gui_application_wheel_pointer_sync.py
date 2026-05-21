@@ -30,7 +30,10 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
 
         app.tile_windows(newly_visible=(window,), as_visibility_event=True)
 
-        self.assertEqual((110, 80), window.rect.topleft)
+        bounds = app.surface.get_rect()
+        expected_left = int((bounds.width - window.rect.width) / 2)
+        expected_top = int((bounds.height - window.rect.height) / 2)
+        self.assertEqual((expected_left, expected_top), window.rect.topleft)
 
 
 if __name__ == "__main__":

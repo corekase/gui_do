@@ -20,13 +20,12 @@ _LIFE_CTRL_GAP = 8       # Gap between the canvas bottom edge and the control st
 _LIFE_CTRL_H = 28        # Control strip height
 _LIFE_CTRL_SPACING = 12  # Horizontal spacing between items in the control strip
 _LIFE_CANVAS_SIZE = 600  # Square canvas dimension
-_LIFE_TITLEBAR_H = 24    # Estimated titlebar height (matches size-14 title font)
 
 _LIFE_BODY_W = _LIFE_PAD + _LIFE_CANVAS_SIZE + _LIFE_PAD
 _LIFE_BODY_H = (
     _LIFE_PAD + _LIFE_CANVAS_SIZE + _LIFE_CTRL_GAP + _LIFE_CTRL_H + _LIFE_PAD
 )
-_LIFE_WINDOW_SIZE = (_LIFE_BODY_W, _LIFE_TITLEBAR_H + _LIFE_BODY_H)
+_LIFE_WINDOW_SIZE = (_LIFE_BODY_W, _LIFE_BODY_H)
 
 _LIFE_CANVAS_CONTROL_SPEC = {
     "control_id": "life_canvas",

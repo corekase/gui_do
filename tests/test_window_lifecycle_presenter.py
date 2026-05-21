@@ -1,11 +1,14 @@
 import unittest
 
+import pygame
 from pygame import Rect
 
 from gui_do.controls.base.ui_node import UiNode
 from gui_do.controls.chrome.window_control import WindowControl
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.events.gui_event import EventType, GuiEvent
+from gui_do.graphics.built_in_factory import BuiltInGraphicsFactory
+from gui_do.theme.font_manager import FontManager
 
 
 class _StubApp:
@@ -32,6 +35,16 @@ class _StubFonts:
 class _StubTheme:
     def __init__(self, line_height: int):
         self.fonts = _StubFonts(line_height)
+
+
+class _DrawThemeStub:
+    def __init__(self, fonts):
+        self.fonts = fonts
+        self.text = (255, 255, 255)
+        self.highlight = (255, 255, 0)
+        self.shadow = (0, 0, 0)
+        self.dark = (20, 20, 20)
+        self.graphics_factory = BuiltInGraphicsFactory(self)
 
 
 class _TrackingNode(UiNode):
@@ -103,6 +116,21 @@ class _StubShearController:
 
 
 class TestWindowLifecyclePresenter(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+
+    @classmethod
+    def tearDownClass(cls):
+        pygame.quit()
+
+    def test_window_size_is_content_size_plus_titlebar_height(self):
+        window = WindowControl("w", (220, 160), "Window", titlebar_height=24)
+
+        self.assertEqual((220, 184), window.rect.size)
+        self.assertEqual((220, 160), window.content_rect().size)
+
     def test_add_remove_clear_manage_content_layer_children(self):
         window = WindowControl("w", (220, 160), "Window")
         node_a = _TrackingNode("a", Rect(30, 60, 50, 20))
@@ -168,7 +196,7 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         self.assertTrue(presenter.created)
 
         window.resize(260, 170)
-        self.assertEqual((260, 170), presenter.resized_to.size)
+        self.assertEqual((260, 194), presenter.resized_to.size)
 
         window.update(0.016)
         self.assertEqual(1, presenter.before_calls)
@@ -188,6 +216,41 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         window._fit_titlebar_height_to_font(theme)
 
         self.assertEqual(38, window.titlebar_height)
+
+    def test_content_children_translate_when_titlebar_height_grows(self):
+        window = WindowControl("w", (220, 160), "Window", titlebar_height=24)
+        total_before = window.rect.height
+        top = window.content_rect().top
+        child = _TrackingNode("child", Rect(20, top, 50, 20))
+        grandchild = _TrackingNode("grandchild", Rect(24, top + 4, 20, 10))
+        child.add_child(grandchild)
+        window.add(child)
+        theme = _StubTheme(line_height=30)
+
+        window._fit_titlebar_height_to_font(theme)
+
+        self.assertEqual(38, window.titlebar_height)
+        self.assertEqual(total_before + 14, window.rect.height)
+        self.assertEqual(160, window.content_rect().height)
+        self.assertEqual(window.content_rect().top, child.rect.top)
+        self.assertEqual(window.content_rect().top + 4, grandchild.rect.top)
+
+    def test_draw_time_chrome_growth_keeps_content_children_below_titlebar(self):
+        window = WindowControl("w", (220, 160), "Window", titlebar_height=24, title_font_role="title")
+        child = _TrackingNode("child", Rect(20, window.content_rect().top, 50, 20))
+        window.add(child)
+
+        fonts = FontManager()
+        fonts.register_role("default", size=16)
+        fonts.register_role("title", size=36)
+        theme = _DrawThemeStub(fonts)
+        canvas = pygame.Surface((800, 600), pygame.SRCALPHA)
+
+        window.draw(canvas, theme)
+
+        self.assertGreater(window.titlebar_height, 24)
+        self.assertEqual(160, window.content_rect().height)
+        self.assertEqual(window.content_rect().top, child.rect.top)
 
     def test_titlebar_height_respects_minimum_floor_when_font_is_small(self):
         window = WindowControl("w", (220, 160), "Window", titlebar_height=24)
