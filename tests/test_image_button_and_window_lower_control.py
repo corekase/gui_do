@@ -121,6 +121,35 @@ class TestImageButtonControl(unittest.TestCase):
 
 
 class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
+    def test_titlebar_control_partial_spec_defaults_undefined_items_true(self):
+        window = WindowControl(
+            "w",
+            (220, 140),
+            "W",
+            titlebar_controls={"include_window_hide_image_button": False},
+        )
+
+        self.assertEqual(0, window.hide_control_rect().width)
+        self.assertGreater(window.lower_control_rect().width, 0)
+
+    def test_hide_image_button_opt_out_ignores_hide_clicks(self):
+        window = WindowControl(
+            "w",
+            (220, 140),
+            "W",
+            titlebar_controls={"include_window_hide_image_button": False},
+        )
+        app = _StubApp()
+
+        lower_rect = window.lower_control_rect()
+        click_pos = (max(window.rect.left, lower_rect.left - 4), lower_rect.centery)
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=click_pos, button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=click_pos, button=1)
+
+        self.assertFalse(window.handle_lower_control_event(down, app))
+        self.assertFalse(window.handle_lower_control_event(up, app))
+        self.assertFalse(window.consume_hide_control_click_request())
+
     def test_lower_control_lowers_window_on_release(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         window_a = WindowControl("wa", (220, 140), "A")

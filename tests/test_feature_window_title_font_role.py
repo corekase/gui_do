@@ -67,6 +67,28 @@ class TestFeatureWindowTitleFontRole(unittest.TestCase):
         self.assertEqual("title", window.kwargs["title_font_role"])
         self.assertFalse(window.kwargs["use_frame_backdrop"])
 
+    def test_titlebar_controls_are_forwarded(self):
+        host = _DummyHost()
+
+        window = create_anchored_feature_window(
+            host,
+            window_control_cls=_CaptureWindowControl,
+            control_id="w",
+            title="Window",
+            size=(320, 200),
+            anchor="center",
+            margin=(10, 10),
+            titlebar_controls={"include_window_hide_image_button": False},
+        )
+
+        self.assertEqual(
+            {
+                "include_window_lower_button": True,
+                "include_window_hide_image_button": False,
+            },
+            window.kwargs["titlebar_controls"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

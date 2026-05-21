@@ -171,6 +171,14 @@ class FeatureSpec:
 
 
 @dataclass(frozen=True)
+class WindowTitlebarControlsSpec:
+    """Declarative titlebar button opt-in settings for WindowControl."""
+
+    include_window_lower_button: bool = True
+    include_window_hide_image_button: bool = True
+
+
+@dataclass(frozen=True)
 class WindowSpec:
     """Declarative descriptor for a feature window presentation binding."""
     key: str
@@ -185,6 +193,7 @@ class WindowSpec:
     accessibility_label: str
     window_effects: dict = field(default_factory=dict)
     window_management_opt_in: bool = True
+    titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -241,6 +250,7 @@ class AnchoredWindowSpec:
     margin: tuple[int, int]
     use_frame_backdrop: bool = True
     window_management_opt_in: bool = True
+    titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -711,6 +721,7 @@ class FeatureWindowBundleBindingSpec:
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
     window_management_opt_in: bool = True
+    titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
 
@@ -729,6 +740,7 @@ class WindowToggleBindingSpec:
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
+    titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -2910,6 +2922,8 @@ def make_window_toggle_spec(
     toggle_attribute_name: str | None = None,
     accessibility_label: str | None = None,
     window_effects: dict | None = None,
+    window_management_opt_in: bool = True,
+    titlebar_controls: WindowTitlebarControlsSpec | None = None,
 ) -> WindowSpec:
     """Build a WindowSpec with conventional defaults for demo/host window toggles."""
     return _make_window_toggle_spec(
@@ -2925,6 +2939,8 @@ def make_window_toggle_spec(
         toggle_attribute_name=toggle_attribute_name,
         accessibility_label=accessibility_label,
         window_effects=window_effects or {},
+        window_management_opt_in=window_management_opt_in,
+        titlebar_controls=titlebar_controls,
     )
 
 
@@ -3389,6 +3405,7 @@ def create_presented_anchored_window(
     presenter,
     window_control_cls=WindowControl,
     use_frame_backdrop: bool = True,
+    titlebar_controls: WindowTitlebarControlsSpec | dict | None = None,
 ):
     """Create an anchored window and attach a presenter in one call."""
     return _create_presented_anchored_window(
@@ -3401,6 +3418,7 @@ def create_presented_anchored_window(
         presenter=presenter,
         window_control_cls=window_control_cls,
         use_frame_backdrop=use_frame_backdrop,
+        titlebar_controls=titlebar_controls,
         create_anchored_feature_window_fn=create_anchored_feature_window,
     )
 

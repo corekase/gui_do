@@ -20,6 +20,7 @@ from gui_do.features.data_driven_runtime import (
 from gui_do.features.scene_task_panel_builder import SceneTaskPanelBuilder
 
 from .main_specs import (
+    MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS,
     MAIN_TASK_PANEL_LAYOUT_SPEC,
     MAIN_TASK_PANEL_SCENE_NAV_SPECS,
     MAIN_TASK_PANEL_SPEC,
@@ -62,6 +63,7 @@ def _add_opt_out_test_window(host) -> None:
             (window_w, window_h),
             "Opt-out test",
             use_frame_backdrop=True,
+            titlebar_controls=MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS,
         )
     )
     host.opt_out_test_window.visible = True

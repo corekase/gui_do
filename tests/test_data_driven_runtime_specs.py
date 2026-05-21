@@ -8,6 +8,7 @@ from gui_do.features.data_driven_runtime import (
     CursorSpec,
     SceneRootSpec,
     AnchoredWindowSpec,
+    WindowTitlebarControlsSpec,
     LogicBindingSpec,
     TaskPanelButtonSpec,
     TelemetryConfig,
@@ -113,6 +114,18 @@ class TestSceneRootSpec(unittest.TestCase):
 # ===========================================================================
 # AnchoredWindowSpec
 # ===========================================================================
+
+
+class TestWindowTitlebarControlsSpec(unittest.TestCase):
+    def test_defaults_opt_in(self):
+        spec = WindowTitlebarControlsSpec()
+        self.assertTrue(spec.include_window_lower_button)
+        self.assertTrue(spec.include_window_hide_image_button)
+
+    def test_partial_override_defaults_missing_values_to_true(self):
+        spec = WindowTitlebarControlsSpec(include_window_hide_image_button=False)
+        self.assertTrue(spec.include_window_lower_button)
+        self.assertFalse(spec.include_window_hide_image_button)
 
 
 class TestAnchoredWindowSpec(unittest.TestCase):

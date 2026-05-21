@@ -159,6 +159,7 @@ def create_presented_anchored_window(
     presenter,
     window_control_cls=WindowControl,
     use_frame_backdrop: bool = True,
+    titlebar_controls: dict | None = None,
     create_anchored_feature_window_fn=None,
 ):
     """Create an anchored window and attach a presenter in one call."""
@@ -174,6 +175,7 @@ def create_presented_anchored_window(
         anchor=anchor,
         margin=margin,
         use_frame_backdrop=bool(use_frame_backdrop),
+        titlebar_controls=titlebar_controls,
     )
     window.set_presenter(presenter)
     return window
@@ -201,6 +203,7 @@ def create_presented_window_from_spec(
         presenter=presenter,
         window_control_cls=window_control_cls,
         use_frame_backdrop=spec.use_frame_backdrop,
+        titlebar_controls=getattr(spec, "titlebar_controls", None),
     )
 
 

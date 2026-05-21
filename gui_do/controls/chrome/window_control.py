@@ -127,6 +127,7 @@ class WindowControl(UiNode):
         titlebar_height: int = 24,
         title_font_role: str = "title",
         use_frame_backdrop: bool = False,
+        titlebar_controls: dict | object | None = None,
     ) -> None:
         # Only size is provided; position is managed by the window tiler after creation.
         rect = Rect(0, 0, *size)
@@ -168,6 +169,7 @@ class WindowControl(UiNode):
         self._hide_control_visual_size = (0, 0)
         self._lower_control_visual_size = (0, 0)
         self._titlebar_control_requests: list[str] = []
+        self.set_titlebar_controls(titlebar_controls)
         self._content_host = _WindowContentHost(f"{self.control_id}__content", self.content_rect())
         self._content_host_rect_dirty = False
         super().add_child(self._content_host)
@@ -274,16 +276,46 @@ class WindowControl(UiNode):
 
     def title_bar_rect(self) -> Rect:
         # Reserve trailing titlebar controls so drag starts only in free title area.
-        right_controls_left = self.lower_control_rect().left
-        hide_left = self.hide_control_rect().left
-        if hide_left > self.rect.left:
-            right_controls_left = min(right_controls_left, hide_left)
-        lower_left = right_controls_left if right_controls_left > self.rect.left else self.rect.right
-        width = max(0, lower_left - self.rect.left)
-        # Fallback: if lower control is missing or overlaps, use the full width
-        if width == 0 or width > self.rect.width or lower_left > self.rect.right or lower_left <= self.rect.left:
-            width = self.rect.width
+        control_size = max(12, self.titlebar_height)
+        reserved_width = 0
+        if self._include_window_lower_button():
+            lower_width = max(1, int(self._lower_control_button.rect.width))
+            reserved_width += lower_width if lower_width > 1 else control_size
+        if self._include_window_hide_image_button():
+            hide_width = max(1, int(self._hide_control_button.rect.width))
+            reserved_width += hide_width if hide_width > 1 else control_size
+        width = max(0, self.rect.width - reserved_width)
         return Rect(self.rect.left, self.rect.top, width, self.titlebar_height)
+
+    @staticmethod
+    def _normalize_titlebar_controls(spec) -> dict:
+        if spec is None:
+            return {
+                "include_window_lower_button": True,
+                "include_window_hide_image_button": True,
+            }
+        if isinstance(spec, dict):
+            raw = spec
+        else:
+            raw = {
+                "include_window_lower_button": getattr(spec, "include_window_lower_button", None),
+                "include_window_hide_image_button": getattr(spec, "include_window_hide_image_button", None),
+            }
+        lower_value = raw.get("include_window_lower_button")
+        hide_value = raw.get("include_window_hide_image_button")
+        return {
+            "include_window_lower_button": True if lower_value is None else bool(lower_value),
+            "include_window_hide_image_button": True if hide_value is None else bool(hide_value),
+        }
+
+    def set_titlebar_controls(self, spec) -> None:
+        self.titlebar_controls = self._normalize_titlebar_controls(spec)
+
+    def _include_window_lower_button(self) -> bool:
+        return bool(self.titlebar_controls.get("include_window_lower_button", True))
+
+    def _include_window_hide_image_button(self) -> bool:
+        return bool(self.titlebar_controls.get("include_window_hide_image_button", True))
 
     def _fit_titlebar_height_to_font(self, theme: "ColorTheme") -> None:
         """Keep titlebar height aligned to title font metrics for vertical centering."""
@@ -313,6 +345,8 @@ class WindowControl(UiNode):
         )
 
     def lower_control_rect(self) -> Rect:
+        if not self._include_window_lower_button():
+            return Rect(self.rect.right, self.rect.top, 0, 0)
         if self._lower_control_button is not None:
             width = max(1, int(self._lower_control_button.rect.width))
             height = max(1, int(self._lower_control_button.rect.height))
@@ -326,20 +360,28 @@ class WindowControl(UiNode):
         return Rect(self.rect.right - size, top, size, size)
 
     def hide_control_rect(self) -> Rect:
+        if not self._include_window_hide_image_button():
+            return Rect(self.rect.right, self.rect.top, 0, 0)
         lower_rect = self.lower_control_rect()
         if self._hide_control_button is not None:
             width = max(1, int(self._hide_control_button.rect.width))
             height = max(1, int(self._hide_control_button.rect.height))
             if width > 1 and height > 1:
-                return Rect(lower_rect.left - width, self.rect.top, width, height)
+                left = lower_rect.left - width if self._include_window_lower_button() else self.rect.right - width
+                return Rect(left, self.rect.top, width, height)
         size = max(12, self.titlebar_height)
         top = self.rect.top
-        return Rect(lower_rect.left - size, top, size, size)
+        left = lower_rect.left - size if self._include_window_lower_button() else self.rect.right - size
+        return Rect(left, top, size, size)
 
     def _on_hide_control_click(self) -> None:
+        if not self._include_window_hide_image_button():
+            return
         self._titlebar_control_requests.append("hide")
 
     def _queue_lower_control_click(self) -> None:
+        if not self._include_window_lower_button():
+            return
         self._titlebar_control_requests.append("lower")
 
     def consume_titlebar_control_requests(self) -> tuple[str, ...]:
@@ -363,27 +405,33 @@ class WindowControl(UiNode):
         return self._pop_titlebar_control_request("hide")
 
     def is_lower_control_pressed(self) -> bool:
-        return bool(getattr(self._lower_control_button, "pressed", False) or getattr(self._hide_control_button, "pressed", False))
+        lower_pressed = self._include_window_lower_button() and bool(getattr(self._lower_control_button, "pressed", False))
+        hide_pressed = self._include_window_hide_image_button() and bool(getattr(self._hide_control_button, "pressed", False))
+        return bool(lower_pressed or hide_pressed)
 
     def clear_lower_control_hover(self) -> None:
-        self._lower_control_button.reconcile_hover(False)
-        self._hide_control_button.reconcile_hover(False)
+        if self._include_window_lower_button():
+            self._lower_control_button.reconcile_hover(False)
+        if self._include_window_hide_image_button():
+            self._hide_control_button.reconcile_hover(False)
 
     def _sync_hide_control_button_rect(self) -> None:
-        if self._hide_control_button is None:
+        if self._hide_control_button is None or not self._include_window_hide_image_button():
             return
         target = self.hide_control_rect()
         if self._hide_control_button.rect != target:
             self._hide_control_button.set_rect(target)
 
     def _sync_lower_control_button_rect(self) -> None:
-        if self._lower_control_button is None:
+        if self._lower_control_button is None or not self._include_window_lower_button():
             return
         target = self.lower_control_rect()
         if self._lower_control_button.rect != target:
             self._lower_control_button.set_rect(target)
 
     def _ensure_lower_control_button_visuals(self, theme: "ColorTheme") -> None:
+        if not self._include_window_lower_button():
+            return
         factory = theme.graphics_factory
         control_size = max(12, self.titlebar_height)
         if self._lower_control_visual_size == (control_size, control_size):
@@ -393,6 +441,8 @@ class WindowControl(UiNode):
         self._lower_control_visual_size = (control_size, control_size)
 
     def _ensure_hide_control_button_visuals(self, theme: "ColorTheme") -> None:
+        if not self._include_window_hide_image_button():
+            return
         factory = theme.graphics_factory
         control_size = max(12, self.titlebar_height)
         if self._hide_control_visual_size == (control_size, control_size):
@@ -408,17 +458,29 @@ class WindowControl(UiNode):
             self._hide_control_button.hovered = False
             self._hide_control_button.pressed = False
             return False
+        include_lower = self._include_window_lower_button()
+        include_hide = self._include_window_hide_image_button()
+        if not (include_lower or include_hide):
+            self._lower_control_button.hovered = False
+            self._lower_control_button.pressed = False
+            self._hide_control_button.hovered = False
+            self._hide_control_button.pressed = False
+            return False
         if theme is not None:
-            self._ensure_lower_control_button_visuals(theme)
-            self._ensure_hide_control_button_visuals(theme)
-        self._sync_lower_control_button_rect()
-        self._sync_hide_control_button_rect()
+            if include_lower:
+                self._ensure_lower_control_button_visuals(theme)
+            if include_hide:
+                self._ensure_hide_control_button_visuals(theme)
+        if include_lower:
+            self._sync_lower_control_button_rect()
+        if include_hide:
+            self._sync_hide_control_button_rect()
         self._lower_control_button.enabled = self.enabled
-        self._lower_control_button.visible = self.visible
+        self._lower_control_button.visible = self.visible and include_lower
         self._hide_control_button.enabled = self.enabled
-        self._hide_control_button.visible = self.visible
-        hide_consumed = self._hide_control_button.handle_event(event, app, theme)
-        lower_consumed = self._lower_control_button.handle_event(event, app, theme)
+        self._hide_control_button.visible = self.visible and include_hide
+        hide_consumed = self._hide_control_button.handle_event(event, app, theme) if include_hide else False
+        lower_consumed = self._lower_control_button.handle_event(event, app, theme) if include_lower else False
         return bool(hide_consumed or lower_consumed)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
@@ -613,16 +675,22 @@ class WindowControl(UiNode):
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)
         surface.blit(title_bitmap, title_rect.topleft, source_rect)
         draw_rect(surface, theme.dark, self.rect, 2)
-        self._ensure_lower_control_button_visuals(theme)
-        self._ensure_hide_control_button_visuals(theme)
-        self._sync_lower_control_button_rect()
-        self._sync_hide_control_button_rect()
+        include_lower = self._include_window_lower_button()
+        include_hide = self._include_window_hide_image_button()
+        if include_lower:
+            self._ensure_lower_control_button_visuals(theme)
+            self._sync_lower_control_button_rect()
+        if include_hide:
+            self._ensure_hide_control_button_visuals(theme)
+            self._sync_hide_control_button_rect()
         self._lower_control_button.enabled = self.enabled
-        self._lower_control_button.visible = self.visible
+        self._lower_control_button.visible = self.visible and include_lower
         self._hide_control_button.enabled = self.enabled
-        self._hide_control_button.visible = self.visible
-        self._hide_control_button.draw(surface, theme)
-        self._lower_control_button.draw(surface, theme)
+        self._hide_control_button.visible = self.visible and include_hide
+        if include_hide:
+            self._hide_control_button.draw(surface, theme)
+        if include_lower:
+            self._lower_control_button.draw(surface, theme)
 
         # Debug overlay removed; normal rendering restored.
 

@@ -19,6 +19,7 @@ from gui_do.features.data_driven_runtime import (
     TaskPanelWindowToggleGroupSpec,
     TaskPanelFocusToggleSpec,
     TooltipBindingSpec,
+    WindowTitlebarControlsSpec,
 )
 
 
@@ -177,6 +178,10 @@ MAIN_TASK_PANEL_SCENE_NAV_SPECS = (
 
 MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC = TaskPanelWindowToggleGroupSpec(start_index=1)
 
+MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS = WindowTitlebarControlsSpec(
+    include_window_hide_image_button=False,
+)
+
 MAIN_TOOLTIP_BINDINGS = (
     TooltipBindingSpec("exit_button", "Exit the application"),
     TooltipBindingSpec("showcase_button", "Open the control showcase scene"),
@@ -190,6 +195,7 @@ __all__ = [
     "MAIN_TASK_PANEL_SCENE_NAV_SPECS",
     "MAIN_TASK_PANEL_SPEC",
     "MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC",
+    "MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS",
     "MAIN_TITLE_SPEC",
     "MAIN_TOOLTIP_BINDINGS",
     "build_main_menu_strip_spec",

@@ -680,6 +680,7 @@ class FeatureWindowBinding:
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=dict)
     window_management_opt_in: bool = True
+    titlebar_controls: dict = field(default_factory=dict)
 
 
 class FeatureWindowPresentationModel:
@@ -692,6 +693,27 @@ class FeatureWindowPresentationModel:
         self._bindings_by_control_id: dict[str, str] = {}
         self._bindings_by_window_object: dict[object, str] = {}
         self._window_object_by_key: dict[str, object] = {}
+
+    @staticmethod
+    def _normalize_titlebar_controls(spec) -> dict:
+        if spec is None:
+            return {
+                "include_window_lower_button": True,
+                "include_window_hide_image_button": True,
+            }
+        if isinstance(spec, dict):
+            raw = spec
+        else:
+            raw = {
+                "include_window_lower_button": getattr(spec, "include_window_lower_button", None),
+                "include_window_hide_image_button": getattr(spec, "include_window_hide_image_button", None),
+            }
+        lower_value = raw.get("include_window_lower_button")
+        hide_value = raw.get("include_window_hide_image_button")
+        return {
+            "include_window_lower_button": True if lower_value is None else bool(lower_value),
+            "include_window_hide_image_button": True if hide_value is None else bool(hide_value),
+        }
 
     def register_feature_window(
         self,
@@ -708,6 +730,7 @@ class FeatureWindowPresentationModel:
         accessibility_label: str | None = None,
         window_effects: dict | None = None,
         window_management_opt_in: bool = True,
+        titlebar_controls: dict | None = None,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
             key=str(key),
@@ -722,6 +745,7 @@ class FeatureWindowPresentationModel:
             accessibility_label=None if accessibility_label is None else str(accessibility_label),
             window_effects=dict(window_effects or {}),
             window_management_opt_in=bool(window_management_opt_in),
+            titlebar_controls=self._normalize_titlebar_controls(titlebar_controls),
         )
         self._bindings[binding.key] = binding
         return binding
@@ -743,6 +767,14 @@ class FeatureWindowPresentationModel:
         # Keep per-window effects synchronized from declarative binding metadata.
         try:
             window.window_effects = dict(binding.window_effects)
+        except Exception:
+            pass
+        try:
+            set_titlebar_controls = getattr(window, "set_titlebar_controls", None)
+            if callable(set_titlebar_controls):
+                set_titlebar_controls(dict(binding.titlebar_controls))
+            else:
+                window.titlebar_controls = dict(binding.titlebar_controls)
         except Exception:
             pass
         previous_window = self._window_object_by_key.get(binding.key)
@@ -1049,6 +1081,7 @@ def create_anchored_feature_window(
     margin: tuple[int, int],
     title_font_role: Optional[str] = None,
     use_frame_backdrop: bool = True,
+    titlebar_controls: dict | object | None = None,
 ):
     """Create and attach a window anchored by layout.anchored to the host root."""
     # Only pass size to WindowControl; position is managed by tiler/layout, not constructor.
@@ -1059,6 +1092,8 @@ def create_anchored_feature_window(
         resolved_title_role = str(title_font_role).strip()
         if resolved_title_role:
             kwargs["title_font_role"] = resolved_title_role
+    if titlebar_controls is not None:
+        kwargs["titlebar_controls"] = FeatureWindowPresentationModel._normalize_titlebar_controls(titlebar_controls)
     window = window_control_cls(
         str(control_id),
         size,

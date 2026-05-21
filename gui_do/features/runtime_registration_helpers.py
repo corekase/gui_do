@@ -3,6 +3,27 @@ from __future__ import annotations
 from pygame import Rect
 
 
+def _normalize_titlebar_controls_spec(spec) -> dict:
+    if spec is None:
+        return {
+            "include_window_lower_button": True,
+            "include_window_hide_image_button": True,
+        }
+    if isinstance(spec, dict):
+        raw = spec
+    else:
+        raw = {
+            "include_window_lower_button": getattr(spec, "include_window_lower_button", None),
+            "include_window_hide_image_button": getattr(spec, "include_window_hide_image_button", None),
+        }
+    lower_value = raw.get("include_window_lower_button")
+    hide_value = raw.get("include_window_hide_image_button")
+    return {
+        "include_window_lower_button": True if lower_value is None else bool(lower_value),
+        "include_window_hide_image_button": True if hide_value is None else bool(hide_value),
+    }
+
+
 def instantiate_features_from_specs(host, feature_specs) -> None:
     """Instantiate feature objects from specs and attach them to host attributes."""
     for spec in feature_specs:
@@ -34,6 +55,8 @@ def register_window_presentation_specs(window_presentation, window_specs) -> Non
             kwargs["window_effects"] = dict(spec.window_effects or {})
         if hasattr(spec, "window_management_opt_in"):
             kwargs["window_management_opt_in"] = bool(spec.window_management_opt_in)
+        if hasattr(spec, "titlebar_controls"):
+            kwargs["titlebar_controls"] = _normalize_titlebar_controls_spec(spec.titlebar_controls)
         window_presentation.register_feature_window(spec.key, **kwargs)
 
 

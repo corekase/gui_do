@@ -7,6 +7,7 @@ from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     AnchoredWindowSpec,
+    WindowTitlebarControlsSpec,
     LogicBindingSpec,
     TaskPanelSlotLayoutSpec,
     TaskPanelSceneNavButtonSpec,
@@ -493,6 +494,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         host = object()
         presenter = object()
         window = _StubWindow()
+        titlebar_controls = WindowTitlebarControlsSpec(include_window_hide_image_button=False)
         spec = AnchoredWindowSpec(
             control_id="demo_window",
             title="Demo",
@@ -500,13 +502,15 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             anchor="top_left",
             margin=(12, 14),
             use_frame_backdrop=False,
+            titlebar_controls=titlebar_controls,
         )
 
-        with patch("gui_do.features.data_driven_runtime.create_anchored_feature_window", return_value=window):
+        with patch("gui_do.features.data_driven_runtime.create_anchored_feature_window", return_value=window) as create_window:
             result = create_presented_window_from_spec(host, presenter=presenter, spec=spec)
 
         self.assertIs(window, result)
         self.assertIs(presenter, window.presenter)
+        self.assertEqual(titlebar_controls, create_window.call_args.kwargs["titlebar_controls"])
 
     def test_create_feature_presented_window_builds_presenter_from_types(self):
         host = object()
