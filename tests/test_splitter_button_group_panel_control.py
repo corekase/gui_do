@@ -347,7 +347,8 @@ class _StubApp:
     def chain_screen_fallthrough(self, event_handler, *, scene_name=None):
         # No-op stub for test compatibility
         return lambda: True
-    def __init__(self):
+
+    def __init__(self, bounded_area_rect=None):
         self.surface = pygame.Surface((800, 600))
         self.pointer_capture = PointerCapture()
         self.focus = _StubFocusManager()
@@ -355,6 +356,7 @@ class _StubApp:
         self.sync_calls = []
         self.tile_windows_calls = 0
         self.window_tiling_enabled = True
+        self._bounded_area_rect = Rect(bounded_area_rect) if bounded_area_rect is not None else Rect(self.surface.get_rect())
 
     @property
     def logical_pointer_pos(self):
@@ -377,6 +379,9 @@ class _StubApp:
 
     def is_window_tiling_enabled(self):
         return bool(self.window_tiling_enabled)
+
+    def bounded_area_rect(self, scene_name=None):
+        return Rect(self._bounded_area_rect)
 
 
 class TestPanelControlWindowDrag(unittest.TestCase):
@@ -431,7 +436,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
         panel.add(menu)
         panel.add(window)
-        app = _StubApp()
+        app = _StubApp(Rect(0, MenuStripControl.preferred_height(), 800, 600 - MenuStripControl.preferred_height()))
 
         down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 90), button=1)
         self.assertTrue(panel.on_event_capture(down, app))
@@ -492,7 +497,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         window = WindowControl("win", Rect(140, 470, 220, 120), "Window")
         panel.add(task_panel)
         panel.add(window)
-        app = _StubApp()
+        app = _StubApp(Rect(0, 0, 800, 600 - 6))
 
         down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(170, 482), button=1)
         self.assertTrue(panel.on_event_capture(down, app))
