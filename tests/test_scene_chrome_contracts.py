@@ -26,6 +26,9 @@ class _StubApp:
         self.task_panel_focus = _StubTaskPanelFocus()
         self.overlay = _StubOverlay()
         self.logical_pointer_pos = (0, 0)
+        self.locking_object = None
+        self.mouse_point_locked = False
+        self.lock_point_pos = None
 
 
 class TestSceneChromeContracts(unittest.TestCase):
@@ -46,7 +49,7 @@ class TestSceneChromeContracts(unittest.TestCase):
         self.assertEqual(MenuStripControl.preferred_height(), app.scene_menu_bar_height())
 
     def test_window_menu_bar_snaps_to_top_of_window_scope(self):
-        window = WindowControl("win", Rect(100, 100, 300, 200), "Window")
+        window = WindowControl("win", (300, 200), "Window")
         menu = MenuStripControl("menu")
 
         window.add(menu)
@@ -65,7 +68,7 @@ class TestSceneChromeContracts(unittest.TestCase):
         self.assertIn("can only have one task panel in this scope", str(ctx.exception))
 
     def test_task_panel_cannot_be_added_to_window(self):
-        window = WindowControl("win", Rect(40, 40, 320, 220), "Window")
+        window = WindowControl("win", (320, 220), "Window")
 
         with self.assertRaises(ValueError) as ctx:
             window.add(TaskPanelControl("task", Rect(0, 0, 320, 48), auto_hide=False))
@@ -123,7 +126,7 @@ class TestSceneChromeContracts(unittest.TestCase):
 
     def test_window_drag_limits_follow_application_bounded_area_rect(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(0, 0, 200, 100), "Window")
+        window = WindowControl("win", (200, 100), "Window")
         panel.add(window)
 
         class _BoundedAreaApp:
@@ -141,7 +144,8 @@ class TestSceneChromeContracts(unittest.TestCase):
 
     def test_scene_root_task_panel_occludes_window_lower_control_pointer_events(self):
         app = GuiApplication(pygame.Surface((800, 600)))
-        window = WindowControl("win", Rect(560, 540, 220, 140), "W")
+        window = WindowControl("win", (220, 140), "W")
+        window.move_by(560, 520)
         task_panel = TaskPanelControl(
             "task",
             Rect(0, 520, 800, 80),
@@ -167,12 +171,14 @@ class TestSceneChromeContracts(unittest.TestCase):
         )
         consumed = app.scene.dispatch(event, app, theme=app.theme)
 
+        # The raised task panel consumes overlapping pointer events.
         self.assertTrue(consumed)
+        # Hover state should not be set if occluded
         self.assertFalse(window._lower_control_button.hovered)
 
     def test_scene_root_task_panel_clears_stale_lower_control_hover_on_update(self):
         app = GuiApplication(pygame.Surface((800, 600)))
-        window = WindowControl("win", Rect(560, 500, 220, 140), "W")
+        window = WindowControl("win", (220, 140), "W")
         task_panel = TaskPanelControl(
             "task",
             Rect(0, 520, 800, 80),

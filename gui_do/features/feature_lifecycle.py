@@ -1051,7 +1051,7 @@ def create_anchored_feature_window(
     use_frame_backdrop: bool = True,
 ):
     """Create and attach a window anchored by layout.anchored to the host root."""
-    window_rect = host.app.layout.anchored(size, anchor=anchor, margin=margin, use_rect=True)
+    # Only pass size to WindowControl; position is managed by tiler/layout, not constructor.
     kwargs: Dict[str, Any] = {
         "use_frame_backdrop": bool(use_frame_backdrop),
     }
@@ -1061,7 +1061,7 @@ def create_anchored_feature_window(
             kwargs["title_font_role"] = resolved_title_role
     window = window_control_cls(
         str(control_id),
-        window_rect,
+        size,
         str(title),
         **kwargs,
     )

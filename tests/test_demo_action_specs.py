@@ -54,6 +54,9 @@ class _StubPaletteManager:
 class _StubApp:
     def __init__(self):
         self.running = True
+        self.locking_object = None
+        self.mouse_point_locked = False
+        self.lock_point_pos = None
 
 
 class _StubHost:

@@ -259,6 +259,9 @@ class TestScrollbarControlSetOffset(unittest.TestCase):
         class _StubApp:
             logical_pointer_pos = (10, 10)
             pointer_capture = _StubCapture()
+            locking_object = None
+            mouse_point_locked = False
+            lock_point_pos = None
 
         ev = GuiEvent(kind=EventType.MOUSE_WHEEL, type=pygame.MOUSEWHEEL, pos=(10, 10), wheel_y=0.25)
         changed = sb.handle_event(ev, _StubApp())

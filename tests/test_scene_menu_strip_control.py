@@ -77,6 +77,9 @@ class _StubApp:
                 self.border = (60, 60, 60)
 
         self.theme = _Theme()
+        self.locking_object = None
+        self.mouse_point_locked = False
+        self.lock_point_pos = None
 
     def scene_names(self):
         return ["main", "control_showcase"]

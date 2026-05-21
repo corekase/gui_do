@@ -16,6 +16,9 @@ class _StubApp:
     def __init__(self, scene=None):
         self.scene = Scene() if scene is None else scene
         self.theme = None
+        self.locking_object = None
+        self.mouse_point_locked = False
+        self.lock_point_pos = None
 
 
 class TestChipInputControlKeyboard(unittest.TestCase):

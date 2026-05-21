@@ -10,6 +10,7 @@ from ...app.first_frame_profiler import first_frame_profiler
 from ..base.ui_node import UiNode
 from ..input.image_button_control import ImageButtonControl
 from ...graphics import load_pristine_surface
+from ...app.screen_util import get_screen_size
 from ...app.error_handling import logical_error
 
 if TYPE_CHECKING:
@@ -121,12 +122,14 @@ class WindowControl(UiNode):
     def __init__(
         self,
         control_id: str,
-        rect: Rect,
+        size: tuple[int, int],
         title: str,
         titlebar_height: int = 24,
         title_font_role: str = "title",
         use_frame_backdrop: bool = False,
     ) -> None:
+        # Only size is provided; position is managed by the window tiler after creation.
+        rect = Rect(0, 0, *size)
         super().__init__(control_id, rect)
         self.title = title
         self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, int(titlebar_height))
@@ -188,20 +191,9 @@ class WindowControl(UiNode):
         if self.rect.size != previous.size:
             self._notify_presenter_resized()
 
-    def set_pos(self, x: int, y: int) -> None:
-        previous = self.rect.topleft
-        super().set_pos(x, y)
-        if self.rect.topleft != previous:
-            self._mark_content_host_rect_dirty()
-            self._sync_content_host_rect()
+    # set_pos is removed; window position is managed by the tiler only.
 
-    def set_rect(self, rect: Rect) -> None:
-        previous = Rect(self.rect)
-        super().set_rect(rect)
-        self._mark_content_host_rect_dirty()
-        self._sync_content_host_rect()
-        if self.rect.size != previous.size:
-            self._notify_presenter_resized()
+    # set_rect is removed; window rect is managed by the tiler only.
 
     @property
     def title_font_role(self) -> str:

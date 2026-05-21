@@ -56,11 +56,10 @@ def _add_opt_out_test_window(host) -> None:
     window_w = int(text_w + (content_pad * 2))
     window_h = int(titlebar_h + text_h + (content_pad * 2))
 
-    window_rect = Rect(0, 0, window_w, window_h)  # Position will be set by layout handler
     host.opt_out_test_window = host.root.add(
         WindowControl(
             "opt_out_test_window",
-            window_rect,
+            (window_w, window_h),
             "Opt-out test",
             use_frame_backdrop=True,
         )

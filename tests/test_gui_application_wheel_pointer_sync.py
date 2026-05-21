@@ -23,7 +23,7 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
 
     def test_visibility_event_centers_new_window_when_tiling_disabled(self):
         app = GuiApplication(pygame.Surface((320, 240)))
-        window = WindowControl("w", pygame.Rect(5, 7, 100, 80), "Window")
+        window = WindowControl("w", (100, 80), "Window")
         window.visible = True
         app.scene.add(window)
         app.set_window_tiling_enabled(False, relayout=False)

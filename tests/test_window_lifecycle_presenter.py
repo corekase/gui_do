@@ -104,7 +104,7 @@ class _StubShearController:
 
 class TestWindowLifecyclePresenter(unittest.TestCase):
     def test_add_remove_clear_manage_content_layer_children(self):
-        window = WindowControl("w", Rect(20, 30, 220, 160), "Window")
+        window = WindowControl("w", (220, 160), "Window")
         node_a = _TrackingNode("a", Rect(30, 60, 50, 20))
         node_b = _TrackingNode("b", Rect(85, 60, 50, 20))
 
@@ -125,7 +125,7 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         self.assertEqual(1, len(window.children))
 
     def test_move_by_translates_entire_content_subtree(self):
-        window = WindowControl("w", Rect(10, 20, 200, 120), "Window")
+        window = WindowControl("w", (200, 120), "Window")
         parent = _TrackingNode("parent", Rect(30, 50, 60, 30))
         child = _TrackingNode("child", Rect(35, 55, 20, 10))
         parent.add_child(child)
@@ -133,17 +133,17 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
 
         window.move_by(12, -7)
 
-        self.assertEqual((22, 13), window.rect.topleft)
+        self.assertEqual((12, -7), window.rect.topleft)
         self.assertEqual((42, 43), parent.rect.topleft)
         self.assertEqual((47, 48), child.rect.topleft)
 
     def test_content_scope_blocks_titlebar_child_interaction(self):
-        window = WindowControl("w", Rect(100, 120, 280, 200), "Window")
+        window = WindowControl("w", (280, 200), "Window")
         target = _TrackingNode("target", Rect(120, 170, 80, 30))
         window.add(target)
         app = _StubApp()
 
-        titlebar_event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(130, 125), button=1)
+        titlebar_event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(130, 12), button=1)
         consumed = window.handle_event(titlebar_event, app)
 
         # The window is opaque to position-based mouse input: it consumes the
@@ -159,7 +159,7 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         self.assertEqual(1, target.event_calls)
 
     def test_presenter_lifecycle_hooks_are_wired(self):
-        window = WindowControl("w", Rect(0, 0, 200, 140), "Window")
+        window = WindowControl("w", (200, 140), "Window")
         presenter = _TrackingPresenter()
         app = _StubApp()
 
@@ -182,7 +182,7 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         self.assertEqual(1, presenter.handled_events)
 
     def test_titlebar_height_fits_to_title_font_height_plus_padding(self):
-        window = WindowControl("w", Rect(0, 0, 220, 160), "Window", titlebar_height=24)
+        window = WindowControl("w", (220, 160), "Window", titlebar_height=24)
         theme = _StubTheme(line_height=30)
 
         window._fit_titlebar_height_to_font(theme)
@@ -190,7 +190,7 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         self.assertEqual(38, window.titlebar_height)
 
     def test_titlebar_height_respects_minimum_floor_when_font_is_small(self):
-        window = WindowControl("w", Rect(0, 0, 220, 160), "Window", titlebar_height=24)
+        window = WindowControl("w", (220, 160), "Window", titlebar_height=24)
         theme = _StubTheme(line_height=6)
 
         window._fit_titlebar_height_to_font(theme)
@@ -198,7 +198,7 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
         self.assertEqual(14, window.titlebar_height)
 
     def test_dispose_releases_shear_controller(self):
-        window = WindowControl("w", Rect(0, 0, 220, 160), "Window")
+        window = WindowControl("w", (220, 160), "Window")
         shear = _StubShearController()
         window.shear_controller = shear
         window.shear_active = True

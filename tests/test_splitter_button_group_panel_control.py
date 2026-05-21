@@ -357,6 +357,9 @@ class _StubApp:
         self.tile_windows_calls = 0
         self.window_tiling_enabled = True
         self._bounded_area_rect = Rect(bounded_area_rect) if bounded_area_rect is not None else Rect(self.surface.get_rect())
+        self.locking_object = None
+        self.mouse_point_locked = False
+        self.lock_point_pos = None
 
     @property
     def logical_pointer_pos(self):
@@ -384,10 +387,15 @@ class _StubApp:
         return Rect(self._bounded_area_rect)
 
 
+def _move_window_to(window: WindowControl, x: int, y: int) -> None:
+    window.move_by(int(x) - int(window.rect.left), int(y) - int(window.rect.top))
+
+
 class TestPanelControlWindowDrag(unittest.TestCase):
     def test_titlebar_drag_uses_mouse_anchor_in_shear_mode(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(100, 80, 260, 180), "Window")
+        window = WindowControl("win", (260, 180), "Window")
+        _move_window_to(window, 100, 80)
         window.window_effects = {"shear_enabled": True}
         shear = _StubShearController()
         window.shear_controller = shear
@@ -433,7 +441,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
     def test_drag_clamps_to_scene_menu_bar_boundary_and_preserves_title_anchor(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         menu = MenuStripControl("scene_menu", entries=[])
-        window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
+        window = WindowControl("win", (260, 180), "Window")
+        _move_window_to(window, 120, 80)
         panel.add(menu)
         panel.add(window)
         app = _StubApp(Rect(0, MenuStripControl.preferred_height(), 800, 600 - MenuStripControl.preferred_height()))
@@ -459,7 +468,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_drag_end_skips_automatic_tiling_when_disabled(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(100, 80, 260, 180), "Window")
+        window = WindowControl("win", (260, 180), "Window")
         panel.add(window)
         panel._drag_window = window
         panel._drag_last_pos = (140, 110)
@@ -474,7 +483,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_drag_end_triggers_window_relayout(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(120, 80, 260, 180), "Window")
+        window = WindowControl("win", (260, 180), "Window")
+        _move_window_to(window, 120, 80)
         panel.add(window)
         app = _StubApp()
 
@@ -494,7 +504,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
             hidden_peek_pixels=6,
             dock_bottom=True,
         )
-        window = WindowControl("win", Rect(140, 470, 220, 120), "Window")
+        window = WindowControl("win", (220, 120), "Window")
+        _move_window_to(window, 140, 474)
         panel.add(task_panel)
         panel.add(window)
         app = _StubApp(Rect(0, 0, 800, 600 - 6))
@@ -512,7 +523,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         )
         self.assertTrue(panel.on_event_capture(motion, app))
         self.assertEqual((140, 474), window.rect.topleft)
-        self.assertEqual((170, 486), app.logical_pointer_pos)
+        self.assertEqual((170, 482), app.logical_pointer_pos)
 
     def test_drag_release_ends_when_pointer_is_in_lowered_task_panel_occupancy_band(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
@@ -524,7 +535,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
             animation_step_px=8,
             dock_bottom=True,
         )
-        window = WindowControl("win", Rect(560, 500, 220, 140), "Window")
+        window = WindowControl("win", (220, 140), "Window")
+        _move_window_to(window, 560, 500)
         panel.add(task_panel)
         panel.add(window)
         app = _StubApp()
@@ -555,7 +567,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
             animation_step_px=8,
             dock_bottom=True,
         )
-        window = WindowControl("win", Rect(560, 500, 220, 140), "Window")
+        window = WindowControl("win", (220, 140), "Window")
         panel.add(task_panel)
         panel.add(window)
         app = _StubApp()
@@ -564,6 +576,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         task_panel.update(0.0)
 
         start_pos = (590, int(task_panel._shown_y + 2))
+        _move_window_to(window, start_pos[0] - 30, start_pos[1] - 12)
         self.assertFalse(task_panel.pointer_occlusion_rect().collidepoint(start_pos))
         self.assertTrue(Rect(panel.rect).collidepoint(start_pos))
 
@@ -575,7 +588,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_drag_clamps_when_window_would_leave_left_or_right_screen_edge(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(10, 120, 260, 180), "Window")
+        window = WindowControl("win", (260, 180), "Window")
+        _move_window_to(window, 10, 120)
         panel.add(window)
         app = _StubApp()
 
@@ -594,7 +608,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         self.assertEqual((0, 120), window.rect.topleft)
         self.assertEqual((20, 132), app.logical_pointer_pos)
 
-        window.set_pos(530, 120)
+        _move_window_to(window, 530, 120)
         down_right = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(550, 132), button=1)
         self.assertTrue(panel.on_event_capture(down_right, app))
         motion_right = GuiEvent(
@@ -611,7 +625,8 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_drag_without_scene_chrome_uses_top_and_bottom_screen_limits(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(120, 100, 260, 120), "Window")
+        window = WindowControl("win", (260, 120), "Window")
+        _move_window_to(window, 120, 100)
         panel.add(window)
         app = _StubApp()
 
@@ -632,7 +647,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         up_top = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 112), raw_pos=(150, -10), button=1)
         self.assertTrue(panel.on_event_capture(up_top, app))
 
-        window.set_pos(120, 470)
+        _move_window_to(window, 120, 470)
         down_bottom = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 482), button=1)
         self.assertTrue(panel.on_event_capture(down_bottom, app))
         motion_bottom = GuiEvent(
@@ -649,7 +664,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
 
     def test_shear_suppression_only_when_drag_pushes_into_edge_gutter(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
-        window = WindowControl("win", Rect(0, 120, 260, 180), "Window")
+        window = WindowControl("win", (260, 180), "Window")
         panel.add(window)
         app = _StubApp()
 
@@ -671,7 +686,7 @@ class TestPanelControlWindowDrag(unittest.TestCase):
                 attempted_dy=attempted_dy,
                 expected=expected,
             ):
-                window.set_pos(*topleft)
+                _move_window_to(window, *topleft)
                 suppressed = panel._should_suppress_drag_shear(
                     window,
                     app,
@@ -703,7 +718,7 @@ class _StubAppForDrawOrder:
 
 class _OrderTrackingWindow(WindowControl):
     def __init__(self, control_id: str, order_log: list[str]):
-        super().__init__(control_id, Rect(0, 0, 160, 100), control_id)
+        super().__init__(control_id, (160, 100), control_id)
         self._order_log = order_log
 
     def draw(self, surface, theme):
