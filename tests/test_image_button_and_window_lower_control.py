@@ -214,7 +214,16 @@ class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
                 self.gap = 16
                 self.calls = []
 
-            def arrange_windows_for_drop(self, window, drop_point, *, include_hidden=False, immediate=False, force=False):
+            def arrange_windows_for_drop(
+                self,
+                window,
+                drop_point,
+                *,
+                include_hidden=False,
+                immediate=False,
+                force=False,
+                demoted_windows=None,
+            ):
                 self.calls.append(
                     {
                         "window": window,
@@ -222,6 +231,7 @@ class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
                         "include_hidden": bool(include_hidden),
                         "immediate": bool(immediate),
                         "force": bool(force),
+                        "demoted_windows": tuple(demoted_windows or ()),
                     }
                 )
 
@@ -260,6 +270,7 @@ class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
         self.assertEqual(1, len(app.window_tiling.calls))
         self.assertIs(app.window_tiling.calls[0]["window"], window_b)
         self.assertTrue(bool(app.window_tiling.calls[0]["force"]))
+        self.assertEqual((window_b,), app.window_tiling.calls[0]["demoted_windows"])
         self.assertEqual(0, len(app.tile_calls))
 
     def test_hide_control_hides_window_on_release(self):

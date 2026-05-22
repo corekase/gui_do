@@ -348,6 +348,33 @@ class _StubAppForRaiseRelayout:
         )
 
 
+class _StubAppForToggleOpenWithTilingDisabled:
+    def __init__(self):
+        self.calls = []
+        self.window_tiling = object()
+
+    @staticmethod
+    def is_window_tiling_enabled() -> bool:
+        return False
+
+    def tile_windows(
+        self,
+        newly_visible=None,
+        *,
+        raised_windows=None,
+        as_visibility_event: bool = False,
+        force: bool = False,
+    ):
+        self.calls.append(
+            {
+                "newly_visible": newly_visible,
+                "raised_windows": raised_windows,
+                "as_visibility_event": bool(as_visibility_event),
+                "force": bool(force),
+            }
+        )
+
+
 class _StubHostForPresentation:
     def __init__(self, app, feature_attr_name: str, feature_obj):
         self.app = app
@@ -355,7 +382,7 @@ class _StubHostForPresentation:
 
 
 class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
-    def test_show_visible_window_relayout_uses_raised_window_hint(self):
+    def test_show_visible_window_raises_without_global_tile_relayout(self):
         app = _StubAppForRaiseRelayout()
 
         raised_window = _StubWindowNode("raised_window", visible=True)
@@ -371,9 +398,53 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         model.show("life")
 
         self.assertIs(parent.children[-1], raised_window)
-        self.assertGreaterEqual(len(app.calls), 1)
-        self.assertEqual((raised_window,), app.calls[-1]["raised_windows"])
-        self.assertTrue(bool(app.calls[-1]["as_visibility_event"]))
+        self.assertEqual([], app.calls)
+
+    def test_get_window_marks_opt_out_window_as_unmanaged_for_tiling(self):
+        app = _StubAppForRaiseRelayout()
+        window = _StubWindowNode("opt_out_window", visible=True)
+        host = _StubHostForPresentation(app, "opt_out_feature", _StubWindowFeature(window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window(
+            "opt_out",
+            feature_attribute_name="opt_out_feature",
+            window_management_opt_in=False,
+        )
+
+        resolved = model.get_window("opt_out")
+
+        self.assertIs(resolved, window)
+        self.assertFalse(bool(getattr(window, "_window_management_opt_in", True)))
+
+    def test_set_visible_opt_out_binding_does_not_call_tile_windows(self):
+        app = _StubAppForRaiseRelayout()
+        window = _StubWindowNode("opt_out_window", visible=False)
+        host = _StubHostForPresentation(app, "opt_out_feature", _StubWindowFeature(window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window(
+            "opt_out",
+            feature_attribute_name="opt_out_feature",
+            window_management_opt_in=False,
+        )
+
+        model.set_visible("opt_out", True)
+
+        self.assertTrue(window.visible)
+        self.assertEqual([], app.calls)
+
+    def test_task_panel_toggle_open_forces_relayout_when_tiling_disabled(self):
+        app = _StubAppForToggleOpenWithTilingDisabled()
+        window = _StubWindowNode("life_window", visible=False)
+        host = _StubHostForPresentation(app, "life_feature", _StubWindowFeature(window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window("life", feature_attribute_name="life_feature")
+
+        model.set_visible("life", True, from_toggle=True)
+
+        self.assertTrue(window.visible)
+        self.assertEqual(1, len(app.calls))
+        self.assertTrue(bool(app.calls[0]["as_visibility_event"]))
+        self.assertTrue(bool(app.calls[0]["force"]))
 
 
 if __name__ == "__main__":

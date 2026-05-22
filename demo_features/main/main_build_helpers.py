@@ -81,7 +81,7 @@ def _add_opt_out_test_window(host) -> None:
     host.window_presentation.register_feature_window(
         "opt_out_test",
         feature_attribute_name="_opt_out_test_window_feature",
-        window_management_opt_in=False,
+        window_management_opt_in=True,
     )
 
 

@@ -121,7 +121,7 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         demo.window_presentation.show("life")
 
         self.assertEqual([window], window.parent.raised)
-        self.assertEqual(1, demo.app.tile_windows_calls)
+        self.assertEqual(0, demo.app.tile_windows_calls)
         self.assertFalse(demo.life_toggle_window.pushed)
 
 

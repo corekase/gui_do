@@ -35,6 +35,22 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
         expected_top = int((bounds.height - window.rect.height) / 2)
         self.assertEqual((expected_left, expected_top), window.rect.topleft)
 
+    def test_visibility_event_with_raised_windows_does_not_expand_newly_visible_snapshot(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        raised = WindowControl("raised", (100, 80), "Raised")
+        other = WindowControl("other", (100, 80), "Other")
+        app.scene.add(raised)
+        app.scene.add(other)
+
+        with patch.object(app.window_tiling, "visible_windows_snapshot", return_value=(raised, other)):
+            with patch.object(app.window_tiling, "arrange_windows") as arrange_mock:
+                app.tile_windows(raised_windows=(raised,), as_visibility_event=True, force=True)
+
+        arrange_mock.assert_called_once()
+        kwargs = arrange_mock.call_args.kwargs
+        self.assertIsNone(kwargs.get("newly_visible"))
+        self.assertEqual((raised,), kwargs.get("raised_windows"))
+
 
 if __name__ == "__main__":
     unittest.main()

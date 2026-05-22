@@ -495,6 +495,39 @@ class TestPanelControlWindowDrag(unittest.TestCase):
         self.assertTrue(panel.on_event_capture(up, app))
         self.assertEqual(1, app.tile_windows_calls)
 
+    def test_drag_end_prefers_drop_relayout_with_promoted_window_hint(self):
+        class _StubWindowTiling:
+            def __init__(self):
+                self.calls = []
+
+            def arrange_windows_for_drop(self, window, drop_point, *, promoted_windows=None):
+                self.calls.append(
+                    {
+                        "window": window,
+                        "drop_point": drop_point,
+                        "promoted_windows": tuple(promoted_windows or ()),
+                    }
+                )
+
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", (260, 180), "Window")
+        _move_window_to(window, 120, 80)
+        panel.add(window)
+
+        app = _StubApp()
+        app.window_tiling = _StubWindowTiling()
+
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(150, 90), button=1)
+        self.assertTrue(panel.on_event_capture(down, app))
+
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=(150, 90), button=1)
+        self.assertTrue(panel.on_event_capture(up, app))
+
+        self.assertEqual(1, len(app.window_tiling.calls))
+        self.assertIs(app.window_tiling.calls[0]["window"], window)
+        self.assertEqual((window,), app.window_tiling.calls[0]["promoted_windows"])
+        self.assertEqual(0, app.tile_windows_calls)
+
     def test_drag_clamps_at_task_panel_reserved_strip_and_preserves_title_anchor(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         task_panel = TaskPanelControl(
@@ -726,7 +759,7 @@ class _OrderTrackingWindow(WindowControl):
 
 
 class TestPanelControlFocusedWindowDrawOrder(unittest.TestCase):
-    def test_focused_window_drawn_last_when_not_shear_dragging(self):
+    def test_window_draw_order_follows_child_z_order_even_when_focused(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
         draw_order: list[str] = []
         focused = _OrderTrackingWindow("focused", draw_order)
@@ -737,9 +770,9 @@ class TestPanelControlFocusedWindowDrawOrder(unittest.TestCase):
         surface = pygame.Surface((800, 600))
         panel.draw_window_phase(surface, theme=None, app=app)
 
-        self.assertEqual(["other", "focused"], draw_order)
+        self.assertEqual(["focused", "other"], draw_order)
 
-    def test_active_window_drawn_last_even_when_another_window_is_focused(self):
+    def test_active_window_does_not_override_child_z_order(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
         draw_order: list[str] = []
         focused = _OrderTrackingWindow("focused", draw_order)

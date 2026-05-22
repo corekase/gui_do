@@ -46,7 +46,10 @@ class WindowToggleButtonControl(ToggleControl):
         window = get_window(self.window_id) if callable(get_window) else None
         is_visible = bool(getattr(window, "visible", False))
         is_open = bool(is_visible or self.pushed)
-        should_raise_visible = bool(is_visible or (window_presentation is None and self.pushed))
+        # Raise path should be keyed to actual visibility. The pushed flag can
+        # drift stale across external hide/show paths; only use it as a
+        # fallback when window resolution is temporarily unavailable.
+        should_raise_visible = bool(is_visible or (window is None and self.pushed))
 
         if event.is_mouse_down(1) and inside:
             if should_raise_visible:

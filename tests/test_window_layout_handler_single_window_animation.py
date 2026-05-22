@@ -86,6 +86,56 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         animate_mock.assert_called_once()
 
+    def test_visible_windows_snapshot_excludes_unmanaged_opt_out_window(self):
+        unmanaged = _WindowNode(0, 0, 120, 90, visible=True)
+        setattr(unmanaged, "_window_management_opt_in", False)
+        managed = _WindowNode(180, 0, 120, 90, visible=True)
+        scene = _Scene([unmanaged, managed])
+        app = _App(Rect(0, 0, 520, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        snapshot = handler.visible_windows_snapshot()
+
+        self.assertEqual((managed,), snapshot)
+
+    def test_arrange_windows_does_not_move_unmanaged_opt_out_window(self):
+        unmanaged = _WindowNode(20, 20, 120, 90, visible=True)
+        setattr(unmanaged, "_window_management_opt_in", False)
+        managed_a = _WindowNode(220, 20, 120, 90, visible=True)
+        managed_b = _WindowNode(370, 20, 120, 90, visible=True)
+        scene = _Scene([unmanaged, managed_a, managed_b])
+        app = _App(Rect(0, 0, 520, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        original_unmanaged = Rect(unmanaged.rect)
+        handler.arrange_windows(immediate=True)
+
+        self.assertEqual(original_unmanaged, unmanaged.rect)
+
+    def test_spatial_rows_ignore_tiny_outlier_when_grouping_normal_windows(self):
+        normal_a = _WindowNode(20, 20, 220, 140, visible=True)
+        normal_b = _WindowNode(260, 38, 220, 140, visible=True)
+        tiny_outlier = _WindowNode(40, 280, 100, 30, visible=True)
+
+        scene = _Scene([normal_a, normal_b, tiny_outlier])
+        app = _App(Rect(0, 0, 700, 420), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+
+        window_rects = {
+            normal_a: Rect(normal_a.rect),
+            normal_b: Rect(normal_b.rect),
+            tiny_outlier: Rect(tiny_outlier.rect),
+        }
+
+        rows = handler._spatial_rows([normal_a, normal_b, tiny_outlier], window_rects)
+
+        normal_rows = [row for row in rows if normal_a in row or normal_b in row]
+        self.assertEqual(1, len(normal_rows))
+        self.assertIn(normal_a, normal_rows[0])
+        self.assertIn(normal_b, normal_rows[0])
+
     def test_single_window_immediate_relayout_moves_without_animation(self):
         window = _WindowNode(0, 0, 120, 90, visible=True)
         scene = _Scene([window])
@@ -570,6 +620,50 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         self.assertFalse(self._rects_overlap(w1.rect, moved.rect))
 
+    def test_arrange_windows_for_drop_uses_live_z_order_for_top_to_back_layering(self):
+        back = _WindowNode(20, 20, 140, 100, visible=True)
+        z_mid_old = _WindowNode(20, 20, 140, 100, visible=True)
+        z_mid_new = _WindowNode(20, 20, 140, 100, visible=True)
+        dragged_top = _WindowNode(20, 20, 140, 100, visible=True)
+
+        # Registration order: back, z_mid_old, z_mid_new, dragged_top.
+        # Current z-order (children): back, z_mid_new, z_mid_old, dragged_top.
+        # Drag-drop layering must follow live children z-order, not registration.
+        parent = _ParentNode([back, z_mid_new, z_mid_old, dragged_top])
+        back.parent = parent
+        z_mid_old.parent = parent
+        z_mid_new.parent = parent
+        dragged_top.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 560, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Seed registration in a different order than current z-order.
+        handler._registration_order = {
+            back: 0,
+            z_mid_old: 1,
+            z_mid_new: 2,
+            dragged_top: 3,
+        }
+        handler._next_order = 4
+
+        captured_order = []
+
+        def _capture_order(ordered_windows, _window_rects, _work, *, prefer_vertical, force_row_before=None):
+            captured_order.append(list(ordered_windows))
+            targets = [(w, 40 + (idx * 20), 80) for idx, w in enumerate(ordered_windows)]
+            return (targets, set(), 1)
+
+        with patch.object(handler, "_solve_layered_targets", side_effect=_capture_order):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows_for_drop(dragged_top, (200, 120), immediate=True)
+
+        self.assertGreaterEqual(len(captured_order), 1)
+        non_dragged = [w for w in captured_order[0] if w is not dragged_top]
+        self.assertEqual([z_mid_old, z_mid_new, back], non_dragged)
+
     def test_fit_pass_repacks_selected_overlapping_targets(self):
         w1 = _WindowNode(20, 20, 120, 90, visible=True)
         w2 = _WindowNode(170, 20, 120, 90, visible=True)
@@ -755,6 +849,250 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
                 handler.arrange_windows(newly_visible=(new_window,), immediate=True)
 
         self.assertEqual([base_a, base_b, new_window], list(parent.children))
+
+    def test_raised_window_is_promoted_alone_to_top_layer(self):
+        back = _WindowNode(20, 20, 120, 90, visible=True)
+        mid_peer = _WindowNode(170, 20, 120, 90, visible=True)
+        raised = _WindowNode(320, 20, 120, 90, visible=True)
+        front = _WindowNode(470, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([back, mid_peer, raised, front])
+        back.parent = parent
+        mid_peer.parent = parent
+        raised.parent = parent
+        front.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Layer 0: back
+        # Layer 1: mid_peer, raised
+        # Layer 2: front
+        solved_targets = [
+            (back, 80, 80),
+            (mid_peer, 80, 80),
+            (raised, 240, 80),
+            (front, 80, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 3),
+                (solved_targets, set(), 3),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        self.assertEqual([back, mid_peer, front, raised], list(parent.children))
+
+    def test_arrange_windows_for_drop_demoted_window_is_forced_to_back(self):
+        back = _WindowNode(20, 20, 120, 90, visible=True)
+        mid = _WindowNode(170, 20, 120, 90, visible=True)
+        lowered = _WindowNode(320, 20, 120, 90, visible=True)
+        front = _WindowNode(470, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([back, mid, lowered, front])
+        back.parent = parent
+        mid.parent = parent
+        lowered.parent = parent
+        front.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        solved_targets = [
+            (back, 80, 80),
+            (mid, 240, 80),
+            (lowered, 400, 80),
+            (front, 560, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows_for_drop(
+                    lowered,
+                    (lowered.rect.centerx, app.surface.get_rect().bottom + 40),
+                    immediate=True,
+                    demoted_windows=(lowered,),
+                )
+
+        self.assertIs(parent.children[0], lowered)
+
+    def test_demotion_preserves_non_demoted_parent_z_order(self):
+        back_a = _WindowNode(20, 20, 120, 90, visible=True)
+        back_b = _WindowNode(170, 20, 120, 90, visible=True)
+        top_a = _WindowNode(320, 20, 120, 90, visible=True)
+        lowered = _WindowNode(470, 20, 120, 90, visible=True)
+        top_b = _WindowNode(620, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([back_a, back_b, top_a, lowered, top_b])
+        back_a.parent = parent
+        back_b.parent = parent
+        top_a.parent = parent
+        lowered.parent = parent
+        top_b.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 900, 420), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Force solver order that differs from current parent order to ensure
+        # demotion path preserves non-demoted z-order from parent.children.
+        solved_targets = [
+            (top_b, 80, 80),
+            (top_a, 240, 80),
+            (back_a, 400, 80),
+            (back_b, 560, 80),
+            (lowered, 720, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 2),
+                (solved_targets, set(), 2),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows_for_drop(
+                    lowered,
+                    (lowered.rect.centerx, app.surface.get_rect().bottom + 40),
+                    immediate=True,
+                    demoted_windows=(lowered,),
+                )
+
+        self.assertEqual(
+            [lowered, back_a, back_b, top_a, top_b],
+            list(parent.children),
+        )
+
+    def test_arrange_windows_for_drop_promoted_window_is_forced_to_top(self):
+        back = _WindowNode(20, 20, 120, 90, visible=True)
+        mid = _WindowNode(170, 20, 120, 90, visible=True)
+        front = _WindowNode(320, 20, 120, 90, visible=True)
+        dragged = _WindowNode(470, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([back, mid, front, dragged])
+        back.parent = parent
+        mid.parent = parent
+        front.parent = parent
+        dragged.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 800, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        solved_targets = [
+            (back, 80, 80),
+            (mid, 240, 80),
+            (front, 400, 80),
+            (dragged, 560, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows_for_drop(
+                    dragged,
+                    (dragged.rect.centerx, dragged.rect.centery),
+                    immediate=True,
+                    promoted_windows=(dragged,),
+                )
+
+        self.assertIs(parent.children[-1], dragged)
+
+    def test_promotion_preserves_non_promoted_parent_z_order(self):
+        back_a = _WindowNode(20, 20, 120, 90, visible=True)
+        promoted = _WindowNode(170, 20, 120, 90, visible=True)
+        back_b = _WindowNode(320, 20, 120, 90, visible=True)
+        front_a = _WindowNode(470, 20, 120, 90, visible=True)
+        front_b = _WindowNode(620, 20, 120, 90, visible=True)
+
+        # Existing parent order should be preserved for non-promoted windows.
+        parent = _ParentNode([back_a, promoted, back_b, front_a, front_b])
+        back_a.parent = parent
+        promoted.parent = parent
+        back_b.parent = parent
+        front_a.parent = parent
+        front_b.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 900, 420), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Solver order intentionally differs from existing parent order.
+        solved_targets = [
+            (front_b, 80, 80),
+            (front_a, 240, 80),
+            (back_b, 400, 80),
+            (back_a, 560, 80),
+            (promoted, 720, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 2),
+                (solved_targets, set(), 2),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows_for_drop(
+                    promoted,
+                    (promoted.rect.centerx, promoted.rect.centery),
+                    immediate=True,
+                    promoted_windows=(promoted,),
+                )
+
+        self.assertEqual(
+            [back_a, back_b, front_a, front_b, promoted],
+            list(parent.children),
+        )
 
 
 if __name__ == "__main__":
