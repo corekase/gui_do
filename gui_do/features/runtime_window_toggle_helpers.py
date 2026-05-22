@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Mapping
 
+from pygame import Rect
+
 from ..controls.input.window_toggle_button_control import WindowToggleButtonControl
 
 
@@ -44,40 +46,66 @@ def add_window_toggle_task_panel_controls(
     app_layout,
     window_presentation,
     *,
-    min_slot_index: int | None = None,
-    max_slot_index: int | None = None,
     attr_owner=None,
-    slot_overrides: Mapping[str, int] | None = None,
+    flow_start_slot: int = 0,
+    flow_slot_assignments: Mapping[str, int] | None = None,
+    panel_rect_overrides: Mapping[str, Rect | tuple[int, int, int, int]] | None = None,
 ):
     """Create window toggle controls on the task panel from declarative bindings."""
     target = host if attr_owner is None else attr_owner
     toggle_controls = []
-    max_seen_slot_index = 0
-    slot_map = {} if slot_overrides is None else {str(k): int(v) for k, v in slot_overrides.items()}
-    next_auto_slot = int(min_slot_index) if min_slot_index is not None else 0
+    slot_map = {} if flow_slot_assignments is None else {str(k): int(v) for k, v in flow_slot_assignments.items()}
+    rect_map = {
+        str(k): v
+        for k, v in ({} if panel_rect_overrides is None else panel_rect_overrides).items()
+    }
+    next_auto_slot = int(flow_start_slot)
     used_slots: set[int] = set(slot_map.values())
-    for binding in sorted_window_bindings(window_presentation.bindings()):
-        if str(binding.key) in slot_map:
-            slot_index = int(slot_map[str(binding.key)])
-        elif binding.task_panel_slot_index is not None:
-            slot_index = int(binding.task_panel_slot_index)
+    next_tab_index = int(flow_start_slot)
+
+    def _resolve_panel_rect(raw_rect) -> Rect:
+        if isinstance(raw_rect, Rect):
+            rel_rect = Rect(raw_rect)
         else:
-            while next_auto_slot in used_slots:
+            rel_rect = Rect(
+                int(raw_rect[0]),
+                int(raw_rect[1]),
+                int(raw_rect[2]),
+                int(raw_rect[3]),
+            )
+        return Rect(
+            int(task_panel.rect.left) + int(rel_rect.left),
+            int(task_panel.rect.top) + int(rel_rect.top),
+            int(rel_rect.width),
+            int(rel_rect.height),
+        )
+
+    for binding in sorted_window_bindings(window_presentation.bindings()):
+        key = str(binding.key)
+        assigned_slot = slot_map.get(key)
+        if assigned_slot is None and getattr(binding, "task_panel_slot_index", None) is not None:
+            assigned_slot = int(binding.task_panel_slot_index)
+
+        if key in rect_map:
+            control_rect = _resolve_panel_rect(rect_map[key])
+        else:
+            slot_index = assigned_slot
+            if slot_index is None:
+                while next_auto_slot in used_slots:
+                    next_auto_slot += 1
+                slot_index = int(next_auto_slot)
                 next_auto_slot += 1
-            slot_index = int(next_auto_slot)
-            used_slots.add(slot_index)
-            next_auto_slot += 1
-        if min_slot_index is not None and slot_index < int(min_slot_index):
-            continue
-        if max_slot_index is not None and slot_index > int(max_slot_index):
-            continue
-        used_slots.add(slot_index)
-        next_auto_slot = max(next_auto_slot, slot_index + 1)
-        max_seen_slot_index = max(max_seen_slot_index, slot_index)
+            used_slots.add(int(slot_index))
+            next_auto_slot = max(next_auto_slot, int(slot_index) + 1)
+            control_rect = app_layout.slot_rect(int(slot_index))
+
+        tab_index = int(assigned_slot) if assigned_slot is not None else int(next_tab_index)
+        next_tab_index = max(next_tab_index + 1, tab_index + 1)
+
         toggle = task_panel.add(
             WindowToggleButtonControl(
                 binding.task_panel_toggle_button_id or f"show_{binding.key}",
-                app_layout.slot_rect(slot_index),
+                control_rect,
                 binding.key,  # window_id
                 binding.task_panel_label or binding.key.title(),
                 binding.task_panel_label or binding.key.title(),
@@ -95,11 +123,19 @@ def add_window_toggle_task_panel_controls(
                 style=binding.task_panel_style,
             )
         )
-        toggle.set_tab_index(int(slot_index))
+        toggle.set_tab_index(int(tab_index))
+        panel_rect = Rect(
+            int(toggle.rect.left) - int(task_panel.rect.left),
+            int(toggle.rect.top) - int(task_panel.rect.top),
+            int(toggle.rect.width),
+            int(toggle.rect.height),
+        )
+        setattr(toggle, "task_panel_window_key", key)
+        setattr(toggle, "task_panel_panel_rect", panel_rect)
         if binding.toggle_attribute_name:
             setattr(target, binding.toggle_attribute_name, toggle)
         toggle_controls.append((binding, toggle))
-    return toggle_controls, max_seen_slot_index
+    return toggle_controls
 
 
 def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
@@ -117,16 +153,26 @@ def add_task_panel_window_toggle_group(
     spec,
     *,
     attr_owner=None,
-    slot_overrides: Mapping[str, int] | None = None,
+    flow_slot_assignments: Mapping[str, int] | None = None,
+    panel_rect_overrides: Mapping[str, Rect | tuple[int, int, int, int]] | None = None,
 ) -> list:
     """Create window toggle controls from a declarative TaskPanelWindowToggleGroupSpec."""
-    toggle_controls, _ = add_window_toggle_task_panel_controls(
+    toggle_controls = add_window_toggle_task_panel_controls(
         host,
         task_panel,
         app_layout,
         window_presentation,
-        min_slot_index=int(spec.start_index),
         attr_owner=attr_owner,
-        slot_overrides=slot_overrides,
+        flow_start_slot=int(spec.flow_start_slot),
+        flow_slot_assignments=(
+            flow_slot_assignments
+            if flow_slot_assignments is not None
+            else spec.flow_slot_assignments
+        ),
+        panel_rect_overrides=(
+            panel_rect_overrides
+            if panel_rect_overrides is not None
+            else spec.panel_rect_overrides
+        ),
     )
     return toggle_controls

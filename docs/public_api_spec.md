@@ -71,7 +71,13 @@ The runtime keeps scene-level window visibility entries synchronized across all 
 
 ### Task Panel
 
-Declare with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`.  No default items — every button must be added explicitly.  The optional **window toggle group** is declared with `TaskPanelWindowToggleGroupSpec(start_index=N)`, passed to `add_task_panel_window_toggle_group`, which automatically creates one toggle button per registered window with `window_management_opt_in=True`.  Other controls may coexist before, after, or within the group's slot range.
+Declare with `SceneTaskPanelSpec` passed to `ensure_scene_task_panel`. No default items — every button must be added explicitly. The optional **window toggle group** is declared with `TaskPanelWindowToggleGroupSpec(...)`, passed to `add_task_panel_window_toggle_group`, which automatically creates one toggle button per registered window with `window_management_opt_in=True`.
+
+Window-toggle placement uses one clean API:
+- `panel_rect_overrides`: per-window panel-relative rectangles for arbitrary placement (not limited to one row).
+- `flow_start_slot` and `flow_slot_assignments`: slot-layout fallback for windows without explicit rectangles.
+
+`add_scene_task_panel_items(...)` returns `SceneTaskPanelItemsResult.window_toggle_placements`, a tuple of `(window_key, control_id, panel_rect)` records for deterministic per-window geometry lookup inside the task panel.
 
 Task panel chrome contracts:
 - At most one scene-level task panel per scene.

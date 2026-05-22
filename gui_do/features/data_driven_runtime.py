@@ -393,35 +393,27 @@ class TaskPanelSlotLayoutSpec:
 
 @dataclass(frozen=True)
 class TaskPanelWindowToggleGroupSpec:
-    """Declarative marker for placing automatic window-toggle buttons in the task panel.
+    """Declarative placement policy for automatic task-panel window toggles.
 
-    Declare one of these in the scene's task panel setup to opt in to automatic window
-    toggle management.  The framework creates one ``ToggleControl`` per registered window
-    and places it at the slot index declared by each window's binding spec.
-
-    *start_index* is the lowest slot index that the toggle group may occupy.  Controls
-    added before that index (Exit buttons, navigation buttons, etc.) are unaffected.
-    Controls added after the last window's slot index are equally unaffected — the group
-    and other task panel items can freely coexist at any index values.
-
-    Declaring this spec is optional.  Omitting it means no automatic window toggles
-    appear in the task panel for this scene.
-
-    Example — task panel with an Exit button at slot 0, window toggles starting at
-    slot 1 (System at 1, Life at 3), and a Showcase navigation button at slot 2::
-
-        ensure_scene_task_panel(host, SceneTaskPanelSpec(...))
-        add_task_panel_buttons(host, task_panel, layout, [
-            TaskPanelButtonSpec(attr_name="exit_button", slot_index=0, ...),
-            TaskPanelButtonSpec(attr_name="showcase_button", slot_index=2, ...),
-        ])
-        add_task_panel_window_toggle_group(
-            host, task_panel, layout, host.window_presentation,
-            TaskPanelWindowToggleGroupSpec(start_index=1),
-        )
+    The group creates one toggle per managed window. Placement is explicit-first:
+    - ``panel_rect_overrides`` maps window keys to panel-relative rectangles
+      ``(left, top, width, height)`` for arbitrary placement.
+    - Remaining windows fall back to layout slots, starting at ``flow_start_slot``.
+    - ``flow_slot_assignments`` optionally pins specific windows to specific slots.
     """
 
-    start_index: int = 1
+    flow_start_slot: int = 0
+    flow_slot_assignments: Mapping[str, int] = field(default_factory=dict)
+    panel_rect_overrides: Mapping[str, tuple[int, int, int, int]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class TaskPanelWindowTogglePlacement:
+    """Resolved task-panel metadata for one auto-generated window toggle button."""
+
+    window_key: str
+    control_id: str
+    panel_rect: Rect
 
 
 @dataclass(frozen=True)
@@ -477,6 +469,7 @@ class SceneTaskPanelItemsResult:
 
     scene_nav_buttons: tuple[object, ...] = field(default_factory=tuple)
     window_toggle_controls: tuple[tuple[object, object], ...] = field(default_factory=tuple)
+    window_toggle_placements: tuple[TaskPanelWindowTogglePlacement, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -1354,25 +1347,21 @@ def add_window_toggle_task_panel_controls(
     app_layout,
     window_presentation,
     *,
-    min_slot_index: int | None = None,
-    max_slot_index: int | None = None,
     attr_owner=None,
-    slot_overrides: Mapping[str, int] | None = None,
+    flow_start_slot: int = 0,
+    flow_slot_assignments: Mapping[str, int] | None = None,
+    panel_rect_overrides: Mapping[str, Rect | tuple[int, int, int, int]] | None = None,
 ):
-    """Create window toggle controls on the task panel from declarative bindings.
-
-    Optional slot bounds allow callers to create controls in phases so focus order
-    can match visual slot order when mixed with non-toggle controls.
-    """
+    """Create window toggle controls on the task panel from declarative bindings."""
     return _add_window_toggle_task_panel_controls(
         host,
         task_panel,
         app_layout,
         window_presentation,
-        min_slot_index=min_slot_index,
-        max_slot_index=max_slot_index,
         attr_owner=attr_owner,
-        slot_overrides=slot_overrides,
+        flow_start_slot=flow_start_slot,
+        flow_slot_assignments=flow_slot_assignments,
+        panel_rect_overrides=panel_rect_overrides,
     )
 
 
@@ -1389,14 +1378,13 @@ def add_task_panel_window_toggle_group(
     spec: "TaskPanelWindowToggleGroupSpec",
     *,
     attr_owner=None,
-    slot_overrides: Mapping[str, int] | None = None,
+    flow_slot_assignments: Mapping[str, int] | None = None,
+    panel_rect_overrides: Mapping[str, Rect | tuple[int, int, int, int]] | None = None,
 ) -> list:
     """Create window toggle controls from a declarative ``TaskPanelWindowToggleGroupSpec``.
 
     This is the canonical spec-driven alternative to calling
-    ``add_window_toggle_task_panel_controls`` directly.  The *spec* records where the
-    group begins; individual window slot positions are controlled by the ``slot_index``
-    declared on each ``FeatureWindowBundleBindingSpec`` / ``WindowToggleBindingSpec``.
+    ``add_window_toggle_task_panel_controls`` directly.
 
     Returns the same ``list[(binding, toggle)]`` structure as
     ``add_window_toggle_task_panel_controls`` so callers can pass the result to
@@ -1409,7 +1397,8 @@ def add_task_panel_window_toggle_group(
         window_presentation,
         spec,
         attr_owner=attr_owner,
-        slot_overrides=slot_overrides,
+        flow_slot_assignments=flow_slot_assignments,
+        panel_rect_overrides=panel_rect_overrides,
     )
 
 
@@ -1879,13 +1868,11 @@ def add_scene_task_panel_items(
     window_toggle_group_spec: "TaskPanelWindowToggleGroupSpec | None" = None,
     window_presentation=None,
     window_toggle_attr_owner=None,
-    window_toggle_slot_overrides: Mapping[str, int] | None = None,
     tab_sequence_start: int | None = None,
 ) -> SceneTaskPanelItemsResult:
     """Compose scene task-panel content from declarative button/toggle specs."""
     resolved_button_slots: dict[str, int] = {}
     resolved_scene_nav_slots: dict[str, int] = {}
-    resolved_toggle_slots: dict[str, int] = {}
 
     next_auto_slot = 0
     used_slots: set[int] = set()
@@ -1919,27 +1906,13 @@ def add_scene_task_panel_items(
         )
         setattr(host, spec.attr_name, button)
 
-    resolved_override_map = dict(window_toggle_slot_overrides or {})
-
     effective_window_toggle_group_spec = window_toggle_group_spec
     if window_toggle_group_spec is not None and window_presentation is not None:
-        min_slot = int(window_toggle_group_spec.start_index)
-        if min_slot >= len(used_slots):
-            min_slot = int(next_auto_slot)
-        effective_window_toggle_group_spec = TaskPanelWindowToggleGroupSpec(start_index=int(min_slot))
-        next_auto_slot = max(next_auto_slot, min_slot)
-        for binding in sorted_window_bindings(window_presentation.bindings()):
-            key = str(getattr(binding, "key", ""))
-            if key in resolved_override_map:
-                slot = int(resolved_override_map[key])
-                used_slots.add(slot)
-                next_auto_slot = max(next_auto_slot, slot + 1)
-                resolved_toggle_slots[key] = slot
-                continue
-            declared = getattr(binding, "task_panel_slot_index", None)
-            slot = _claim_slot(int(declared) if declared is not None else None, minimum=min_slot)
-            resolved_override_map[key] = slot
-            resolved_toggle_slots[key] = slot
+        effective_window_toggle_group_spec = TaskPanelWindowToggleGroupSpec(
+            flow_start_slot=max(int(next_auto_slot), int(window_toggle_group_spec.flow_start_slot)),
+            flow_slot_assignments=dict(window_toggle_group_spec.flow_slot_assignments),
+            panel_rect_overrides=dict(window_toggle_group_spec.panel_rect_overrides),
+        )
 
     next_auto_slot = (max(used_slots) + 1) if used_slots else 0
     scene_nav_buttons = []
@@ -1974,8 +1947,21 @@ def add_scene_task_panel_items(
             window_presentation,
             effective_window_toggle_group_spec,
             attr_owner=window_toggle_attr_owner,
-            slot_overrides=resolved_override_map,
         )
+
+    window_toggle_placements = tuple(
+        TaskPanelWindowTogglePlacement(
+            window_key=str(binding.key),
+            control_id=str(getattr(control, "control_id", "")),
+            panel_rect=Rect(
+                int(control.rect.left) - int(task_panel.rect.left),
+                int(control.rect.top) - int(task_panel.rect.top),
+                int(control.rect.width),
+                int(control.rect.height),
+            ),
+        )
+        for binding, control in window_toggle_controls
+    )
 
     if tab_sequence_start is not None:
         ordered_items = []
@@ -1994,7 +1980,7 @@ def add_scene_task_panel_items(
                 )
             )
         for binding, control in window_toggle_controls:
-            slot_index = int(resolved_toggle_slots.get(str(binding.key), 0))
+            slot_index = int(getattr(control, "tab_index", 0))
             label = binding.accessibility_label or binding.action_label or binding.key
             ordered_items.append((int(slot_index), control, "toggle", str(label)))
         ordered_items.sort(key=lambda x: x[0])
@@ -2004,6 +1990,7 @@ def add_scene_task_panel_items(
     return SceneTaskPanelItemsResult(
         scene_nav_buttons=tuple(scene_nav_buttons),
         window_toggle_controls=tuple(window_toggle_controls),
+        window_toggle_placements=window_toggle_placements,
     )
 
 

@@ -131,6 +131,12 @@ The generated manual must include and correctly cross-link:
 10. Contract-test and maintenance checklist guidance
 11. File path resolution behavior from process working directory
 12. Demo feature package organization convention
+13. Task-panel window-toggle placement API:
+   `TaskPanelWindowToggleGroupSpec(flow_start_slot, flow_slot_assignments, panel_rect_overrides)`
+   with explicit guidance for non-linear placement and slot-flow fallback
+14. Task-panel window-toggle identity/geometry reporting API:
+   `SceneTaskPanelItemsResult.window_toggle_placements` and `TaskPanelWindowTogglePlacement`
+   with panel-relative rect semantics (ignoring auto-hide offsets)
 
 ### Appendix contract
 
@@ -201,6 +207,7 @@ Use this as the terse generation input list. Expand each item using the Program 
 9. Systems: Application Bootstrap and Host Configuration through State and Observables
 10. Systems: Controls and Control Composition through Overlays, Dialogs, Notifications, and Command Surfaces (include command palette two-bind model in Overlays, Dialogs, Notifications, and Command Surfaces)
 11. Systems: Scene, Window, and Task-Panel Presentation Models through Theme, Styling, and Visual Systems (include unified window-visibility guidance in Scene, Window, and Task-Panel Presentation Models)
+11a. In Scene, Window, and Task-Panel Presentation Models, explicitly document task-panel window-toggle placement and geometry reporting APIs with verified demo usage examples
 12. Systems: Text, Input, Forms, and Validation Systems through Telemetry, Introspection, and Operational Hooks
 13. Integration patterns and composition recipes
 14. End-to-end reference application listing with validation checklist

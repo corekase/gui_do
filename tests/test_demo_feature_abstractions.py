@@ -732,7 +732,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             )
         )
 
-        controls, max_slot = add_window_toggle_task_panel_controls(
+        controls = add_window_toggle_task_panel_controls(
             host,
             task_panel,
             layout,
@@ -740,7 +740,6 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         )
 
         self.assertEqual(["first", "later"], [binding.key for binding, _ in controls])
-        self.assertEqual(3, max_slot)
         self.assertEqual(2, len(task_panel.added_controls))
         self.assertIs(task_panel.added_controls[0], host.first_toggle)
         self.assertIs(task_panel.added_controls[1], host.later_toggle)
@@ -749,6 +748,8 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         later_toggle = task_panel.added_controls[1]
         self.assertEqual(1, first_toggle.tab_index)
         self.assertEqual(3, later_toggle.tab_index)
+        self.assertEqual("first", getattr(first_toggle, "task_panel_window_key", ""))
+        self.assertEqual((1, -100, 120, 30), tuple(getattr(first_toggle, "task_panel_panel_rect")))
         first_toggle.on_toggle(True)
         later_toggle.on_toggle(False)
         self.assertEqual(
@@ -886,7 +887,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             panel_a,
             layout,
             window_presentation,
-            TaskPanelWindowToggleGroupSpec(start_index=1),
+            TaskPanelWindowToggleGroupSpec(flow_start_slot=1),
             attr_owner=scene_a,
         )
         toggles_b = add_task_panel_window_toggle_group(
@@ -894,7 +895,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             panel_b,
             layout,
             window_presentation,
-            TaskPanelWindowToggleGroupSpec(start_index=1),
+            TaskPanelWindowToggleGroupSpec(flow_start_slot=1),
             attr_owner=scene_b,
         )
 
@@ -1191,9 +1192,11 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
                     accessibility_label="Open showcase",
                 ),
             ),
-            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(start_index=1),
+            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(
+                flow_start_slot=1,
+                flow_slot_assignments={"first": 1, "second": 2},
+            ),
             window_presentation=presentation,
-            window_toggle_slot_overrides={"first": 1, "second": 2},
             tab_sequence_start=40,
         )
 
@@ -1203,10 +1206,13 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertIs(host.showcase_button, task_panel.added_controls[1])
         self.assertEqual(1, result.window_toggle_controls[0][1].rect.left)
         self.assertEqual(2, result.window_toggle_controls[1][1].rect.left)
+        self.assertEqual(2, len(result.window_toggle_placements))
+        self.assertEqual("first", result.window_toggle_placements[0].window_key)
+        self.assertEqual((1, -100, 120, 30), tuple(result.window_toggle_placements[0].panel_rect))
         self.assertEqual(40, host.exit_button.tab_index)
         self.assertEqual(43, host.showcase_button.tab_index)
 
-    def test_add_scene_task_panel_items_clamps_out_of_range_toggle_group_start_to_panel_end(self):
+    def test_add_scene_task_panel_items_allows_explicit_window_toggle_panel_rects(self):
         host = _StubTaskPanelHost()
         task_panel = _StubTaskPanel()
         layout = _StubLayout()
@@ -1242,13 +1248,21 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
                     on_click=lambda: None,
                 ),
             ),
-            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(start_index=99),
+            window_toggle_group_spec=TaskPanelWindowToggleGroupSpec(
+                panel_rect_overrides={
+                    "first": (20, 8, 100, 24),
+                    "second": (138, 8, 110, 24),
+                },
+                flow_start_slot=1,
+            ),
             window_presentation=presentation,
         )
 
         self.assertEqual(2, len(result.window_toggle_controls))
-        self.assertEqual(1, result.window_toggle_controls[0][1].rect.left)
-        self.assertEqual(2, result.window_toggle_controls[1][1].rect.left)
+        self.assertEqual(20, result.window_toggle_controls[0][1].rect.left)
+        self.assertEqual(138, result.window_toggle_controls[1][1].rect.left)
+        self.assertEqual((20, 8, 100, 24), tuple(result.window_toggle_placements[0].panel_rect))
+        self.assertEqual((138, 8, 110, 24), tuple(result.window_toggle_placements[1].panel_rect))
 
     def test_add_window_control_and_label_and_button_helpers(self):
         window = _StubWindow()

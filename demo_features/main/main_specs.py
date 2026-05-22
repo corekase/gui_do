@@ -154,6 +154,19 @@ MAIN_TASK_PANEL_LAYOUT_SPEC = TaskPanelSlotLayoutSpec(
     horizontal=True,
 )
 
+MAIN_TASK_PANEL_SHOWCASE_SLOT_INDEX = 1
+MAIN_TASK_PANEL_WINDOW_TOGGLE_FIRST_FLOW_SLOT = MAIN_TASK_PANEL_SHOWCASE_SLOT_INDEX + 1
+
+MAIN_TASK_PANEL_WINDOW_BUTTON_WIDTH = int(MAIN_TASK_PANEL_LAYOUT_SPEC.item_width)
+MAIN_TASK_PANEL_WINDOW_BUTTON_HEIGHT = int(MAIN_TASK_PANEL_LAYOUT_SPEC.item_height)
+MAIN_TASK_PANEL_WINDOW_BUTTON_SPACING = int(MAIN_TASK_PANEL_LAYOUT_SPEC.spacing)
+MAIN_TASK_PANEL_WINDOW_BUTTON_STRIDE = MAIN_TASK_PANEL_WINDOW_BUTTON_WIDTH + MAIN_TASK_PANEL_WINDOW_BUTTON_SPACING
+MAIN_TASK_PANEL_WINDOW_BUTTON_TOP = int((int(MAIN_TASK_PANEL_SPEC.height) - MAIN_TASK_PANEL_WINDOW_BUTTON_HEIGHT) // 2)
+MAIN_TASK_PANEL_WINDOW_BUTTON_START_LEFT = int(
+    int(MAIN_TASK_PANEL_LAYOUT_SPEC.left)
+    + (MAIN_TASK_PANEL_WINDOW_TOGGLE_FIRST_FLOW_SLOT * MAIN_TASK_PANEL_WINDOW_BUTTON_STRIDE)
+)
+
 def build_main_task_panel_button_specs(host):
     return (
         TaskPanelButtonSpec(
@@ -169,6 +182,7 @@ MAIN_TASK_PANEL_SCENE_NAV_SPECS = (
     TaskPanelSceneNavButtonSpec(
         attr_name="showcase_button",
         control_id="showcase",
+        slot_index=MAIN_TASK_PANEL_SHOWCASE_SLOT_INDEX,
         label="Showcase",
         target_scene="control_showcase",
         accessibility_label="Open control showcase scene",
@@ -176,7 +190,29 @@ MAIN_TASK_PANEL_SCENE_NAV_SPECS = (
     ),
 )
 
-MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC = TaskPanelWindowToggleGroupSpec(start_index=1)
+MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC = TaskPanelWindowToggleGroupSpec(
+    flow_start_slot=MAIN_TASK_PANEL_WINDOW_TOGGLE_FIRST_FLOW_SLOT,
+    panel_rect_overrides={
+        "systems": (
+            MAIN_TASK_PANEL_WINDOW_BUTTON_START_LEFT,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_TOP,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_WIDTH,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_HEIGHT,
+        ),
+        "life": (
+            MAIN_TASK_PANEL_WINDOW_BUTTON_START_LEFT + MAIN_TASK_PANEL_WINDOW_BUTTON_STRIDE,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_TOP,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_WIDTH,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_HEIGHT,
+        ),
+        "mandel": (
+            MAIN_TASK_PANEL_WINDOW_BUTTON_START_LEFT + (MAIN_TASK_PANEL_WINDOW_BUTTON_STRIDE * 2),
+            MAIN_TASK_PANEL_WINDOW_BUTTON_TOP,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_WIDTH,
+            MAIN_TASK_PANEL_WINDOW_BUTTON_HEIGHT,
+        ),
+    },
+)
 
 MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS = WindowTitlebarControlsSpec(
     include_window_hide_image_button=False,
