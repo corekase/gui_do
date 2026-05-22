@@ -121,6 +121,44 @@ class _OverlayStub:
 
 
 class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
+    def test_visibility_transition_effect_uses_live_window_draw_each_frame(self):
+        target = pygame.Surface((640, 480), pygame.SRCALPHA)
+
+        for mode_name, effects in (
+            ("hide_show", {"hide_show_enabled": True}),
+            ("grow_shrink", {"grow_shrink_enabled": True}),
+        ):
+            with self.subTest(mode=mode_name):
+                window = WindowControl(f"demo_window_{mode_name}", (180, 120), "Demo")
+                window.window_effects = effects
+                window.visible = True
+                window.rect.topleft = (120, 80)
+                center = tuple(map(int, window.rect.center))
+
+                # Make the draw output obviously frame-varying so the transition
+                # effect must sample fresh content each render.
+                frame_color = [(220, 40, 40, 255)]
+
+                def _draw_standard(surface, _theme, force_visible_visuals=False):
+                    del force_visible_visuals
+                    surface.fill(frame_color[0])
+
+                window._draw_standard = _draw_standard
+                window.begin_visibility_transition(False, app=None, binding=None)
+                self.assertTrue(window.is_visibility_transition_renderable())
+
+                target.fill((0, 0, 0, 0))
+                window.draw(target, object())
+                first_frame = target.get_at(center)
+
+                frame_color[0] = (40, 200, 80, 255)
+                target.fill((0, 0, 0, 0))
+                window.draw(target, object())
+                second_frame = target.get_at(center)
+
+                self.assertNotEqual(first_frame, second_frame)
+                self.assertEqual((40, 200, 80, 255), tuple(second_frame))
+
     def test_shear_and_visibility_share_common_window_effect_buffer_slot(self):
         WindowEffectScratchPad.dispose_all()
         shear = ShearWindowController(_ScratchPadStubWindow())
