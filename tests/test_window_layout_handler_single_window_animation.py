@@ -987,7 +987,12 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         # Back layer should occupy lower z slots than the front layer.
         self.assertIs(parent.children[0], back)
 
-    def test_arrange_windows_z_slices_preserve_within_layer_target_order(self):
+    def test_arrange_windows_z_slices_layer_determines_overall_within_layer_existing_z_order(self):
+        # Initial children: [w1(z=0), back(z=1), w2(z=2)].
+        # Solver puts w2 and w1 in back layer, back in overflow front layer.
+        # Within the back layer the existing z-order (w1 behind w2) should be
+        # preserved, and the front layer (back) should be rendered in front of
+        # all back-layer windows regardless of its original z-index.
         w1 = _WindowNode(20, 20, 120, 90, visible=True)
         w2 = _WindowNode(170, 20, 120, 90, visible=True)
         back = _WindowNode(320, 20, 120, 90, visible=True)
@@ -1002,7 +1007,7 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         handler = WindowLayoutHandler(app, scene=scene)
         handler.enabled = True
 
-        # Back layer order is [w2, w1], then a front layer [back].
+        # Back layer solve order is [w2, w1]; front layer is [back].
         solved_targets = [
             (w2, 80, 80),
             (w1, 240, 80),
@@ -1024,8 +1029,9 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             ):
                 handler.arrange_windows(immediate=True)
 
-        # Back layer first preserving target order, then front layer.
-        self.assertEqual([w2, w1, back], list(parent.children))
+        # Within back layer: w1 (z=0) behind w2 (z=2), preserving existing order.
+        # Front layer: back on top of all back-layer windows.
+        self.assertEqual([w1, w2, back], list(parent.children))
 
     def test_newly_visible_windows_are_appended_to_trailing_solve_segment(self):
         base_a = _WindowNode(20, 20, 120, 90, visible=True)

@@ -853,9 +853,14 @@ class WindowLayoutHandler:
 
     def _window_current_z_index(self, window: object) -> int:
         parent = getattr(window, "parent", None)
-        children = getattr(parent, "children", None)
-        if isinstance(children, list) and window in children:
-            return int(children.index(window))
+        if parent is not None:
+            children = getattr(parent, "children", None)
+            if isinstance(children, list) and window in children:
+                return int(children.index(window))
+        else:
+            nodes = getattr(self._bound_scene(), "nodes", None)
+            if isinstance(nodes, list) and window in nodes:
+                return int(nodes.index(window))
         return int(self._registration_order.get(window, 0))
 
     def _windows_top_to_back(self, windows: Iterable[object]) -> list[object]:
@@ -943,6 +948,7 @@ class WindowLayoutHandler:
             demoted_order = [w for w in demoted_order if w not in promoted_set]
 
         parent_to_ordered_windows: dict[object, list[object]] = {}
+        scene_ordered_windows: list[object] = []
         if demoted_set or promoted_set:
             target_window_set = {w for w, _x, _y in targets}
             demoted_order_set = set(demoted_order)
@@ -952,6 +958,18 @@ class WindowLayoutHandler:
                 for window in target_window_set
                 if getattr(window, "parent", None) is not None
             }
+            # Root windows (parent=None) are ordered via scene.nodes.
+            root_target_set = {w for w in target_window_set if getattr(w, "parent", None) is None}
+            if root_target_set:
+                scene_nodes = getattr(self._bound_scene(), "nodes", None)
+                if isinstance(scene_nodes, list):
+                    root_non_dp = [
+                        w for w in scene_nodes
+                        if w in root_target_set and w not in demoted_set and w not in promoted_set
+                    ]
+                    root_demoted = [w for w in demoted_order if getattr(w, "parent", None) is None]
+                    root_promoted = [w for w in promoted_order if getattr(w, "parent", None) is None]
+                    scene_ordered_windows = list(root_demoted) + list(root_non_dp) + list(root_promoted)
             for parent in parent_candidates:
                 children = getattr(parent, "children", None)
                 if not isinstance(children, list):
@@ -1012,18 +1030,23 @@ class WindowLayoutHandler:
         else:
             ordered_windows: list[object] = []
             for layer in layers:
+                # Within each layer preserve existing z-order so layer index is the
+                # primary z-order band and per-layer relative order reflects prior
+                # user interactions (focus, click, drag) rather than solve position.
+                layer_sorted = sorted(layer, key=lambda w: self._window_current_z_index(w))
                 if preferred_layer_tail:
-                    layer_head = [w for w in layer if w not in preferred_layer_tail]
-                    layer_tail = [w for w in layer if w in preferred_layer_tail]
+                    layer_head = [w for w in layer_sorted if w not in preferred_layer_tail]
+                    layer_tail = [w for w in layer_sorted if w in preferred_layer_tail]
                     ordered_windows.extend(layer_head + layer_tail)
                 else:
-                    ordered_windows.extend(list(layer))
+                    ordered_windows.extend(layer_sorted)
 
             for window in ordered_windows:
                 parent = getattr(window, "parent", None)
                 if parent is None:
-                    continue
-                parent_to_ordered_windows.setdefault(parent, []).append(window)
+                    scene_ordered_windows.append(window)
+                else:
+                    parent_to_ordered_windows.setdefault(parent, []).append(window)
 
         for parent, desired in parent_to_ordered_windows.items():
             children = getattr(parent, "children", None)
@@ -1044,6 +1067,21 @@ class WindowLayoutHandler:
             for slot_idx, window in zip(slot_indices, desired):
                 reordered[slot_idx] = window
             parent.children[:] = reordered
+
+        # Keep root-level z-order in sync with solved layered order.
+        if scene_ordered_windows:
+            scene_nodes = getattr(self._bound_scene(), "nodes", None)
+            if isinstance(scene_nodes, list) and len(scene_ordered_windows) > 1:
+                desired_set = set(scene_ordered_windows)
+                slot_indices = [
+                    idx for idx, node in enumerate(scene_nodes)
+                    if node in desired_set
+                ]
+                if len(slot_indices) > 1:
+                    reordered = list(scene_nodes)
+                    for slot_idx, window in zip(slot_indices, scene_ordered_windows):
+                        reordered[slot_idx] = window
+                    scene_nodes[:] = reordered
 
     def arrange_windows(
         self,
