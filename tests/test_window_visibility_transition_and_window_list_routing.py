@@ -19,16 +19,21 @@ class _StubNode:
 
 
 class _StubApp:
-    def __init__(self):
+    def __init__(self, *, tiling_enabled: bool = True):
         self._nodes = {}
         self.tile_windows_calls = []
         self.surface = _StubSurface((800, 600))
+        self._tiling_enabled = bool(tiling_enabled)
+        self.window_tiling = _StubWindowTiling(self.surface)
 
     def find(self, control_id: str):
         return self._nodes.get(str(control_id))
 
     def tile_windows(self, *args, **kwargs) -> None:
         self.tile_windows_calls.append((args, kwargs))
+
+    def is_window_tiling_enabled(self, scene_name=None) -> bool:
+        return self._tiling_enabled
 
 
 class _StubSurface:
@@ -37,6 +42,31 @@ class _StubSurface:
 
     def get_size(self):
         return self._size
+
+    def get_rect(self):
+        return Rect(0, 0, int(self._size[0]), int(self._size[1]))
+
+
+class _StubWindowTiling:
+    def __init__(self, surface: _StubSurface):
+        self._surface = surface
+        self.center_windows_calls = []
+
+    def center_windows(self, windows):
+        items = tuple(windows)
+        self.center_windows_calls.append(items)
+        bounds = self._surface.get_rect()
+        for window in items:
+            rect = getattr(window, "rect", None)
+            move_by = getattr(window, "move_by", None)
+            if rect is None or not callable(move_by):
+                continue
+            target_x = int(bounds.centerx - (int(rect.width) // 2))
+            target_y = int(bounds.centery - (int(rect.height) // 2))
+            dx = int(target_x - int(rect.x))
+            dy = int(target_y - int(rect.y))
+            if dx != 0 or dy != 0:
+                move_by(dx, dy)
 
 
 class _StubBinding:
@@ -208,6 +238,31 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         # Finish the reverse leg.
         window.update(duration * 0.7)
         self.assertFalse(controller.is_active())
+
+    def test_show_when_tiling_disabled_centers_only_target_window_and_skips_tile_solve(self):
+        app = _StubApp(tiling_enabled=False)
+        window = _ShowTileStubWindow()
+        other = _ShowTileStubWindow()
+        window.visible = False
+        other.visible = True
+        window.rect.topleft = (12, 18)
+        other.rect.topleft = (66, 72)
+        other_start = Rect(other.rect)
+
+        set_window_visible_state(
+            window,
+            True,
+            tile_windows=app.tile_windows,
+            app=app,
+            binding=None,
+        )
+
+        self.assertEqual(0, len(app.tile_windows_calls))
+        self.assertEqual(1, len(app.window_tiling.center_windows_calls))
+        centered_windows = app.window_tiling.center_windows_calls[0]
+        self.assertEqual((window,), centered_windows)
+        self.assertEqual(app.surface.get_rect().center, window.rect.center)
+        self.assertEqual(other_start.topleft, other.rect.topleft)
 
     def test_menu_bar_window_list_routes_through_window_presentation(self):
         presentation = _PresentationStub(return_value=True)

@@ -622,6 +622,49 @@ def set_window_visible_state(
     is_visible = bool(visible)
     if app is None and host is not None:
         app = getattr(host, "app", None)
+
+    tiling_enabled: bool | None = None
+    if app is not None:
+        is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
+        if callable(is_window_tiling_enabled):
+            try:
+                tiling_enabled = bool(is_window_tiling_enabled())
+            except Exception:
+                tiling_enabled = None
+
+    def _center_single_window_without_tiling() -> bool:
+        if app is None or window is None:
+            return False
+
+        window_tiling = getattr(app, "window_tiling", None)
+        center_windows = getattr(window_tiling, "center_windows", None)
+        if callable(center_windows):
+            try:
+                center_windows((window,))
+                return True
+            except Exception:
+                return False
+
+        surface = getattr(app, "surface", None)
+        get_rect = getattr(surface, "get_rect", None)
+        move_by = getattr(window, "move_by", None)
+        if not callable(get_rect) or not callable(move_by):
+            return False
+        try:
+            bounds = get_rect()
+            current = getattr(window, "rect", None)
+            if current is None:
+                return False
+            target_x = int(bounds.centerx - (int(current.width) // 2))
+            target_y = int(bounds.centery - (int(current.height) // 2))
+            dx = int(target_x - int(current.x))
+            dy = int(target_y - int(current.y))
+            if dx != 0 or dy != 0:
+                move_by(dx, dy)
+            return True
+        except Exception:
+            return False
+
     use_transition = bool(
         window is not None
         and getattr(window, "window_effects", {}).get("hide_show_enabled", True)
@@ -635,14 +678,22 @@ def set_window_visible_state(
         toggle.pushed = is_visible
     if tile_windows is not None:
         if is_visible and window is not None:
-            try:
-                tile_windows(newly_visible=(window,), as_visibility_event=True)
-            except TypeError:
-                tile_windows()
+            if tiling_enabled is False:
+                if not _center_single_window_without_tiling():
+                    try:
+                        tile_windows(newly_visible=(window,), as_visibility_event=True)
+                    except TypeError:
+                        tile_windows()
+            else:
+                try:
+                    tile_windows(newly_visible=(window,), as_visibility_event=True)
+                except TypeError:
+                    tile_windows()
         else:
             if window is not None:
                 window.visible = False
-            tile_windows()
+            if tiling_enabled is not False:
+                tile_windows()
     elif window is not None:
         window.visible = is_visible
 
