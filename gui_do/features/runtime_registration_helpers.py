@@ -55,6 +55,8 @@ def register_window_presentation_specs(window_presentation, window_specs) -> Non
             kwargs["window_effects"] = spec.window_effects
         if hasattr(spec, "titlebar_controls"):
             kwargs["titlebar_controls"] = _normalize_titlebar_controls_spec(spec.titlebar_controls)
+        if hasattr(spec, "startup_visible"):
+            kwargs["startup_visible"] = bool(getattr(spec, "startup_visible"))
         window_presentation.register_feature_window(spec.key, **kwargs)
 
 

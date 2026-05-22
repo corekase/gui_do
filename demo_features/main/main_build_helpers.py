@@ -21,6 +21,7 @@ from gui_do.features.scene_task_panel_builder import SceneTaskPanelBuilder
 
 from .main_specs import (
     MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS,
+    MAIN_OPT_OUT_TEST_WINDOW_VISIBLE,
     MAIN_TASK_PANEL_LAYOUT_SPEC,
     MAIN_TASK_PANEL_SCENE_NAV_SPECS,
     MAIN_TASK_PANEL_SPEC,
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
 
 
 def _add_opt_out_test_window(host) -> None:
-    text = "This is an unmanaged window"
+    text = "Non-Menu Window"
     text_w = 0
     text_h = 0
     theme = getattr(host.app, "theme", None)
@@ -60,12 +61,12 @@ def _add_opt_out_test_window(host) -> None:
         WindowControl(
             "opt_out_test_window",
             (window_w, window_h),
-            "Opt-out test",
+            "Non-Menu",
             use_frame_backdrop=True,
             titlebar_controls=MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS,
         )
     )
-    host.opt_out_test_window.visible = True
+    host.opt_out_test_window.visible = bool(MAIN_OPT_OUT_TEST_WINDOW_VISIBLE)
     content_rect = host.opt_out_test_window.content_rect()
     host.opt_out_test_window.add(
         LabelControl(
@@ -81,6 +82,8 @@ def _add_opt_out_test_window(host) -> None:
     host.window_presentation.register_feature_window(
         "opt_out_test",
         feature_attribute_name="_opt_out_test_window_feature",
+        titlebar_controls=MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS,
+        startup_visible=MAIN_OPT_OUT_TEST_WINDOW_VISIBLE,
     )
 
 

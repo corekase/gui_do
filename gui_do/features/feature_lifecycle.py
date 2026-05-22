@@ -797,6 +797,7 @@ class FeatureWindowBinding:
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=_default_window_effects)
     titlebar_controls: dict = field(default_factory=dict)
+    startup_visible: bool = False
 
 
 class FeatureWindowPresentationModel:
@@ -846,6 +847,7 @@ class FeatureWindowPresentationModel:
         accessibility_label: str | None = None,
         window_effects: object | None = None,
         titlebar_controls: dict | None = None,
+        startup_visible: bool = False,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
             key=str(key),
@@ -863,6 +865,7 @@ class FeatureWindowPresentationModel:
                 operation="FeatureWindowPresentationModel.register_feature_window",
             ),
             titlebar_controls=self._normalize_titlebar_controls(titlebar_controls),
+            startup_visible=bool(startup_visible),
         )
         self._bindings[binding.key] = binding
         return binding
@@ -939,9 +942,10 @@ class FeatureWindowPresentationModel:
         self.set_visible(key, next_visible, from_toggle=from_toggle)
         return next_visible
 
-    def sync_initial_visibility(self, *, visible: bool = False) -> None:
+    def sync_initial_visibility(self, *, visible: bool | None = None) -> None:
         for key in self._bindings:
-            self.set_visible(key, visible)
+            binding = self.get_binding(key)
+            self.set_visible(key, binding.startup_visible if visible is None else bool(visible))
 
     def toggle_window(self, window) -> bool:
         """Toggle a window by object reference, routing through the presentation model.

@@ -4,6 +4,7 @@ import pygame
 
 from demo_features.life.life_specs import _LIFE_WINDOW_SIZE
 from demo_features.main.main_build_helpers import _add_opt_out_test_window
+from demo_features.main.main_specs import MAIN_OPT_OUT_TEST_WINDOW_VISIBLE
 from demo_features.mandelbrot.mandelbrot_specs import _WINDOW_SIZE as _MANDEL_WINDOW_SIZE
 
 
@@ -20,8 +21,8 @@ class _WindowPresentationStub:
     def __init__(self):
         self.calls = []
 
-    def register_feature_window(self, key, *, feature_attribute_name):
-        self.calls.append((key, feature_attribute_name))
+    def register_feature_window(self, key, *, feature_attribute_name, **kwargs):
+        self.calls.append((key, feature_attribute_name, kwargs))
 
 
 class _HostStub:
@@ -73,6 +74,10 @@ class TestDemoWindowContentSizeSemantics(unittest.TestCase):
         self.assertEqual(label.rect.height + (content_pad * 2), content.height)
         self.assertEqual(content.left + content_pad, label.rect.left)
         self.assertEqual(content.top + content_pad, label.rect.top)
+        self.assertEqual(MAIN_OPT_OUT_TEST_WINDOW_VISIBLE, window.visible)
+        self.assertEqual(1, len(host.window_presentation.calls))
+        _, _, kwargs = host.window_presentation.calls[0]
+        self.assertFalse(kwargs["titlebar_controls"].include_window_hide_image_button)
 
 
 if __name__ == "__main__":

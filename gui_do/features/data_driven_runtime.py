@@ -194,6 +194,7 @@ class WindowSpec:
     accessibility_label: str
     window_effects: WindowEffectsSpec | Mapping[str, bool] = field(default_factory=WindowEffectsSpec)
     titlebar_controls: WindowTitlebarControlsSpec | None = None
+    startup_visible: bool = False
 
 
 @dataclass(frozen=True)
@@ -250,6 +251,7 @@ class AnchoredWindowSpec:
     margin: tuple[int, int]
     use_frame_backdrop: bool = True
     titlebar_controls: WindowTitlebarControlsSpec | None = None
+    startup_visible: bool = False
 
 
 @dataclass(frozen=True)
@@ -1049,7 +1051,7 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
 
     # 13 – Build features, sync visibility, pristine assets, standard actions
     host.app.build_features(host)
-    host.window_presentation.sync_initial_visibility(visible=False)
+    host.window_presentation.sync_initial_visibility()
     apply_runtime_scene_pristine_assets(host.app, config.runtime_scene_specs)
     # Register window-presentation toggle handlers on the app-level action dispatcher
     # so they are callable by name (e.g. from the command palette selection path).

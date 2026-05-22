@@ -84,6 +84,20 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         self.assertTrue(demo.extra_toggle_window.pushed)
         self.assertEqual(3, demo.app.tile_windows_calls)
 
+    def test_initial_visibility_uses_per_binding_startup_visibility(self):
+        demo = self._make_demo()
+        demo.window_presentation.register_feature_window(
+            "opt_out_test",
+            feature_attribute_name="_extra_feature",
+            startup_visible=True,
+        )
+
+        demo.window_presentation.sync_initial_visibility()
+
+        self.assertTrue(demo._extra_feature.window.visible)
+        self.assertFalse(demo._life_feature.window.visible)
+        self.assertFalse(demo._mandel_feature.window.visible)
+
     def test_from_toggle_path_does_not_overwrite_toggle_state(self):
         demo = self._make_demo()
         demo.life_toggle_window.pushed = False
