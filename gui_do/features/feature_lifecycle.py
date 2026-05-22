@@ -615,11 +615,22 @@ def set_window_visible_state(
     tile_windows: Optional[Callable[[], None]] = None,
     host=None,
     host_setter_name: str = None,
+    app=None,
+    binding=None,
 ) -> None:
     """Apply canonical window/toggle visibility synchronization used by demo hosts. Calls host setter if provided."""
     is_visible = bool(visible)
-    if window is not None:
-        window.visible = is_visible
+    if app is None and host is not None:
+        app = getattr(host, "app", None)
+    use_transition = bool(
+        window is not None
+        and getattr(window, "window_effects", {}).get("hide_show_enabled", True)
+        and hasattr(window, "begin_visibility_transition")
+    )
+    if use_transition and hasattr(window, "ensure_visibility_transition_controller"):
+        window.ensure_visibility_transition_controller()
+    if window is not None and is_visible:
+        window.visible = True
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
         toggle.pushed = is_visible
     if tile_windows is not None:
@@ -629,7 +640,16 @@ def set_window_visible_state(
             except TypeError:
                 tile_windows()
         else:
+            if window is not None:
+                window.visible = False
             tile_windows()
+    elif window is not None:
+        window.visible = is_visible
+
+    if use_transition:
+        window.begin_visibility_transition(is_visible, app=app, binding=binding)
+    elif window is not None:
+        window.visible = is_visible
     # Call host setter if provided
     if host is not None and host_setter_name:
         setter = getattr(host, host_setter_name, None)
@@ -794,12 +814,16 @@ class FeatureWindowPresentationModel:
         return getattr(self.host, binding.toggle_attribute_name, None)
 
     def set_visible(self, key: str, visible: bool, *, from_toggle: bool = False) -> None:
+        binding = self.get_binding(key)
         set_window_visible_state(
             self.get_window(key),
             visible,
             toggle=self.get_toggle(key),
             from_toggle=from_toggle,
             tile_windows=self._tile_windows,
+            host=self.host,
+            app=getattr(self.host, "app", None),
+            binding=binding,
         )
 
     def show(self, key: str) -> None:

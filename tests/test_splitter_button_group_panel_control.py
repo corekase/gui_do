@@ -772,6 +772,22 @@ class TestPanelControlFocusedWindowDrawOrder(unittest.TestCase):
 
         self.assertEqual(["focused", "other"], draw_order)
 
+    def test_hiding_transition_window_keeps_child_z_order_above_active_visible_window(self):
+        panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
+        draw_order: list[str] = []
+        lower_visible = _OrderTrackingWindow("lower_visible", draw_order)
+        hiding_top = _OrderTrackingWindow("hiding_top", draw_order)
+        panel.children.extend([lower_visible, hiding_top])
+        panel._set_active_window(lower_visible)
+        hiding_top.visible = False
+        hiding_top.is_visibility_transition_renderable = lambda: True
+        app = _StubAppForDrawOrder(focused_node=lower_visible)
+
+        surface = pygame.Surface((800, 600))
+        panel.draw_window_phase(surface, theme=None, app=app)
+
+        self.assertEqual(["lower_visible", "hiding_top"], draw_order)
+
 
 if __name__ == "__main__":
     unittest.main()

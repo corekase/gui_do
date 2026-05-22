@@ -6,6 +6,9 @@ from typing import Dict, Iterable, List, Optional
 from pygame import Rect
 
 
+WINDOW_TILING_ANIMATION_DURATION_SECONDS = 0.5
+
+
 class WindowLayoutHandler:
     """Arrange window-like scene nodes into a non-overlapping tiled grid."""
 
@@ -231,6 +234,15 @@ class WindowLayoutHandler:
         tweens.tween_fn(float(duration), _apply, easing="ease_in_out", tag=tag)
 
     @staticmethod
+    def _set_window_tiling_target(window: object, target_x: int, target_y: int) -> None:
+        rect = Rect(getattr(window, "rect", Rect(0, 0, 0, 0)))
+        setattr(
+            window,
+            "_window_tiling_target_rect",
+            Rect(int(target_x), int(target_y), int(rect.width), int(rect.height)),
+        )
+
+    @staticmethod
     def _full_window_rect(window: object) -> Rect:
         rect = Rect(window.rect)
         return Rect(rect.x, rect.y, rect.width, rect.height)
@@ -246,6 +258,7 @@ class WindowLayoutHandler:
         rect = self._full_window_rect(window)
         target = Rect(0, 0, rect.width, rect.height)
         target.center = bounds.center
+        self._set_window_tiling_target(window, int(target.x), int(target.y))
         current = Rect(window.rect)
         dx = target.x - current.x
         dy = target.y - current.y
@@ -378,11 +391,17 @@ class WindowLayoutHandler:
             target = Rect(0, 0, only_window.rect.width, only_window.rect.height)
             target.center = work.center
             clamped_x, clamped_y = self._clamp_target(only_window, int(target.x), int(target.y), scene_snapshot)
+            self._set_window_tiling_target(only_window, int(clamped_x), int(clamped_y))
             if immediate:
                 current = Rect(only_window.rect)
                 only_window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
             else:
-                self._animate_window_to(only_window, int(clamped_x), int(clamped_y), duration=0.5)
+                self._animate_window_to(
+                    only_window,
+                    int(clamped_x),
+                    int(clamped_y),
+                    duration=WINDOW_TILING_ANIMATION_DURATION_SECONDS,
+                )
             return
 
         order_idx = self._registration_order
@@ -616,7 +635,7 @@ class WindowLayoutHandler:
                 overflow_queue = deferred
 
         # Clamp targets to drag-safe bounds, then animate to new positions.
-        duration = 0.0 if immediate else 0.5
+        duration = 0.0 if immediate else WINDOW_TILING_ANIMATION_DURATION_SECONDS
         for window, target_x, target_y in targets:
             if window in center_fallback:
                 centered_x, centered_y = self._center_target(work, window_rects[window])
@@ -625,6 +644,7 @@ class WindowLayoutHandler:
                 clamped_x, clamped_y = (int(target_x), int(target_y))
             else:
                 clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
+            self._set_window_tiling_target(window, int(clamped_x), int(clamped_y))
             if duration <= 0.0:
                 current = Rect(window.rect)
                 window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)

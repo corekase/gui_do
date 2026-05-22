@@ -10,6 +10,7 @@ from ...app.first_frame_profiler import first_frame_profiler
 from ..base.ui_node import UiNode
 from ..input.image_button_control import ImageButtonControl
 from ...graphics import load_pristine_surface
+from ...graphics.window_visibility_transition import WindowVisibilityTransitionController
 from ...app.screen_util import get_screen_size
 from ...app.error_handling import logical_error
 
@@ -181,7 +182,36 @@ class WindowControl(UiNode):
         # Shear effect: initialize controller if enabled in spec (integration to be completed)
         self.shear_controller = None
         self.shear_active = False
+        self.visibility_transition_controller: Optional[WindowVisibilityTransitionController] = None
         # Actual instantiation and event hookup will be handled in drag logic
+
+    def ensure_visibility_transition_controller(self) -> WindowVisibilityTransitionController:
+        controller = self.visibility_transition_controller
+        if controller is None:
+            controller = WindowVisibilityTransitionController(self)
+            self.visibility_transition_controller = controller
+        return controller
+
+    def is_visibility_transition_active(self) -> bool:
+        controller = self.visibility_transition_controller
+        return bool(controller is not None and controller.is_active())
+
+    def is_visibility_transition_renderable(self) -> bool:
+        controller = self.visibility_transition_controller
+        return bool(controller is not None and controller.should_render())
+
+    def begin_visibility_transition(self, visible: bool, *, app=None, binding=None) -> None:
+        if not getattr(self, "window_effects", {}).get("hide_show_enabled", True):
+            return
+        controller = self.ensure_visibility_transition_controller()
+        controller.begin_transition(bool(visible), app=app, binding=binding)
+
+    def release_visibility_transition_resources(self) -> None:
+        controller = self.visibility_transition_controller
+        if controller is None:
+            return
+        controller.dispose()
+        self.visibility_transition_controller = None
 
     def _mark_content_host_rect_dirty(self) -> None:
         self._content_host_rect_dirty = True
@@ -261,14 +291,14 @@ class WindowControl(UiNode):
         surface.blit(bitmap, self.rect.topleft)
         return True
 
-    def _draw_default_window_background(self, surface, theme, factory) -> None:
+    def _draw_default_window_background(self, surface, theme, factory, *, visible_for_visuals: bool) -> None:
         visual_size = (self.rect.width, self.rect.height)
         if self._frame_visuals is None or self._frame_visual_size != visual_size:
             self._frame_visuals = factory.build_frame_visuals(self.rect)
             self._frame_visual_size = visual_size
         selected = factory.resolve_visual_state(
             self._frame_visuals,
-            visible=self.visible,
+            visible=bool(visible_for_visuals),
             enabled=self.enabled,
             armed=False,
             hovered=False,
@@ -573,6 +603,9 @@ class WindowControl(UiNode):
 
     def update(self, dt_seconds: float) -> None:
         self._sync_content_host_rect()
+        transition_controller = self.visibility_transition_controller
+        if transition_controller is not None:
+            transition_controller.update(dt_seconds)
         if self.presenter is not None and hasattr(self.presenter, "before_update"):
             self.presenter.before_update(dt_seconds)
         for child in self.children:
@@ -664,12 +697,24 @@ class WindowControl(UiNode):
             return False
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
-    def _draw_standard(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+    def _draw_standard(
+        self,
+        surface: pygame.Surface,
+        theme: "ColorTheme",
+        *,
+        force_visible_visuals: bool = False,
+    ) -> None:
         self._sync_content_host_rect()
+        visible_for_visuals = bool(self.visible or force_visible_visuals)
         factory = theme.graphics_factory
         font_revision = factory.font_revision()
         if not self.restore_pristine(surface):
-            self._draw_default_window_background(surface, theme, factory)
+            self._draw_default_window_background(
+                surface,
+                theme,
+                factory,
+                visible_for_visuals=visible_for_visuals,
+            )
         chrome_key = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
         if self._chrome is None or self._chrome_size != chrome_key:
             start = perf_counter()
@@ -710,9 +755,9 @@ class WindowControl(UiNode):
             self._ensure_hide_control_button_visuals(theme)
             self._sync_hide_control_button_rect()
         self._lower_control_button.enabled = self.enabled
-        self._lower_control_button.visible = self.visible and include_lower
+        self._lower_control_button.visible = visible_for_visuals and include_lower
         self._hide_control_button.enabled = self.enabled
-        self._hide_control_button.visible = self.visible and include_hide
+        self._hide_control_button.visible = visible_for_visuals and include_hide
         if include_hide:
             self._hide_control_button.draw(surface, theme)
         if include_lower:
@@ -740,6 +785,14 @@ class WindowControl(UiNode):
             surface.set_clip(previous_clip)
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        transition_controller = self.visibility_transition_controller
+        if transition_controller is not None and transition_controller.should_render():
+            transition_controller.render(
+                surface,
+                theme,
+                lambda s, t: self._draw_standard(s, t, force_visible_visuals=True),
+            )
+            return
         # If shear effect is active, render from a fresh per-frame snapshot.
         if self.shear_active and self.shear_controller:
             self.shear_controller.render(surface, theme, self._draw_standard)
@@ -748,6 +801,7 @@ class WindowControl(UiNode):
         self._draw_standard(surface, theme)
 
     def dispose(self) -> None:
+        self.release_visibility_transition_resources()
         controller = self.shear_controller
         if controller is not None:
             release = getattr(controller, "dispose", None)

@@ -906,6 +906,15 @@ class GuiApplication:
         collector = telemetry_collector()
         with collector.span("gui_application", "shutdown"):
             self.features.shutdown_runtime()
+            for runtime in self._scenes.values():
+                scene = getattr(runtime, "scene", None)
+                walk = getattr(scene, "_walk_nodes", None)
+                if not callable(walk):
+                    continue
+                for node in walk():
+                    release = getattr(node, "release_visibility_transition_resources", None)
+                    if callable(release):
+                        release()
             seen = set()
             for runtime in self._scenes.values():
                 scheduler = runtime.scheduler

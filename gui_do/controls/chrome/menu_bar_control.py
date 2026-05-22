@@ -832,7 +832,14 @@ class MenuStripControl(UiNode):
             switch_scene(scene_name)
 
     def _toggle_window(self, window: UiNode) -> None:
+        if self._window_presentation is not None:
+            if self._window_presentation.toggle_window(window):
+                return
         next_visible = not bool(window.visible)
+        setter = self._resolve_builtin_visibility_setter(self._app, window) if self._app is not None else None
+        if setter is not None:
+            setter(next_visible)
+            return
         window.visible = next_visible
         if self._on_window_toggled is not None:
             self._on_window_toggled(window, next_visible)
@@ -844,6 +851,29 @@ class MenuStripControl(UiNode):
                     tile_windows(newly_visible=(window,), as_visibility_event=True)
                 else:
                     tile_windows()
+
+    @staticmethod
+    def _resolve_builtin_visibility_setter(app: "GuiApplication", window):
+        control_id = str(getattr(window, "control_id", "")).strip()
+        if not control_id.endswith("_window"):
+            return None
+        window_key = control_id[: -len("_window")]
+        if not window_key:
+            return None
+        method_name = f"set_{window_key}_window_visible"
+
+        app_method = getattr(app, method_name, None)
+        if callable(app_method):
+            return app_method
+
+        features = getattr(app, "features", None)
+        feature_hosts = getattr(features, "_feature_hosts", None)
+        if isinstance(feature_hosts, dict):
+            for host in feature_hosts.values():
+                host_method = getattr(host, method_name, None)
+                if callable(host_method):
+                    return host_method
+        return None
 
     def _resolve_scene(self):
         if self._app is None:

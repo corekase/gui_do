@@ -595,7 +595,7 @@ class PanelControl(UiNode):
     def update(self, dt_seconds: float) -> None:
         self._reapply_constraints()
         for child in self.children:
-            if child.visible:
+            if child.visible or bool(getattr(child, "is_visibility_transition_active", lambda: False)()):
                 child.update(dt_seconds)
 
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
@@ -869,6 +869,26 @@ class PanelControl(UiNode):
             controller = getattr(window, "shear_controller", None)
             return bool(getattr(controller, "dragging", False))
 
+        def _is_transition_renderable(window: UiNode) -> bool:
+            return bool(getattr(window, "is_visibility_transition_renderable", lambda: False)())
+
+        def _should_draw_window(window: UiNode) -> bool:
+            return bool(window.visible or _is_transition_renderable(window))
+
+        def _has_higher_z_transition_window_than(window: UiNode) -> bool:
+            seen = False
+            for candidate in self.children:
+                if candidate is window:
+                    seen = True
+                    continue
+                if not seen:
+                    continue
+                if not self._is_window_like(candidate):
+                    continue
+                if _is_transition_renderable(candidate):
+                    return True
+            return False
+
         if app is not None:
             self._clear_occluded_window_hovers_for_pointer(getattr(app, "logical_pointer_pos", None))
 
@@ -884,11 +904,18 @@ class PanelControl(UiNode):
             and self._is_window_like(active_window)
             and active_window.visible
             and not _is_actively_shear_dragging(active_window)
+            and not _has_higher_z_transition_window_than(active_window)
         ):
             prioritized_window = active_window
         if prioritized_window is None and app is not None and hasattr(app, 'focus') and app.focus is not None:
             focused_node = app.focus.focused_node
-            if focused_node is not None and focused_node in self.children and self._is_window_like(focused_node):
+            if (
+                focused_node is not None
+                and focused_node in self.children
+                and self._is_window_like(focused_node)
+                and focused_node.visible
+                and not _has_higher_z_transition_window_than(focused_node)
+            ):
                 prioritized_window = focused_node
                 if _is_actively_shear_dragging(prioritized_window):
                     prioritized_window = None
@@ -904,16 +931,16 @@ class PanelControl(UiNode):
             if child is prioritized_window:
                 # Skip focused window for now; draw it last
                 continue
-            if not child.visible:
+            if not _should_draw_window(child):
                 continue
             child.draw(surface, theme)
-            if app is not None:
+            if app is not None and child.visible:
                 if hint_window is None or child is hint_window:
                     app.focus_visualizer.draw_hint_for_window(surface, theme, child)
 
         # Draw the prioritized window last so its extra rendering stays on top
-        if prioritized_window is not None and prioritized_window.visible:
+        if prioritized_window is not None and _should_draw_window(prioritized_window):
             prioritized_window.draw(surface, theme)
-            if app is not None:
+            if app is not None and prioritized_window.visible:
                 if hint_window is None or prioritized_window is hint_window:
                     app.focus_visualizer.draw_hint_for_window(surface, theme, prioritized_window)
