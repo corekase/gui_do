@@ -430,6 +430,26 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         self.assertTrue(window.visible)
         self.assertEqual(1, len(app.calls))
 
+    def test_set_visible_hidden_window_raises_and_marks_raised_for_tiling(self):
+        app = _StubAppForRaiseRelayout()
+
+        raised_window = _StubWindowNode("raised_window", visible=False)
+        other_window = _StubWindowNode("other_window", visible=True)
+        parent = _StubRaiseParent([raised_window, other_window])
+        raised_window.parent = parent
+        other_window.parent = parent
+
+        host = _StubHostForPresentation(app, "life_feature", _StubWindowFeature(raised_window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window("life", feature_attribute_name="life_feature")
+
+        model.set_visible("life", True)
+
+        self.assertTrue(raised_window.visible)
+        self.assertIs(parent.children[-1], raised_window)
+        self.assertEqual(1, len(app.calls))
+        self.assertEqual((raised_window,), app.calls[0]["raised_windows"])
+
     def test_task_panel_toggle_open_forces_relayout_when_tiling_disabled(self):
         app = _StubAppForToggleOpenWithTilingDisabled()
         window = _StubWindowNode("life_window", visible=False)

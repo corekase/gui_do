@@ -666,6 +666,8 @@ def set_window_visible_state(
 ) -> None:
     """Apply canonical window/toggle visibility synchronization used by demo hosts. Calls host setter if provided."""
     is_visible = bool(visible)
+    was_visible = bool(window is not None and getattr(window, "visible", False))
+    becoming_visible = bool(window is not None and is_visible and not was_visible)
     if app is None and host is not None:
         app = getattr(host, "app", None)
     if tile_windows is None and app is not None:
@@ -726,6 +728,8 @@ def set_window_visible_state(
     )
     if use_transition and hasattr(window, "ensure_visibility_transition_controller"):
         window.ensure_visibility_transition_controller()
+    if becoming_visible:
+        raise_window_in_parent(window)
     if window is not None and is_visible:
         window.visible = True
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
@@ -735,7 +739,15 @@ def set_window_visible_state(
             if tiling_enabled is False:
                 if from_toggle:
                     try:
-                        tile_windows(newly_visible=(window,), as_visibility_event=True, force=True)
+                        if becoming_visible:
+                            tile_windows(
+                                newly_visible=(window,),
+                                raised_windows=(window,),
+                                as_visibility_event=True,
+                                force=True,
+                            )
+                        else:
+                            tile_windows(newly_visible=(window,), as_visibility_event=True, force=True)
                     except TypeError:
                         try:
                             tile_windows(newly_visible=(window,), as_visibility_event=True)
@@ -748,7 +760,14 @@ def set_window_visible_state(
                         tile_windows()
             else:
                 try:
-                    tile_windows(newly_visible=(window,), as_visibility_event=True)
+                    if becoming_visible:
+                        tile_windows(
+                            newly_visible=(window,),
+                            raised_windows=(window,),
+                            as_visibility_event=True,
+                        )
+                    else:
+                        tile_windows(newly_visible=(window,), as_visibility_event=True)
                 except TypeError:
                     tile_windows()
         else:

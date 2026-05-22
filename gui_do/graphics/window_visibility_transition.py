@@ -207,13 +207,28 @@ class WindowVisibilityTransitionController:
         if not callable(tile_windows):
             return
         is_show = self._target_progress >= 0.5
+        if is_show:
+            parent = getattr(self.window, "parent", None)
+            raise_window = getattr(parent, "_raise_window", None)
+            if callable(raise_window):
+                raise_window(self.window)
         try:
             if is_show:
-                tile_windows(newly_visible=(self.window,), as_visibility_event=True)
+                tile_windows(
+                    newly_visible=(self.window,),
+                    raised_windows=(self.window,),
+                    as_visibility_event=True,
+                )
             else:
                 tile_windows()
         except TypeError:
-            tile_windows()
+            if is_show:
+                try:
+                    tile_windows(newly_visible=(self.window,), as_visibility_event=True)
+                except TypeError:
+                    tile_windows()
+            else:
+                tile_windows()
 
     def update(self, dt_seconds: float) -> None:
         if not self._active:

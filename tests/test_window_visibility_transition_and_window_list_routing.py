@@ -128,6 +128,17 @@ class _OverlayStub:
         return None
 
 
+class _RaiseParentStub:
+    def __init__(self):
+        self.raised = []
+
+    def _raise_window(self, window):
+        self.raised.append(window)
+
+    def _on_window_visibility_changed(self, _window, _old_visible: bool, _new_visible: bool) -> None:
+        return None
+
+
 class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
     def test_visibility_transition_effect_uses_live_window_draw_each_frame(self):
         target = pygame.Surface((640, 480), pygame.SRCALPHA)
@@ -369,6 +380,41 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
 
         self.assertGreater(mid_center_after[0], mid_center_before[0])
         self.assertGreater(mid_center_after[1], mid_center_before[1])
+
+    def test_show_transition_completion_retiles_with_raised_window_hint(self):
+        app = _StubApp()
+        app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
+        binding = _StubBinding("show_demo")
+        window = _ShowTileStubWindow()
+        window.visible = False
+        window.rect.topleft = (300, 220)
+        window.parent = _RaiseParentStub()
+
+        def _tile_windows(*args, **kwargs):
+            app.tile_windows(*args, **kwargs)
+            window._window_tiling_target_rect = Rect(120, 140, window.rect.width, window.rect.height)
+
+        set_window_visible_state(
+            window,
+            True,
+            tile_windows=_tile_windows,
+            app=app,
+            binding=binding,
+        )
+        pre_completion_raise_count = len(window.parent.raised)
+
+        controller = window.visibility_transition_controller
+        self.assertIsNotNone(controller)
+        window.update(controller.base_duration_seconds)
+
+        self.assertFalse(controller.is_active())
+        self.assertGreaterEqual(len(app.tile_windows_calls), 2)
+        _args, kwargs = app.tile_windows_calls[-1]
+        self.assertEqual((window,), kwargs.get("newly_visible"))
+        self.assertEqual((window,), kwargs.get("raised_windows"))
+        self.assertTrue(bool(kwargs.get("as_visibility_event")))
+        self.assertEqual(pre_completion_raise_count + 1, len(window.parent.raised))
+        self.assertIs(window, window.parent.raised[-1])
 
     def test_near_complete_reverse_uses_elapsed_time_not_remaining_time(self):
         app = _StubApp()

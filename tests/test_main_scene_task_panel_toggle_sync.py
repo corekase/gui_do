@@ -127,6 +127,17 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         self.assertEqual(0, demo.app.tile_windows_calls)
         self.assertFalse(demo.life_toggle_window.pushed)
 
+    def test_set_visible_hidden_window_raises_before_relayout(self):
+        demo = self._make_demo(tiling_enabled=True)
+        window = demo._life_feature.window
+        window.visible = False
+
+        demo.window_presentation.set_visible("life", True)
+
+        self.assertEqual([window], window.parent.raised)
+        self.assertEqual(1, demo.app.tile_windows_calls)
+        self.assertTrue(window.visible)
+
     def test_show_raises_and_relayouts_already_visible_window_when_tiling_enabled(self):
         demo = self._make_demo(tiling_enabled=True)
         window = demo._life_feature.window
