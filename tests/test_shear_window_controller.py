@@ -5,6 +5,7 @@ import pygame
 from pygame import Rect
 
 from gui_do.graphics.shear_window import ShearWindowController
+from gui_do.graphics.window_effect_scratch_pad import WindowEffectScratchPad
 
 
 pygame.init()
@@ -116,11 +117,7 @@ class TestShearWindowControllerAutoQuality(unittest.TestCase):
 
 class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
     def setUp(self):
-        ShearWindowController._pool_buffer = None
-        ShearWindowController._pool_buffer_size = (0, 0)
-        ShearWindowController._pool_scratch = None
-        ShearWindowController._pool_scratch_size = (0, 0)
-        ShearWindowController._pool_refcount = 0
+        WindowEffectScratchPad.dispose_all()
 
     def test_buffer_allocates_growth_headroom_and_reuses_within_capacity(self):
         window = _StubWindow()
@@ -185,7 +182,10 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
         controller._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
 
         self.assertIsNot(controller.buffer, old_buffer)
-        self.assertIsNot(ShearWindowController._pool_buffer, old_buffer)
+        self.assertIsNot(
+            WindowEffectScratchPad.get_surface(ShearWindowController._BUFFER_SLOT),
+            old_buffer,
+        )
 
     def test_scratch_enlarge_drops_old_surface_reference(self):
         window = _StubWindow()
@@ -200,7 +200,10 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
         controller._refresh_buffer(larger, theme=object(), draw_window_standard=lambda _s, _t: None)
 
         self.assertIsNot(controller._scratch, old_scratch)
-        self.assertIsNot(ShearWindowController._pool_scratch, old_scratch)
+        self.assertIsNot(
+            WindowEffectScratchPad.get_surface(ShearWindowController._SCRATCH_SLOT),
+            old_scratch,
+        )
 
     def test_surface_pool_is_shared_across_controllers(self):
         controller_a = ShearWindowController(_StubWindow())
@@ -219,18 +222,18 @@ class TestShearWindowControllerSurfaceCaching(unittest.TestCase):
 
         controller_a._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
         self.assertIsNotNone(controller_a.buffer)
-        self.assertEqual(2, ShearWindowController._pool_refcount)
+        self.assertEqual(2, WindowEffectScratchPad._refcount)
 
         controller_a.dispose()
-        self.assertEqual(1, ShearWindowController._pool_refcount)
+        self.assertEqual(1, WindowEffectScratchPad._refcount)
         self.assertIsNotNone(controller_b.buffer)
 
         controller_b.dispose()
-        self.assertEqual(0, ShearWindowController._pool_refcount)
-        self.assertIsNone(ShearWindowController._pool_buffer)
-        self.assertIsNone(ShearWindowController._pool_scratch)
-        self.assertEqual((0, 0), ShearWindowController._pool_buffer_size)
-        self.assertEqual((0, 0), ShearWindowController._pool_scratch_size)
+        self.assertEqual(0, WindowEffectScratchPad._refcount)
+        self.assertIsNone(WindowEffectScratchPad.get_surface(ShearWindowController._BUFFER_SLOT))
+        self.assertIsNone(WindowEffectScratchPad.get_surface(ShearWindowController._SCRATCH_SLOT))
+        self.assertEqual((0, 0), WindowEffectScratchPad.get_size(ShearWindowController._BUFFER_SLOT))
+        self.assertEqual((0, 0), WindowEffectScratchPad.get_size(ShearWindowController._SCRATCH_SLOT))
 
     def test_expanded_surface_size_uses_growth_factor(self):
         window = _StubWindow()

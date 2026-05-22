@@ -22,6 +22,7 @@ from ..telemetry.telemetry import configure_telemetry
 from ..telemetry.telemetry import telemetry_collector
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
+from ..graphics.window_effect_scratch_pad import WindowEffectScratchPad
 from ..focus.focus_visualizer import FocusVisualizer
 from ..focus.window_focus_manager import WindowFocusManager
 from ..focus.task_panel_focus_manager import TaskPanelFocusManager
@@ -923,6 +924,7 @@ class GuiApplication:
                     continue
                 seen.add(marker)
                 scheduler.shutdown()
+            WindowEffectScratchPad.dispose_all()
         collector.shutdown()
 
     def process_event(self, event) -> bool:

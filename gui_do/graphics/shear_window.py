@@ -8,15 +8,14 @@ from typing import Any, Optional
 
 import pygame
 
+from .window_effect_scratch_pad import WindowEffectScratchPad
+
 
 class ShearWindowController:
     """Applies a horizontal shear deformation while dragging a window titlebar."""
 
-    _pool_buffer: Optional[pygame.Surface] = None
-    _pool_buffer_size: tuple[int, int] = (0, 0)
-    _pool_scratch: Optional[pygame.Surface] = None
-    _pool_scratch_size: tuple[int, int] = (0, 0)
-    _pool_refcount: int = 0
+    _BUFFER_SLOT = "window_effect_buffer"
+    _SCRATCH_SLOT = "window_effect_shear_scratch"
 
     def __init__(self, window: Any):
         self.window = window
@@ -120,62 +119,39 @@ class ShearWindowController:
 
     @property
     def buffer(self) -> Optional[pygame.Surface]:
-        return type(self)._pool_buffer
+        return WindowEffectScratchPad.get_surface(self._BUFFER_SLOT)
 
     @buffer.setter
     def buffer(self, value: Optional[pygame.Surface]) -> None:
-        type(self)._pool_buffer = value
+        WindowEffectScratchPad.set_surface(self._BUFFER_SLOT, value)
 
     @property
     def _buffer_size(self) -> tuple[int, int]:
-        return type(self)._pool_buffer_size
-
-    @_buffer_size.setter
-    def _buffer_size(self, value: tuple[int, int]) -> None:
-        type(self)._pool_buffer_size = value
+        return WindowEffectScratchPad.get_size(self._BUFFER_SLOT)
 
     @property
     def _scratch(self) -> Optional[pygame.Surface]:
-        return type(self)._pool_scratch
+        return WindowEffectScratchPad.get_surface(self._SCRATCH_SLOT)
 
     @_scratch.setter
     def _scratch(self, value: Optional[pygame.Surface]) -> None:
-        type(self)._pool_scratch = value
+        WindowEffectScratchPad.set_surface(self._SCRATCH_SLOT, value)
 
     @property
     def _scratch_size(self) -> tuple[int, int]:
-        return type(self)._pool_scratch_size
-
-    @_scratch_size.setter
-    def _scratch_size(self, value: tuple[int, int]) -> None:
-        type(self)._pool_scratch_size = value
+        return WindowEffectScratchPad.get_size(self._SCRATCH_SLOT)
 
     def _acquire_surface_pool(self) -> None:
         if self._pool_acquired:
             return
-        type(self)._pool_refcount += 1
+        WindowEffectScratchPad.acquire()
         self._pool_acquired = True
 
     def _release_surface_pool(self) -> None:
         if not self._pool_acquired:
             return
-
-        cls = type(self)
-        if cls._pool_refcount > 0:
-            cls._pool_refcount -= 1
+        WindowEffectScratchPad.release()
         self._pool_acquired = False
-
-        if cls._pool_refcount > 0:
-            return
-
-        old_buffer = cls._pool_buffer
-        old_scratch = cls._pool_scratch
-        cls._pool_buffer = None
-        cls._pool_buffer_size = (0, 0)
-        cls._pool_scratch = None
-        cls._pool_scratch_size = (0, 0)
-        del old_buffer
-        del old_scratch
 
     @staticmethod
     def _smoothstep(edge0: float, edge1: float, value: float) -> float:
@@ -226,39 +202,22 @@ class ShearWindowController:
             1,
         )
 
-    @staticmethod
-    def _surface_can_fit(capacity: tuple[int, int], needed: tuple[int, int]) -> bool:
-        return capacity[0] >= needed[0] and capacity[1] >= needed[1]
-
     def _expanded_surface_size(self, needed: tuple[int, int]) -> tuple[int, int]:
-        growth = max(1.0, float(self.surface_growth_factor))
-        width = max(1, int(math.ceil(float(needed[0]) * growth)))
-        height = max(1, int(math.ceil(float(needed[1]) * growth)))
-        return width, height
-
-    @staticmethod
-    def _replace_surface(
-        current: Optional[pygame.Surface],
-        allocated: tuple[int, int],
-    ) -> pygame.Surface:
-        # Explicitly drop the previous surface reference as soon as the enlarged
-        # surface is installed so lifecycle ownership is unambiguous.
-        old_surface = current
-        current = pygame.Surface(allocated, pygame.SRCALPHA)
-        del old_surface
-        return current
+        return WindowEffectScratchPad._expanded_surface_size(needed, self.surface_growth_factor)
 
     def _ensure_buffer_capacity(self, needed: tuple[int, int]) -> None:
-        if self.buffer is None or not self._surface_can_fit(self._buffer_size, needed):
-            allocated = self._expanded_surface_size(needed)
-            self.buffer = self._replace_surface(self.buffer, allocated)
-            self._buffer_size = allocated
+        WindowEffectScratchPad.ensure_capacity(
+            self._BUFFER_SLOT,
+            needed,
+            growth_factor=self.surface_growth_factor,
+        )
 
     def _ensure_scratch_capacity(self, needed: tuple[int, int]) -> None:
-        if self._scratch is None or not self._surface_can_fit(self._scratch_size, needed):
-            allocated = self._expanded_surface_size(needed)
-            self._scratch = self._replace_surface(self._scratch, allocated)
-            self._scratch_size = allocated
+        WindowEffectScratchPad.ensure_capacity(
+            self._SCRATCH_SLOT,
+            needed,
+            growth_factor=self.surface_growth_factor,
+        )
 
     def dispose(self) -> None:
         self.active = False

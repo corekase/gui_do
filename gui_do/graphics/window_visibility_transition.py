@@ -6,6 +6,7 @@ import pygame
 
 from ..app.screen_util import get_screen_size
 from ..layout.window_layout_handler import WINDOW_TILING_ANIMATION_DURATION_SECONDS
+from .window_effect_scratch_pad import WindowEffectScratchPad
 
 
 class WindowVisibilityTransitionController:
@@ -15,11 +16,8 @@ class WindowVisibilityTransitionController:
     content can continue updating during the transition.
     """
 
-    _pool_buffer: Optional[pygame.Surface] = None
-    _pool_buffer_size: tuple[int, int] = (0, 0)
-    _pool_scaled: Optional[pygame.Surface] = None
-    _pool_scaled_size: tuple[int, int] = (0, 0)
-    _pool_refcount: int = 0
+    _BUFFER_SLOT = "window_effect_buffer"
+    _SCALED_SLOT = "window_effect_visibility_scaled"
 
     def __init__(self, window: Any) -> None:
         self.window = window
@@ -43,71 +41,43 @@ class WindowVisibilityTransitionController:
 
     @property
     def buffer(self) -> Optional[pygame.Surface]:
-        return type(self)._pool_buffer
+        return WindowEffectScratchPad.get_surface(self._BUFFER_SLOT)
 
     @buffer.setter
     def buffer(self, value: Optional[pygame.Surface]) -> None:
-        type(self)._pool_buffer = value
+        WindowEffectScratchPad.set_surface(self._BUFFER_SLOT, value)
 
     @property
     def _buffer_size(self) -> tuple[int, int]:
-        return type(self)._pool_buffer_size
-
-    @_buffer_size.setter
-    def _buffer_size(self, value: tuple[int, int]) -> None:
-        type(self)._pool_buffer_size = value
+        return WindowEffectScratchPad.get_size(self._BUFFER_SLOT)
 
     @property
     def scaled_buffer(self) -> Optional[pygame.Surface]:
-        return type(self)._pool_scaled
+        return WindowEffectScratchPad.get_surface(self._SCALED_SLOT)
 
     @scaled_buffer.setter
     def scaled_buffer(self, value: Optional[pygame.Surface]) -> None:
-        type(self)._pool_scaled = value
+        WindowEffectScratchPad.set_surface(self._SCALED_SLOT, value)
 
     @property
     def _scaled_size(self) -> tuple[int, int]:
-        return type(self)._pool_scaled_size
-
-    @_scaled_size.setter
-    def _scaled_size(self, value: tuple[int, int]) -> None:
-        type(self)._pool_scaled_size = value
+        return WindowEffectScratchPad.get_size(self._SCALED_SLOT)
 
     def _acquire_surface_pool(self) -> None:
         if self._pool_acquired:
             return
-        type(self)._pool_refcount += 1
+        WindowEffectScratchPad.acquire()
         self._pool_acquired = True
 
-    def _release_surface_pool(self, *, force: bool = False) -> None:
-        cls = type(self)
-        if self._pool_acquired:
-            if cls._pool_refcount > 0:
-                cls._pool_refcount -= 1
-            self._pool_acquired = False
-        if not force and cls._pool_refcount > 0:
+    def _release_surface_pool(self) -> None:
+        if not self._pool_acquired:
             return
-
-        old_buffer = cls._pool_buffer
-        old_scaled = cls._pool_scaled
-        cls._pool_buffer = None
-        cls._pool_buffer_size = (0, 0)
-        cls._pool_scaled = None
-        cls._pool_scaled_size = (0, 0)
-        del old_buffer
-        del old_scaled
+        WindowEffectScratchPad.release()
+        self._pool_acquired = False
 
     @classmethod
     def dispose_shared_pool(cls) -> None:
-        old_buffer = cls._pool_buffer
-        old_scaled = cls._pool_scaled
-        cls._pool_buffer = None
-        cls._pool_buffer_size = (0, 0)
-        cls._pool_scaled = None
-        cls._pool_scaled_size = (0, 0)
-        cls._pool_refcount = 0
-        del old_buffer
-        del old_scaled
+        WindowEffectScratchPad.dispose_all()
 
     @staticmethod
     def _smoothstep(value: float) -> float:
@@ -272,36 +242,10 @@ class WindowVisibilityTransitionController:
         self._issue_post_transition_tile()
 
     def _ensure_buffer_capacity(self, size: tuple[int, int]) -> None:
-        needed_w = max(1, int(size[0]))
-        needed_h = max(1, int(size[1]))
-        current = self.buffer
-        current_w, current_h = self._buffer_size
-        if current is not None and current_w >= needed_w and current_h >= needed_h:
-            return
-
-        growth_factor = 1.5
-        next_w = needed_w if current_w <= 0 else max(needed_w, int(round(current_w * growth_factor)))
-        next_h = needed_h if current_h <= 0 else max(needed_h, int(round(current_h * growth_factor)))
-        old_surface = current
-        self.buffer = pygame.Surface((next_w, next_h), pygame.SRCALPHA)
-        self._buffer_size = (next_w, next_h)
-        del old_surface
+        WindowEffectScratchPad.ensure_capacity(self._BUFFER_SLOT, size, growth_factor=1.5)
 
     def _ensure_scaled_capacity(self, size: tuple[int, int]) -> None:
-        needed_w = max(1, int(size[0]))
-        needed_h = max(1, int(size[1]))
-        current = self.scaled_buffer
-        current_w, current_h = self._scaled_size
-        if current is not None and current_w >= needed_w and current_h >= needed_h:
-            return
-
-        growth_factor = 1.5
-        next_w = needed_w if current_w <= 0 else max(needed_w, int(round(current_w * growth_factor)))
-        next_h = needed_h if current_h <= 0 else max(needed_h, int(round(current_h * growth_factor)))
-        old_surface = current
-        self.scaled_buffer = pygame.Surface((next_w, next_h), pygame.SRCALPHA)
-        self._scaled_size = (next_w, next_h)
-        del old_surface
+        WindowEffectScratchPad.ensure_capacity(self._SCALED_SLOT, size, growth_factor=1.5)
 
     def _iter_control_subtree(self):
         root = self.window

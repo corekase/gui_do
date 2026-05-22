@@ -1,9 +1,13 @@
 import unittest
 from types import SimpleNamespace
 
+import pygame
 from pygame import Rect
 
 from gui_do.controls.chrome.menu_bar_control import MenuStripControl
+from gui_do.graphics.shear_window import ShearWindowController
+from gui_do.graphics.window_effect_scratch_pad import WindowEffectScratchPad
+from gui_do.graphics.window_visibility_transition import WindowVisibilityTransitionController
 from gui_do.controls.chrome.window_control import WindowControl
 from gui_do.features.feature_lifecycle import FeatureWindowPresentationModel, set_window_visible_state
 from gui_do.overlays.command_palette_manager import CommandPaletteManager
@@ -80,6 +84,12 @@ class _StubWindow:
         self.visible = False
 
 
+class _ScratchPadStubWindow:
+    def __init__(self):
+        self.rect = Rect(10, 10, 120, 80)
+        self.visible = True
+
+
 class _ShowTileStubWindow(WindowControl):
     def __init__(self):
         super().__init__("demo_window", (180, 120), "Demo")
@@ -111,6 +121,26 @@ class _OverlayStub:
 
 
 class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
+    def test_shear_and_visibility_share_common_window_effect_buffer_slot(self):
+        WindowEffectScratchPad.dispose_all()
+        shear = ShearWindowController(_ScratchPadStubWindow())
+        visibility = WindowVisibilityTransitionController(_ScratchPadStubWindow())
+        surface = pygame.Surface((400, 300), pygame.SRCALPHA)
+
+        shear._refresh_buffer(surface, theme=object(), draw_window_standard=lambda _s, _t: None)
+        shared = shear.buffer
+        self.assertIsNotNone(shared)
+
+        visibility._ensure_buffer_capacity((100, 60))
+        self.assertIs(shared, visibility.buffer)
+
+        visibility._ensure_buffer_capacity((220, 160))
+        self.assertIsNot(shared, visibility.buffer)
+        self.assertIs(visibility.buffer, shear.buffer)
+
+        shear.dispose()
+        visibility.dispose()
+
     def test_visibility_setter_uses_app_tile_windows_when_callback_not_supplied(self):
         app = _StubApp()
         window = WindowControl("demo_window", (180, 120), "Demo")
