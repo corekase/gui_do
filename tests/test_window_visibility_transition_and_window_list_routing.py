@@ -248,7 +248,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         self.assertTrue(window.is_visibility_transition_renderable())
         self.assertFalse(toggle.pushed)
         self.assertEqual(1, len(app.tile_windows_calls))
-        self.assertEqual((44.0, 600.0), controller._target_center)
+        self.assertEqual((44.0, 31.0), controller._target_center)
 
         half = controller.base_duration_seconds / 2.0
         window.update(half)
@@ -276,6 +276,65 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         self.assertFalse(controller.is_active())
         self.assertAlmostEqual(1.0, controller.progress(), places=4)
         self.assertGreaterEqual(len(app.tile_windows_calls), 2)
+
+    def test_hide_and_show_anchor_use_button_center_for_varied_button_rects(self):
+        for index, button_rect in enumerate(
+            (
+                Rect(4, 572, 40, 24),
+                Rect(160, 560, 96, 32),
+                Rect(420, 578, 120, 18),
+                Rect(700, 548, 84, 44),
+            )
+        ):
+            with self.subTest(case=index, button_rect=tuple(button_rect)):
+                app = _StubApp()
+                button_id = f"show_demo_{index}"
+                app._nodes[button_id] = _StubNode(button_rect)
+                binding = _StubBinding(button_id)
+
+                hide_window = WindowControl(f"hide_demo_{index}", (180, 120), "Demo")
+                hide_window.window_effects = {"hide_show_enabled": True}
+                hide_window.rect.topleft = (240, 180)
+                hide_window.visible = True
+                set_window_visible_state(
+                    hide_window,
+                    False,
+                    tile_windows=app.tile_windows,
+                    app=app,
+                    binding=binding,
+                )
+                hide_controller = hide_window.visibility_transition_controller
+                self.assertIsNotNone(hide_controller)
+                self.assertEqual(
+                    (float(button_rect.centerx), float(button_rect.centery)),
+                    hide_controller._target_center,
+                )
+
+                show_window = _ShowTileStubWindow()
+                show_window.visible = False
+                show_window.rect.topleft = (300, 220)
+
+                def _tile_windows(*args, **kwargs):
+                    show_window._window_tiling_target_rect = Rect(
+                        120,
+                        140,
+                        show_window.rect.width,
+                        show_window.rect.height,
+                    )
+
+                set_window_visible_state(
+                    show_window,
+                    True,
+                    tile_windows=_tile_windows,
+                    app=app,
+                    binding=binding,
+                )
+                show_controller = show_window.visibility_transition_controller
+                self.assertIsNotNone(show_controller)
+                self.assertEqual(
+                    (float(button_rect.centerx), float(button_rect.centery)),
+                    show_controller._start_center,
+                )
 
     def test_show_transition_targets_solved_tile_position_and_tracks_relayout(self):
         app = _StubApp()

@@ -4,7 +4,6 @@ from typing import Any, Optional
 
 import pygame
 
-from ..app.screen_util import get_screen_size
 from ..layout.window_layout_handler import WINDOW_TILING_ANIMATION_DURATION_SECONDS
 from .window_effect_scratch_pad import WindowEffectScratchPad
 
@@ -140,19 +139,6 @@ class WindowVisibilityTransitionController:
             return None
         return pygame.Rect(rect)
 
-    @staticmethod
-    def _resolve_screen_bottom(app) -> float:
-        surface = getattr(app, "surface", None) if app is not None else None
-        get_size = getattr(surface, "get_size", None)
-        if callable(get_size):
-            try:
-                _width, height = get_size()
-                return float(height)
-            except Exception:
-                pass
-        _width, height = get_screen_size()
-        return float(height)
-
     def begin_transition(self, visible: bool, *, app=None, binding=None, mode: str = "hide_show") -> None:
         target_progress = 1.0 if bool(visible) else 0.0
         transition_mode = str(mode).strip().lower()
@@ -180,7 +166,7 @@ class WindowVisibilityTransitionController:
                 if target_center_rect is not None:
                     target_center = (
                         float(target_center_rect.centerx),
-                        self._resolve_screen_bottom(app),
+                        float(target_center_rect.centery),
                     )
 
         duration = self.base_duration_seconds
