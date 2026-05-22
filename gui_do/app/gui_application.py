@@ -448,7 +448,31 @@ class GuiApplication:
         """Add a root node to the application scene."""
         target_scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
         self._normalize_scene_chrome_node(node, target_scene)
+        self._validate_window_size_for_scene(node, scene_name=scene_name)
         return target_scene.add(node)
+
+    def _validate_window_size_for_scene(self, node, *, scene_name: Optional[str] = None) -> None:
+        if not bool(getattr(node, "is_window", lambda: False)()):
+            return
+        rect = getattr(node, "rect", None)
+        if rect is None:
+            return
+        bounded = self.bounded_area_rect(scene_name=scene_name)
+        if int(rect.width) <= int(bounded.width) and int(rect.height) <= int(bounded.height):
+            return
+        raise logical_error(
+            "Window area is too large to fit within available screen area",
+            subsystem="gui.application",
+            operation="GuiApplication.add",
+            details={
+                "window_width": int(rect.width),
+                "window_height": int(rect.height),
+                "bounded_width": int(bounded.width),
+                "bounded_height": int(bounded.height),
+                "scene_name": self._active_scene_name if scene_name is None else str(scene_name),
+            },
+            source_skip_frames=1,
+        )
 
     @staticmethod
     def _is_node_in_window_scope(node) -> bool:

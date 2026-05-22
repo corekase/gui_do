@@ -142,6 +142,30 @@ class TestSceneChromeContracts(unittest.TestCase):
         self.assertEqual((100, 50), panel._clamp_window_drag_target(window, -20, -10, app))
         self.assertEqual((300, 226), panel._clamp_window_drag_target(window, 1000, 1000, app))
 
+    def test_add_window_raises_logical_error_when_window_exceeds_bounded_area_width(self):
+        app = GuiApplication(pygame.Surface((800, 600)))
+        app.add(MenuStripControl("menu"))
+        app.add(TaskPanelControl("task", Rect(0, 560, 800, 40), auto_hide=False))
+
+        # bounded area is 800x530; this window total height fits, width does not.
+        too_wide = WindowControl("too_wide", (801, 500), "Too Wide")
+
+        with self.assertRaises(ValueError) as ctx:
+            app.add(too_wide)
+
+        self.assertIn("Window area is too large to fit within available screen area", str(ctx.exception))
+
+    def test_add_window_allows_window_that_exactly_fits_bounded_area(self):
+        app = GuiApplication(pygame.Surface((800, 600)))
+        app.add(MenuStripControl("menu"))
+        app.add(TaskPanelControl("task", Rect(0, 560, 800, 40), auto_hide=False))
+
+        # bounded area is 800x530; content height 506 yields total window height 530.
+        exact_fit = WindowControl("exact_fit", (800, 506), "Exact Fit")
+        added = app.add(exact_fit)
+
+        self.assertIs(added, exact_fit)
+
     def test_scene_root_task_panel_occludes_window_lower_control_pointer_events(self):
         app = GuiApplication(pygame.Surface((800, 600)))
         window = WindowControl("win", (220, 140), "W")
