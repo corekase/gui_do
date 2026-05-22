@@ -662,6 +662,79 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         non_dragged = [w for w in captured_order[0] if w is not dragged_top]
         self.assertEqual([z_mid_old, z_mid_new, back], non_dragged)
 
+    def test_arrange_windows_for_drop_depth_layers_use_layout_reference_rects(self):
+        opt_out = _WindowNode(40, 30, 220, 110, visible=True)
+        life = _WindowNode(40, 180, 220, 110, visible=True)
+        mandelbrot = _WindowNode(300, 180, 220, 110, visible=True)
+
+        # Simulate stale in-flight animation geometry: mandelbrot is still at
+        # the top in live rects, but target metadata already places it on the
+        # second row.
+        mandelbrot.move_by(0, -150)
+        setattr(opt_out, "_window_tiling_target_rect", Rect(40, 30, 220, 110))
+        setattr(life, "_window_tiling_target_rect", Rect(40, 180, 220, 110))
+        setattr(mandelbrot, "_window_tiling_target_rect", Rect(300, 180, 220, 110))
+
+        scene = _Scene([opt_out, life, mandelbrot])
+        app = _App(Rect(0, 0, 900, 640), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        captured_force_sets = []
+
+        def _capture_order_and_forces(ordered_windows, _window_rects, _work, *, prefer_vertical, force_row_before=None):
+            captured_force_sets.append(set(force_row_before or set()))
+            targets = [(w, 80 + (idx * 160), 120) for idx, w in enumerate(ordered_windows)]
+            return (targets, set(), 1)
+
+        with patch.object(handler, "_solve_layered_targets", side_effect=_capture_order_and_forces):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows_for_drop(
+                    life,
+                    (life.rect.centerx, 200),
+                    immediate=True,
+                )
+
+        self.assertGreaterEqual(len(captured_force_sets), 1)
+        # Forced row breaks should only preserve top->second-row structure;
+        # stale live overlap must not split mandelbrot into an extra row.
+        self.assertEqual({life}, captured_force_sets[0])
+
+    def test_drop_inside_lower_row_top_band_does_not_create_new_middle_row(self):
+        opt_out = _WindowNode(40, 30, 200, 60, visible=True)
+        life = _WindowNode(40, 180, 220, 110, visible=True)
+        mandelbrot = _WindowNode(300, 180, 220, 110, visible=True)
+
+        scene = _Scene([opt_out, life, mandelbrot])
+        app = _App(Rect(0, 0, 900, 640), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Seed tiling targets so row inference mirrors active tiling state.
+        for window in (opt_out, life, mandelbrot):
+            setattr(window, "_window_tiling_target_rect", Rect(window.rect))
+
+        captured_force_sets = []
+
+        def _capture_order_and_forces(ordered_windows, _window_rects, _work, *, prefer_vertical, force_row_before=None):
+            captured_force_sets.append(set(force_row_before or set()))
+            targets = [(w, 80 + (idx * 160), 120) for idx, w in enumerate(ordered_windows)]
+            return (targets, set(), 1)
+
+        drop_y_near_top_of_lower_row = int(mandelbrot.rect.top + 2)
+        with patch.object(handler, "_solve_layered_targets", side_effect=_capture_order_and_forces):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows_for_drop(
+                    life,
+                    (mandelbrot.rect.centerx, drop_y_near_top_of_lower_row),
+                    immediate=True,
+                )
+
+        self.assertGreaterEqual(len(captured_force_sets), 1)
+        # Expected rows are [opt_out], [life, mandelbrot] -> only one forced
+        # row break before the lower row head (life).
+        self.assertEqual({life}, captured_force_sets[0])
+
     def test_fit_pass_repacks_selected_overlapping_targets(self):
         w1 = _WindowNode(20, 20, 120, 90, visible=True)
         w2 = _WindowNode(170, 20, 120, 90, visible=True)

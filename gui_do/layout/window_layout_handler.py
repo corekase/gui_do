@@ -1174,14 +1174,15 @@ class WindowLayoutHandler:
         drop_x, drop_y = clamped_drop
         insertion_gap = max(4, int(self.gap * 2))
 
-        # Build front-to-back depth layers using current overlap relationships,
-        # then insert into the first eligible layer and stop (no deeper search).
+        # Build front-to-back depth layers using layout reference geometry so
+        # in-flight animation positions do not fragment layers during drop.
+        # Then insert into the first eligible layer and stop (no deeper search).
         depth_layers: list[list[object]] = []
         for candidate in top_to_back:
-            candidate_rect = window_rects[candidate]
+            candidate_rect = layout_rects[candidate]
             placed = False
             for layer in depth_layers:
-                if all(not candidate_rect.colliderect(window_rects[existing]) for existing in layer):
+                if all(not candidate_rect.colliderect(layout_rects[existing]) for existing in layer):
                     layer.append(candidate)
                     placed = True
                     break
@@ -1245,24 +1246,25 @@ class WindowLayoutHandler:
                 create_new_row = True
                 target_row_index = len(rows)
             else:
-                found_gap = False
-                for idx in range(len(row_spans) - 1):
-                    upper_bottom = int(row_spans[idx][1])
-                    lower_top = int(row_spans[idx + 1][0])
-                    if int(drop_y) > int(upper_bottom - insertion_gap) and int(drop_y) < int(lower_top + insertion_gap):
-                        create_new_row = True
-                        target_row_index = idx + 1
-                        found_gap = True
+                containing_index = None
+                for idx, (top, bottom, _center) in enumerate(row_spans):
+                    if int(drop_y) >= int(top) and int(drop_y) <= int(bottom):
+                        containing_index = idx
                         break
-                if not found_gap:
-                    containing_index = None
-                    for idx, (top, bottom, _center) in enumerate(row_spans):
-                        if int(drop_y) >= int(top) and int(drop_y) <= int(bottom):
-                            containing_index = idx
+
+                if containing_index is not None:
+                    target_row_index = containing_index
+                else:
+                    found_gap = False
+                    for idx in range(len(row_spans) - 1):
+                        upper_bottom = int(row_spans[idx][1])
+                        lower_top = int(row_spans[idx + 1][0])
+                        if int(drop_y) > int(upper_bottom - insertion_gap) and int(drop_y) < int(lower_top + insertion_gap):
+                            create_new_row = True
+                            target_row_index = idx + 1
+                            found_gap = True
                             break
-                    if containing_index is not None:
-                        target_row_index = containing_index
-                    else:
+                    if not found_gap:
                         target_row_index = min(
                             range(len(row_spans)),
                             key=lambda idx: abs(int(row_spans[idx][2]) - int(drop_y)),
