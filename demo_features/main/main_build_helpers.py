@@ -11,7 +11,6 @@ from pygame import Rect
 from gui_do import LabelControl, PanelControl, TooltipManager, WindowControl
 from gui_do.features.data_driven_runtime import (
     RightAnchoredTaskPanelButtonSpec,
-    add_task_panel_scene_nav_button,
     add_right_anchored_task_panel_button,
     add_menu_strip_from_spec,
     create_auto_sized_styled_label,
@@ -110,40 +109,18 @@ def build_main_scene(feature: MainFeature, host) -> None:
         .panel_runtime(MAIN_TASK_PANEL_SPEC)
         .slots_runtime(MAIN_TASK_PANEL_LAYOUT_SPEC)
         .add_buttons(build_main_task_panel_button_specs(host))
-        .with_window_toggles(
-            group_spec=MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC,
-            window_presentation=host.window_presentation,
-            attr_owner=host,
-            tab_sequence_start=0,
-        )
+    )
+    for nav_spec in MAIN_TASK_PANEL_SCENE_NAV_SPECS:
+        builder = builder.add_scene_nav_runtime(nav_spec)
+    builder = builder.with_window_toggles(
+        group_spec=MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC,
+        window_presentation=host.window_presentation,
+        attr_owner=host,
+        tab_sequence_start=0,
     )
 
     host.task_panel, task_panel_layout, task_panel_items = builder.build()
     toggle_controls = task_panel_items.window_toggle_controls
-
-    scene_nav_buttons = [
-        add_task_panel_scene_nav_button(host.task_panel, task_panel_layout, host, nav_spec)
-        for nav_spec in MAIN_TASK_PANEL_SCENE_NAV_SPECS
-    ]
-    peers = getattr(host.task_panel, "children", None)
-    if not isinstance(peers, list):
-        peers = getattr(host.task_panel, "added_controls", [])
-    next_tab_index = (
-        max(
-            (
-                int(getattr(node, "tab_index", -1))
-                for node in peers
-                if int(getattr(node, "tab_index", -1)) >= 0
-            ),
-            default=-1,
-        )
-        + 1
-    )
-    for button in scene_nav_buttons:
-        if int(getattr(button, "tab_index", -1)) >= 0:
-            continue
-        button.set_tab_index(int(next_tab_index))
-        next_tab_index += 1
 
     slot0_rect = task_panel_layout.slot_rect(0)
     host.help_button = add_right_anchored_task_panel_button(
