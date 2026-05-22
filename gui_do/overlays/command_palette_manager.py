@@ -1034,9 +1034,6 @@ class CommandPaletteManager:
             )
             ordered: list[object] = []
             for binding in sorted_bindings:
-                # Skip windows opted out of management
-                if not bool(getattr(binding, "window_management_opt_in", True)):
-                    continue
                 key = str(getattr(binding, "key", ""))
                 window = None
                 get_window = getattr(presentation, "get_window", None)

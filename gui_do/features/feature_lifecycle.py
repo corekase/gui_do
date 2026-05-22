@@ -730,11 +730,7 @@ def set_window_visible_state(
         window.visible = True
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
         toggle.pushed = is_visible
-    is_window_management_opt_in = True
-    if binding is not None:
-        is_window_management_opt_in = bool(getattr(binding, "window_management_opt_in", True))
-
-    if tile_windows is not None and is_window_management_opt_in:
+    if tile_windows is not None:
         if is_visible and window is not None:
             if tiling_enabled is False:
                 if from_toggle:
@@ -800,7 +796,6 @@ class FeatureWindowBinding:
     task_panel_slot_index: int | None = None
     accessibility_label: str | None = None
     window_effects: dict = field(default_factory=_default_window_effects)
-    window_management_opt_in: bool = True
     titlebar_controls: dict = field(default_factory=dict)
 
 
@@ -850,7 +845,6 @@ class FeatureWindowPresentationModel:
         task_panel_slot_index: int | None = None,
         accessibility_label: str | None = None,
         window_effects: object | None = None,
-        window_management_opt_in: bool = True,
         titlebar_controls: dict | None = None,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
@@ -868,7 +862,6 @@ class FeatureWindowPresentationModel:
                 window_effects,
                 operation="FeatureWindowPresentationModel.register_feature_window",
             ),
-            window_management_opt_in=bool(window_management_opt_in),
             titlebar_controls=self._normalize_titlebar_controls(titlebar_controls),
         )
         self._bindings[binding.key] = binding
@@ -910,10 +903,6 @@ class FeatureWindowPresentationModel:
         control_id = getattr(window, "control_id", None)
         if control_id:
             self._bindings_by_control_id[str(control_id)] = binding.key
-        try:
-            setattr(window, "_window_management_opt_in", bool(binding.window_management_opt_in))
-        except Exception:
-            pass
         self._bindings_by_window_object[window] = binding.key
         self._window_object_by_key[binding.key] = window
         return window
@@ -951,9 +940,7 @@ class FeatureWindowPresentationModel:
         return next_visible
 
     def sync_initial_visibility(self, *, visible: bool = False) -> None:
-        for key, binding in self._bindings.items():
-            if not bool(getattr(binding, "window_management_opt_in", True)):
-                continue
+        for key in self._bindings:
             self.set_visible(key, visible)
 
     def toggle_window(self, window) -> bool:

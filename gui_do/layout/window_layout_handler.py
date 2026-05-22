@@ -75,9 +75,7 @@ class WindowLayoutHandler:
 
     @staticmethod
     def _is_window_like(node: object) -> bool:
-        if not node.is_window():
-            return False
-        return bool(getattr(node, "_window_management_opt_in", True))
+        return bool(node.is_window())
 
     def _ensure_registration(self, windows: Iterable[object]) -> None:
         current = set(windows)

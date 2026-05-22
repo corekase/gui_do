@@ -702,23 +702,22 @@ class MenuStripControl(UiNode):
         # Get all windows from the scene
         windows: List[UiNode] = [node for node in scene._walk_nodes() if node.is_window()]  # noqa: SLF001
 
-        # Filter by opt-in flag if presentation model is available; otherwise include all
+        # Filter by presentation-model registration when available; otherwise include all.
         if self._window_presentation is not None and hasattr(self._window_presentation, "bindings"):
             bindings = getattr(self._window_presentation, "bindings")() or ()
-            opted_in_bindings = {
+            registered_bindings = {
                 str(getattr(b, "key", "")): b
                 for b in bindings
-                if bool(getattr(b, "window_management_opt_in", True))
             }
-            # Map windows to their binding keys via the presentation model
+            # Map windows to their binding keys via the presentation model.
             windows_by_key = {}
-            for binding_key, binding in opted_in_bindings.items():
+            for binding_key in registered_bindings:
                 get_window = getattr(self._window_presentation, "get_window", None)
                 if callable(get_window):
                     window = get_window(binding_key)
                     if window is not None:
                         windows_by_key[id(window)] = window
-            # Only include windows that are in the opted-in set
+            # Only include windows that are registered in the presentation model.
             windows = [w for w in windows if id(w) in windows_by_key]
 
         scene_order_key = self._window_scene_order_key(scene)

@@ -400,37 +400,35 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         self.assertIs(parent.children[-1], raised_window)
         self.assertEqual([], app.calls)
 
-    def test_get_window_marks_opt_out_window_as_unmanaged_for_tiling(self):
+    def test_get_window_leaves_window_managed_for_tiling(self):
         app = _StubAppForRaiseRelayout()
-        window = _StubWindowNode("opt_out_window", visible=True)
-        host = _StubHostForPresentation(app, "opt_out_feature", _StubWindowFeature(window))
+        window = _StubWindowNode("window", visible=True)
+        host = _StubHostForPresentation(app, "feature", _StubWindowFeature(window))
         model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
         model.register_feature_window(
-            "opt_out",
-            feature_attribute_name="opt_out_feature",
-            window_management_opt_in=False,
+            "managed",
+            feature_attribute_name="feature",
         )
 
-        resolved = model.get_window("opt_out")
+        resolved = model.get_window("managed")
 
         self.assertIs(resolved, window)
-        self.assertFalse(bool(getattr(window, "_window_management_opt_in", True)))
+        self.assertTrue(bool(getattr(window, "visible", False)))
 
-    def test_set_visible_opt_out_binding_does_not_call_tile_windows(self):
+    def test_set_visible_calls_tile_windows_for_all_bindings(self):
         app = _StubAppForRaiseRelayout()
-        window = _StubWindowNode("opt_out_window", visible=False)
-        host = _StubHostForPresentation(app, "opt_out_feature", _StubWindowFeature(window))
+        window = _StubWindowNode("window", visible=False)
+        host = _StubHostForPresentation(app, "feature", _StubWindowFeature(window))
         model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
         model.register_feature_window(
-            "opt_out",
-            feature_attribute_name="opt_out_feature",
-            window_management_opt_in=False,
+            "managed",
+            feature_attribute_name="feature",
         )
 
-        model.set_visible("opt_out", True)
+        model.set_visible("managed", True)
 
         self.assertTrue(window.visible)
-        self.assertEqual([], app.calls)
+        self.assertEqual(1, len(app.calls))
 
     def test_task_panel_toggle_open_forces_relayout_when_tiling_disabled(self):
         app = _StubAppForToggleOpenWithTilingDisabled()

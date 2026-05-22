@@ -15,7 +15,6 @@ def make_window_toggle_spec(
     toggle_attribute_name: str | None = None,
     accessibility_label: str | None = None,
     window_effects: dict | None = None,
-    window_management_opt_in: bool = True,
     titlebar_controls=None,
 ):
     """Build a WindowSpec-like object with conventional defaults for window toggles."""
@@ -33,7 +32,6 @@ def make_window_toggle_spec(
         task_panel_slot_index=(None if task_panel_slot_index is None else int(task_panel_slot_index)),
         accessibility_label=accessibility_label or f"Show {normalized_label} window",
         window_effects=window_effects or {},
-        window_management_opt_in=bool(window_management_opt_in),
         titlebar_controls=titlebar_controls,
     )
 

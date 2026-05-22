@@ -193,7 +193,6 @@ class WindowSpec:
     task_panel_slot_index: int | None
     accessibility_label: str
     window_effects: WindowEffectsSpec | Mapping[str, bool] = field(default_factory=WindowEffectsSpec)
-    window_management_opt_in: bool = True
     titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
@@ -250,7 +249,6 @@ class AnchoredWindowSpec:
     anchor: str
     margin: tuple[int, int]
     use_frame_backdrop: bool = True
-    window_management_opt_in: bool = True
     titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
@@ -714,7 +712,6 @@ class FeatureWindowBundleBindingSpec:
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
     window_effects: WindowEffectsSpec | Mapping[str, bool] = field(default_factory=WindowEffectsSpec)
-    window_management_opt_in: bool = True
     titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
@@ -2910,7 +2907,6 @@ def make_window_toggle_spec(
     toggle_attribute_name: str | None = None,
     accessibility_label: str | None = None,
     window_effects: dict | None = None,
-    window_management_opt_in: bool = True,
     titlebar_controls: WindowTitlebarControlsSpec | None = None,
 ) -> WindowSpec:
     """Build a WindowSpec with conventional defaults for demo/host window toggles."""
@@ -2927,7 +2923,6 @@ def make_window_toggle_spec(
         toggle_attribute_name=toggle_attribute_name,
         accessibility_label=accessibility_label,
         window_effects=window_effects or {},
-        window_management_opt_in=window_management_opt_in,
         titlebar_controls=titlebar_controls,
     )
 

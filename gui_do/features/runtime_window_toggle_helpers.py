@@ -8,10 +8,8 @@ from ..controls.input.window_toggle_button_control import WindowToggleButtonCont
 
 
 def sorted_window_bindings(bindings):
-    """Return feature-window bindings ordered by explicit slot then declaration order, only including those with window_management_opt_in=True (default). Setting window_management_opt_in to False opts out."""
+    """Return feature-window bindings ordered by explicit slot then declaration order."""
     ordered = list(tuple(bindings))
-    # Only include bindings with window_management_opt_in True (default)
-    ordered = [b for b in ordered if getattr(b, "window_management_opt_in", True)]
     with_slots = [b for b in ordered if getattr(b, "task_panel_slot_index", None) is not None]
     without_slots = [b for b in ordered if getattr(b, "task_panel_slot_index", None) is None]
     with_slots.sort(key=lambda b: (int(b.task_panel_slot_index), str(getattr(b, "key", ""))))

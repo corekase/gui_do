@@ -44,7 +44,6 @@ def build_feature_window_bundle_specs(
                 toggle_attribute_name=entry.toggle_attribute_name,
                 accessibility_label=entry.accessibility_label,
                 window_effects=getattr(entry, "window_effects", {}) or {},
-                window_management_opt_in=bool(getattr(entry, "window_management_opt_in", True)),
                 titlebar_controls=getattr(entry, "titlebar_controls", None),
             )
         )
@@ -71,7 +70,6 @@ def build_window_toggle_specs(bindings, *, window_spec_cls, make_window_toggle_s
                 toggle_attribute_name=binding.toggle_attribute_name,
                 accessibility_label=binding.accessibility_label,
                 window_effects=getattr(binding, "window_effects", {}) or {},
-                window_management_opt_in=bool(getattr(binding, "window_management_opt_in", True)),
                 titlebar_controls=getattr(binding, "titlebar_controls", None),
             )
         )

@@ -86,33 +86,31 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         animate_mock.assert_called_once()
 
-    def test_visible_windows_snapshot_excludes_unmanaged_opt_out_window(self):
-        unmanaged = _WindowNode(0, 0, 120, 90, visible=True)
-        setattr(unmanaged, "_window_management_opt_in", False)
-        managed = _WindowNode(180, 0, 120, 90, visible=True)
-        scene = _Scene([unmanaged, managed])
+    def test_visible_windows_snapshot_includes_all_windows(self):
+        first = _WindowNode(0, 0, 120, 90, visible=True)
+        second = _WindowNode(180, 0, 120, 90, visible=True)
+        scene = _Scene([first, second])
         app = _App(Rect(0, 0, 520, 320), scene)
         handler = WindowLayoutHandler(app, scene=scene)
         handler.enabled = True
 
         snapshot = handler.visible_windows_snapshot()
 
-        self.assertEqual((managed,), snapshot)
+        self.assertEqual((first, second), snapshot)
 
-    def test_arrange_windows_does_not_move_unmanaged_opt_out_window(self):
-        unmanaged = _WindowNode(20, 20, 120, 90, visible=True)
-        setattr(unmanaged, "_window_management_opt_in", False)
-        managed_a = _WindowNode(220, 20, 120, 90, visible=True)
-        managed_b = _WindowNode(370, 20, 120, 90, visible=True)
-        scene = _Scene([unmanaged, managed_a, managed_b])
+    def test_arrange_windows_repositions_all_windows(self):
+        first = _WindowNode(20, 20, 120, 90, visible=True)
+        second = _WindowNode(220, 20, 120, 90, visible=True)
+        third = _WindowNode(370, 20, 120, 90, visible=True)
+        scene = _Scene([first, second, third])
         app = _App(Rect(0, 0, 520, 320), scene)
         handler = WindowLayoutHandler(app, scene=scene)
         handler.enabled = True
 
-        original_unmanaged = Rect(unmanaged.rect)
+        original_third = Rect(third.rect)
         handler.arrange_windows(immediate=True)
 
-        self.assertEqual(original_unmanaged, unmanaged.rect)
+        self.assertNotEqual(original_third, third.rect)
 
     def test_spatial_rows_ignore_tiny_outlier_when_grouping_normal_windows(self):
         normal_a = _WindowNode(20, 20, 220, 140, visible=True)
