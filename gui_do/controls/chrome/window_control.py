@@ -60,7 +60,8 @@ class WindowControl(UiNode):
         Called when the user starts dragging the window via the title bar.
         If shear_enabled is enabled, start the shear effect.
         """
-        if getattr(self, 'window_effects', {}).get('shear_enabled', True):
+        effects = self._resolved_window_effects()
+        if effects.get('shear_enabled', True):
             if self.shear_controller is None:
                 # Lazy import to avoid circular dependency
                 from ...graphics.shear_window import ShearWindowController
@@ -201,10 +202,38 @@ class WindowControl(UiNode):
         return bool(controller is not None and controller.should_render())
 
     def begin_visibility_transition(self, visible: bool, *, app=None, binding=None) -> None:
-        if not getattr(self, "window_effects", {}).get("hide_show_enabled", True):
+        effects = self._resolved_window_effects()
+        hide_show_enabled = bool(effects.get("hide_show_enabled", False))
+        grow_shrink_enabled = bool(effects.get("grow_shrink_enabled", False))
+        if hide_show_enabled and grow_shrink_enabled:
+            raise logical_error(
+                "window visibility transition must enable at most one of hide_show_enabled or grow_shrink_enabled",
+                subsystem="gui.controls",
+                operation="WindowControl.begin_visibility_transition",
+                details={"window_effects": effects},
+                source_skip_frames=1,
+            )
+        if not hide_show_enabled and not grow_shrink_enabled:
             return
         controller = self.ensure_visibility_transition_controller()
-        controller.begin_transition(bool(visible), app=app, binding=binding)
+        transition_mode = "hide_show" if hide_show_enabled else "grow_shrink"
+        controller.begin_transition(bool(visible), app=app, binding=binding, mode=transition_mode)
+
+    def _resolved_window_effects(self) -> dict:
+        raw = getattr(self, "window_effects", None)
+        if isinstance(raw, dict):
+            source = raw
+        else:
+            source = {
+                "shear_enabled": getattr(raw, "shear_enabled", None),
+                "hide_show_enabled": getattr(raw, "hide_show_enabled", None),
+                "grow_shrink_enabled": getattr(raw, "grow_shrink_enabled", None),
+            }
+        return {
+            "shear_enabled": True if source.get("shear_enabled") is None else bool(source.get("shear_enabled")),
+            "hide_show_enabled": False if source.get("hide_show_enabled") is None else bool(source.get("hide_show_enabled")),
+            "grow_shrink_enabled": False if source.get("grow_shrink_enabled") is None else bool(source.get("grow_shrink_enabled")),
+        }
 
     def release_visibility_transition_resources(self) -> None:
         controller = self.visibility_transition_controller

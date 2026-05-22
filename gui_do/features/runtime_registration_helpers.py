@@ -52,7 +52,7 @@ def register_window_presentation_specs(window_presentation, window_specs) -> Non
             "accessibility_label": spec.accessibility_label,
         }
         if hasattr(spec, "window_effects"):
-            kwargs["window_effects"] = dict(spec.window_effects or {})
+            kwargs["window_effects"] = spec.window_effects
         if hasattr(spec, "window_management_opt_in"):
             kwargs["window_management_opt_in"] = bool(spec.window_management_opt_in)
         if hasattr(spec, "titlebar_controls"):

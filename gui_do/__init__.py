@@ -38,6 +38,7 @@ from .features.feature_lifecycle import (
 from .features.data_driven_runtime import (
     FeatureSpec,
     WindowSpec,
+    WindowEffectsSpec,
     RuntimeSceneSpec,
     ActionSpec,
     StaticAccessibilitySpec,
@@ -735,6 +736,7 @@ __all__ = [
     "setup_standard_font_roles",
     "FeatureSpec",
     "WindowSpec",
+    "WindowEffectsSpec",
     "RuntimeSceneSpec",
     "ActionSpec",
     "StaticAccessibilitySpec",

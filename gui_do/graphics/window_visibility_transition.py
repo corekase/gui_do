@@ -37,6 +37,9 @@ class WindowVisibilityTransitionController:
         self._target_center = (0.0, 0.0)
         self._render_size = (1, 1)
         self._track_window_tiling_target = False
+        self._transition_mode = "hide_show"
+        self._post_transition_tile_app = None
+        self._post_transition_tile_pending = False
 
     @property
     def buffer(self) -> Optional[pygame.Surface]:
@@ -180,27 +183,35 @@ class WindowVisibilityTransitionController:
         _width, height = get_screen_size()
         return float(height)
 
-    def begin_transition(self, visible: bool, *, app=None, binding=None) -> None:
+    def begin_transition(self, visible: bool, *, app=None, binding=None, mode: str = "hide_show") -> None:
         target_progress = 1.0 if bool(visible) else 0.0
+        transition_mode = str(mode).strip().lower()
+        if transition_mode not in {"hide_show", "grow_shrink"}:
+            transition_mode = "hide_show"
+        self._transition_mode = transition_mode
         current_progress = self.progress()
         current_center = self._current_center() if self._active else tuple(map(float, pygame.Rect(self.window.rect).center))
         current_rect = pygame.Rect(self.window.rect)
-        target_center_rect = self._resolve_anchor_rect(app, binding)
         target_center = tuple(map(float, current_rect.center))
-        if bool(visible):
-            target_center = self._resolved_window_tiling_target_center() or tuple(map(float, current_rect.center))
-            start_center = tuple(map(float, target_center_rect.center)) if target_center_rect is not None else target_center
-            if self._active:
-                start_center = current_center
-            self._track_window_tiling_target = True
-        else:
+        if transition_mode == "grow_shrink":
             start_center = current_center
             self._track_window_tiling_target = False
-            if target_center_rect is not None:
-                target_center = (
-                    float(target_center_rect.centerx),
-                    self._resolve_screen_bottom(app),
-                )
+        else:
+            target_center_rect = self._resolve_anchor_rect(app, binding)
+            if bool(visible):
+                target_center = self._resolved_window_tiling_target_center() or tuple(map(float, current_rect.center))
+                start_center = tuple(map(float, target_center_rect.center)) if target_center_rect is not None else target_center
+                if self._active:
+                    start_center = current_center
+                self._track_window_tiling_target = True
+            else:
+                start_center = current_center
+                self._track_window_tiling_target = False
+                if target_center_rect is not None:
+                    target_center = (
+                        float(target_center_rect.centerx),
+                        self._resolve_screen_bottom(app),
+                    )
 
         duration = self.base_duration_seconds
         if self._active:
@@ -222,6 +233,31 @@ class WindowVisibilityTransitionController:
         self._elapsed_seconds = 0.0
         self._duration_seconds = float(duration)
         self._active = abs(self._target_progress - self._start_progress) > 1e-6
+        tile_windows = getattr(app, "tile_windows", None) if app is not None else None
+        if callable(tile_windows):
+            self._post_transition_tile_app = app
+            self._post_transition_tile_pending = True
+        else:
+            self._post_transition_tile_app = None
+            self._post_transition_tile_pending = False
+
+    def _issue_post_transition_tile(self) -> None:
+        if not self._post_transition_tile_pending:
+            return
+        app = self._post_transition_tile_app
+        self._post_transition_tile_pending = False
+        self._post_transition_tile_app = None
+        tile_windows = getattr(app, "tile_windows", None) if app is not None else None
+        if not callable(tile_windows):
+            return
+        is_show = self._target_progress >= 0.5
+        try:
+            if is_show:
+                tile_windows(newly_visible=(self.window,), as_visibility_event=True)
+            else:
+                tile_windows()
+        except TypeError:
+            tile_windows()
 
     def update(self, dt_seconds: float) -> None:
         if not self._active:
@@ -233,6 +269,7 @@ class WindowVisibilityTransitionController:
         self._start_progress = self._target_progress
         self._start_center = self._resolved_target_center()
         self._active = False
+        self._issue_post_transition_tile()
 
     def _ensure_buffer_capacity(self, size: tuple[int, int]) -> None:
         needed_w = max(1, int(size[0]))

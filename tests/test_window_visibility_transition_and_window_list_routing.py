@@ -1,10 +1,11 @@
 import unittest
+from types import SimpleNamespace
 
 from pygame import Rect
 
 from gui_do.controls.chrome.menu_bar_control import MenuStripControl
 from gui_do.controls.chrome.window_control import WindowControl
-from gui_do.features.feature_lifecycle import set_window_visible_state
+from gui_do.features.feature_lifecycle import FeatureWindowPresentationModel, set_window_visible_state
 from gui_do.overlays.command_palette_manager import CommandPaletteManager
 
 
@@ -85,6 +86,12 @@ class _ShowTileStubWindow(WindowControl):
         self.window_effects = {"hide_show_enabled": True}
 
 
+class _GrowShrinkStubWindow(WindowControl):
+    def __init__(self):
+        super().__init__("demo_window", (180, 120), "Demo")
+        self.window_effects = {"grow_shrink_enabled": True}
+
+
 class _PresentationStub:
     def __init__(self, *, return_value: bool = True):
         self.return_value = bool(return_value)
@@ -104,6 +111,40 @@ class _OverlayStub:
 
 
 class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
+    def test_visibility_setter_uses_app_tile_windows_when_callback_not_supplied(self):
+        app = _StubApp()
+        window = WindowControl("demo_window", (180, 120), "Demo")
+        window.window_effects = {}
+        window.visible = False
+
+        set_window_visible_state(
+            window,
+            True,
+            app=app,
+            binding=None,
+        )
+
+        self.assertTrue(window.visible)
+        self.assertEqual(1, len(app.tile_windows_calls))
+
+    def test_defaults_disable_visibility_transition_when_not_configured(self):
+        app = _StubApp()
+        window = WindowControl("demo_window", (180, 120), "Demo")
+        window.window_effects = {}
+        window.visible = True
+
+        set_window_visible_state(
+            window,
+            False,
+            tile_windows=app.tile_windows,
+            app=app,
+            binding=None,
+        )
+
+        self.assertIsNone(window.visibility_transition_controller)
+        self.assertFalse(window.visible)
+        self.assertEqual(1, len(app.tile_windows_calls))
+
     def test_hide_then_reverse_show_finishes_in_original_remaining_time(self):
         app = _StubApp()
         app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
@@ -158,6 +199,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         window.update(half * 0.01)
         self.assertFalse(controller.is_active())
         self.assertAlmostEqual(1.0, controller.progress(), places=4)
+        self.assertGreaterEqual(len(app.tile_windows_calls), 2)
 
     def test_show_transition_targets_solved_tile_position_and_tracks_relayout(self):
         app = _StubApp()
@@ -238,6 +280,40 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         # Finish the reverse leg.
         window.update(duration * 0.7)
         self.assertFalse(controller.is_active())
+
+    def test_grow_shrink_hides_from_window_center_without_anchor_drift(self):
+        app = _StubApp()
+        app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
+        binding = _StubBinding("show_demo")
+        window = _GrowShrinkStubWindow()
+        window.visible = True
+        window.rect.topleft = (300, 220)
+        starting_center = tuple(map(float, window.rect.center))
+
+        set_window_visible_state(
+            window,
+            False,
+            tile_windows=app.tile_windows,
+            app=app,
+            binding=binding,
+        )
+
+        controller = window.visibility_transition_controller
+        self.assertIsNotNone(controller)
+        self.assertEqual(starting_center, controller._target_center)
+
+    def test_register_feature_window_rejects_conflicting_transition_modes(self):
+        model = FeatureWindowPresentationModel(SimpleNamespace(app=None), tile_windows=None)
+
+        with self.assertRaises(ValueError):
+            model.register_feature_window(
+                "demo",
+                feature_attribute_name="_demo_feature",
+                window_effects={
+                    "hide_show_enabled": True,
+                    "grow_shrink_enabled": True,
+                },
+            )
 
     def test_show_when_tiling_disabled_centers_only_target_window_and_skips_tile_solve(self):
         app = _StubApp(tiling_enabled=False)

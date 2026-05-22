@@ -606,6 +606,52 @@ def minimize_window_menu_entries(
     ]
 
 
+def _default_window_effects() -> dict[str, bool]:
+    return {
+        "shear_enabled": True,
+        "hide_show_enabled": False,
+        "grow_shrink_enabled": False,
+    }
+
+
+@dataclass(frozen=True)
+class WindowEffectsSpec:
+    """Declarative per-window visual effects configuration."""
+
+    shear_enabled: bool = True
+    hide_show_enabled: bool = False
+    grow_shrink_enabled: bool = False
+
+
+def normalize_window_effects_spec(window_effects, *, operation: str) -> dict[str, bool]:
+    defaults = _default_window_effects()
+    if window_effects is None:
+        raw = {}
+    elif isinstance(window_effects, Mapping):
+        raw = dict(window_effects)
+    else:
+        raw = {
+            "shear_enabled": getattr(window_effects, "shear_enabled", None),
+            "hide_show_enabled": getattr(window_effects, "hide_show_enabled", None),
+            "grow_shrink_enabled": getattr(window_effects, "grow_shrink_enabled", None),
+        }
+
+    normalized = {
+        "shear_enabled": defaults["shear_enabled"] if raw.get("shear_enabled") is None else bool(raw.get("shear_enabled")),
+        "hide_show_enabled": defaults["hide_show_enabled"] if raw.get("hide_show_enabled") is None else bool(raw.get("hide_show_enabled")),
+        "grow_shrink_enabled": defaults["grow_shrink_enabled"] if raw.get("grow_shrink_enabled") is None else bool(raw.get("grow_shrink_enabled")),
+    }
+    if normalized["hide_show_enabled"] and normalized["grow_shrink_enabled"]:
+        raise logical_error(
+            "window visibility transition must enable at most one of hide_show_enabled or grow_shrink_enabled",
+            subsystem="gui.features",
+            operation=str(operation),
+            details={"window_effects": normalized},
+            source_skip_frames=1,
+        )
+    return normalized
+
+
 def set_window_visible_state(
     window,
     visible: bool,
@@ -622,6 +668,10 @@ def set_window_visible_state(
     is_visible = bool(visible)
     if app is None and host is not None:
         app = getattr(host, "app", None)
+    if tile_windows is None and app is not None:
+        app_tile_windows = getattr(app, "tile_windows", None)
+        if callable(app_tile_windows):
+            tile_windows = app_tile_windows
 
     tiling_enabled: bool | None = None
     if app is not None:
@@ -665,9 +715,13 @@ def set_window_visible_state(
         except Exception:
             return False
 
+    window_effects = normalize_window_effects_spec(
+        getattr(window, "window_effects", None),
+        operation="set_window_visible_state",
+    ) if window is not None else _default_window_effects()
     use_transition = bool(
         window is not None
-        and getattr(window, "window_effects", {}).get("hide_show_enabled", True)
+        and (window_effects["hide_show_enabled"] or window_effects["grow_shrink_enabled"])
         and hasattr(window, "begin_visibility_transition")
     )
     if use_transition and hasattr(window, "ensure_visibility_transition_controller"):
@@ -749,7 +803,7 @@ class FeatureWindowBinding:
     task_panel_style: str = "round"
     task_panel_slot_index: int | None = None
     accessibility_label: str | None = None
-    window_effects: dict = field(default_factory=dict)
+    window_effects: dict = field(default_factory=_default_window_effects)
     window_management_opt_in: bool = True
     titlebar_controls: dict = field(default_factory=dict)
 
@@ -799,7 +853,7 @@ class FeatureWindowPresentationModel:
         task_panel_style: str = "round",
         task_panel_slot_index: int | None = None,
         accessibility_label: str | None = None,
-        window_effects: dict | None = None,
+        window_effects: object | None = None,
         window_management_opt_in: bool = True,
         titlebar_controls: dict | None = None,
     ) -> FeatureWindowBinding:
@@ -814,7 +868,10 @@ class FeatureWindowPresentationModel:
             task_panel_style=str(task_panel_style),
             task_panel_slot_index=None if task_panel_slot_index is None else int(task_panel_slot_index),
             accessibility_label=None if accessibility_label is None else str(accessibility_label),
-            window_effects=dict(window_effects or {}),
+            window_effects=normalize_window_effects_spec(
+                window_effects,
+                operation="FeatureWindowPresentationModel.register_feature_window",
+            ),
             window_management_opt_in=bool(window_management_opt_in),
             titlebar_controls=self._normalize_titlebar_controls(titlebar_controls),
         )
@@ -837,7 +894,10 @@ class FeatureWindowPresentationModel:
             return None
         # Keep per-window effects synchronized from declarative binding metadata.
         try:
-            window.window_effects = dict(binding.window_effects)
+            window.window_effects = normalize_window_effects_spec(
+                binding.window_effects,
+                operation="FeatureWindowPresentationModel.get_window",
+            )
         except Exception:
             pass
         try:

@@ -20,6 +20,7 @@ from ..app.service_scope import ServiceScope
 from .feature_lifecycle import (
     FeatureWindowPresentationModel,
     SceneSetupSpec,
+    WindowEffectsSpec,
     ScenePresentationModel,
     apply_scene_setup_specs,
     create_anchored_feature_window,
@@ -191,7 +192,7 @@ class WindowSpec:
     task_panel_style: str
     task_panel_slot_index: int | None
     accessibility_label: str
-    window_effects: dict = field(default_factory=dict)
+    window_effects: WindowEffectsSpec | Mapping[str, bool] = field(default_factory=WindowEffectsSpec)
     window_management_opt_in: bool = True
     titlebar_controls: WindowTitlebarControlsSpec | None = None
 
@@ -719,7 +720,7 @@ class FeatureWindowBundleBindingSpec:
     task_panel_toggle_button_id: str | None = None
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
-    window_effects: dict = field(default_factory=dict)
+    window_effects: WindowEffectsSpec | Mapping[str, bool] = field(default_factory=WindowEffectsSpec)
     window_management_opt_in: bool = True
     titlebar_controls: WindowTitlebarControlsSpec | None = None
 
@@ -739,7 +740,7 @@ class WindowToggleBindingSpec:
     task_panel_toggle_button_id: str | None = None
     toggle_attribute_name: str | None = None
     accessibility_label: str | None = None
-    window_effects: dict = field(default_factory=dict)
+    window_effects: WindowEffectsSpec | Mapping[str, bool] = field(default_factory=WindowEffectsSpec)
     titlebar_controls: WindowTitlebarControlsSpec | None = None
 
 
