@@ -57,6 +57,10 @@ class _App:
 
 
 class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
+    @staticmethod
+    def _rects_overlap(a: Rect, b: Rect) -> bool:
+        return bool(a.colliderect(b))
+
     def test_single_window_standard_relayout_uses_animation(self):
         window = _WindowNode(0, 0, 120, 90, visible=True)
         scene = _Scene([window])
@@ -256,6 +260,324 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         self.assertGreaterEqual(life.rect.top, menu_bottom)
         self.assertGreaterEqual(mandel.rect.top, menu_bottom)
         self.assertGreaterEqual(systems.rect.top, menu_bottom)
+
+    def test_bounded_area_rect_is_used_as_window_placement_truth_source(self):
+        window = _WindowNode(0, 0, 120, 90, visible=True)
+        scene = _Scene([window])
+        app = _App(Rect(0, 0, 400, 300), scene)
+        app.bounded_area_rect = lambda scene_name=None: Rect(0, 40, 400, 220)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        bounded = app.bounded_area_rect()
+        self.assertEqual(bounded.centerx, window.rect.centerx)
+        self.assertGreaterEqual(window.rect.top, bounded.top)
+
+    def test_arrange_windows_for_drop_reinserts_window_by_drop_position(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        middle = _WindowNode(170, 20, 120, 90, visible=True)
+        right = _WindowNode(320, 20, 120, 90, visible=True)
+        scene = _Scene([left, middle, right])
+        app = _App(Rect(0, 0, 480, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        handler.arrange_windows_for_drop(middle, (10, left.rect.centery), immediate=True)
+
+        self.assertLessEqual(middle.rect.x, left.rect.x)
+        self.assertLessEqual(middle.rect.x, right.rect.x)
+
+    def test_does_not_create_overlap_when_single_layer_has_room(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        w2 = _WindowNode(170, 20, 120, 90, visible=True)
+        w3 = _WindowNode(320, 20, 120, 90, visible=True)
+        scene = _Scene([w1, w2, w3])
+        app = _App(Rect(0, 0, 440, 140), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        self.assertFalse(self._rects_overlap(w1.rect, w2.rect))
+        self.assertFalse(self._rects_overlap(w1.rect, w3.rect))
+        self.assertFalse(self._rects_overlap(w2.rect, w3.rect))
+
+    def test_drop_to_far_right_moves_dragged_window_to_rightmost_slot(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        middle = _WindowNode(170, 20, 120, 90, visible=True)
+        right = _WindowNode(320, 20, 120, 90, visible=True)
+        scene = _Scene([left, middle, right])
+        app = _App(Rect(0, 0, 520, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        handler.arrange_windows_for_drop(middle, (500, right.rect.centery), immediate=True)
+
+        self.assertGreaterEqual(middle.rect.x, left.rect.x)
+        self.assertGreaterEqual(middle.rect.x, right.rect.x)
+
+    def test_drop_inside_row_between_windows_places_window_between_neighbors(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        moved = _WindowNode(170, 20, 120, 90, visible=True)
+        right = _WindowNode(320, 20, 120, 90, visible=True)
+        scene = _Scene([left, moved, right])
+        app = _App(Rect(0, 0, 520, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        between_x = int((left.rect.right + right.rect.left) // 2)
+        handler.arrange_windows_for_drop(moved, (between_x, left.rect.centery), immediate=True)
+
+        ordered = sorted([left, moved, right], key=lambda w: w.rect.x)
+        self.assertIs(ordered[1], moved)
+
+    def test_drop_to_different_vertical_row_moves_window_to_that_row(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        moved = _WindowNode(170, 20, 120, 90, visible=True)
+        w3 = _WindowNode(320, 20, 120, 90, visible=True)
+        w4 = _WindowNode(20, 140, 120, 90, visible=True)
+        w5 = _WindowNode(170, 140, 120, 90, visible=True)
+        w6 = _WindowNode(320, 140, 120, 90, visible=True)
+        scene = _Scene([w1, moved, w3, w4, w5, w6])
+        app = _App(Rect(0, 0, 520, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        top_row_y = min(w.rect.y for w in [w1, moved, w3, w4, w5, w6])
+        bottom_row_y = max(w.rect.y for w in [w1, moved, w3, w4, w5, w6])
+        self.assertLess(top_row_y, bottom_row_y)
+
+        handler.arrange_windows_for_drop(moved, (w5.rect.centerx, bottom_row_y + 5), immediate=True)
+
+        self.assertGreaterEqual(moved.rect.y, bottom_row_y)
+
+    def test_drop_above_row_moves_window_to_top_row_band(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        w2 = _WindowNode(170, 20, 120, 90, visible=True)
+        w3 = _WindowNode(320, 20, 120, 90, visible=True)
+        moved = _WindowNode(20, 140, 120, 90, visible=True)
+        w5 = _WindowNode(170, 140, 120, 90, visible=True)
+        w6 = _WindowNode(320, 140, 120, 90, visible=True)
+        scene = _Scene([w1, w2, w3, moved, w5, w6])
+        app = _App(Rect(0, 0, 520, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        top_row_y = min(w.rect.y for w in [w1, w2, w3, moved, w5, w6])
+        handler.arrange_windows_for_drop(moved, (w2.rect.centerx, top_row_y - 10), immediate=True)
+
+        self.assertLessEqual(moved.rect.y, top_row_y)
+
+    def test_drop_above_all_rows_creates_new_top_row(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        w2 = _WindowNode(170, 20, 120, 90, visible=True)
+        moved = _WindowNode(20, 140, 120, 90, visible=True)
+        w4 = _WindowNode(170, 140, 120, 90, visible=True)
+        scene = _Scene([w1, w2, moved, w4])
+        app = _App(Rect(0, 0, 520, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        prior_unique_rows = sorted({w.rect.y for w in [w1, w2, moved, w4]})
+        self.assertEqual(2, len(prior_unique_rows))
+
+        handler.arrange_windows_for_drop(moved, (moved.rect.centerx, prior_unique_rows[0] - 40), immediate=True)
+
+        after_unique_rows = sorted({w.rect.y for w in [w1, w2, moved, w4]})
+        self.assertGreaterEqual(len(after_unique_rows), 3)
+        self.assertLess(moved.rect.y, min(w.rect.y for w in [w1, w2, w4]))
+
+    def test_tile_now_preserves_spatial_row_column_order_after_manual_reposition(self):
+        a = _WindowNode(20, 20, 120, 90, visible=True)
+        b = _WindowNode(170, 20, 120, 90, visible=True)
+        c = _WindowNode(320, 20, 120, 90, visible=True)
+        d = _WindowNode(20, 140, 120, 90, visible=True)
+        e = _WindowNode(170, 140, 120, 90, visible=True)
+        f = _WindowNode(320, 140, 120, 90, visible=True)
+        scene = _Scene([a, b, c, d, e, f])
+        app = _App(Rect(0, 0, 520, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        # Simulate user move to bottom row middle slot before tile-now.
+        b.move_by(e.rect.x - b.rect.x, e.rect.y - b.rect.y)
+        handler.arrange_windows(immediate=True)
+
+        # Tile-now should preserve the moved window's row/column preference.
+        self.assertGreaterEqual(b.rect.y, d.rect.y)
+
+    def test_tile_now_prefers_live_rect_over_stale_target_for_ordering(self):
+        a = _WindowNode(20, 20, 120, 90, visible=True)
+        b = _WindowNode(170, 20, 120, 90, visible=True)
+        c = _WindowNode(320, 20, 120, 90, visible=True)
+        d = _WindowNode(20, 140, 120, 90, visible=True)
+        e = _WindowNode(170, 140, 120, 90, visible=True)
+        f = _WindowNode(320, 140, 120, 90, visible=True)
+        scene = _Scene([a, b, c, d, e, f])
+        app = _App(Rect(0, 0, 520, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        # Simulate stale target metadata while user has manually moved b lower.
+        b.move_by(e.rect.x - b.rect.x, e.rect.y - b.rect.y)
+        stale_top = Rect(a.rect.x, a.rect.y, b.rect.width, b.rect.height)
+        setattr(b, "_window_tiling_target_rect", stale_top)
+
+        handler.arrange_windows(immediate=True)
+
+        self.assertGreaterEqual(b.rect.y, d.rect.y)
+
+    def test_tile_now_preserves_window_moved_to_new_row_membership(self):
+        a = _WindowNode(20, 20, 120, 90, visible=True)
+        b = _WindowNode(170, 20, 120, 90, visible=True)
+        c = _WindowNode(320, 20, 120, 90, visible=True)
+        d = _WindowNode(20, 140, 120, 90, visible=True)
+        e = _WindowNode(170, 140, 120, 90, visible=True)
+        scene = _Scene([a, b, c, d, e])
+        app = _App(Rect(0, 0, 520, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        lowest_row_y = max(w.rect.y for w in [a, b, c, d, e])
+
+        # Simulate user placing b on a distinct new lower row before tile_now.
+        b.move_by(0, (lowest_row_y + 120) - b.rect.y)
+        handler.arrange_windows(immediate=True)
+
+        self.assertGreaterEqual(b.rect.y, max(w.rect.y for w in [a, c, d, e]))
+
+    def test_large_window_insert_into_existing_row_uses_pointer_x_position(self):
+        top_left = _WindowNode(20, 20, 160, 120, visible=True)
+        top_right = _WindowNode(260, 20, 160, 120, visible=True)
+        moved_large = _WindowNode(20, 200, 170, 120, visible=True)
+        bottom_right = _WindowNode(280, 200, 170, 120, visible=True)
+        scene = _Scene([top_left, top_right, moved_large, bottom_right])
+        app = _App(Rect(0, 0, 560, 380), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        # Drop into top row between the two top windows.
+        between_x = int((top_left.rect.right + top_right.rect.left) // 2)
+        handler.arrange_windows_for_drop(moved_large, (between_x, top_left.rect.centery), immediate=True)
+
+        ordered = sorted([top_left, moved_large, top_right], key=lambda w: w.rect.x)
+        self.assertIs(ordered[1], moved_large)
+
+    def test_large_window_between_gap_uses_widened_logical_insertion_zone(self):
+        left = _WindowNode(20, 20, 160, 120, visible=True)
+        right = _WindowNode(260, 20, 160, 120, visible=True)
+        moved = _WindowNode(20, 200, 160, 120, visible=True)
+        scene = _Scene([left, right, moved])
+        app = _App(Rect(0, 0, 560, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        # Aim near (not exactly at) the between-window boundary; widened logical
+        # insertion zone should still place moved between left/right.
+        near_between_x = int(((left.rect.right + right.rect.left) // 2) + int(handler.gap * 1.5))
+        handler.arrange_windows_for_drop(moved, (near_between_x, left.rect.centery), immediate=True)
+
+        ordered = sorted([left, moved, right], key=lambda w: w.rect.x)
+        self.assertIs(ordered[1], moved)
+
+    def test_tile_now_keeps_explicit_new_row_membership_with_large_window_present(self):
+        large = _WindowNode(20, 20, 300, 180, visible=True)
+        a = _WindowNode(340, 20, 140, 100, visible=True)
+        b = _WindowNode(340, 140, 140, 100, visible=True)
+        moved = _WindowNode(20, 240, 140, 100, visible=True)
+        scene = _Scene([large, a, b, moved])
+        app = _App(Rect(0, 0, 560, 420), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+        # Move window to a distinct lower row, then tile-now should preserve it.
+        moved.move_by(0, 90)
+        handler.arrange_windows(immediate=True)
+
+        self.assertGreaterEqual(moved.rect.y, max(int(w.rect.y) for w in [large, a, b]))
+
+    def test_arrange_windows_prefers_relaxed_solution_when_forced_overlaps(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        w2 = _WindowNode(170, 20, 120, 90, visible=True)
+        scene = _Scene([w1, w2])
+        app = _App(Rect(0, 0, 520, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        forced_targets = [(w1, 100, 80), (w2, 100, 80)]  # overlap
+        relaxed_targets = [(w1, 80, 80), (w2, 240, 80)]  # non-overlap
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (forced_targets, set(), 2),
+                (relaxed_targets, set(), 1),
+            ],
+        ):
+            handler.arrange_windows(immediate=True)
+
+        self.assertFalse(self._rects_overlap(w1.rect, w2.rect))
+
+    def test_arrange_windows_for_drop_prefers_relaxed_when_forced_overlaps(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        moved = _WindowNode(170, 20, 120, 90, visible=True)
+        scene = _Scene([w1, moved])
+        app = _App(Rect(0, 0, 520, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        forced_targets = [(w1, 100, 80), (moved, 100, 80)]  # overlap
+        relaxed_targets = [(w1, 80, 80), (moved, 240, 80)]  # non-overlap
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (forced_targets, set(), 2),
+                (relaxed_targets, set(), 1),
+            ],
+        ):
+            handler.arrange_windows_for_drop(moved, (240, 120), immediate=True)
+
+        self.assertFalse(self._rects_overlap(w1.rect, moved.rect))
+
+    def test_fit_pass_repacks_selected_overlapping_targets(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        w2 = _WindowNode(170, 20, 120, 90, visible=True)
+        scene = _Scene([w1, w2])
+        app = _App(Rect(0, 0, 520, 260), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        overlapping_targets = [(w1, 100, 80), (w2, 100, 80)]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (overlapping_targets, set(), 1),
+                (overlapping_targets, set(), 1),
+            ],
+        ):
+            handler.arrange_windows(immediate=True)
+
+        self.assertFalse(self._rects_overlap(w1.rect, w2.rect))
 
 
 if __name__ == "__main__":

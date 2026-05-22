@@ -37,8 +37,9 @@ class PanelControl(UiNode):
         """End active title-bar dragging and release pointer capture when owned."""
         if self._drag_window is None:
             return False
+        dragged_window = self._drag_window
+        drag_end_pos = release_pos if release_pos is not None else self._drag_last_pos
         if hasattr(self._drag_window, "on_titlebar_drag_end"):
-            drag_end_pos = release_pos if release_pos is not None else self._drag_last_pos
             self._drag_window.on_titlebar_drag_end(drag_end_pos, blocked=self._drag_blocked_last)
         if app is not None and hasattr(app, "pointer_capture"):
             if app.pointer_capture.is_owned_by(self._drag_window.control_id):
@@ -56,8 +57,13 @@ class PanelControl(UiNode):
             auto_layout_enabled = True
             if callable(is_window_tiling_enabled):
                 auto_layout_enabled = bool(is_window_tiling_enabled())
-            if auto_layout_enabled and callable(tile_windows):
-                tile_windows()
+            if auto_layout_enabled:
+                window_tiling = getattr(app, "window_tiling", None)
+                arrange_drop = getattr(window_tiling, "arrange_windows_for_drop", None)
+                if callable(arrange_drop):
+                    arrange_drop(dragged_window, drag_end_pos)
+                elif callable(tile_windows):
+                    tile_windows()
         return True
 
     def _window_drag_limits(self, window: UiNode, app: "GuiApplication") -> Optional[tuple[int, int, int, int]]:
@@ -271,6 +277,43 @@ class PanelControl(UiNode):
                 self._clear_active_windows()
             else:
                 self._set_active_window(new_top)
+
+            # Lowering changes draw order and can expose stale gaps from the
+            # previous layering solve; trigger a tile-now style relayout so
+            # animations and placement update immediately.
+            window_tiling = getattr(app, "window_tiling", None) if app is not None else None
+            arrange_drop = getattr(window_tiling, "arrange_windows_for_drop", None) if window_tiling is not None else None
+            tile_windows = getattr(app, "tile_windows", None) if app is not None else None
+            is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None) if app is not None else None
+            auto_layout_enabled = True
+            if callable(is_window_tiling_enabled):
+                auto_layout_enabled = bool(is_window_tiling_enabled())
+            if auto_layout_enabled:
+                used_drop_relayout = False
+                if callable(arrange_drop):
+                    bounded_area_rect = getattr(app, "bounded_area_rect", None) if app is not None else None
+                    if callable(bounded_area_rect):
+                        bounds = Rect(bounded_area_rect())
+                    else:
+                        surface = getattr(app, "surface", None) if app is not None else None
+                        bounds = Rect(surface.get_rect()) if surface is not None else Rect(0, 0, 0, 0)
+                    gap = int(getattr(window_tiling, "gap", 16)) if window_tiling is not None else 16
+                    drop_point = (int(window.rect.centerx), int(bounds.bottom + max(4, gap * 2)))
+                    try:
+                        arrange_drop(window, drop_point, force=True)
+                        used_drop_relayout = True
+                    except TypeError:
+                        try:
+                            arrange_drop(window, drop_point)
+                            used_drop_relayout = True
+                        except Exception:
+                            used_drop_relayout = False
+
+                if not used_drop_relayout and callable(tile_windows):
+                    try:
+                        tile_windows(as_visibility_event=True, force=True)
+                    except TypeError:
+                        tile_windows()
             return True
         return False
 

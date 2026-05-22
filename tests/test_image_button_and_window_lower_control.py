@@ -171,6 +171,97 @@ class TestWindowLowerControlUsesImageButtonBehavior(unittest.TestCase):
         self.assertIs(panel.children[0], window_b)
         self.assertIs(panel.children[-1], window_a)
 
+    def test_lower_control_release_triggers_tile_now_relayout(self):
+        class _StubAppWithTile(_StubApp):
+            def __init__(self):
+                super().__init__()
+                self.tile_calls = []
+
+            @staticmethod
+            def is_window_tiling_enabled() -> bool:
+                return True
+
+            def tile_windows(self, newly_visible=None, *, as_visibility_event: bool = False, force: bool = False):
+                self.tile_calls.append(
+                    {
+                        "newly_visible": newly_visible,
+                        "as_visibility_event": bool(as_visibility_event),
+                        "force": bool(force),
+                    }
+                )
+
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window_a = WindowControl("wa", (220, 140), "A")
+        window_b = WindowControl("wb", (220, 140), "B")
+        panel.add(window_a)
+        panel.add(window_b)
+        app = _StubAppWithTile()
+
+        lower_rect = window_b.lower_control_rect()
+        click_pos = lower_rect.center
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=click_pos, button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=click_pos, button=1)
+
+        self.assertTrue(panel.on_event_capture(down, app))
+        self.assertTrue(panel.on_event_capture(up, app))
+        self.assertGreaterEqual(len(app.tile_calls), 1)
+        self.assertTrue(bool(app.tile_calls[-1]["as_visibility_event"]))
+        self.assertTrue(bool(app.tile_calls[-1]["force"]))
+
+    def test_lower_control_release_prefers_drop_relayout_when_available(self):
+        class _StubWindowTiling:
+            def __init__(self):
+                self.gap = 16
+                self.calls = []
+
+            def arrange_windows_for_drop(self, window, drop_point, *, include_hidden=False, immediate=False, force=False):
+                self.calls.append(
+                    {
+                        "window": window,
+                        "drop_point": drop_point,
+                        "include_hidden": bool(include_hidden),
+                        "immediate": bool(immediate),
+                        "force": bool(force),
+                    }
+                )
+
+        class _StubAppWithDropRelayout(_StubApp):
+            def __init__(self):
+                super().__init__()
+                self.window_tiling = _StubWindowTiling()
+                self.tile_calls = []
+
+            @staticmethod
+            def is_window_tiling_enabled() -> bool:
+                return True
+
+            def tile_windows(self, newly_visible=None, *, as_visibility_event: bool = False, force: bool = False):
+                self.tile_calls.append((newly_visible, bool(as_visibility_event), bool(force)))
+
+            @staticmethod
+            def bounded_area_rect(scene_name=None):
+                return Rect(0, 0, 800, 600)
+
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window_a = WindowControl("wa", (220, 140), "A")
+        window_b = WindowControl("wb", (220, 140), "B")
+        panel.add(window_a)
+        panel.add(window_b)
+        app = _StubAppWithDropRelayout()
+
+        lower_rect = window_b.lower_control_rect()
+        click_pos = lower_rect.center
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=click_pos, button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=0, pos=click_pos, button=1)
+
+        self.assertTrue(panel.on_event_capture(down, app))
+        self.assertTrue(panel.on_event_capture(up, app))
+
+        self.assertEqual(1, len(app.window_tiling.calls))
+        self.assertIs(app.window_tiling.calls[0]["window"], window_b)
+        self.assertTrue(bool(app.window_tiling.calls[0]["force"]))
+        self.assertEqual(0, len(app.tile_calls))
+
     def test_hide_control_hides_window_on_release(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         window = WindowControl("w", (220, 140), "W")
