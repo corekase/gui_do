@@ -204,20 +204,23 @@ class WindowLayoutHandler:
                 pass
         return self._fallback_clamp_target(window, int(target_x), int(target_y), snapshot)
 
-    def _animate_window_to(self, window: object, target_x: int, target_y: int, *, duration: float) -> None:
+    def _animate_window_to(self, window: object, target_x: int, target_y: int, *, duration: float) -> bool:
         current = Rect(window.rect)
         if (current.x, current.y) == (int(target_x), int(target_y)):
-            return
+            setattr(window, "_window_tiling_animating", False)
+            return True
 
         tweens = getattr(self.app, "tweens", None)
         if tweens is None or not hasattr(tweens, "tween_fn"):
+            setattr(window, "_window_tiling_animating", False)
             window.move_by(int(target_x) - current.x, int(target_y) - current.y)
-            return
+            return True
 
         tag = f"window_tiling:{id(window)}"
         cancel_for_tag = getattr(tweens, "cancel_all_for_tag", None)
         if callable(cancel_for_tag):
             cancel_for_tag(tag)
+        setattr(window, "_window_tiling_animating", True)
 
         start_x = int(current.x)
         start_y = int(current.y)
@@ -237,7 +240,28 @@ class WindowLayoutHandler:
                 last_x = next_x
                 last_y = next_y
 
-        tweens.tween_fn(float(duration), _apply, easing="ease_in_out", tag=tag)
+        def _finish() -> None:
+            setattr(window, "_window_tiling_animating", False)
+
+        handle = None
+        try:
+            handle = tweens.tween_fn(float(duration), _apply, easing="ease_in_out", on_complete=_finish, tag=tag)
+        except Exception:
+            handle = None
+
+        scheduled = bool(handle is not None)
+        if scheduled and hasattr(handle, "is_complete"):
+            try:
+                scheduled = not bool(handle.is_complete)
+            except Exception:
+                scheduled = True
+
+        if not scheduled:
+            # Fallback for non-standard/failed tween schedulers.
+            setattr(window, "_window_tiling_animating", False)
+            window.move_by(int(target_x) - current.x, int(target_y) - current.y)
+            return True
+        return True
 
     @staticmethod
     def _set_window_tiling_target(window: object, target_x: int, target_y: int) -> None:
@@ -263,6 +287,14 @@ class WindowLayoutHandler:
         ref = getattr(window, "_window_tiling_target_rect", None)
         current = Rect(getattr(window, "rect", Rect(0, 0, 0, 0)))
         if isinstance(ref, Rect):
+            if bool(getattr(window, "_window_tiling_animating", False)):
+                # If animation state is stale (for example, tween cancelled by
+                # user interaction), large divergence means live geometry is
+                # authoritative again.
+                if abs(int(current.x) - int(ref.x)) > 64 or abs(int(current.y) - int(ref.y)) > 64:
+                    setattr(window, "_window_tiling_animating", False)
+                    return Rect(current)
+                return Rect(ref)
             # If the live rect diverges significantly from the stored target,
             # treat live geometry as authoritative (e.g. user drag reposition).
             if abs(int(current.x) - int(ref.x)) > 4 or abs(int(current.y) - int(ref.y)) > 4:
@@ -275,6 +307,26 @@ class WindowLayoutHandler:
         target = Rect(0, 0, int(window_rect.width), int(window_rect.height))
         target.center = bounds.center
         return (int(target.x), int(target.y))
+
+    @staticmethod
+    def _count_centered_targets(
+        targets: list[tuple[object, int, int]],
+        windows: Iterable[object],
+        window_rects: Dict[object, Rect],
+        work: Rect,
+    ) -> int:
+        target_positions = {w: (int(x), int(y)) for w, x, y in targets}
+        centered = 0
+        for window in windows:
+            if window not in target_positions or window not in window_rects:
+                continue
+            tx, _ty = target_positions[window]
+            cx, _cy = WindowLayoutHandler._center_target(work, window_rects[window])
+            # Horizontal centering is the key visual signal for this fallback
+            # path; y can differ because layers are vertically stacked.
+            if abs(int(tx) - int(cx)) <= 1:
+                centered += 1
+        return int(centered)
 
     def _center_window(self, window: object, work_area: Optional[Rect] = None) -> None:
         bounds = Rect(self.app.surface.get_rect()) if work_area is None else Rect(work_area)
@@ -419,6 +471,7 @@ class WindowLayoutHandler:
         *,
         prefer_vertical: bool,
         force_row_before: Optional[set[object]] = None,
+        enforce_vertical_pair_cap: bool = True,
     ) -> tuple[list[tuple[object, int, int]], list[object], list[object]]:
         """Pack one non-overlapping layer in row-major order.
 
@@ -430,7 +483,7 @@ class WindowLayoutHandler:
         placements: list[tuple[object, int, int]] = []
         center_fallback: list[object] = []
         remaining: list[object] = []
-        hard_column_cap = 1 if (prefer_vertical and len(windows) <= 2) else 0
+        hard_column_cap = 1 if (enforce_vertical_pair_cap and prefer_vertical and len(windows) <= 2) else 0
 
         row_x = 0
         row_y = 0
@@ -536,6 +589,7 @@ class WindowLayoutHandler:
         solve_layers: list[list[object]] = []
 
         pending = list(ordered_windows)
+        layer_index = 0
         while pending:
             layer, remaining, layer_fallback = self._pack_single_layer(
                 pending,
@@ -543,6 +597,7 @@ class WindowLayoutHandler:
                 work,
                 prefer_vertical=prefer_vertical,
                 force_row_before=force_row_before,
+                enforce_vertical_pair_cap=(int(layer_index) == 0),
             )
             if layer or layer_fallback:
                 layer_count += 1
@@ -555,6 +610,7 @@ class WindowLayoutHandler:
             if not centered_layer and not layer_fallback and remaining == pending:
                 break
             pending = remaining
+            layer_index += 1
 
         for window in center_fallback:
             cx, cy = self._center_target(work, window_rects[window])
@@ -629,6 +685,7 @@ class WindowLayoutHandler:
                 clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
             self._set_window_tiling_target(window, int(clamped_x), int(clamped_y))
             if duration <= 0.0:
+                setattr(window, "_window_tiling_animating", False)
                 current = Rect(window.rect)
                 window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
             else:
@@ -703,6 +760,7 @@ class WindowLayoutHandler:
                     work,
                     prefer_vertical=prefer_vertical,
                     force_row_before=force_row_before,
+                    enforce_vertical_pair_cap=False,
                 )
 
                 if remaining or layer_fallback:
@@ -1026,6 +1084,7 @@ class WindowLayoutHandler:
         prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
         spatial_rows = self._spatial_rows(windows, layout_rects)
         solve_order = [w for row in spatial_rows for w in row]
+        base_solve_order = list(solve_order)
         force_row_before = {row[0] for row in spatial_rows[1:] if row}
 
         # Visibility-event hint: newly shown windows should enter from the
@@ -1052,45 +1111,131 @@ class WindowLayoutHandler:
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
             solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible
+            # Row breaks are inferred from pre-reordered spatial rows; once
+            # newly-visible windows are tailed, keeping their old row-head
+            # break markers can over-fragment solves into single-window layers.
+            force_row_before = {w for w in force_row_before if w not in trailing_set}
 
-        forced_targets, forced_fallback, forced_layers = self._solve_layered_targets(
-            solve_order,
-            window_rects,
-            work,
-            prefer_vertical=prefer_vertical,
-            force_row_before=force_row_before,
-        )
-        forced_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
+        def _solve_with_order(order: list[object]) -> tuple[
+            list[tuple[object, int, int]],
+            set[object],
+            Optional[list[list[object]]],
+            int,
+        ]:
+            forced_targets, forced_fallback, forced_layers = self._solve_layered_targets(
+                order,
+                window_rects,
+                work,
+                prefer_vertical=prefer_vertical,
+                force_row_before=force_row_before,
+            )
+            forced_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
 
-        relaxed_targets, relaxed_fallback, relaxed_layers = self._solve_layered_targets(
-            solve_order,
-            window_rects,
-            work,
-            prefer_vertical=prefer_vertical,
-        )
-        relaxed_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
+            relaxed_targets, relaxed_fallback, relaxed_layers = self._solve_layered_targets(
+                order,
+                window_rects,
+                work,
+                prefer_vertical=prefer_vertical,
+            )
+            relaxed_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
 
-        # Preserve existing row membership by default; only relax when it
-        # clearly reduces fragmentation pressure.
-        targets = forced_targets
-        center_fallback = forced_fallback
-        layer_groups: Optional[list[list[object]]] = [list(layer) for layer in forced_layer_groups]
-        forced_overlap = self._overlap_pair_count(forced_targets, window_rects)
-        relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
-        if int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
-            targets = relaxed_targets
-            center_fallback = relaxed_fallback
-            layer_groups = [list(layer) for layer in relaxed_layer_groups]
-        elif int(forced_overlap) == 0 and int(relaxed_overlap) == 0:
-            # Keep row membership unless relaxation is a substantial win.
-            if int(relaxed_layers) + 2 < int(forced_layers):
+            # Preserve existing row membership by default; only relax when it
+            # clearly reduces fragmentation pressure.
+            targets = forced_targets
+            center_fallback = forced_fallback
+            layer_groups: Optional[list[list[object]]] = [list(layer) for layer in forced_layer_groups]
+            forced_overlap = self._overlap_pair_count(forced_targets, window_rects)
+            relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
+            forced_centered_new = 0
+            relaxed_centered_new = 0
+            forced_centered_all = self._count_centered_targets(
+                forced_targets,
+                windows,
+                window_rects,
+                work,
+            )
+            relaxed_centered_all = self._count_centered_targets(
+                relaxed_targets,
+                windows,
+                window_rects,
+                work,
+            )
+            if trailing_newly_visible:
+                forced_centered_new = self._count_centered_targets(
+                    forced_targets,
+                    trailing_newly_visible,
+                    window_rects,
+                    work,
+                )
+                relaxed_centered_new = self._count_centered_targets(
+                    relaxed_targets,
+                    trailing_newly_visible,
+                    window_rects,
+                    work,
+                )
+
+            if int(forced_centered_new) > int(relaxed_centered_new):
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
                 layer_groups = [list(layer) for layer in relaxed_layer_groups]
-        elif int(relaxed_layers) + 1 < int(forced_layers):
-            targets = relaxed_targets
-            center_fallback = relaxed_fallback
-            layer_groups = [list(layer) for layer in relaxed_layer_groups]
+            elif int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
+                targets = relaxed_targets
+                center_fallback = relaxed_fallback
+                layer_groups = [list(layer) for layer in relaxed_layer_groups]
+            elif int(forced_overlap) == 0 and int(relaxed_overlap) == 0:
+                if int(relaxed_centered_all) < int(forced_centered_all):
+                    targets = relaxed_targets
+                    center_fallback = relaxed_fallback
+                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
+                # Keep row membership unless relaxation is a substantial win.
+                elif int(relaxed_layers) + 2 < int(forced_layers):
+                    targets = relaxed_targets
+                    center_fallback = relaxed_fallback
+                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
+            elif int(relaxed_layers) + 1 < int(forced_layers):
+                targets = relaxed_targets
+                center_fallback = relaxed_fallback
+                layer_groups = [list(layer) for layer in relaxed_layer_groups]
+
+            centered_new = 0
+            if trailing_newly_visible:
+                centered_new = self._count_centered_targets(
+                    targets,
+                    trailing_newly_visible,
+                    window_rects,
+                    work,
+                )
+            return (targets, center_fallback, layer_groups, int(centered_new))
+
+        targets, center_fallback, layer_groups, centered_new = _solve_with_order(solve_order)
+        if trailing_newly_visible and solve_order != base_solve_order:
+            base_targets, base_fallback, base_layers, base_centered_new = _solve_with_order(base_solve_order)
+            if int(base_centered_new) < int(centered_new):
+                targets = base_targets
+                center_fallback = base_fallback
+                layer_groups = base_layers
+                centered_new = int(base_centered_new)
+
+        # Visibility-event fallback: if a single/new-subset event still yields
+        # overlap after spatial-order solving, retry with registration order
+        # (same family used by the explicit tile-now/F3 flow) and take it when
+        # it improves overlap or keeps overlap while reducing centered fallback
+        # pressure for newly-visible windows.
+        if trailing_newly_visible and len(trailing_newly_visible) < len(windows):
+            selected_overlap = self._overlap_pair_count(targets, window_rects)
+            if int(selected_overlap) > 0:
+                trailing_set = set(trailing_newly_visible)
+                registration_solve_order = [w for w in windows if w not in trailing_set] + trailing_newly_visible
+                reg_targets, reg_fallback, reg_layers, reg_centered_new = _solve_with_order(registration_solve_order)
+                reg_overlap = self._overlap_pair_count(reg_targets, window_rects)
+                if int(reg_overlap) < int(selected_overlap) or (
+                    int(reg_overlap) == int(selected_overlap)
+                    and int(reg_centered_new) < int(centered_new)
+                ):
+                    targets = reg_targets
+                    center_fallback = reg_fallback
+                    layer_groups = reg_layers
+                    centered_new = int(reg_centered_new)
 
         original_targets = list(targets)
         targets, center_fallback = self._fit_pass_repack_layers(

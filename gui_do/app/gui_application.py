@@ -1589,7 +1589,7 @@ class GuiApplication:
         as_visibility_event: bool = False,
         force: bool = False,
     ) -> None:
-        if as_visibility_event and newly_visible is None and raised_windows is None:
+        if as_visibility_event and not force and newly_visible is None and raised_windows is None:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
             if callable(snapshot_fn):
                 newly_visible = snapshot_fn()
