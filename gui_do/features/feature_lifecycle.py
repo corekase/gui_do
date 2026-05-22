@@ -730,10 +730,22 @@ def set_window_visible_state(
         window.visible = True
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
         toggle.pushed = is_visible
-    if tile_windows is not None:
+    is_window_management_opt_in = True
+    if binding is not None:
+        is_window_management_opt_in = bool(getattr(binding, "window_management_opt_in", True))
+
+    if tile_windows is not None and is_window_management_opt_in:
         if is_visible and window is not None:
             if tiling_enabled is False:
-                if not _center_single_window_without_tiling():
+                if from_toggle:
+                    try:
+                        tile_windows(newly_visible=(window,), as_visibility_event=True, force=True)
+                    except TypeError:
+                        try:
+                            tile_windows(newly_visible=(window,), as_visibility_event=True)
+                        except TypeError:
+                            tile_windows()
+                elif not _center_single_window_without_tiling():
                     try:
                         tile_windows(newly_visible=(window,), as_visibility_event=True)
                     except TypeError:
@@ -770,37 +782,6 @@ def raise_window_in_parent(window) -> bool:
     if not callable(raise_window):
         return False
     raise_window(window)
-    return True
-
-
-def relayout_raised_window_if_enabled(
-    host,
-    tile_windows: Optional[Callable[[], None]] = None,
-    *,
-    raised_window=None,
-) -> bool:
-    app = getattr(host, "app", None)
-    if app is None:
-        return False
-    is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
-    if not callable(is_window_tiling_enabled):
-        return False
-    if not bool(is_window_tiling_enabled()):
-        return False
-    relayout = tile_windows if callable(tile_windows) else getattr(app, "tile_windows", None)
-    if not callable(relayout):
-        return False
-    if raised_window is not None:
-        try:
-            relayout(raised_windows=(raised_window,), as_visibility_event=True)
-            return True
-        except TypeError:
-            try:
-                relayout(newly_visible=(raised_window,), as_visibility_event=True)
-                return True
-            except TypeError:
-                pass
-    relayout()
     return True
 
 
@@ -929,6 +910,10 @@ class FeatureWindowPresentationModel:
         control_id = getattr(window, "control_id", None)
         if control_id:
             self._bindings_by_control_id[str(control_id)] = binding.key
+        try:
+            setattr(window, "_window_management_opt_in", bool(binding.window_management_opt_in))
+        except Exception:
+            pass
         self._bindings_by_window_object[window] = binding.key
         self._window_object_by_key[binding.key] = window
         return window
@@ -955,12 +940,7 @@ class FeatureWindowPresentationModel:
     def show(self, key: str) -> None:
         window = self.get_window(key)
         if window is not None and getattr(window, "visible", False):
-            if raise_window_in_parent(window):
-                relayout_raised_window_if_enabled(
-                    self.host,
-                    self._tile_windows,
-                    raised_window=window,
-                )
+            raise_window_in_parent(window)
             return
         self.set_visible(key, True)
 

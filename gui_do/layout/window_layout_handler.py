@@ -22,6 +22,7 @@ class WindowLayoutHandler:
         self.center_on_failure = True
         self._registration_order: Dict[object, int] = {}
         self._next_order = 0
+        self._last_solve_layers: Optional[list[list[object]]] = None
 
     def _bound_scene(self):
         if self.scene is not None:
@@ -74,7 +75,9 @@ class WindowLayoutHandler:
 
     @staticmethod
     def _is_window_like(node: object) -> bool:
-        return node.is_window()
+        if not node.is_window():
+            return False
+        return bool(getattr(node, "_window_management_opt_in", True))
 
     def _ensure_registration(self, windows: Iterable[object]) -> None:
         current = set(windows)
@@ -532,6 +535,7 @@ class WindowLayoutHandler:
         targets: list[tuple[object, int, int]] = []
         center_fallback: set[object] = set()
         layer_count = 0
+        solve_layers: list[list[object]] = []
 
         pending = list(ordered_windows)
         while pending:
@@ -546,6 +550,8 @@ class WindowLayoutHandler:
                 layer_count += 1
             centered_layer = self._center_layer_in_work(layer, window_rects, work)
             targets.extend(centered_layer)
+            if centered_layer:
+                solve_layers.append([w for w, _x, _y in centered_layer])
             center_fallback.update(layer_fallback)
 
             if not centered_layer and not layer_fallback and remaining == pending:
@@ -555,6 +561,8 @@ class WindowLayoutHandler:
         for window in center_fallback:
             cx, cy = self._center_target(work, window_rects[window])
             targets.append((window, int(cx), int(cy)))
+            solve_layers.append([window])
+        self._last_solve_layers = [list(layer) for layer in solve_layers]
         return (targets, center_fallback, int(layer_count))
 
     def _spatial_rows(
@@ -567,10 +575,11 @@ class WindowLayoutHandler:
             return []
 
         heights = sorted(max(1, int(window_rects[w].height)) for w in windows)
-        min_h = int(heights[0])
-        # Keep row grouping tolerant enough for drag jitter but bounded so a
-        # single very large window does not collapse adjacent rows.
-        row_tolerance = max(8, min(int(min_h // 3), max(12, int(self.gap * 2))))
+        median_h = int(heights[len(heights) // 2])
+        # Keep row grouping tolerant enough for drag jitter, but robust to
+        # tiny outlier windows that would otherwise collapse tolerance and
+        # fragment rows/layers for normal-sized windows.
+        row_tolerance = max(8, min(int(median_h // 3), max(12, int(self.gap * 2))))
 
         rows: list[dict[str, object]] = []
         for window in sorted(windows, key=lambda w: (int(window_rects[w].top), int(window_rects[w].left))):
@@ -793,38 +802,172 @@ class WindowLayoutHandler:
             return int(children.index(window))
         return int(self._registration_order.get(window, 0))
 
+    def _windows_top_to_back(self, windows: Iterable[object]) -> list[object]:
+        """Return windows ordered from visually top-most to back-most."""
+        return sorted(
+            list(windows),
+            key=lambda w: (
+                int(self._window_current_z_index(w)),
+                int(self._registration_order.get(w, 0)),
+            ),
+            reverse=True,
+        )
+
     def _normalize_window_z_order_from_targets(
         self,
         targets: list[tuple[object, int, int]],
         window_rects: Dict[object, Rect],
         *,
         preferred_layer_tail: Optional[set[object]] = None,
+        demote_to_back: Optional[set[object]] = None,
+        promote_to_top: Optional[set[object]] = None,
+        explicit_layers: Optional[list[list[object]]] = None,
     ) -> None:
         """Assign per-layer z-order slices so deeper layers stay behind front layers."""
         if not targets:
             return
 
-        layers = self._infer_target_layers(targets, window_rects)
+        layers = [list(layer) for layer in explicit_layers] if explicit_layers else self._infer_target_layers(targets, window_rects)
         if not layers:
             return
 
+        target_window_set = {w for w, _x, _y in targets}
+        filtered_layers: list[list[object]] = []
+        seen: set[object] = set()
+        for layer in layers:
+            kept = [w for w in layer if w in target_window_set and w not in seen]
+            if kept:
+                filtered_layers.append(kept)
+                seen.update(kept)
+        if len(seen) < len(target_window_set):
+            leftovers = [w for w, _x, _y in targets if w not in seen]
+            if leftovers:
+                filtered_layers.append(leftovers)
+        layers = filtered_layers
+        if not layers:
+            return
+
+        demoted_order: list[object] = []
+        demoted_set: set[object] = set()
+        if demote_to_back:
+            demoted_set = set(demote_to_back)
+            for window, _x, _y in targets:
+                if window in demoted_set and window not in demoted_order:
+                    demoted_order.append(window)
+
+            if demoted_order:
+                stripped_layers: list[list[object]] = []
+                for layer in layers:
+                    remaining = [w for w in layer if w not in demoted_set]
+                    if remaining:
+                        stripped_layers.append(remaining)
+                layers = [list(demoted_order)] + stripped_layers
+
+        promoted_order: list[object] = []
+        promoted_set: set[object] = set()
+        if promote_to_top:
+            promoted_set = set(promote_to_top)
+            for window, _x, _y in targets:
+                if window in promoted_set and window not in promoted_order:
+                    promoted_order.append(window)
+
+            if promoted_order:
+                stripped_layers: list[list[object]] = []
+                for layer in layers:
+                    remaining = [w for w in layer if w not in promoted_set]
+                    if remaining:
+                        stripped_layers.append(remaining)
+                stripped_layers.append(list(promoted_order))
+                layers = stripped_layers
+
         # Render order is children list order; earlier is behind, later is front.
         # Inferred layers are back-to-front in solved target order.
-        ordered_windows: list[object] = []
-        for layer in layers:
-            if preferred_layer_tail:
-                layer_head = [w for w in layer if w not in preferred_layer_tail]
-                layer_tail = [w for w in layer if w in preferred_layer_tail]
-                ordered_windows.extend(layer_head + layer_tail)
-            else:
-                ordered_windows.extend(list(layer))
+        if demoted_set and promoted_set:
+            demoted_set = {w for w in demoted_set if w not in promoted_set}
+            demoted_order = [w for w in demoted_order if w not in promoted_set]
 
         parent_to_ordered_windows: dict[object, list[object]] = {}
-        for window in ordered_windows:
-            parent = getattr(window, "parent", None)
-            if parent is None:
-                continue
-            parent_to_ordered_windows.setdefault(parent, []).append(window)
+        if demoted_set or promoted_set:
+            target_window_set = {w for w, _x, _y in targets}
+            demoted_order_set = set(demoted_order)
+            promoted_order_set = set(promoted_order)
+            parent_candidates = {
+                getattr(window, "parent", None)
+                for window in target_window_set
+                if getattr(window, "parent", None) is not None
+            }
+            for parent in parent_candidates:
+                children = getattr(parent, "children", None)
+                if not isinstance(children, list):
+                    continue
+                parent_demoted = [
+                    w for w in demoted_order
+                    if getattr(w, "parent", None) is parent
+                ]
+                parent_promoted = [
+                    w for w in promoted_order
+                    if getattr(w, "parent", None) is parent
+                ]
+                parent_non_demoted = [
+                    child for child in children
+                    if (
+                        child in target_window_set
+                        and child not in demoted_set
+                        and child not in promoted_set
+                    )
+                ]
+                desired = list(parent_demoted) + list(parent_non_demoted) + list(parent_promoted)
+                if desired:
+                    parent_to_ordered_windows[parent] = desired
+
+            # Include any remaining targets that were not present in current
+            # parent.children ordering, preserving solved order while honoring
+            # demoted/promoted intent bands.
+            solved_order = [w for layer in layers for w in layer]
+            for window in solved_order:
+                if window in demoted_order_set or window in promoted_order_set:
+                    continue
+                parent = getattr(window, "parent", None)
+                if parent is None:
+                    continue
+                desired = parent_to_ordered_windows.setdefault(parent, [])
+                if window not in desired:
+                    insert_at = len(desired)
+                    if promoted_order:
+                        for idx, candidate in enumerate(desired):
+                            if candidate in promoted_order_set:
+                                insert_at = idx
+                                break
+                    desired.insert(insert_at, window)
+            for window in demoted_order:
+                parent = getattr(window, "parent", None)
+                if parent is None:
+                    continue
+                desired = parent_to_ordered_windows.setdefault(parent, [])
+                if window not in desired:
+                    desired.insert(0, window)
+            for window in promoted_order:
+                parent = getattr(window, "parent", None)
+                if parent is None:
+                    continue
+                desired = parent_to_ordered_windows.setdefault(parent, [])
+                if window not in desired:
+                    desired.append(window)
+        else:
+            ordered_windows: list[object] = []
+            for layer in layers:
+                if preferred_layer_tail:
+                    layer_head = [w for w in layer if w not in preferred_layer_tail]
+                    layer_tail = [w for w in layer if w in preferred_layer_tail]
+                    ordered_windows.extend(layer_head + layer_tail)
+                else:
+                    ordered_windows.extend(list(layer))
+
+            for window in ordered_windows:
+                parent = getattr(window, "parent", None)
+                if parent is None:
+                    continue
+                parent_to_ordered_windows.setdefault(parent, []).append(window)
 
         for parent, desired in parent_to_ordered_windows.items():
             children = getattr(parent, "children", None)
@@ -891,6 +1034,7 @@ class WindowLayoutHandler:
         # trailing solve segment so existing visible layout stabilizes first.
         trailing_newly_visible: list[object] = []
         layer_tail_hint: set[object] = set()
+        promoted_raised: set[object] = set()
         if newly_visible is not None:
             seen_new: set[object] = set()
             for candidate in newly_visible:
@@ -906,7 +1050,7 @@ class WindowLayoutHandler:
         if raised_windows is not None:
             for candidate in raised_windows:
                 if candidate in windows and bool(getattr(candidate, "visible", False)):
-                    layer_tail_hint.add(candidate)
+                    promoted_raised.add(candidate)
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
             solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible
@@ -918,6 +1062,7 @@ class WindowLayoutHandler:
             prefer_vertical=prefer_vertical,
             force_row_before=force_row_before,
         )
+        forced_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
 
         relaxed_targets, relaxed_fallback, relaxed_layers = self._solve_layered_targets(
             solve_order,
@@ -925,25 +1070,31 @@ class WindowLayoutHandler:
             work,
             prefer_vertical=prefer_vertical,
         )
+        relaxed_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
 
         # Preserve existing row membership by default; only relax when it
         # clearly reduces fragmentation pressure.
         targets = forced_targets
         center_fallback = forced_fallback
+        layer_groups: Optional[list[list[object]]] = [list(layer) for layer in forced_layer_groups]
         forced_overlap = self._overlap_pair_count(forced_targets, window_rects)
         relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
         if int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
             targets = relaxed_targets
             center_fallback = relaxed_fallback
+            layer_groups = [list(layer) for layer in relaxed_layer_groups]
         elif int(forced_overlap) == 0 and int(relaxed_overlap) == 0:
             # Keep row membership unless relaxation is a substantial win.
             if int(relaxed_layers) + 2 < int(forced_layers):
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
+                layer_groups = [list(layer) for layer in relaxed_layer_groups]
         elif int(relaxed_layers) + 1 < int(forced_layers):
             targets = relaxed_targets
             center_fallback = relaxed_fallback
+            layer_groups = [list(layer) for layer in relaxed_layer_groups]
 
+        original_targets = list(targets)
         targets, center_fallback = self._fit_pass_repack_layers(
             targets,
             window_rects,
@@ -951,11 +1102,15 @@ class WindowLayoutHandler:
             prefer_vertical=prefer_vertical,
             center_fallback=center_fallback,
         )
+        if targets != original_targets:
+            layer_groups = None
 
         self._normalize_window_z_order_from_targets(
             targets,
             window_rects,
             preferred_layer_tail=set(layer_tail_hint),
+            promote_to_top=set(promoted_raised),
+            explicit_layers=layer_groups,
         )
 
         self._apply_targets(
@@ -974,6 +1129,8 @@ class WindowLayoutHandler:
         include_hidden: bool = False,
         immediate: bool = False,
         force: bool = False,
+        demoted_windows: Optional[Iterable[object]] = None,
+        promoted_windows: Optional[Iterable[object]] = None,
     ) -> None:
         """Retile after a user drop by spatially reinserting the dropped window.
 
@@ -1015,7 +1172,7 @@ class WindowLayoutHandler:
         layout_rects = {w: self._layout_reference_rect(w) for w in windows}
         prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
 
-        top_to_back = [w for w in reversed(windows) if w is not window]
+        top_to_back = [w for w in self._windows_top_to_back(windows) if w is not window]
         drop_x, drop_y = clamped_drop
         insertion_gap = max(4, int(self.gap * 2))
 
@@ -1173,6 +1330,7 @@ class WindowLayoutHandler:
             prefer_vertical=prefer_vertical,
             force_row_before=force_row_before,
         )
+        forced_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
 
         # If row constraints force extra overlap-prone layers, retry without
         # forced row breaks and prefer the solution with fewer layers.
@@ -1182,10 +1340,12 @@ class WindowLayoutHandler:
             work,
             prefer_vertical=prefer_vertical,
         )
+        relaxed_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
 
         # Drop solves prioritize explicit row/slot insertion intent.
         forced_overlap = self._overlap_pair_count(targets, window_rects)
         relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
+        layer_groups: Optional[list[list[object]]] = [list(layer) for layer in forced_layer_groups]
 
         forced_drop_target = next(((tx, ty) for w, tx, ty in targets if w is window), None)
         relaxed_drop_target = next(((tx, ty) for w, tx, ty in relaxed_targets if w is window), None)
@@ -1201,10 +1361,13 @@ class WindowLayoutHandler:
             if use_relaxed:
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
+                layer_groups = [list(layer) for layer in relaxed_layer_groups]
         elif int(relaxed_layers) + 1 < int(forced_layers):
             targets = relaxed_targets
             center_fallback = relaxed_fallback
+            layer_groups = [list(layer) for layer in relaxed_layer_groups]
 
+        original_targets = list(targets)
         targets, center_fallback = self._fit_pass_repack_layers(
             targets,
             window_rects,
@@ -1212,8 +1375,28 @@ class WindowLayoutHandler:
             prefer_vertical=prefer_vertical,
             center_fallback=center_fallback,
         )
+        if targets != original_targets:
+            layer_groups = None
 
-        self._normalize_window_z_order_from_targets(targets, window_rects)
+        demoted_set: set[object] = set()
+        if demoted_windows is not None:
+            for candidate in demoted_windows:
+                if candidate in windows and bool(getattr(candidate, "visible", False)):
+                    demoted_set.add(candidate)
+
+        promoted_set: set[object] = set()
+        if promoted_windows is not None:
+            for candidate in promoted_windows:
+                if candidate in windows and bool(getattr(candidate, "visible", False)):
+                    promoted_set.add(candidate)
+
+        self._normalize_window_z_order_from_targets(
+            targets,
+            window_rects,
+            demote_to_back=demoted_set,
+            promote_to_top=promoted_set,
+            explicit_layers=layer_groups,
+        )
 
         self._apply_targets(
             targets,

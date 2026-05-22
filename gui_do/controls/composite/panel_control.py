@@ -61,7 +61,10 @@ class PanelControl(UiNode):
                 window_tiling = getattr(app, "window_tiling", None)
                 arrange_drop = getattr(window_tiling, "arrange_windows_for_drop", None)
                 if callable(arrange_drop):
-                    arrange_drop(dragged_window, drag_end_pos)
+                    try:
+                        arrange_drop(dragged_window, drag_end_pos, promoted_windows=(dragged_window,))
+                    except TypeError:
+                        arrange_drop(dragged_window, drag_end_pos)
                 elif callable(tile_windows):
                     tile_windows()
         return True
@@ -300,9 +303,21 @@ class PanelControl(UiNode):
                     gap = int(getattr(window_tiling, "gap", 16)) if window_tiling is not None else 16
                     drop_point = (int(window.rect.centerx), int(bounds.bottom + max(4, gap * 2)))
                     try:
-                        arrange_drop(window, drop_point, force=True)
+                        arrange_drop(window, drop_point, force=True, demoted_windows=(window,))
                         used_drop_relayout = True
                     except TypeError:
+                        try:
+                            arrange_drop(window, drop_point, force=True)
+                            used_drop_relayout = True
+                        except TypeError:
+                            try:
+                                arrange_drop(window, drop_point, demoted_windows=(window,))
+                                used_drop_relayout = True
+                            except Exception:
+                                used_drop_relayout = False
+                        except Exception:
+                            used_drop_relayout = False
+                    except Exception:
                         try:
                             arrange_drop(window, drop_point)
                             used_drop_relayout = True
@@ -903,8 +918,8 @@ class PanelControl(UiNode):
     def draw_window_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
         """Draw window children (window lifecycle layer), optionally with per-window hints.
 
-        The focused window control is drawn last so that any content it draws outside its
-        assigned rect stays on top of other windows.
+        Window draw order follows child z-order strictly so visual layering
+        matches input hit-testing and window-management ordering.
         """
         def _is_actively_shear_dragging(window: UiNode) -> bool:
             if not self._is_window_like(window):
@@ -935,44 +950,15 @@ class PanelControl(UiNode):
         if app is not None:
             self._clear_occluded_window_hovers_for_pointer(getattr(app, "logical_pointer_pos", None))
 
-        # Identify the highest-priority window child to draw last. Prefer the
-        # currently active window because z-order changes update active state;
-        # fall back to the focused window when no active window is tracked.
-        prioritized_window = None
         hint_window = None
-        active_window = self._active_window
-        if (
-            active_window is not None
-            and active_window in self.children
-            and self._is_window_like(active_window)
-            and active_window.visible
-            and not _is_actively_shear_dragging(active_window)
-            and not _has_higher_z_transition_window_than(active_window)
-        ):
-            prioritized_window = active_window
-        if prioritized_window is None and app is not None and hasattr(app, 'focus') and app.focus is not None:
-            focused_node = app.focus.focused_node
-            if (
-                focused_node is not None
-                and focused_node in self.children
-                and self._is_window_like(focused_node)
-                and focused_node.visible
-                and not _has_higher_z_transition_window_than(focused_node)
-            ):
-                prioritized_window = focused_node
-                if _is_actively_shear_dragging(prioritized_window):
-                    prioritized_window = None
         if app is not None and hasattr(app, "focus_visualizer"):
             resolve_hint_window = getattr(app.focus_visualizer, "focused_hint_window", None)
             if callable(resolve_hint_window):
                 hint_window = resolve_hint_window()
 
-        # Draw non-focused window children
+        # Draw window children strictly in child z-order.
         for child in self.children:
             if not self._is_window_like(child):
-                continue
-            if child is prioritized_window:
-                # Skip focused window for now; draw it last
                 continue
             if not _should_draw_window(child):
                 continue
@@ -980,10 +966,3 @@ class PanelControl(UiNode):
             if app is not None and child.visible:
                 if hint_window is None or child is hint_window:
                     app.focus_visualizer.draw_hint_for_window(surface, theme, child)
-
-        # Draw the prioritized window last so its extra rendering stays on top
-        if prioritized_window is not None and _should_draw_window(prioritized_window):
-            prioritized_window.draw(surface, theme)
-            if app is not None and prioritized_window.visible:
-                if hint_window is None or prioritized_window is hint_window:
-                    app.focus_visualizer.draw_hint_for_window(surface, theme, prioritized_window)
