@@ -2,6 +2,7 @@ import unittest
 
 import pygame
 
+from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.overlays.command_palette_manager import CommandEntry, CommandPaletteManager
 
 
@@ -137,6 +138,10 @@ class _GraphicsFactoryStub:
 
 
 class TestCommandPaletteGroupedEntries(unittest.TestCase):
+    @staticmethod
+    def _key_down_event(key: int) -> GuiEvent:
+        return GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=int(key))
+
     def test_show_is_idempotent_while_already_open(self):
         overlay = _OverlayLifecycleStub()
         app = _PaletteAppStub(overlay)
@@ -672,6 +677,58 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
         self.assertFalse(manager.is_open)
         self.assertEqual(["run"], calls)
         self.assertEqual(1, len(overlay.hide_calls))
+
+    def test_space_key_activates_selected_entry_without_closing_palette(self):
+        overlay = _OverlayLifecycleStub()
+        app = _PaletteAppStub(overlay)
+        manager = CommandPaletteManager(overlay)
+        calls = []
+        manager.register(
+            CommandEntry(
+                entry_id="custom:refresh",
+                title="Refresh",
+                action=lambda: calls.append("run"),
+                category="Custom",
+            )
+        )
+
+        manager.show(app)
+        self.assertEqual(1, len(overlay.show_calls))
+        panel = overlay.show_calls[0][1]
+
+        consumed = panel.handle_event(self._key_down_event(pygame.K_SPACE), app)
+
+        self.assertTrue(consumed)
+        self.assertTrue(manager.is_open)
+        self.assertEqual(["run"], calls)
+        self.assertEqual(0, len(overlay.hide_calls))
+
+    def test_enter_and_keypad_enter_activate_and_close_palette(self):
+        for key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            with self.subTest(key=key):
+                overlay = _OverlayLifecycleStub()
+                app = _PaletteAppStub(overlay)
+                manager = CommandPaletteManager(overlay)
+                calls = []
+                manager.register(
+                    CommandEntry(
+                        entry_id="custom:refresh",
+                        title="Refresh",
+                        action=lambda: calls.append("run"),
+                        category="Custom",
+                    )
+                )
+
+                manager.show(app)
+                self.assertEqual(1, len(overlay.show_calls))
+                panel = overlay.show_calls[0][1]
+
+                consumed = panel.handle_event(self._key_down_event(key), app)
+
+                self.assertTrue(consumed)
+                self.assertFalse(manager.is_open)
+                self.assertEqual(["run"], calls)
+                self.assertEqual(1, len(overlay.hide_calls))
 
 
 if __name__ == "__main__":

@@ -50,9 +50,17 @@ def _resolved_highlight_color(theme) -> tuple[int, int, int] | tuple[int, int, i
 class _CommandPalettePanel(OverlayPanelControl):
     """Overlay panel that manages wheel-scroll and keyboard navigation within palette semantics."""
 
-    def __init__(self, control_id: str, rect: Rect, *, listview: ListViewControl) -> None:
+    def __init__(
+        self,
+        control_id: str,
+        rect: Rect,
+        *,
+        listview: ListViewControl,
+        activate_without_close: Optional[Callable[[int], bool]] = None,
+    ) -> None:
         super().__init__(control_id, rect)
         self._listview = listview
+        self._activate_without_close = activate_without_close
 
     _POINTER_EVENT_KINDS = frozenset((
         EventType.MOUSE_WHEEL,
@@ -85,7 +93,15 @@ class _CommandPalettePanel(OverlayPanelControl):
             if key == pygame.K_DOWN:
                 CommandPaletteManager._move_selection_by_wheel(self._listview, -1)
                 return True
-            if key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+            if key == pygame.K_SPACE:
+                idx = self._listview.selected_index
+                if 0 <= idx < self._listview.item_count():
+                    if callable(self._activate_without_close):
+                        self._activate_without_close(idx)
+                    else:
+                        self._listview.select(idx, scroll_to=False)
+                return True
+            if key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 idx = self._listview.selected_index
                 if 0 <= idx < self._listview.item_count():
                     # Calling select() fires the registered _on_select callback,
@@ -641,12 +657,30 @@ class CommandPaletteManager:
             if isinstance(entry, CommandEntry) and entry.render_kind == "window_toggle":
                 entry.window_visible = not entry.window_visible
 
+        def _activate_selected_without_close(idx: int) -> bool:
+            if idx < 0 or idx >= listview.item_count():
+                return False
+            item = listview._items[idx]
+            entry = item.data
+            if not isinstance(entry, CommandEntry):
+                return False
+            handled = self._activate_entry(
+                idx,
+                entry,
+                suppress_followup_select=False,
+            )
+            if handled:
+                listview.selected_index = idx
+                listview.scroll_to_item(idx)
+            return handled
+
         listview._on_select = _on_select
 
         panel = _CommandPalettePanel(
             self._OWNER_ID + "_panel",
             rect,
             listview=listview,
+            activate_without_close=_activate_selected_without_close,
         )
 
         panel.add(listview)
@@ -699,18 +733,26 @@ class CommandPaletteManager:
         entry = item.data
         if not isinstance(entry, CommandEntry):
             return False
-        if entry.render_kind == "window_toggle":
-            handled = self._activate_window_toggle_at(idx, entry, suppress_followup_select=suppress_followup_select)
-        elif entry.render_kind == "command_toggle":
-            handled = self._activate_command_toggle_at(idx, entry, suppress_followup_select=suppress_followup_select)
-        elif entry.render_kind == "command_button":
-            handled = self._activate_command_button_at(idx, entry, suppress_followup_select=suppress_followup_select)
-        else:
-            handled = self._activate_default_entry_at(idx, entry, suppress_followup_select=suppress_followup_select)
+        handled = self._activate_entry(idx, entry, suppress_followup_select=suppress_followup_select)
         if handled:
             listview.selected_index = idx
             listview.scroll_to_item(idx)
         return handled
+
+    def _activate_entry(
+        self,
+        idx: int,
+        entry: CommandEntry,
+        *,
+        suppress_followup_select: bool = True,
+    ) -> bool:
+        if entry.render_kind == "window_toggle":
+            return self._activate_window_toggle_at(idx, entry, suppress_followup_select=suppress_followup_select)
+        if entry.render_kind == "command_toggle":
+            return self._activate_command_toggle_at(idx, entry, suppress_followup_select=suppress_followup_select)
+        if entry.render_kind == "command_button":
+            return self._activate_command_button_at(idx, entry, suppress_followup_select=suppress_followup_select)
+        return self._activate_default_entry_at(idx, entry, suppress_followup_select=suppress_followup_select)
 
     def _activate_window_toggle_at(
         self,
