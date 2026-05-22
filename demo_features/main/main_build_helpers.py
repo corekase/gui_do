@@ -76,12 +76,11 @@ def _add_opt_out_test_window(host) -> None:
         )
     )
 
-    # Register in presentation with explicit opt-out from window management surfaces.
+    # Register in presentation with default window-management participation.
     host._opt_out_test_window_feature = SimpleNamespace(window=host.opt_out_test_window)
     host.window_presentation.register_feature_window(
         "opt_out_test",
         feature_attribute_name="_opt_out_test_window_feature",
-        window_management_opt_in=True,
     )
 
 

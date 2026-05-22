@@ -20,7 +20,7 @@ class _WindowPresentationStub:
     def __init__(self):
         self.calls = []
 
-    def register_feature_window(self, key, *, feature_attribute_name, window_management_opt_in):
+    def register_feature_window(self, key, *, feature_attribute_name, window_management_opt_in=True):
         self.calls.append((key, feature_attribute_name, window_management_opt_in))
 
 
