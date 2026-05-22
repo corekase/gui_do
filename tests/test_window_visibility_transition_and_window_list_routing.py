@@ -79,6 +79,14 @@ class _StubBinding:
         self.task_panel_toggle_button_id = str(button_id)
 
 
+class _StubFocus:
+    def __init__(self):
+        self.clear_calls = 0
+
+    def clear_focus(self):
+        self.clear_calls += 1
+
+
 class _StubWindow:
     def __init__(self):
         self.visible = False
@@ -369,6 +377,22 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         controller = window.visibility_transition_controller
         self.assertIsNotNone(controller)
         self.assertEqual(starting_center, controller._target_center)
+
+    def test_visibility_transition_clears_focus_on_entry(self):
+        app = _StubApp()
+        app.focus = _StubFocus()
+        window = _GrowShrinkStubWindow()
+        window.visible = True
+
+        set_window_visible_state(
+            window,
+            False,
+            tile_windows=app.tile_windows,
+            app=app,
+            binding=None,
+        )
+
+        self.assertEqual(1, app.focus.clear_calls)
 
     def test_register_feature_window_rejects_conflicting_transition_modes(self):
         model = FeatureWindowPresentationModel(SimpleNamespace(app=None), tile_windows=None)

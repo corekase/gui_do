@@ -215,6 +215,9 @@ class WindowControl(UiNode):
             )
         if not hide_show_enabled and not grow_shrink_enabled:
             return
+        focus_manager = getattr(app, "focus", None) if app is not None else None
+        if focus_manager is not None and hasattr(focus_manager, "clear_focus"):
+            focus_manager.clear_focus()
         controller = self.ensure_visibility_transition_controller()
         transition_mode = "hide_show" if hide_show_enabled else "grow_shrink"
         controller.begin_transition(bool(visible), app=app, binding=binding, mode=transition_mode)
