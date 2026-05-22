@@ -1581,7 +1581,14 @@ class GuiApplication:
             relayout=relayout,
         )
 
-    def tile_windows(self, newly_visible=None, *, as_visibility_event: bool = False, force: bool = False) -> None:
+    def tile_windows(
+        self,
+        newly_visible=None,
+        *,
+        raised_windows=None,
+        as_visibility_event: bool = False,
+        force: bool = False,
+    ) -> None:
         if as_visibility_event and newly_visible is None:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
             if callable(snapshot_fn):
@@ -1592,7 +1599,11 @@ class GuiApplication:
                 if callable(center_windows):
                     center_windows(tuple(newly_visible))
             return
-        self.window_tiling.arrange_windows(newly_visible=newly_visible, force=bool(force))
+        self.window_tiling.arrange_windows(
+            newly_visible=newly_visible,
+            raised_windows=raised_windows,
+            force=bool(force),
+        )
 
     def register_font_role(
         self,

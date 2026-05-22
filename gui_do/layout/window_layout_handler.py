@@ -754,9 +754,102 @@ class WindowLayoutHandler:
 
         return (targets, center_fallback)
 
+    @staticmethod
+    def _infer_target_layers(
+        targets: list[tuple[object, int, int]],
+        window_rects: Dict[object, Rect],
+    ) -> list[list[object]]:
+        """Infer front-to-back layout layers preserving per-layer target order.
+
+        Targets are emitted in layer sequence by the solver/fit passes, so we
+        keep contiguous layer groups and start a new layer when an item would
+        overlap the current layer.
+        """
+        layers: list[list[object]] = []
+        current_layer: list[object] = []
+        current_layer_rects: list[Rect] = []
+
+        for window, x, y in targets:
+            wr = window_rects[window]
+            rect = Rect(int(x), int(y), int(wr.width), int(wr.height))
+            overlaps_current = any(rect.colliderect(existing) for existing in current_layer_rects)
+
+            if overlaps_current and current_layer:
+                layers.append(list(current_layer))
+                current_layer = []
+                current_layer_rects = []
+
+            current_layer.append(window)
+            current_layer_rects.append(rect)
+
+        if current_layer:
+            layers.append(list(current_layer))
+        return layers
+
+    def _window_current_z_index(self, window: object) -> int:
+        parent = getattr(window, "parent", None)
+        children = getattr(parent, "children", None)
+        if isinstance(children, list) and window in children:
+            return int(children.index(window))
+        return int(self._registration_order.get(window, 0))
+
+    def _normalize_window_z_order_from_targets(
+        self,
+        targets: list[tuple[object, int, int]],
+        window_rects: Dict[object, Rect],
+        *,
+        preferred_layer_tail: Optional[set[object]] = None,
+    ) -> None:
+        """Assign per-layer z-order slices so deeper layers stay behind front layers."""
+        if not targets:
+            return
+
+        layers = self._infer_target_layers(targets, window_rects)
+        if not layers:
+            return
+
+        # Render order is children list order; earlier is behind, later is front.
+        # Inferred layers are back-to-front in solved target order.
+        ordered_windows: list[object] = []
+        for layer in layers:
+            if preferred_layer_tail:
+                layer_head = [w for w in layer if w not in preferred_layer_tail]
+                layer_tail = [w for w in layer if w in preferred_layer_tail]
+                ordered_windows.extend(layer_head + layer_tail)
+            else:
+                ordered_windows.extend(list(layer))
+
+        parent_to_ordered_windows: dict[object, list[object]] = {}
+        for window in ordered_windows:
+            parent = getattr(window, "parent", None)
+            if parent is None:
+                continue
+            parent_to_ordered_windows.setdefault(parent, []).append(window)
+
+        for parent, desired in parent_to_ordered_windows.items():
+            children = getattr(parent, "children", None)
+            if not isinstance(children, list):
+                continue
+            if len(desired) <= 1:
+                continue
+
+            desired_set = set(desired)
+            slot_indices = [
+                idx for idx, child in enumerate(children)
+                if child in desired_set
+            ]
+            if len(slot_indices) <= 1:
+                continue
+
+            reordered = list(children)
+            for slot_idx, window in zip(slot_indices, desired):
+                reordered[slot_idx] = window
+            parent.children[:] = reordered
+
     def arrange_windows(
         self,
         newly_visible: Optional[Iterable[object]] = None,
+        raised_windows: Optional[Iterable[object]] = None,
         *,
         include_hidden: bool = False,
         immediate: bool = False,
@@ -793,6 +886,30 @@ class WindowLayoutHandler:
         spatial_rows = self._spatial_rows(windows, layout_rects)
         solve_order = [w for row in spatial_rows for w in row]
         force_row_before = {row[0] for row in spatial_rows[1:] if row}
+
+        # Visibility-event hint: newly shown windows should enter from the
+        # trailing solve segment so existing visible layout stabilizes first.
+        trailing_newly_visible: list[object] = []
+        layer_tail_hint: set[object] = set()
+        if newly_visible is not None:
+            seen_new: set[object] = set()
+            for candidate in newly_visible:
+                if candidate in seen_new:
+                    continue
+                if candidate not in windows:
+                    continue
+                if not bool(getattr(candidate, "visible", False)):
+                    continue
+                trailing_newly_visible.append(candidate)
+                layer_tail_hint.add(candidate)
+                seen_new.add(candidate)
+        if raised_windows is not None:
+            for candidate in raised_windows:
+                if candidate in windows and bool(getattr(candidate, "visible", False)):
+                    layer_tail_hint.add(candidate)
+        if trailing_newly_visible:
+            trailing_set = set(trailing_newly_visible)
+            solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible
 
         forced_targets, forced_fallback, forced_layers = self._solve_layered_targets(
             solve_order,
@@ -833,6 +950,12 @@ class WindowLayoutHandler:
             work,
             prefer_vertical=prefer_vertical,
             center_fallback=center_fallback,
+        )
+
+        self._normalize_window_z_order_from_targets(
+            targets,
+            window_rects,
+            preferred_layer_tail=set(layer_tail_hint),
         )
 
         self._apply_targets(
@@ -1089,6 +1212,8 @@ class WindowLayoutHandler:
             prefer_vertical=prefer_vertical,
             center_fallback=center_fallback,
         )
+
+        self._normalize_window_z_order_from_targets(targets, window_rects)
 
         self._apply_targets(
             targets,

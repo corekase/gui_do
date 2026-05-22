@@ -19,6 +19,19 @@ class _Scene:
         self.nodes = list(nodes)
 
 
+class _ParentNode:
+    def __init__(self, children=None):
+        self.children = list(children or [])
+        self.visible = True
+        self.enabled = True
+
+    def is_window(self) -> bool:
+        return False
+
+    def is_task_panel(self) -> bool:
+        return False
+
+
 class MenuStripControl:
     def __init__(self, rect: Rect, *, visible: bool = True, enabled: bool = True):
         self.rect = Rect(rect)
@@ -578,6 +591,170 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             handler.arrange_windows(immediate=True)
 
         self.assertFalse(self._rects_overlap(w1.rect, w2.rect))
+
+    def test_arrange_windows_normalizes_parent_z_order_by_solved_layers(self):
+        front_left = _WindowNode(20, 20, 120, 90, visible=True)
+        back = _WindowNode(170, 20, 120, 90, visible=True)
+        front_right = _WindowNode(320, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([front_left, back, front_right])
+        front_left.parent = parent
+        back.parent = parent
+        front_right.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 560, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # First layer: one back window.
+        # Second layer: two non-overlapping front windows.
+        solved_targets = [
+            (back, 80, 80),
+            (front_left, 80, 80),
+            (front_right, 240, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 2),
+                (solved_targets, set(), 2),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows(immediate=True)
+
+        # Back layer should occupy lower z slots than the front layer.
+        self.assertIs(parent.children[0], back)
+
+    def test_arrange_windows_z_slices_preserve_within_layer_target_order(self):
+        w1 = _WindowNode(20, 20, 120, 90, visible=True)
+        w2 = _WindowNode(170, 20, 120, 90, visible=True)
+        back = _WindowNode(320, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([w1, back, w2])
+        w1.parent = parent
+        w2.parent = parent
+        back.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 560, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Back layer order is [w2, w1], then a front layer [back].
+        solved_targets = [
+            (w2, 80, 80),
+            (w1, 240, 80),
+            (back, 80, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 2),
+                (solved_targets, set(), 2),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows(immediate=True)
+
+        # Back layer first preserving target order, then front layer.
+        self.assertEqual([w2, w1, back], list(parent.children))
+
+    def test_newly_visible_windows_are_appended_to_trailing_solve_segment(self):
+        base_a = _WindowNode(20, 20, 120, 90, visible=True)
+        base_b = _WindowNode(170, 20, 120, 90, visible=True)
+        new_window = _WindowNode(320, 20, 120, 90, visible=True)
+        scene = _Scene([base_a, base_b, new_window])
+        app = _App(Rect(0, 0, 560, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        captured_orders = []
+
+        def _capture_order(ordered_windows, *_args, **_kwargs):
+            captured_orders.append(list(ordered_windows))
+            # Return a simple non-overlapping placement for whichever order we got.
+            targets = [(w, 40 + (idx * 140), 80) for idx, w in enumerate(ordered_windows)]
+            return (targets, set(), 1)
+
+        with patch.object(handler, "_solve_layered_targets", side_effect=_capture_order):
+            handler.arrange_windows(newly_visible=(new_window,), immediate=True)
+
+        self.assertGreaterEqual(len(captured_orders), 1)
+        self.assertIs(captured_orders[0][-1], new_window)
+
+    def test_newly_visible_trailing_segment_does_not_force_row_break(self):
+        base_a = _WindowNode(20, 20, 120, 90, visible=True)
+        base_b = _WindowNode(170, 20, 120, 90, visible=True)
+        new_window = _WindowNode(320, 20, 120, 90, visible=True)
+        scene = _Scene([base_a, base_b, new_window])
+        app = _App(Rect(0, 0, 560, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        captured_force_sets = []
+
+        def _capture_order_and_forces(ordered_windows, _window_rects, _work, *, prefer_vertical, force_row_before=None):
+            captured_force_sets.append(set(force_row_before or set()))
+            targets = [(w, 40 + (idx * 140), 80) for idx, w in enumerate(ordered_windows)]
+            return (targets, set(), 1)
+
+        with patch.object(handler, "_solve_layered_targets", side_effect=_capture_order_and_forces):
+            handler.arrange_windows(newly_visible=(new_window,), immediate=True)
+
+        self.assertGreaterEqual(len(captured_force_sets), 1)
+        self.assertNotIn(new_window, captured_force_sets[0])
+
+    def test_newly_visible_windows_are_last_drawn_within_their_layer(self):
+        base_a = _WindowNode(20, 20, 120, 90, visible=True)
+        new_window = _WindowNode(170, 20, 120, 90, visible=True)
+        base_b = _WindowNode(320, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([base_a, new_window, base_b])
+        base_a.parent = parent
+        new_window.parent = parent
+        base_b.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 560, 320), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        solved_targets = [
+            (base_a, 80, 80),
+            (new_window, 240, 80),
+            (base_b, 400, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows(newly_visible=(new_window,), immediate=True)
+
+        self.assertEqual([base_a, base_b, new_window], list(parent.children))
 
 
 if __name__ == "__main__":

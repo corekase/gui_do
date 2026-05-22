@@ -773,7 +773,12 @@ def raise_window_in_parent(window) -> bool:
     return True
 
 
-def relayout_raised_window_if_enabled(host, tile_windows: Optional[Callable[[], None]] = None) -> bool:
+def relayout_raised_window_if_enabled(
+    host,
+    tile_windows: Optional[Callable[[], None]] = None,
+    *,
+    raised_window=None,
+) -> bool:
     app = getattr(host, "app", None)
     if app is None:
         return False
@@ -785,6 +790,16 @@ def relayout_raised_window_if_enabled(host, tile_windows: Optional[Callable[[], 
     relayout = tile_windows if callable(tile_windows) else getattr(app, "tile_windows", None)
     if not callable(relayout):
         return False
+    if raised_window is not None:
+        try:
+            relayout(raised_windows=(raised_window,), as_visibility_event=True)
+            return True
+        except TypeError:
+            try:
+                relayout(newly_visible=(raised_window,), as_visibility_event=True)
+                return True
+            except TypeError:
+                pass
     relayout()
     return True
 
@@ -941,7 +956,11 @@ class FeatureWindowPresentationModel:
         window = self.get_window(key)
         if window is not None and getattr(window, "visible", False):
             if raise_window_in_parent(window):
-                relayout_raised_window_if_enabled(self.host, self._tile_windows)
+                relayout_raised_window_if_enabled(
+                    self.host,
+                    self._tile_windows,
+                    raised_window=window,
+                )
             return
         self.set_visible(key, True)
 

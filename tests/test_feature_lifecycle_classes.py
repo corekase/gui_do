@@ -6,6 +6,7 @@ from pygame import Rect
 
 from gui_do.features.feature_lifecycle import (
     ControlPlacementSpec,
+    FeatureWindowPresentationModel,
     FeatureMessage,
     FrameTimer,
     PlacedControl,
@@ -292,6 +293,87 @@ class TestPlacementHelpers(unittest.TestCase):
         self.assertEqual("unlabeled", placed[1].name)
         self.assertEqual(0, labeled.tab_index)
         self.assertEqual(-1, unlabeled.tab_index)
+
+
+class _StubWindowFeature:
+    def __init__(self, window):
+        self.window = window
+
+
+class _StubRaiseParent:
+    def __init__(self, children):
+        self.children = list(children)
+
+    def _raise_window(self, window):
+        if window in self.children:
+            self.children.remove(window)
+            self.children.append(window)
+
+
+class _StubWindowNode:
+    def __init__(self, control_id: str, *, visible: bool = True):
+        self.control_id = str(control_id)
+        self.visible = bool(visible)
+        self.parent = None
+        self.window_effects = {
+            "shear_enabled": True,
+            "hide_show_enabled": False,
+            "grow_shrink_enabled": False,
+        }
+
+
+class _StubAppForRaiseRelayout:
+    def __init__(self):
+        self.calls = []
+
+    @staticmethod
+    def is_window_tiling_enabled() -> bool:
+        return True
+
+    def tile_windows(
+        self,
+        newly_visible=None,
+        *,
+        raised_windows=None,
+        as_visibility_event: bool = False,
+        force: bool = False,
+    ):
+        self.calls.append(
+            {
+                "newly_visible": newly_visible,
+                "raised_windows": raised_windows,
+                "as_visibility_event": bool(as_visibility_event),
+                "force": bool(force),
+            }
+        )
+
+
+class _StubHostForPresentation:
+    def __init__(self, app, feature_attr_name: str, feature_obj):
+        self.app = app
+        setattr(self, feature_attr_name, feature_obj)
+
+
+class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
+    def test_show_visible_window_relayout_uses_raised_window_hint(self):
+        app = _StubAppForRaiseRelayout()
+
+        raised_window = _StubWindowNode("raised_window", visible=True)
+        other_window = _StubWindowNode("other_window", visible=True)
+        parent = _StubRaiseParent([raised_window, other_window])
+        raised_window.parent = parent
+        other_window.parent = parent
+
+        host = _StubHostForPresentation(app, "life_feature", _StubWindowFeature(raised_window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window("life", feature_attribute_name="life_feature")
+
+        model.show("life")
+
+        self.assertIs(parent.children[-1], raised_window)
+        self.assertGreaterEqual(len(app.calls), 1)
+        self.assertEqual((raised_window,), app.calls[-1]["raised_windows"])
+        self.assertTrue(bool(app.calls[-1]["as_visibility_event"]))
 
 
 if __name__ == "__main__":
