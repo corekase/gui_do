@@ -29,10 +29,6 @@ from .feature_lifecycle import (
 )
 from .runtime_helpers import (
     apply_accessibility_sequence as _apply_accessibility_sequence,
-    apply_accessibility_sequence_from_attrs as _apply_accessibility_sequence_from_attrs,
-    initialize_locale_registry as _initialize_locale_registry,
-    bind_input_map_actions as _bind_input_map_actions,
-    register_descriptors as _register_descriptors,
     resolve_canvas_local_point as _resolve_canvas_local_point,
     apply_runtime_scene_pristine_assets as _apply_runtime_scene_pristine_assets,
     bind_runtime_scene_exit_keys as _bind_runtime_scene_exit_keys,
@@ -112,14 +108,12 @@ from .runtime_routed_helpers import (
 )
 from .runtime_window_toggle_helpers import (
     add_task_panel_window_toggle_group as _add_task_panel_window_toggle_group,
-    add_window_toggle_task_panel_controls as _add_window_toggle_task_panel_controls,
     apply_window_toggle_accessibility as _apply_window_toggle_accessibility,
     collect_window_toggle_controls as _collect_window_toggle_controls,
     register_window_toggle_tooltips as _register_window_toggle_tooltips,
     sorted_window_bindings as _sorted_window_bindings,
 )
 from .runtime_task_panel_helpers import (
-    add_right_anchored_task_panel_button as _add_right_anchored_task_panel_button,
     add_task_panel_button as _add_task_panel_button,
     add_task_panel_buttons as _add_task_panel_buttons,
 )
@@ -1053,23 +1047,23 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     # 13 – Build features, sync visibility, pristine assets, standard actions
     host.app.build_features(host)
     host.window_presentation.sync_initial_visibility()
-    apply_runtime_scene_pristine_assets(host.app, config.runtime_scene_specs)
+    _apply_runtime_scene_pristine_assets(host.app, config.runtime_scene_specs)
     # Register window-presentation toggle handlers on the app-level action dispatcher
     # so they are callable by name (e.g. from the command palette selection path).
     if host.app.actions is not None:
         for _name, _cb in host.window_presentation.action_callbacks().items():
             host.app.actions.register_action(_name, lambda _ev, _f=_cb: (_f() or True))
-    bind_runtime_scene_exit_keys(
+    _bind_runtime_scene_exit_keys(
         host.app.actions,
         config.runtime_scene_specs,
         key=pygame.K_ESCAPE,
         action_name="exit",
     )
     host.app.bind_features_runtime(host)
-    prewarm_runtime_scenes(host.app, config.runtime_scene_specs)
+    _prewarm_runtime_scenes(host.app, config.runtime_scene_specs)
 
     # 14 – Accessibility metadata
-    window_toggle_controls = collect_window_toggle_controls(host, host.window_presentation)
+    window_toggle_controls = _collect_window_toggle_controls(host, host.window_presentation)
     base_controls = build_host_main_tab_order(host, window_toggle_controls)
     apply_host_main_accessibility(host, base_controls, config.static_accessibility_specs)
 
@@ -1301,16 +1295,6 @@ def add_menu_strip_from_spec(container, host, spec: MenuStripSpec):
     return menu_strip
 
 
-def apply_accessibility_sequence(items, tab_index_start: int) -> int:
-    """Apply sequential tab order and accessibility metadata to controls."""
-    return _apply_accessibility_sequence(items, tab_index_start)
-
-
-def apply_accessibility_sequence_from_attrs(target, specs: Sequence[AccessibilitySequenceSpec], tab_index_start: int) -> int:
-    """Apply sequential accessibility/tab-order metadata using target attribute names."""
-    return _apply_accessibility_sequence_from_attrs(target, specs, tab_index_start)
-
-
 def register_companion_logic_features(feature_manager, host, providers) -> None:
     """Register companion logic features for a routed/direct feature."""
     for provider in providers:
@@ -1326,43 +1310,9 @@ def ensure_scene_scheduler(feature, host, *, scene_name: str = "main", attr_name
     return scheduler
 
 
-def sorted_window_bindings(bindings):
-    """Return feature-window bindings ordered by explicit slot then declaration order."""
-    return _sorted_window_bindings(bindings)
-
-
-def collect_window_toggle_controls(host, window_presentation):
-    """Return sorted (binding, control) pairs for all available window toggles on host."""
-    return _collect_window_toggle_controls(host, window_presentation)
-
-
 def apply_window_toggle_accessibility(host, window_presentation, *, role: str = "toggle") -> None:
     """Apply accessibility metadata for all window toggle controls declared by bindings."""
     _apply_window_toggle_accessibility(host, window_presentation, role=role)
-
-
-def add_window_toggle_task_panel_controls(
-    host,
-    task_panel,
-    app_layout,
-    window_presentation,
-    *,
-    attr_owner=None,
-    flow_start_slot: int = 0,
-    flow_slot_assignments: Mapping[str, int] | None = None,
-    panel_rect_overrides: Mapping[str, Rect | tuple[int, int, int, int]] | None = None,
-):
-    """Create window toggle controls on the task panel from declarative bindings."""
-    return _add_window_toggle_task_panel_controls(
-        host,
-        task_panel,
-        app_layout,
-        window_presentation,
-        attr_owner=attr_owner,
-        flow_start_slot=flow_start_slot,
-        flow_slot_assignments=flow_slot_assignments,
-        panel_rect_overrides=panel_rect_overrides,
-    )
 
 
 def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
@@ -1370,36 +1320,6 @@ def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
     _register_window_toggle_tooltips(tooltip_manager, toggle_controls)
 
 
-def add_task_panel_window_toggle_group(
-    host,
-    task_panel,
-    app_layout,
-    window_presentation,
-    spec: "TaskPanelWindowToggleGroupSpec",
-    *,
-    attr_owner=None,
-    flow_slot_assignments: Mapping[str, int] | None = None,
-    panel_rect_overrides: Mapping[str, Rect | tuple[int, int, int, int]] | None = None,
-) -> list:
-    """Create window toggle controls from a declarative ``TaskPanelWindowToggleGroupSpec``.
-
-    This is the canonical spec-driven alternative to calling
-    ``add_window_toggle_task_panel_controls`` directly.
-
-    Returns the same ``list[(binding, toggle)]`` structure as
-    ``add_window_toggle_task_panel_controls`` so callers can pass the result to
-    ``register_window_toggle_tooltips`` or accessibility helpers.
-    """
-    return _add_task_panel_window_toggle_group(
-        host,
-        task_panel,
-        app_layout,
-        window_presentation,
-        spec,
-        attr_owner=attr_owner,
-        flow_slot_assignments=flow_slot_assignments,
-        panel_rect_overrides=panel_rect_overrides,
-    )
 
 
 def _resolve_pointer_activation_pos(event, app):
@@ -1460,65 +1380,6 @@ def setup_scene_command_palette_bindings(app, palette_manager, spec: "SceneComma
         app_actions.bind_global_pointer_button(int(spec.action.pointer_button), action_action_name, scene=spec.scene_name)
 
 
-def initialize_locale_registry(tables, *, initial_locale: str) -> LocaleRegistry:
-    """Create a LocaleRegistry, register all tables, and select the initial locale."""
-    return _initialize_locale_registry(tables, initial_locale=initial_locale)
-
-
-def bind_input_map_actions(input_map, bindings, *, mod: int = 0) -> None:
-    """Bind multiple (key, action) pairs on an InputMap using a shared modifier."""
-    _bind_input_map_actions(input_map, bindings, mod=mod)
-
-
-def register_descriptors(registry, owner_class, descriptors) -> None:
-    """Register a sequence of property descriptors for a given owner class."""
-    _register_descriptors(registry, owner_class, descriptors)
-
-
-def resolve_canvas_local_point(packet, canvas_rect: Rect):
-    """Resolve packet coordinates to canvas-local space, if available."""
-    return _resolve_canvas_local_point(packet, canvas_rect)
-
-
-def apply_runtime_scene_pristine_assets(app, runtime_scene_specs) -> None:
-    """Apply configured pristine assets to runtime scenes from declarative specs."""
-    _apply_runtime_scene_pristine_assets(app, runtime_scene_specs)
-
-
-def bind_runtime_scene_exit_keys(actions, runtime_scene_specs, *, key, action_name: str = "exit") -> None:
-    """Bind a shared exit action key for all runtime scenes that opt in."""
-    _bind_runtime_scene_exit_keys(actions, runtime_scene_specs, key=key, action_name=action_name)
-
-
-def prewarm_runtime_scenes(app, runtime_scene_specs) -> None:
-    """Prewarm runtime scenes that opt in via declarative scene specs."""
-    _prewarm_runtime_scenes(app, runtime_scene_specs)
-
-
-def add_task_panel_button(
-    task_panel,
-    app_layout,
-    *,
-    control_id: str,
-    slot_index: int,
-    label: str,
-    on_click,
-    style: str = "angle",
-    assign_tab_index: bool = True,
-):
-    """Create and add a standard task-panel button positioned by slot index."""
-    return _add_task_panel_button(
-        task_panel,
-        app_layout,
-        control_id=control_id,
-        slot_index=slot_index,
-        label=label,
-        on_click=on_click,
-        style=style,
-        assign_tab_index=assign_tab_index,
-    )
-
-
 def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPanelButtonSpec]):
     """Create and assign host-owned task-panel buttons from declarative specs."""
     _add_task_panel_buttons(
@@ -1526,13 +1387,8 @@ def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPan
         task_panel,
         app_layout,
         specs,
-        add_task_panel_button_fn=add_task_panel_button,
+        add_task_panel_button_fn=_add_task_panel_button,
     )
-
-
-def add_right_anchored_task_panel_button(host, task_panel, spec: RightAnchoredTaskPanelButtonSpec):
-    """Create one task-panel button anchored to the panel's right edge."""
-    return _add_right_anchored_task_panel_button(host, task_panel, spec)
 
 
 def register_tooltip_specs(tooltip_manager, specs) -> None:
@@ -1841,7 +1697,7 @@ def _resolve_scene_navigation_callback(host, spec: TaskPanelSceneNavButtonSpec):
 def add_task_panel_scene_nav_button(task_panel, app_layout, host, spec: TaskPanelSceneNavButtonSpec):
     """Add a scene-navigation button to a task panel from declarative spec."""
     resolved_slot_index = 0 if spec.slot_index is None else int(spec.slot_index)
-    button = add_task_panel_button(
+    button = _add_task_panel_button(
         task_panel,
         app_layout,
         control_id=str(spec.control_id),
@@ -1895,7 +1751,7 @@ def add_scene_task_panel_items(
     for spec in button_specs:
         slot = _claim_slot(spec.slot_index)
         resolved_button_slots[str(spec.attr_name)] = slot
-        button = add_task_panel_button(
+        button = _add_task_panel_button(
             task_panel,
             app_layout,
             control_id=spec.control_id,
@@ -1940,7 +1796,7 @@ def add_scene_task_panel_items(
 
     window_toggle_controls = []
     if effective_window_toggle_group_spec is not None and window_presentation is not None:
-        window_toggle_controls = add_task_panel_window_toggle_group(
+        window_toggle_controls = _add_task_panel_window_toggle_group(
             host,
             task_panel,
             app_layout,
@@ -1985,7 +1841,7 @@ def add_scene_task_panel_items(
             ordered_items.append((int(slot_index), control, "toggle", str(label)))
         ordered_items.sort(key=lambda x: x[0])
         items = [(control, role, label) for _slot, control, role, label in ordered_items]
-        apply_accessibility_sequence(items, int(tab_sequence_start))
+        _apply_accessibility_sequence(items, int(tab_sequence_start))
 
     return SceneTaskPanelItemsResult(
         scene_nav_buttons=tuple(scene_nav_buttons),

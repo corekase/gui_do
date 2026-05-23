@@ -9,9 +9,9 @@ import pygame
 from pygame import Rect
 
 from gui_do import LabelControl, PanelControl, TooltipManager, WindowControl
+from gui_do.features.runtime_task_panel_helpers import add_right_anchored_task_panel_button
 from gui_do.features.data_driven_runtime import (
     RightAnchoredTaskPanelButtonSpec,
-    add_right_anchored_task_panel_button,
     add_menu_strip_from_spec,
     create_auto_sized_styled_label,
     register_tooltip_attr_specs,

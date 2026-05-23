@@ -1768,22 +1768,6 @@ class GuiApplication:
         """Send dictionary message between registered features by name."""
         return self.features.send_message(sender_name, target_feature_name, message)
 
-    def bind_feature_logic(self, consumer_feature_name: str, logic_feature_name: str, *, alias: str = "default") -> None:
-        """Bind a consumer Feature to a LogicFeature provider under an alias."""
-        self.features.bind_logic(consumer_feature_name, logic_feature_name, alias=alias)
-
-    def unbind_feature_logic(self, consumer_feature_name: str, *, alias: str = "default") -> bool:
-        """Remove one logic binding alias from a consumer Feature."""
-        return self.features.unbind_logic(consumer_feature_name, alias=alias)
-
-    def get_feature_logic(self, consumer_feature_name: str, *, alias: str = "default"):
-        """Return a bound LogicFeature provider name for a consumer alias, or None."""
-        return self.features.bound_logic_name(consumer_feature_name, alias=alias)
-
-    def send_feature_logic_message(self, consumer_feature_name: str, message: dict, *, alias: str = "default") -> bool:
-        """Send a message from a consumer Feature to its bound LogicFeature alias."""
-        return self.features.send_logic_message(consumer_feature_name, message, alias=alias)
-
     def register_feature_runnable(self, feature_name: str, runnable_name: str, runnable) -> None:
         """Register a callable runnable under a registered feature name."""
         self.features.register_runnable(feature_name, runnable_name, runnable)

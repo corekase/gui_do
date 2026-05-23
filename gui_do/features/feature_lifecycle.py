@@ -6,17 +6,10 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
 from collections.abc import Mapping
 from .font_role_setup import setup_standard_font_roles as setup_standard_font_roles
 from .lifecycle_models import FrameTimer as FrameTimer, PlacedControl
-from .lifecycle_layout_helpers import calculate_grid_layout as _calculate_grid_layout
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Deque
     from typing import Any, Optional, Dict, List
-
-def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):
-    """
-    Return a list of (x, y, w, h) tuples for a grid layout anchored at (x, y).
-    """
-    return _calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap)
 
 from ..controls.chrome.menu_bar_control import (
     ContextMenuItem,

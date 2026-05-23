@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from pygame import Rect
 
-from gui_do.features.data_driven_runtime import resolve_canvas_local_point
+from gui_do.features.runtime_helpers import resolve_canvas_local_point
 
 from .life_logic_feature import LifeLogicFeature
 from .life_specs import LIFE_KEY_COMMAND, LIFE_KEY_TOPIC, LIFE_LOGIC_TOPIC

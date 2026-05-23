@@ -3,9 +3,7 @@ import unittest
 import pygame
 from pygame import Rect
 
-from gui_do.features.feature_lifecycle import (
-    calculate_grid_layout,
-)
+from gui_do.features.lifecycle_layout_helpers import calculate_grid_layout
 from gui_do.features.layout_geometry import (
     inset_rect,
     centered_horizontal_strip_layout,

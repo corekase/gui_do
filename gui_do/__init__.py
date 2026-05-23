@@ -506,29 +506,33 @@ from .features.feature_lifecycle import (
     ControlRegistry,
 )
 from .features.layout_geometry import split_slot_bounds
+from .features.runtime_helpers import resolve_canvas_local_point
+from .features.runtime_helpers import (
+    apply_accessibility_sequence,
+    apply_accessibility_sequence_from_attrs,
+    initialize_locale_registry,
+    bind_input_map_actions,
+    register_descriptors,
+    apply_runtime_scene_pristine_assets,
+    bind_runtime_scene_exit_keys,
+    prewarm_runtime_scenes,
+)
+from .features.runtime_window_toggle_helpers import (
+    sorted_window_bindings,
+    collect_window_toggle_controls,
+    add_window_toggle_task_panel_controls,
+    add_task_panel_window_toggle_group,
+)
+from .features.runtime_task_panel_helpers import add_task_panel_button
 from .features.data_driven_runtime import (
     build_tools_menu_entries,
     add_standard_menu_strip,
     add_menu_strip_from_spec,
-    apply_accessibility_sequence,
-    apply_accessibility_sequence_from_attrs,
     register_companion_logic_features,
     ensure_scene_scheduler,
-    sorted_window_bindings,
-    collect_window_toggle_controls,
     apply_window_toggle_accessibility,
-    add_window_toggle_task_panel_controls,
-    add_task_panel_window_toggle_group,
     setup_scene_command_palette_bindings,
     register_window_toggle_tooltips,
-    initialize_locale_registry,
-    bind_input_map_actions,
-    register_descriptors,
-    resolve_canvas_local_point,
-    apply_runtime_scene_pristine_assets,
-    bind_runtime_scene_exit_keys,
-    prewarm_runtime_scenes,
-    add_task_panel_button,
     add_task_panel_buttons,
     register_tooltip_specs,
     register_action_hotkeys,
