@@ -177,6 +177,7 @@ class WindowTitlebarControlsSpec:
 
     include_window_lower_button: bool = True
     include_window_hide_image_button: bool = True
+    menus_enabled: bool = True
 
 
 @dataclass(frozen=True)

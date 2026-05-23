@@ -216,6 +216,7 @@ MAIN_TASK_PANEL_WINDOW_TOGGLE_GROUP_SPEC = TaskPanelWindowToggleGroupSpec(
 
 MAIN_OPT_OUT_TEST_WINDOW_TITLEBAR_CONTROLS = WindowTitlebarControlsSpec(
     include_window_hide_image_button=False,
+    menus_enabled=False,
 )
 
 MAIN_OPT_OUT_TEST_WINDOW_VISIBLE = True
