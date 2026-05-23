@@ -4,105 +4,141 @@
 
 ---
 
-<a href="https://www.youtube.com/watch?v=JLnkEEAQ43Q"><img src="https://img.youtube.com/vi/JLnkEEAQ43Q/0.jpg" alt="Demo Video"></img></a>
+<a href="https://www.youtube.com/watch?v=m_zNl7tcQlQ"><img src="https://img.youtube.com/vi/m_zNl7tcQlQ/0.jpg" alt="Demo Video"></img></a>
 
 ---
 
 ## Overview
 
-gui_do is a data-driven GUI runtime for building scene-based desktop apps with predictable behavior and testable contracts. You declare features, scenes, windows, actions, and optional runtime facilities, then let `bootstrap_host_application` wire them into a coherent host application.
+gui_do is an architecture-first pygame GUI framework designed for deterministic behavior, scene isolation, and feature-level composition. It is built for teams that want explicit runtime contracts, stable public APIs, and a clear path from small prototypes to larger multi-scene applications.
 
-If you want deep system details, use MANUAL.md. If you want a guided build path, use TUTORIAL.md.
+This repository ships with a layered public API at the package root, a complete demo composed under demo_features, and contract-driven docs/tests that keep behavior and docs aligned.
 
 ## Strengths
 
-- Declarative host assembly through `HostApplicationBindingSpec`, scene bundles, and runtime scene specs.
-- Strong lifecycle model with `Feature`, `LogicFeature`, `RoutedFeature`, and runtime-owned cleanup hooks.
-- Reactive data primitives (`ObservableValue`, collection views, bindings, and state store utilities) for predictable UI updates.
-- Rich runtime systems spanning events, actions, focus, scheduling, layout, overlays, controls, forms, persistence, graphics, telemetry, and accessibility.
-- Explicit operating contracts for determinism, optional-facility behavior, bounded scheduling budgets, and restore diagnostics.
+- Data-driven bootstrap: declare scenes, features, actions, windows, and palette behavior with specs.
+- Strong runtime contracts: deterministic event ordering, explicit optional facilities, and scheduler budget bounds.
+- Clear lifecycle boundaries: features own runtime wiring and teardown.
+- Broad systems coverage from one surface: controls, overlays, layout, animation, persistence, telemetry, forms, and dataflow.
+- Practical reference assets: MANUAL.md, architecture docs, and a full demo package layout.
 
 ## Use Cases
 
-- Multi-scene productivity or operations tools with keyboard-driven workflows.
-- Rich data and control surfaces using windows, overlays, command palettes, and docked chrome.
-- Test-heavy GUI systems where lifecycle safety, deterministic routing, and docs-backed contracts matter.
-- Demo-style feature composition where each feature lives in its own package and exposes a clean package root.
+- Desktop control surfaces where predictable input routing and scene switching matter.
+- Tooling dashboards that combine windows, command palettes, and task-panel workflows.
+- Data-heavy editors that benefit from explicit state, observables, and runtime policies.
+- Learning projects that want a single framework covering controls, overlays, scheduling, and persistence.
 
 ## Quick Look
 
-A minimal runnable entrypoint can be as small as this:
+Minimal runnable bootstrap using verified root imports:
 
 ```python
-#!/usr/bin/env python3
-from gui_do import bootstrap_host_application
+from gui_do import (
+    ActionBindingSpec,
+    Feature,
+    FeatureSpec,
+    HostApplicationBindingSpec,
+    RuntimeSceneSpec,
+    SceneSetupSpec,
+    bootstrap_host_application,
+    build_host_application_config,
+)
 
-from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
 
-
-class GuiDoDemo:
+class CounterFeature(Feature):
     def __init__(self) -> None:
-        bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
+        super().__init__("counter", scene_name="main")
+        self.ticks = 0
+
+    def on_update(self, host) -> None:
+        self.ticks += 1
+
+
+class QuickStartHost:
+    def __init__(self) -> None:
+        config = build_host_application_config(
+            HostApplicationBindingSpec(
+                display_size=(1280, 720),
+                window_title="gui_do quick look",
+                fonts={"default": None},
+                initial_scene_name="main",
+                scene_entries=(
+                    SceneSetupSpec(name="main", pretty_name="Main", make_initial=True),
+                ),
+                runtime_scene_entries=(
+                    RuntimeSceneSpec(scene_name="main"),
+                ),
+                feature_entries=(
+                    FeatureSpec(attr_name="counter_feature", factory=CounterFeature),
+                ),
+                action_entries=(
+                    ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+                ),
+                target_fps=60,
+            )
+        )
+        bootstrap_host_application(self, config)
 
 
 if __name__ == "__main__":
-    GuiDoDemo().app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
+    QuickStartHost().app.run_entrypoint(target_fps=60)
 ```
 
-The pattern is intentionally compact. Keep your entrypoint thin, keep composition declarative, and keep feature behavior inside feature classes.
+For a complete build path, follow TUTORIAL.md and use MANUAL.md for deep system details.
 
 ## Documentation
 
-| What you need | Where to go | Why |
-|---|---|---|
-| Quick orientation and setup | TUTORIAL.md | Step-by-step project walkthrough with runnable milestones |
-| Runtime model and deep system details | MANUAL.md | Full conceptual and operational reference |
-| Runtime operating guarantees | docs/runtime_operating_contracts.md | Determinism, safety rails, and release-gate behavior |
-| Architecture boundaries | docs/architecture.md and docs/architecture_boundary_spec.md | Framework/demo separation and subsystem boundaries |
+Start here based on your goal:
 
-Recommended path:
-1. Read TUTORIAL.md first.
-2. Use MANUAL.md sections 5 to 10 for deeper concept and system understanding.
-3. Use MANUAL.md appendix sections for spec-level details when building advanced flows.
+| Goal | Document |
+| --- | --- |
+| Build your first complete app step by step | [TUTORIAL.md](TUTORIAL.md) |
+| Deep reference for runtime systems, architecture, and specs | [MANUAL.md](MANUAL.md) |
+| Runtime guarantees and operating contracts | [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md) |
+| Architectural boundaries and package contracts | [docs/architecture.md](docs/architecture.md) |
+
+Suggested path:
+
+1. Read [TUTORIAL.md](TUTORIAL.md) end to end.
+2. Jump into [MANUAL.md](MANUAL.md#main-systems-reference) when you need subsystem-level depth.
+3. Validate runtime assumptions against [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md).
 
 ## Installation
 
-From the repository root:
+This project uses editable installation with no dependency auto-install:
 
 ```bash
 python -m pip install -e . --no-deps
 ```
 
-Because editable install is intentionally run with `--no-deps` (to avoid problematic binary dependency builds on Windows), install runtime dependencies manually:
+Because --no-deps skips dependency installation, install runtime dependencies manually:
 
-```bash
-python -m pip install pygame numpy
-```
+- pygame>=2.0
+- numpy>=1.24
 
-Then run the demo:
+If you also want CI/test tooling locally, these are discovered in repository dependency files:
 
-```bash
-python gui_do_demo.py
-```
+- coverage
+
+Manual dependency installation is intentional here because building binary dependencies can be problematic on Windows, and explicit installation gives you tighter control over versions and wheel/source behavior.
 
 ## Project Structure
 
-- `gui_do/`: public framework package and runtime systems.
-- `demo_features/`: consumer-side demo features organized one package per feature/scene.
-- `demo_features/data/`: demo assets (fonts, images, cursors, sounds).
-- `docs/`: architecture and contract documentation.
-- `tests/`: behavior and contract test suite.
-- `gui_do_demo.py`: bootstrap entrypoint that consumes `gui_do` as a package client.
+Top-level layout at a glance:
 
-Feature-package convention in `demo_features/`:
-- One folder package per feature (`main`, `life`, `systems`, `mandelbrot`, `moving_shapes`, `showcase`).
-- Package-root `__init__.py` provides package metadata/public surface.
-- Internal modules remain focused by concern (feature class, specs, helpers, presenters).
-- Cross-feature imports should target package roots, not internal submodules.
+- gui_do/: framework source and public root exports.
+- demo_features/: demo composition packages (main, life, mandelbrot, moving_shapes, showcase, systems) plus shared demo data/config.
+- docs/: architecture, contracts, and specification references.
+- tests/: contract and behavior coverage across runtime systems.
+- gui_do_demo.py: demo entrypoint using declarative bootstrap config.
+
+demo_features follows a package-per-feature convention with package-root __init__.py as each feature package's public surface, and internal concerns split across focused modules.
 
 ## See Also
 
-- TUTORIAL.md
-- MANUAL.md
-- docs/runtime_operating_contracts.md
-- docs/library_demo_separation_contract.md
+- [TUTORIAL.md](TUTORIAL.md)
+- [MANUAL.md](MANUAL.md)
+- [MANUAL.md: Main Systems Reference](MANUAL.md#main-systems-reference)
+- [MANUAL.md: Feature Organization Conventions](MANUAL.md#feature-organization-conventions)
+- [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md)

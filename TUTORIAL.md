@@ -1,709 +1,726 @@
-# gui_do Tutorial
+# Introduction
 
-## Introduction
+This tutorial builds one continuous gui_do project from start to finish: a keyboard-driven task tracker with two features.
 
-This tutorial builds one continuous project, start to finish, using the current public `gui_do` root API.
+You will learn how to:
 
-Project goal: create a small scene-based app called Pulse Desk with:
-- one feature that owns reactive counter state,
-- one feature that reacts to that state,
-- keyboard actions for fast interaction,
-- declarative bootstrap config that stays readable as the project grows.
+1. Bootstrap a host app from declarative specs.
+2. Build features with lifecycle-owned runtime wiring.
+3. Add reactive state with cleanup-safe subscriptions.
+4. Connect features with message routing.
+5. Register actions and keyboard shortcuts with routed runtime specs.
 
-You will learn both how and why the workflow is designed this way:
-- How: concrete file layout, imports, specs, and feature lifecycle methods.
-- Why: deterministic runtime routing, declarative composition, and cleanup-safe behavior.
+The tutorial focuses on practical implementation and why each design choice is made. For deeper subsystem reference, use [MANUAL.md](MANUAL.md), especially [Main Systems Reference](MANUAL.md#main-systems-reference) and [Architecture and Runtime Model](MANUAL.md#architecture-and-runtime-model).
 
-For deeper system details while you work, keep these manual sections open:
-- Runtime model: [MANUAL.md#7-architecture-and-runtime-model](MANUAL.md#7-architecture-and-runtime-model)
-- Build/bind/update flow: [MANUAL.md#8-core-workflow-build-bind-route-update-draw](MANUAL.md#8-core-workflow-build-bind-route-update-draw)
-- Main systems reference: [MANUAL.md#9-main-systems-reference](MANUAL.md#9-main-systems-reference)
-- Specifications reference: [MANUAL.md#appendix-f-specifications-and-option-reference](MANUAL.md#appendix-f-specifications-and-option-reference)
+# Core Concepts
 
-## Core Concepts
+Before writing code, lock in the mental model:
 
-Before writing code, lock in four ideas.
+1. Declarative wiring: host composition is described by specs like SceneSetupSpec, RuntimeSceneSpec, FeatureSpec, and ActionBindingSpec.
+2. Imperative behavior: feature classes own runtime behavior (on_update, message handling, actions).
+3. Lifecycle ownership: setup_routed_runtime and shutdown_routed_runtime define where subscriptions and registrations should live and die.
+4. Scene isolation: runtime behavior is scoped per scene; optional facilities only exist when declared.
+5. Stable API surface: import from gui_do package root, not submodules.
 
-1. Declarative wiring versus imperative behavior.
-- Declarative wiring: use specs (`HostApplicationBindingSpec`, scene/window/action specs, palette specs) to describe runtime structure.
-- Imperative behavior: put live logic inside feature methods (`build`, `bind_runtime`, `on_update`, `shutdown_runtime`).
-- Why this split matters: the app remains easy to reason about when structure and behavior are separated.
+These concepts map directly to runtime contracts documented in [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md) and system chapters in [MANUAL.md](MANUAL.md#main-systems-reference).
 
-2. Feature lifecycle ownership.
-- `build` is for object creation and initial model setup.
-- `bind_runtime` is for subscriptions and runtime connections.
-- `shutdown_runtime` is for deterministic cleanup.
-- Why this matters: cleanup is a contract, not a best-effort guess.
+# Installation and Setup
 
-3. Scene-scoped optional facilities.
-- Menu strip, task panel, and command palette are opt-in by spec.
-- They exist only when declared.
-- Why this matters: runtime shape stays explicit and testable.
-
-4. Runtime contracts are practical, not academic.
-- Events are normalized before app-level dispatch.
-- Scheduler work is bounded by fixed budget rails.
-- Workspace restore/report behavior is structured and observable.
-- Why this matters: large apps stay predictable under load and easier to diagnose.
-
-See operating details in [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md).
-
-## Installation and Setup
-
-From the repository root:
+Install the project in editable mode without automatic dependency installation:
 
 ```bash
 python -m pip install -e . --no-deps
 ```
 
-Because editable install is intentionally run with `--no-deps` (to avoid problematic binary dependency builds on Windows), install runtime dependencies manually:
+Because --no-deps skips dependency installation, install discovered runtime dependencies manually:
 
-```bash
-python -m pip install pygame numpy
-```
+- pygame>=2.0
+- numpy>=1.24
 
-Create a tutorial workspace folder inside the repo:
+Optional local CI/test tooling discovered from repository dependency files:
+
+- coverage
+
+Why manual dependencies are called out explicitly: binary dependency builds can be problematic on Windows, so controlling dependency installation directly helps you avoid unexpected build-toolchain issues.
+
+Create a folder for tutorial files:
 
 ```text
-tutorial_pulse_desk/
-  __init__.py
-  features.py
-  config.py
-  main.py
+tutorial_project/
+  app.py
+  tasks_feature.py
 ```
 
-Run with:
+# Your First Feature
 
-```bash
-python -m tutorial_pulse_desk.main
-```
+We start with one feature that tracks the number of created tasks.
 
-If your local environment does not already provide runtime dependencies like `pygame`, install the missing dependency in your environment before running.
-
-## Your First Feature
-
-Start with one feature that owns a counter value and prints updates. This first pass proves lifecycle wiring and app bootstrap.
-
-Create [tutorial_pulse_desk/features.py](tutorial_pulse_desk/features.py):
+Create tutorial_project/tasks_feature.py:
 
 ```python
-from __future__ import annotations
-
-from gui_do import Feature, ObservableValue
+from gui_do import RoutedFeature, RoutedRuntimeSpec, setup_routed_runtime, shutdown_routed_runtime
 
 
-class CounterFeature(Feature):
+class TasksFeature(RoutedFeature):
     def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self._unsubscribe_count = None
-
-    def build(self, host) -> None:
-        self.count.value = 0
+        super().__init__("tasks", scene_name="main")
+        self.task_total = 0
 
     def bind_runtime(self, host) -> None:
-        self._unsubscribe_count = self.count.subscribe(
-            lambda value: print(f"[counter] value={value}")
+        setup_routed_runtime(
+            self,
+            host,
+            RoutedRuntimeSpec(scene_name="main"),
         )
 
-    def increment(self) -> bool:
-        self.count.value += 1
-        return True
-
     def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_count):
-            self._unsubscribe_count()
-            self._unsubscribe_count = None
+        shutdown_routed_runtime(self, host)
+
+    def add_task(self, event=None) -> bool:
+        self.task_total += 1
+        print(f"[tasks] total={self.task_total}")
+        return True
 ```
 
-Now create [tutorial_pulse_desk/config.py](tutorial_pulse_desk/config.py):
+Now wire a host app in tutorial_project/app.py:
 
 ```python
 from gui_do import (
     ActionBindingSpec,
+    FeatureSpec,
     HostApplicationBindingSpec,
-    WindowToggleBindingSpec,
+    RuntimeSceneSpec,
+    SceneSetupSpec,
+    bootstrap_host_application,
     build_host_application_config,
 )
 
-from tutorial_pulse_desk.features import CounterFeature
+from tasks_feature import TasksFeature
 
 
-TUTORIAL_CONFIG = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
-        initial_scene_name="main",
-        scene_entries=(("main", "Main"),),
-        feature_entries=(("_counter_feature", CounterFeature),),
-        window_entries=(
-            WindowToggleBindingSpec("main", "_counter_feature", task_panel_slot_index=1),
-        ),
-        action_entries=(
-            ActionBindingSpec(kind="exit", action_id="exit", label="Exit"),
-        ),
-        static_accessibility_entries=(("exit_button", "Exit"),),
-        target_fps=60,
-    )
-)
-```
-
-Create [tutorial_pulse_desk/main.py](tutorial_pulse_desk/main.py):
-
-```python
-from gui_do import bootstrap_host_application
-
-from tutorial_pulse_desk.config import TUTORIAL_CONFIG
-
-
-class PulseDeskApp:
+class TutorialHost:
     def __init__(self) -> None:
-        bootstrap_host_application(self, TUTORIAL_CONFIG)
+        config = build_host_application_config(
+            HostApplicationBindingSpec(
+                display_size=(1280, 720),
+                window_title="gui_do tutorial project",
+                fonts={"default": None},
+                initial_scene_name="main",
+                scene_entries=(
+                    SceneSetupSpec(name="main", pretty_name="Main", make_initial=True),
+                ),
+                runtime_scene_entries=(
+                    RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),
+                ),
+                feature_entries=(
+                    FeatureSpec(attr_name="tasks_feature", factory=TasksFeature),
+                ),
+                action_entries=(
+                    ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+                ),
+                target_fps=60,
+            )
+        )
+        bootstrap_host_application(self, config)
 
 
 if __name__ == "__main__":
-    PulseDeskApp().app.run_entrypoint(target_fps=TUTORIAL_CONFIG.target_fps)
+    TutorialHost().app.run_entrypoint(target_fps=60)
 ```
 
-Why this milestone matters:
-- You already have declarative host config.
-- You already have lifecycle-safe subscription cleanup.
-- Your app entrypoint stays minimal.
+Why this is the right first milestone:
 
-## Reactive State: Making the UI Respond
+1. You establish scene/runtime declarations up front.
+2. You keep behavior in a feature class instead of global script state.
+3. You get lifecycle-safe runtime setup and teardown from day one.
 
-Now improve the first feature by adding derived text and explicit subscription ownership. This is where reactive patterns become practical.
+For deeper host bootstrapping details, see [MANUAL.md: Application Bootstrap and Host Configuration](MANUAL.md#application-bootstrap-and-host-configuration).
 
-Update [tutorial_pulse_desk/features.py](tutorial_pulse_desk/features.py):
+# Reactive State: Making the UI Respond
+
+Next, convert primitive counters to reactive values so downstream behavior can subscribe safely.
+
+Update tutorial_project/tasks_feature.py:
 
 ```python
-from __future__ import annotations
+from gui_do import (
+    ComputedValue,
+    ObservableValue,
+    RoutedFeature,
+    RoutedRuntimeSpec,
+    setup_routed_runtime,
+    shutdown_routed_runtime,
+)
 
-from gui_do import ComputedValue, Feature, ObservableValue
 
-
-class CounterFeature(Feature):
+class TasksFeature(RoutedFeature):
     def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self.count_label = ComputedValue(lambda: f"Count: {self.count.value}")
-        self._unsubscribe_count = None
-        self._unsubscribe_label = None
-
-    def build(self, host) -> None:
-        self.count.value = 0
+        super().__init__("tasks", scene_name="main")
+        self.task_total = ObservableValue(0)
+        self.completed_total = ObservableValue(0)
+        self.completion_ratio = ComputedValue(
+            lambda: 0.0
+            if self.task_total.value == 0
+            else self.completed_total.value / self.task_total.value
+        )
+        self._unsub_task_total = None
+        self._unsub_completion_ratio = None
 
     def bind_runtime(self, host) -> None:
-        self._unsubscribe_count = self.count.subscribe(
-            lambda value: print(f"[counter] raw value={value}")
-        )
-        self._unsubscribe_label = self.count_label.subscribe(
-            lambda text: print(f"[counter] derived label={text}")
-        )
+        setup_routed_runtime(self, host, RoutedRuntimeSpec(scene_name="main"))
 
-    def increment(self) -> bool:
-        self.count.value += 1
-        return True
-
-    def reset(self) -> bool:
-        self.count.value = 0
-        return True
+        # Subscription cleanup is explicit and lifecycle-owned.
+        self._unsub_task_total = self.task_total.subscribe(self._on_task_total_changed)
+        self._unsub_completion_ratio = self.completion_ratio.subscribe(self._on_completion_ratio_changed)
 
     def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_label):
-            self._unsubscribe_label()
-            self._unsubscribe_label = None
-        if callable(self._unsubscribe_count):
-            self._unsubscribe_count()
-            self._unsubscribe_count = None
+        if callable(self._unsub_task_total):
+            self._unsub_task_total()
+            self._unsub_task_total = None
+        if callable(self._unsub_completion_ratio):
+            self._unsub_completion_ratio()
+            self._unsub_completion_ratio = None
+        shutdown_routed_runtime(self, host)
+
+    def add_task(self, event=None) -> bool:
+        self.task_total.value = self.task_total.value + 1
+        return True
+
+    def complete_task(self, event=None) -> bool:
+        if self.task_total.value == 0:
+            return False
+        self.completed_total.value = min(self.completed_total.value + 1, self.task_total.value)
+        return True
+
+    def _on_task_total_changed(self, value: int) -> None:
+        print(f"[tasks] task_total={value}")
+
+    def _on_completion_ratio_changed(self, value: float) -> None:
+        print(f"[tasks] completion_ratio={value:.2f}")
 ```
 
-Why this is the preferred pattern:
-- Use `ObservableValue` for mutable source-of-truth state.
-- Use `ComputedValue` for read-only projection logic.
-- Keep every subscription paired with deterministic `shutdown_runtime` cleanup.
+Why this change matters:
 
-Related manual context:
-- [MANUAL.md#94-state-and-observables](MANUAL.md#94-state-and-observables)
-- [MANUAL.md#92-feature-lifecycle-and-feature-types](MANUAL.md#92-feature-lifecycle-and-feature-types)
+1. ObservableValue gives explicit change boundaries.
+2. ComputedValue centralizes derived state instead of duplicating arithmetic.
+3. Stored unsubscribe callables make cleanup behavior obvious during shutdown.
 
-## Feature Types
+For more on reactive data and lifecycle ownership, see [MANUAL.md: State and Observables](MANUAL.md#state-and-observables) and [MANUAL.md: Feature Lifecycle and Feature Types](MANUAL.md#feature-lifecycle-and-feature-types).
 
-As projects grow, choose the feature type by intent:
+# Feature Types
 
-- `Feature`: default for most behavior with explicit lifecycle methods.
-- `LogicFeature`: useful when you need behavior-only units that are not UI surfaces.
-- `RoutedFeature`: best when runtime bindings are largely declarative and you want a routed spec-based lifecycle.
+gui_do exposes four key feature styles for different behavior shapes:
 
-Practical rule:
-- Start with `Feature`.
-- Introduce `LogicFeature` when behavior should be shared or independently testable.
-- Introduce `RoutedFeature` when runtime wiring is becoming repetitive and spec-driven.
+1. Feature: base lifecycle hooks.
+2. DirectFeature: direct event/update/draw integration.
+3. LogicFeature: message-command driven logic.
+4. RoutedFeature: topic-routed message handling plus routed runtime helpers.
 
-Minimal reference example:
+In this project we use RoutedFeature because we want action hotkeys, scoped runtime wiring, and topic-based communication. Keep this practical rule:
+
+1. Start with Feature for simple state-only behavior.
+2. Move to RoutedFeature when you need declarative runtime services, key bindings, or cross-feature messaging.
+3. Use DirectFeature for low-level render loops that intentionally bypass control pipelines.
+4. Use LogicFeature for domain modules that mostly consume command messages.
+
+See [MANUAL.md: Feature Lifecycle and Feature Types](MANUAL.md#feature-lifecycle-and-feature-types) for extended patterns and tradeoffs.
+
+# A Second Feature and Feature Communication
+
+Now add a second feature that listens for task updates from TasksFeature.
+
+Create tutorial_project/stats_feature.py:
 
 ```python
-from gui_do import Feature, LogicFeature, RoutedFeature
+from gui_do import ObservableValue, RoutedFeature, RoutedRuntimeSpec, setup_routed_runtime, shutdown_routed_runtime
 
 
-class BasicFeature(Feature):
-    pass
+class StatsFeature(RoutedFeature):
+    def __init__(self) -> None:
+        super().__init__("stats", scene_name="main")
+        self.summary_line = ObservableValue("No task updates yet.")
+        self._unsub_summary = None
 
+    def bind_runtime(self, host) -> None:
+        setup_routed_runtime(self, host, RoutedRuntimeSpec(scene_name="main"))
+        self._unsub_summary = self.summary_line.subscribe(self._on_summary_changed)
 
-class SharedLogic(LogicFeature):
-    pass
+    def shutdown_runtime(self, host) -> None:
+        if callable(self._unsub_summary):
+            self._unsub_summary()
+            self._unsub_summary = None
+        shutdown_routed_runtime(self, host)
 
+    def message_handlers(self):
+        return {
+            "tasks.changed": self._handle_tasks_changed,
+        }
 
-class RoutedPanel(RoutedFeature):
-    pass
+    def _handle_tasks_changed(self, host, message) -> None:
+        count = int(message.get("count", 0))
+        completed = int(message.get("completed", 0))
+        self.summary_line.value = f"Tasks: {count}, Completed: {completed}"
+
+    def _on_summary_changed(self, line: str) -> None:
+        print(f"[stats] {line}")
 ```
 
-Deep design guidance:
-- [MANUAL.md#92-feature-lifecycle-and-feature-types](MANUAL.md#92-feature-lifecycle-and-feature-types)
-- [MANUAL.md#5-conceptual-foundations](MANUAL.md#5-conceptual-foundations)
-
-## A Second Feature and Feature Communication
-
-Add a second feature that listens to the counter and publishes a summary line. This gives you feature-to-feature communication without tightly coupling internal modules.
-
-Update [tutorial_pulse_desk/features.py](tutorial_pulse_desk/features.py):
+Update tutorial_project/tasks_feature.py to publish messages:
 
 ```python
-from __future__ import annotations
+from gui_do import (
+    ComputedValue,
+    ObservableValue,
+    RoutedFeature,
+    RoutedRuntimeSpec,
+    setup_routed_runtime,
+    shutdown_routed_runtime,
+)
 
-from gui_do import ComputedValue, Feature, ObservableValue
 
-
-class CounterFeature(Feature):
+class TasksFeature(RoutedFeature):
     def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self.count_label = ComputedValue(lambda: f"Count: {self.count.value}")
-        self._unsubscribe_count = None
-        self._unsubscribe_label = None
-
-    def build(self, host) -> None:
-        self.count.value = 0
+        super().__init__("tasks", scene_name="main")
+        self.task_total = ObservableValue(0)
+        self.completed_total = ObservableValue(0)
+        self.completion_ratio = ComputedValue(
+            lambda: 0.0
+            if self.task_total.value == 0
+            else self.completed_total.value / self.task_total.value
+        )
+        self._unsub_task_total = None
+        self._unsub_completion_ratio = None
 
     def bind_runtime(self, host) -> None:
-        self._unsubscribe_count = self.count.subscribe(
-            lambda value: print(f"[counter] raw value={value}")
-        )
-        self._unsubscribe_label = self.count_label.subscribe(
-            lambda text: print(f"[counter] derived label={text}")
-        )
-
-    def increment(self) -> bool:
-        self.count.value += 1
-        return True
-
-    def reset(self) -> bool:
-        self.count.value = 0
-        return True
+        setup_routed_runtime(self, host, RoutedRuntimeSpec(scene_name="main"))
+        self._unsub_task_total = self.task_total.subscribe(self._on_task_total_changed)
+        self._unsub_completion_ratio = self.completion_ratio.subscribe(self._on_completion_ratio_changed)
 
     def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_label):
-            self._unsubscribe_label()
-            self._unsubscribe_label = None
-        if callable(self._unsubscribe_count):
-            self._unsubscribe_count()
-            self._unsubscribe_count = None
+        if callable(self._unsub_task_total):
+            self._unsub_task_total()
+            self._unsub_task_total = None
+        if callable(self._unsub_completion_ratio):
+            self._unsub_completion_ratio()
+            self._unsub_completion_ratio = None
+        shutdown_routed_runtime(self, host)
 
+    def add_task(self, event=None) -> bool:
+        self.task_total.value = self.task_total.value + 1
+        self._publish_counts()
+        return True
 
-class SummaryFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("summary", scene_name="main")
-        self.status = ObservableValue("Summary: waiting for updates")
-        self._unsubscribe_status = None
-        self._unsubscribe_counter = None
+    def complete_task(self, event=None) -> bool:
+        if self.task_total.value == 0:
+            return False
+        self.completed_total.value = min(self.completed_total.value + 1, self.task_total.value)
+        self._publish_counts()
+        return True
 
-    def bind_runtime(self, host) -> None:
-        self._unsubscribe_status = self.status.subscribe(
-            lambda text: print(f"[summary] {text}")
+    def _publish_counts(self) -> None:
+        self.send_message(
+            "stats",
+            {
+                "topic": "tasks.changed",
+                "count": self.task_total.value,
+                "completed": self.completed_total.value,
+            },
         )
 
-        counter = host.app.features.get("counter")
-        if counter is None:
-            return
+    def _on_task_total_changed(self, value: int) -> None:
+        print(f"[tasks] task_total={value}")
 
-        self._unsubscribe_counter = counter.count.subscribe(self._on_counter_changed)
-
-    def _on_counter_changed(self, value: int) -> None:
-        self.status.value = f"Summary: counter changed to {value}"
-
-    def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_counter):
-            self._unsubscribe_counter()
-            self._unsubscribe_counter = None
-        if callable(self._unsubscribe_status):
-            self._unsubscribe_status()
-            self._unsubscribe_status = None
+    def _on_completion_ratio_changed(self, value: float) -> None:
+        print(f"[tasks] completion_ratio={value:.2f}")
 ```
 
-Then update [tutorial_pulse_desk/config.py](tutorial_pulse_desk/config.py) to register both features:
+Update tutorial_project/app.py to register both features:
 
 ```python
 from gui_do import (
     ActionBindingSpec,
+    FeatureSpec,
     HostApplicationBindingSpec,
-    WindowToggleBindingSpec,
+    RuntimeSceneSpec,
+    SceneSetupSpec,
+    bootstrap_host_application,
     build_host_application_config,
 )
 
-from tutorial_pulse_desk.features import CounterFeature, SummaryFeature
+from stats_feature import StatsFeature
+from tasks_feature import TasksFeature
 
 
-TUTORIAL_CONFIG = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
-        initial_scene_name="main",
-        scene_entries=(("main", "Main"),),
-        feature_entries=(
-            ("_counter_feature", CounterFeature),
-            ("_summary_feature", SummaryFeature),
-        ),
-        window_entries=(
-            WindowToggleBindingSpec("main", "_counter_feature", task_panel_slot_index=1),
-            WindowToggleBindingSpec("main", "_summary_feature", task_panel_slot_index=2),
-        ),
-        action_entries=(
-            ActionBindingSpec(kind="exit", action_id="exit", label="Exit"),
-            ActionBindingSpec(
-                kind="palette_toggle",
-                action_id="palette_toggle",
-                label="Toggle Command Palette",
-            ),
-        ),
-        static_accessibility_entries=(("exit_button", "Exit"),),
-        target_fps=60,
-    )
-)
+class TutorialHost:
+    def __init__(self) -> None:
+        config = build_host_application_config(
+            HostApplicationBindingSpec(
+                display_size=(1280, 720),
+                window_title="gui_do tutorial project",
+                fonts={"default": None},
+                initial_scene_name="main",
+                scene_entries=(
+                    SceneSetupSpec(name="main", pretty_name="Main", make_initial=True),
+                ),
+                runtime_scene_entries=(
+                    RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),
+                ),
+                feature_entries=(
+                    FeatureSpec(attr_name="tasks_feature", factory=TasksFeature),
+                    FeatureSpec(attr_name="stats_feature", factory=StatsFeature),
+                ),
+                action_entries=(
+                    ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+                ),
+                target_fps=60,
+            )
+        )
+        bootstrap_host_application(self, config)
+
+
+if __name__ == "__main__":
+    TutorialHost().app.run_entrypoint(target_fps=60)
 ```
 
-Why this communication style works:
-- It keeps each feature self-contained.
-- It uses public lifecycle hooks only.
-- It avoids private imports or hidden runtime dependencies.
+Why this pattern scales:
 
-## Actions and Keyboard Shortcuts
+1. Features keep independent state ownership.
+2. Communication uses stable topic messages instead of direct tight coupling.
+3. Each feature still cleans up its own subscriptions.
 
-Now wire keyboard shortcuts for the counter feature with `ActionHotkeySpec` and `register_action_hotkeys`.
+For architecture context, review [MANUAL.md: Core Workflow: Build, Bind, Route, Update, Draw](MANUAL.md#core-workflow-build-bind-route-update-draw) and [MANUAL.md: Integration Patterns and Composition Recipes](MANUAL.md#integration-patterns-and-composition-recipes).
 
-Update [tutorial_pulse_desk/features.py](tutorial_pulse_desk/features.py) one more time:
+# Actions and Keyboard Shortcuts
+
+Now connect hotkeys so the app is interactive immediately:
+
+1. N adds a task.
+2. D marks one task completed.
+
+Update tutorial_project/tasks_feature.py:
 
 ```python
-from __future__ import annotations
-
 import pygame
 
 from gui_do import (
     ActionHotkeySpec,
     ComputedValue,
-    Feature,
     ObservableValue,
-    register_action_hotkeys,
+    RoutedFeature,
+    RoutedRuntimeSpec,
+    setup_routed_runtime,
+    shutdown_routed_runtime,
 )
 
 
-class CounterFeature(Feature):
+class TasksFeature(RoutedFeature):
     def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self.count_label = ComputedValue(lambda: f"Count: {self.count.value}")
-        self._unsubscribe_count = None
-        self._unsubscribe_label = None
-
-    def build(self, host) -> None:
-        self.count.value = 0
+        super().__init__("tasks", scene_name="main")
+        self.task_total = ObservableValue(0)
+        self.completed_total = ObservableValue(0)
+        self.completion_ratio = ComputedValue(
+            lambda: 0.0
+            if self.task_total.value == 0
+            else self.completed_total.value / self.task_total.value
+        )
+        self._unsub_task_total = None
+        self._unsub_completion_ratio = None
 
     def bind_runtime(self, host) -> None:
-        self._unsubscribe_count = self.count.subscribe(
-            lambda value: print(f"[counter] raw value={value}")
-        )
-        self._unsubscribe_label = self.count_label.subscribe(
-            lambda text: print(f"[counter] derived label={text}")
-        )
-
-        register_action_hotkeys(
-            host.app.actions,
-            (
-                ActionHotkeySpec(
-                    action_name="counter.increment",
-                    handler=lambda _event: self.increment(),
-                    key=pygame.K_F2,
-                    scene_name="main",
-                    global_key=True,
-                ),
-                ActionHotkeySpec(
-                    action_name="counter.reset",
-                    handler=lambda _event: self.reset(),
-                    key=pygame.K_F3,
-                    scene_name="main",
-                    global_key=True,
+        setup_routed_runtime(
+            self,
+            host,
+            RoutedRuntimeSpec(
+                scene_name="main",
+                action_hotkeys=(
+                    ActionHotkeySpec(
+                        action_name="tasks.add",
+                        handler=self.add_task,
+                        key=pygame.K_n,
+                        scene_name="main",
+                        global_key=True,
+                    ),
+                    ActionHotkeySpec(
+                        action_name="tasks.complete",
+                        handler=self.complete_task,
+                        key=pygame.K_d,
+                        scene_name="main",
+                        global_key=True,
+                    ),
                 ),
             ),
         )
-
-    def increment(self) -> bool:
-        self.count.value += 1
-        return True
-
-    def reset(self) -> bool:
-        self.count.value = 0
-        return True
+        self._unsub_task_total = self.task_total.subscribe(self._on_task_total_changed)
+        self._unsub_completion_ratio = self.completion_ratio.subscribe(self._on_completion_ratio_changed)
 
     def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_label):
-            self._unsubscribe_label()
-            self._unsubscribe_label = None
-        if callable(self._unsubscribe_count):
-            self._unsubscribe_count()
-            self._unsubscribe_count = None
+        if callable(self._unsub_task_total):
+            self._unsub_task_total()
+            self._unsub_task_total = None
+        if callable(self._unsub_completion_ratio):
+            self._unsub_completion_ratio()
+            self._unsub_completion_ratio = None
+        shutdown_routed_runtime(self, host)
 
+    def add_task(self, event=None) -> bool:
+        self.task_total.value = self.task_total.value + 1
+        self._publish_counts()
+        return True
 
-class SummaryFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("summary", scene_name="main")
-        self.status = ObservableValue("Summary: waiting for updates")
-        self._unsubscribe_status = None
-        self._unsubscribe_counter = None
+    def complete_task(self, event=None) -> bool:
+        if self.task_total.value == 0:
+            return False
+        self.completed_total.value = min(self.completed_total.value + 1, self.task_total.value)
+        self._publish_counts()
+        return True
 
-    def bind_runtime(self, host) -> None:
-        self._unsubscribe_status = self.status.subscribe(
-            lambda text: print(f"[summary] {text}")
+    def _publish_counts(self) -> None:
+        self.send_message(
+            "stats",
+            {
+                "topic": "tasks.changed",
+                "count": self.task_total.value,
+                "completed": self.completed_total.value,
+            },
         )
 
-        counter = host.app.features.get("counter")
-        if counter is None:
-            return
+    def _on_task_total_changed(self, value: int) -> None:
+        print(f"[tasks] task_total={value}")
 
-        self._unsubscribe_counter = counter.count.subscribe(self._on_counter_changed)
-
-    def _on_counter_changed(self, value: int) -> None:
-        self.status.value = f"Summary: counter changed to {value}"
-
-    def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_counter):
-            self._unsubscribe_counter()
-            self._unsubscribe_counter = None
-        if callable(self._unsubscribe_status):
-            self._unsubscribe_status()
-            self._unsubscribe_status = None
+    def _on_completion_ratio_changed(self, value: float) -> None:
+        print(f"[tasks] completion_ratio={value:.2f}")
 ```
 
-Try it:
-- Press F2 to increment the counter.
-- Press F3 to reset it.
-- Use your palette toggle action to open command palette if configured in your scene.
+Run the app, then press N and D to drive updates. You should see task and stats output lines in the console.
 
-Related manual sections:
-- [MANUAL.md#93-events-actions-input-mapping-and-routing](MANUAL.md#93-events-actions-input-mapping-and-routing)
-- [MANUAL.md#98-overlays-dialogs-notifications-and-command-surfaces](MANUAL.md#98-overlays-dialogs-notifications-and-command-surfaces)
+For deeper action/input routing details, see [MANUAL.md: Events, Actions, Input Mapping, and Routing](MANUAL.md#events-actions-input-mapping-and-routing).
 
-## Spec Reference for Builders
+# Spec Reference for Builders
 
-These are the most useful builder-facing specs used in this tutorial and in the repository demo architecture.
+These are the key specs used in this tutorial and why each exists:
 
-| Spec or API | What it does | Why you use it |
-|---|---|---|
-| `HostApplicationBindingSpec` | Declares host-level setup and composition entries | Keeps app assembly declarative and auditable |
-| `build_host_application_config` | Materializes a runtime-ready host config | Central conversion point for binding specs |
-| `WindowToggleBindingSpec` | Declares scene-window toggle wiring and task panel placement | Keeps window chrome synchronized across facilities |
-| `ActionBindingSpec` | Declares high-level actions (`exit`, `scene_nav`, `palette_toggle`) | Standard action behavior without manual glue |
-| `ActionHotkeySpec` + `register_action_hotkeys` | Registers named actions and optional key bindings | Explicit keyboard routing with scene/global scope control |
-| `Feature` | Base lifecycle unit (`build`, `bind_runtime`, `shutdown_runtime`) | Primary place for app behavior and cleanup ownership |
-| `ObservableValue` and `ComputedValue` | Reactive source and derived state | Clear, testable UI-state updates |
-| `bootstrap_host_application` | Applies config to a host instance | Keeps entrypoint simple and consistent |
+| Spec / API | Purpose | Why it helps |
+| --- | --- | --- |
+| HostApplicationBindingSpec | Single declarative input for host build | Keeps startup wiring explicit and testable |
+| build_host_application_config | Converts binding spec into full host config | Centralizes defaulting and normalization |
+| SceneSetupSpec | Declares scene identity and transition metadata | Makes scene ownership explicit |
+| RuntimeSceneSpec | Declares runtime behavior flags per scene | Enables scene-level runtime controls |
+| FeatureSpec | Registers a feature factory on host + app | Decouples composition from concrete class imports in bootstrap logic |
+| ActionBindingSpec | Declares host-level actions (exit, scene nav, palette toggle) | Keeps core actions visible at config layer |
+| RoutedRuntimeSpec | Declarative runtime wiring for routed features | Packs hotkeys, subscriptions, and runtime faculties into one contract |
+| ActionHotkeySpec | Action registration + optional key bind | Reduces ad hoc key-handling code |
 
-For deeper spec breadth and option matrices, use:
-- [MANUAL.md#appendix-f-specifications-and-option-reference](MANUAL.md#appendix-f-specifications-and-option-reference)
-- [MANUAL.md#appendix-d-api-quick-index-by-topic](MANUAL.md#appendix-d-api-quick-index-by-topic)
+When to use declarative vs imperative:
 
-## Complete Project Listing
+1. Declarative specs for composition, registration, and static wiring.
+2. Imperative feature methods for behavior, domain rules, and runtime decision logic.
 
-Final file tree:
+For broader spec depth, use [MANUAL.md: Appendix F: Specifications and Option Reference](MANUAL.md#appendix-f-specifications-and-option-reference).
 
-```text
-tutorial_pulse_desk/
-  __init__.py
-  features.py
-  config.py
-  main.py
-```
+# Complete Project Listing
 
-Final [tutorial_pulse_desk/features.py](tutorial_pulse_desk/features.py):
+Final runnable tutorial project:
+
+tutorial_project/app.py
 
 ```python
-from __future__ import annotations
+from gui_do import (
+    ActionBindingSpec,
+    FeatureSpec,
+    HostApplicationBindingSpec,
+    RuntimeSceneSpec,
+    SceneSetupSpec,
+    bootstrap_host_application,
+    build_host_application_config,
+)
 
+from stats_feature import StatsFeature
+from tasks_feature import TasksFeature
+
+
+class TutorialHost:
+    def __init__(self) -> None:
+        config = build_host_application_config(
+            HostApplicationBindingSpec(
+                display_size=(1280, 720),
+                window_title="gui_do tutorial project",
+                fonts={"default": None},
+                initial_scene_name="main",
+                scene_entries=(
+                    SceneSetupSpec(name="main", pretty_name="Main", make_initial=True),
+                ),
+                runtime_scene_entries=(
+                    RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),
+                ),
+                feature_entries=(
+                    FeatureSpec(attr_name="tasks_feature", factory=TasksFeature),
+                    FeatureSpec(attr_name="stats_feature", factory=StatsFeature),
+                ),
+                action_entries=(
+                    ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+                ),
+                target_fps=60,
+            )
+        )
+        bootstrap_host_application(self, config)
+
+
+if __name__ == "__main__":
+    TutorialHost().app.run_entrypoint(target_fps=60)
+```
+
+tutorial_project/tasks_feature.py
+
+```python
 import pygame
 
 from gui_do import (
     ActionHotkeySpec,
     ComputedValue,
-    Feature,
     ObservableValue,
-    register_action_hotkeys,
+    RoutedFeature,
+    RoutedRuntimeSpec,
+    setup_routed_runtime,
+    shutdown_routed_runtime,
 )
 
 
-class CounterFeature(Feature):
+class TasksFeature(RoutedFeature):
     def __init__(self) -> None:
-        super().__init__("counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self.count_label = ComputedValue(lambda: f"Count: {self.count.value}")
-        self._unsubscribe_count = None
-        self._unsubscribe_label = None
-
-    def build(self, host) -> None:
-        self.count.value = 0
+        super().__init__("tasks", scene_name="main")
+        self.task_total = ObservableValue(0)
+        self.completed_total = ObservableValue(0)
+        self.completion_ratio = ComputedValue(
+            lambda: 0.0
+            if self.task_total.value == 0
+            else self.completed_total.value / self.task_total.value
+        )
+        self._unsub_task_total = None
+        self._unsub_completion_ratio = None
 
     def bind_runtime(self, host) -> None:
-        self._unsubscribe_count = self.count.subscribe(
-            lambda value: print(f"[counter] raw value={value}")
-        )
-        self._unsubscribe_label = self.count_label.subscribe(
-            lambda text: print(f"[counter] derived label={text}")
-        )
-
-        register_action_hotkeys(
-            host.app.actions,
-            (
-                ActionHotkeySpec(
-                    action_name="counter.increment",
-                    handler=lambda _event: self.increment(),
-                    key=pygame.K_F2,
-                    scene_name="main",
-                    global_key=True,
-                ),
-                ActionHotkeySpec(
-                    action_name="counter.reset",
-                    handler=lambda _event: self.reset(),
-                    key=pygame.K_F3,
-                    scene_name="main",
-                    global_key=True,
+        setup_routed_runtime(
+            self,
+            host,
+            RoutedRuntimeSpec(
+                scene_name="main",
+                action_hotkeys=(
+                    ActionHotkeySpec(
+                        action_name="tasks.add",
+                        handler=self.add_task,
+                        key=pygame.K_n,
+                        scene_name="main",
+                        global_key=True,
+                    ),
+                    ActionHotkeySpec(
+                        action_name="tasks.complete",
+                        handler=self.complete_task,
+                        key=pygame.K_d,
+                        scene_name="main",
+                        global_key=True,
+                    ),
                 ),
             ),
         )
-
-    def increment(self) -> bool:
-        self.count.value += 1
-        return True
-
-    def reset(self) -> bool:
-        self.count.value = 0
-        return True
+        self._unsub_task_total = self.task_total.subscribe(self._on_task_total_changed)
+        self._unsub_completion_ratio = self.completion_ratio.subscribe(self._on_completion_ratio_changed)
 
     def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_label):
-            self._unsubscribe_label()
-            self._unsubscribe_label = None
-        if callable(self._unsubscribe_count):
-            self._unsubscribe_count()
-            self._unsubscribe_count = None
+        if callable(self._unsub_task_total):
+            self._unsub_task_total()
+            self._unsub_task_total = None
+        if callable(self._unsub_completion_ratio):
+            self._unsub_completion_ratio()
+            self._unsub_completion_ratio = None
+        shutdown_routed_runtime(self, host)
 
+    def add_task(self, event=None) -> bool:
+        self.task_total.value = self.task_total.value + 1
+        self._publish_counts()
+        return True
 
-class SummaryFeature(Feature):
-    def __init__(self) -> None:
-        super().__init__("summary", scene_name="main")
-        self.status = ObservableValue("Summary: waiting for updates")
-        self._unsubscribe_status = None
-        self._unsubscribe_counter = None
+    def complete_task(self, event=None) -> bool:
+        if self.task_total.value == 0:
+            return False
+        self.completed_total.value = min(self.completed_total.value + 1, self.task_total.value)
+        self._publish_counts()
+        return True
 
-    def bind_runtime(self, host) -> None:
-        self._unsubscribe_status = self.status.subscribe(
-            lambda text: print(f"[summary] {text}")
+    def _publish_counts(self) -> None:
+        self.send_message(
+            "stats",
+            {
+                "topic": "tasks.changed",
+                "count": self.task_total.value,
+                "completed": self.completed_total.value,
+            },
         )
 
-        counter = host.app.features.get("counter")
-        if counter is None:
-            return
+    def _on_task_total_changed(self, value: int) -> None:
+        print(f"[tasks] task_total={value}")
 
-        self._unsubscribe_counter = counter.count.subscribe(self._on_counter_changed)
+    def _on_completion_ratio_changed(self, value: float) -> None:
+        print(f"[tasks] completion_ratio={value:.2f}")
+```
 
-    def _on_counter_changed(self, value: int) -> None:
-        self.status.value = f"Summary: counter changed to {value}"
+tutorial_project/stats_feature.py
+
+```python
+from gui_do import ObservableValue, RoutedFeature, RoutedRuntimeSpec, setup_routed_runtime, shutdown_routed_runtime
+
+
+class StatsFeature(RoutedFeature):
+    def __init__(self) -> None:
+        super().__init__("stats", scene_name="main")
+        self.summary_line = ObservableValue("No task updates yet.")
+        self._unsub_summary = None
+
+    def bind_runtime(self, host) -> None:
+        setup_routed_runtime(self, host, RoutedRuntimeSpec(scene_name="main"))
+        self._unsub_summary = self.summary_line.subscribe(self._on_summary_changed)
 
     def shutdown_runtime(self, host) -> None:
-        if callable(self._unsubscribe_counter):
-            self._unsubscribe_counter()
-            self._unsubscribe_counter = None
-        if callable(self._unsubscribe_status):
-            self._unsubscribe_status()
-            self._unsubscribe_status = None
+        if callable(self._unsub_summary):
+            self._unsub_summary()
+            self._unsub_summary = None
+        shutdown_routed_runtime(self, host)
+
+    def message_handlers(self):
+        return {
+            "tasks.changed": self._handle_tasks_changed,
+        }
+
+    def _handle_tasks_changed(self, host, message) -> None:
+        count = int(message.get("count", 0))
+        completed = int(message.get("completed", 0))
+        self.summary_line.value = f"Tasks: {count}, Completed: {completed}"
+
+    def _on_summary_changed(self, line: str) -> None:
+        print(f"[stats] {line}")
 ```
 
-Final [tutorial_pulse_desk/config.py](tutorial_pulse_desk/config.py):
+Run command from tutorial_project:
 
-```python
-from gui_do import (
-    ActionBindingSpec,
-    HostApplicationBindingSpec,
-    WindowToggleBindingSpec,
-    build_host_application_config,
-)
-
-from tutorial_pulse_desk.features import CounterFeature, SummaryFeature
-
-
-TUTORIAL_CONFIG = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
-        initial_scene_name="main",
-        scene_entries=(("main", "Main"),),
-        feature_entries=(
-            ("_counter_feature", CounterFeature),
-            ("_summary_feature", SummaryFeature),
-        ),
-        window_entries=(
-            WindowToggleBindingSpec("main", "_counter_feature", task_panel_slot_index=1),
-            WindowToggleBindingSpec("main", "_summary_feature", task_panel_slot_index=2),
-        ),
-        action_entries=(
-            ActionBindingSpec(kind="exit", action_id="exit", label="Exit"),
-            ActionBindingSpec(
-                kind="palette_toggle",
-                action_id="palette_toggle",
-                label="Toggle Command Palette",
-            ),
-        ),
-        static_accessibility_entries=(("exit_button", "Exit"),),
-        target_fps=60,
-    )
-)
+```bash
+python app.py
 ```
 
-Final [tutorial_pulse_desk/main.py](tutorial_pulse_desk/main.py):
+# Next Steps
 
-```python
-from gui_do import bootstrap_host_application
+You now have a working baseline with declarative bootstrap, reactive state, inter-feature messaging, and hotkeys.
 
-from tutorial_pulse_desk.config import TUTORIAL_CONFIG
+From here, expand in this order:
 
+1. Add windows and scene-level UI composition using WindowSpec, FeatureWindowBundleBindingSpec, and scene presentation helpers.
+2. Add command palette behavior with PaletteBindingSpec and SceneCommandPaletteSpec.
+3. Add persistence with WorkspacePersistenceManager and scene snapshots.
+4. Add telemetry with configure_telemetry and report analysis utilities.
+5. Refine layout with adaptive constraints and virtualization for large data views.
 
-class PulseDeskApp:
-    def __init__(self) -> None:
-        bootstrap_host_application(self, TUTORIAL_CONFIG)
+Reference map for deeper work:
 
-
-if __name__ == "__main__":
-    PulseDeskApp().app.run_entrypoint(target_fps=TUTORIAL_CONFIG.target_fps)
-```
-
-## Next Steps
-
-You now have a clean baseline using public root imports and lifecycle-safe reactive patterns.
-
-Suggested expansions:
-1. Add scene bundles with navigation actions using `SceneBundleBindingSpec`.
-2. Add command palette custom entries for domain actions and status commands.
-3. Introduce `AppStateStore` for cross-feature state snapshots and transactions.
-4. Add persistence via workspace state and snapshot migration specs.
-5. Add tests around hotkey behavior, feature cleanup, and scene-scoped routing guarantees.
-
-When you move into those expansions, use MANUAL sections 9 through 12 and Appendix F as your reference map.
+- [MANUAL.md: Controls and Control Composition](MANUAL.md#controls-and-control-composition)
+- [MANUAL.md: Scene, Window, and Task-Panel Presentation Models](MANUAL.md#scene-window-and-task-panel-presentation-models)
+- [MANUAL.md: Persistence and Workspace/Session State](MANUAL.md#persistence-and-workspacesession-state)
+- [MANUAL.md: Telemetry, Introspection, and Operational Hooks](MANUAL.md#telemetry-introspection-and-operational-hooks)
+- [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md)
