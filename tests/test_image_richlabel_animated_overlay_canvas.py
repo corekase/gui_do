@@ -1,6 +1,7 @@
 """Tests for ImageControl, RichLabelControl, AnimatedImageControl,
 OverlayPanelControl, and CanvasControl/CanvasEventPacket."""
 import unittest
+from unittest import mock
 
 import pygame
 from pygame import Rect
@@ -223,6 +224,17 @@ class TestAnimatedImageControlSetters(unittest.TestCase):
         anim = _make_animation(fps=1000, frames=[0])
         ctrl = AnimatedImageControl("a", Rect(0, 0, 64, 64), anim)
         ctrl.tick(0.016)  # should not raise
+
+    def test_draw_reuses_scaled_frame_for_same_source_and_size(self):
+        anim = _make_animation(fps=12, frames=[0])
+        ctrl = AnimatedImageControl("a", Rect(0, 0, 32, 32), anim)
+        surface = pygame.Surface((64, 64)).convert_alpha()
+
+        with mock.patch("pygame.transform.smoothscale", wraps=pygame.transform.smoothscale) as smoothscale:
+            ctrl.draw(surface, theme=None)
+            ctrl.draw(surface, theme=None)
+
+        self.assertEqual(1, smoothscale.call_count)
 
 
 # ===========================================================================
@@ -474,6 +486,32 @@ class TestCanvasControlEventQueue(unittest.TestCase):
         handler = lambda dropped, total: None
         cc.set_overflow_handler(handler)
         self.assertIs(handler, cc.on_overflow)
+
+    def test_motion_events_coalesce_to_latest_packet(self):
+        cc = CanvasControl("cc", Rect(0, 0, 200, 150))
+
+        first = GuiEvent(EventType.MOUSE_MOTION, pygame.MOUSEMOTION, pos=(10, 20), rel=(1, 2))
+        second = GuiEvent(EventType.MOUSE_MOTION, pygame.MOUSEMOTION, pos=(30, 40), rel=(3, 4))
+
+        self.assertTrue(cc.handle_event(first, None))
+        self.assertTrue(cc.handle_event(second, None))
+        self.assertEqual(1, len(cc._events))
+        packet = cc.read_event()
+        self.assertEqual((30, 40), packet.pos)
+        self.assertEqual((30, 40), packet.local_pos)
+        self.assertEqual((3, 4), packet.rel)
+
+    def test_resize_reuses_backing_surface_when_shrinking(self):
+        cc = CanvasControl("cc", Rect(0, 0, 200, 150))
+        cc.canvas.fill((12, 34, 56, 255))
+        backing_id = id(cc._canvas_backing)
+
+        cc.rect.size = (120, 90)
+        cc._ensure_canvas_size()
+
+        self.assertEqual((120, 90), cc.canvas.get_size())
+        self.assertEqual(backing_id, id(cc._canvas_backing))
+        self.assertEqual((12, 34, 56, 255), cc.canvas.get_at((0, 0)))
 
 
 if __name__ == "__main__":

@@ -67,9 +67,11 @@ class CanvasControl(UiNode):
 
     def __init__(self, control_id: str, rect: Rect, max_events: int = 256) -> None:
         super().__init__(control_id, rect)
-        self.canvas = Surface(self.rect.size).convert_alpha()
-        self.canvas.fill((0, 0, 0, 0))
+        self._canvas_backing = Surface(self.rect.size).convert_alpha()
+        self._canvas_backing.fill((0, 0, 0, 0))
+        self._canvas_capacity = self.rect.size
         self._canvas_size = self.rect.size
+        self.canvas = self._canvas_backing.subsurface(Rect((0, 0), self._canvas_size))
         self._events: Deque[CanvasEventPacket] = deque(maxlen=max(1, int(max_events)))
         self.coalesce_motion_events = True
         self.overflow_mode = "drop_oldest"
@@ -106,10 +108,23 @@ class CanvasControl(UiNode):
         target_size = self.rect.size
         if self._canvas_size == target_size:
             return
-        resized = Surface(target_size).convert_alpha()
-        resized.fill((0, 0, 0, 0))
-        resized.blit(self.canvas, (0, 0))
-        self.canvas = resized
+        old_width, old_height = self._canvas_size
+        target_width, target_height = target_size
+        capacity_width, capacity_height = self._canvas_capacity
+
+        if target_width > capacity_width or target_height > capacity_height:
+            resized = Surface(target_size).convert_alpha()
+            resized.fill((0, 0, 0, 0))
+            resized.blit(self.canvas, (0, 0))
+            self._canvas_backing = resized
+            self._canvas_capacity = target_size
+        else:
+            if target_width > old_width:
+                self._canvas_backing.fill((0, 0, 0, 0), Rect(old_width, 0, target_width - old_width, old_height))
+            if target_height > old_height:
+                self._canvas_backing.fill((0, 0, 0, 0), Rect(0, old_height, target_width, target_height - old_height))
+
+        self.canvas = self._canvas_backing.subsurface(Rect((0, 0), target_size))
         self._canvas_size = target_size
 
     def handle_event(self, event: GuiEvent, _app, theme=None) -> bool:
@@ -124,6 +139,20 @@ class CanvasControl(UiNode):
 
         local = (int(raw[0]) - int(self.rect.left), int(raw[1]) - int(self.rect.top))
 
+        if event.is_mouse_motion() and self.coalesce_motion_events and self._events:
+            last = self._events[-1]
+            if last.is_mouse_motion():
+                self._events[-1] = CanvasEventPacket(
+                    kind=event.kind,
+                    pos=raw,
+                    local_pos=local,
+                    rel=event.rel,
+                    button=event.button,
+                    wheel_delta=event.wheel_delta,
+                )
+                self._dropped_events = 0
+                return True
+
         packet = CanvasEventPacket(
             kind=event.kind,
             pos=raw,
@@ -132,12 +161,6 @@ class CanvasControl(UiNode):
             button=event.button,
             wheel_delta=event.wheel_delta,
         )
-        if event.is_mouse_motion() and self.coalesce_motion_events and self._events:
-            last = self._events[-1]
-            if last.is_mouse_motion():
-                self._events[-1] = packet
-                self._dropped_events = 0
-                return True
 
         if len(self._events) >= self._events.maxlen:
             self._dropped_events += 1

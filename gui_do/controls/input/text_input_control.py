@@ -18,6 +18,27 @@ _H_PADDING = 4
 
 
 class TextInputControl(AbstractTextInputControl):
+    def _display_mapping_key(self, display: str) -> tuple[object, ...]:
+        return (
+            display,
+            self._value,
+            self._masked,
+            id(self._display_value_provider) if self._display_value_provider is not None else None,
+        )
+
+    def _measure_display_prefix(self, font, display: str, length: int) -> int:
+        cache_key = (id(font), display)
+        if self._prefix_width_cache_key != cache_key:
+            self._prefix_width_cache_key = cache_key
+            self._prefix_width_cache.clear()
+        cached = self._prefix_width_cache.get(length)
+        if cached is not None:
+            return cached
+        px, _ = font.text_size(display[:length])
+        measured = int(px)
+        self._prefix_width_cache[length] = measured
+        return measured
+
     def _build_display_raw_mapping(self):
         """
         Build mappings between display string indices and raw value indices.
@@ -27,11 +48,16 @@ class TextInputControl(AbstractTextInputControl):
         """
         display = self._get_display_value()
         raw = self._value
+        cache_key = self._display_mapping_key(display)
+        if self._display_mapping_cache_key == cache_key and self._display_mapping_cache is not None:
+            return self._display_mapping_cache
         # If no formatter, 1:1 mapping
         if not self._display_value_provider or display == raw:
             display_to_raw = [i for i in range(len(display) + 1)]
             raw_to_display = [i for i in range(len(raw) + 1)]
-            return display_to_raw, raw_to_display
+            self._display_mapping_cache_key = cache_key
+            self._display_mapping_cache = (display_to_raw, raw_to_display)
+            return self._display_mapping_cache
 
         # For formatters, try to align digits/characters
         display_to_raw = [None] * (len(display) + 1)
@@ -70,7 +96,9 @@ class TextInputControl(AbstractTextInputControl):
                 last = v
             else:
                 raw_to_display[i] = last
-        return display_to_raw, raw_to_display
+        self._display_mapping_cache_key = cache_key
+        self._display_mapping_cache = (display_to_raw, raw_to_display)
+        return self._display_mapping_cache
 
     def __init__(self, control_id: str, rect: Rect, value: str = "", placeholder: str = "", max_length: Optional[int] = None, masked: bool = False, on_change: Optional[Callable[[str], None]] = None, on_submit: Optional[Callable[[str], None]] = None, input_filter: Optional[Callable[[str], str]] = None, font_role: str = "body", display_value_provider: Optional[Callable[[], str]] = None) -> None:
         super().__init__(control_id, rect)
@@ -88,6 +116,10 @@ class TextInputControl(AbstractTextInputControl):
         self._sel_anchor = None
         self._sel_active = None
         self._scroll_offset_px = 0
+        self._display_mapping_cache_key = None
+        self._display_mapping_cache = None
+        self._prefix_width_cache_key = None
+        self._prefix_width_cache: dict[int, int] = {}
     _FONT_SCALE: float = 1.25   # 20/16 — slightly larger for text input legibility
 
     def get_char_index_at_pixel(self, x: int, y: Optional[int] = None, theme=None) -> int:
@@ -99,15 +131,9 @@ class TextInputControl(AbstractTextInputControl):
             return 0
         lo = 0
         hi = len(display)
-        width_cache: dict[int, int] = {}
 
         def measure(n):
-            cached = width_cache.get(n)
-            if cached is not None:
-                return cached
-            px, _ = font.text_size(display[:n])
-            width_cache[n] = int(px)
-            return px
+            return self._measure_display_prefix(font, display, n)
         while lo < hi:
             mid = (lo + hi) // 2
             if measure(mid) < x_local:

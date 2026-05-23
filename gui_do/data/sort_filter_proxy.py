@@ -188,16 +188,16 @@ class SortFilterProxySource:
             return
 
         if predicate is None:
-            visible = list(range(raw_count))
+            working = [(i, source_item_at(i)) for i in range(raw_count)]
         else:
-            visible = []
+            working = []
             for i in range(raw_count):
-                if predicate(source_item_at(i)):
-                    visible.append(i)
+                item = source_item_at(i)
+                if predicate(item):
+                    working.append((i, item))
 
-        # Sort indices directly to avoid index-item tuple allocation.
-        visible.sort(key=lambda idx: sort_key(source_item_at(idx)), reverse=self._sort_reverse)
-        self._visible = visible
+        working.sort(key=lambda pair: sort_key(pair[1]), reverse=self._sort_reverse)
+        self._visible = [raw_index for raw_index, _item in working]
         self._dirty = False
 
     # ------------------------------------------------------------------

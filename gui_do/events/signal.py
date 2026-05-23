@@ -81,6 +81,8 @@ class _SignalInstance(Generic[T]):
 
     def __init__(self) -> None:
         self._callbacks: List[Callable[[T], Any]] = []
+        self._callbacks_snapshot: tuple[Callable[[T], Any], ...] = ()
+        self._callbacks_dirty: bool = False
         self._once: List[Callable[[T], Any]] = []
 
     def connect(self, callback: Callable[[T], Any]) -> SignalConnection:
@@ -89,6 +91,7 @@ class _SignalInstance(Generic[T]):
             raise TypeError("callback must be callable")
         if callback not in self._callbacks:
             self._callbacks.append(callback)
+            self._callbacks_dirty = True
         return SignalConnection(self, callback)
 
     def connect_once(self, callback: Callable[[T], Any]) -> SignalConnection:
@@ -106,6 +109,8 @@ class _SignalInstance(Generic[T]):
     def disconnect_all(self) -> None:
         """Remove all connections."""
         self._callbacks.clear()
+        self._callbacks_snapshot = ()
+        self._callbacks_dirty = False
         self._once.clear()
 
     def emit(self, value: T) -> None:
@@ -113,7 +118,14 @@ class _SignalInstance(Generic[T]):
         # Copy lists so that connect/disconnect inside callbacks is safe.
         callbacks = self._callbacks
         if callbacks:
-            for cb in (callbacks if len(callbacks) == 1 else list(callbacks)):
+            if len(callbacks) == 1:
+                snapshot = callbacks
+            else:
+                if self._callbacks_dirty:
+                    self._callbacks_snapshot = tuple(callbacks)
+                    self._callbacks_dirty = False
+                snapshot = self._callbacks_snapshot
+            for cb in snapshot:
                 cb(value)
         once = self._once
         if once:
@@ -124,6 +136,7 @@ class _SignalInstance(Generic[T]):
     def _remove(self, callback: Callable) -> None:
         try:
             self._callbacks.remove(callback)
+            self._callbacks_dirty = True
         except ValueError:
             pass
         try:

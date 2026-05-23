@@ -1,6 +1,7 @@
 """DataGridControl — multi-column virtualized table with sorting and keyboard nav."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Callable, Optional, TYPE_CHECKING
 
@@ -22,6 +23,7 @@ _ROW_HEIGHT = 26
 _SCROLLBAR_WIDTH = 12
 _MIN_COL_WIDTH = 20
 _RESIZE_HIT_ZONE = 5
+_TEXT_CACHE_LIMIT = 256
 
 
 @dataclass
@@ -98,7 +100,7 @@ class DataGridControl(_VirtualizedScrollListBase):
         self._draw_font_role: str = "data_grid.cell"
         # Cache rendered text surfaces: (str_value, color_rgb) -> Surface.
         # Avoids re-rendering identical cell text on every frame.
-        self._text_cache: Dict[tuple, "pygame.Surface"] = {}
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
 
         self.tab_index = 0
 
@@ -301,6 +303,18 @@ class DataGridControl(_VirtualizedScrollListBase):
     def _row_at_y(self, y: int) -> int:
         """Return row index at pixel y relative to content area top."""
         return (y + self._scroll_offset) // self._row_height
+
+    def _get_cached_text_surface(self, font, text: str, color: tuple) -> "pygame.Surface":
+        cache_key = (str(text), tuple(color))
+        cached = self._text_cache.get(cache_key)
+        if cached is not None:
+            self._text_cache.move_to_end(cache_key)
+            return cached
+        rendered = font.render(str(text), True, color)
+        self._text_cache[cache_key] = rendered
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return rendered
 
     def _scroll_to_row(self, index: int) -> None:
         if not self._rows:
@@ -518,11 +532,7 @@ class DataGridControl(_VirtualizedScrollListBase):
             title = col.title
             if col.sortable and self._sort_col == col.key:
                 title += " ▲" if self._sort_asc else " ▼"
-            cache_key = (title, text_col)
-            ts = self._text_cache.get(cache_key)
-            if ts is None:
-                ts = font.render(title, True, text_col)
-                self._text_cache[cache_key] = ts
+            ts = self._get_cached_text_surface(font, title, text_col)
             surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
 
         # Header bottom border
@@ -551,15 +561,10 @@ class DataGridControl(_VirtualizedScrollListBase):
             # Draw cells
             for j, col in enumerate(self._columns):
                 col_x = cr.x + offsets[j]
-                cell_rect = Rect(col_x, row_y, col.width, row_height)
                 val = row.data.get(col.key, "")
                 val_str = str(val)
-                cache_key = (val_str, text_col)
-                ts = self._text_cache.get(cache_key)
-                if ts is None:
-                    ts = font.render(val_str, True, text_col)
-                    self._text_cache[cache_key] = ts
-                surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
+                ts = self._get_cached_text_surface(font, val_str, text_col)
+                surface.blit(ts, (col_x + 4, row_y + (row_height - ts.get_height()) // 2))
                 # column separator
                 pygame.draw.line(surface, border_col, (col_x + col.width - 1, row_y), (col_x + col.width - 1, row_y + row_height - 1))
 

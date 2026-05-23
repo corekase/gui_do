@@ -153,17 +153,19 @@ class InputSnapshot:
         """
         from .gui_event import EventType
 
+        empty_int_set = frozenset()
+
         prev_pos = previous.pointer_pos if previous is not None else (0, 0)
-        prev_held = previous.buttons_held if previous is not None else frozenset()
+        prev_held = previous.buttons_held if previous is not None else empty_int_set
 
         pointer_pos: Tuple[int, int] = prev_pos
         pointer_delta: Tuple[int, int] = (0, 0)
-        held = set(prev_held)
-        just_pressed: set[int] = set()
-        just_released: set[int] = set()
+        held: set[int] | None = set(prev_held) if prev_held else None
+        just_pressed: set[int] | None = None
+        just_released: set[int] | None = None
         modifiers: int = 0
-        keys_pressed: set[int] = set()
-        keys_released: set[int] = set()
+        keys_pressed: set[int] | None = None
+        keys_released: set[int] | None = None
         wheel_delta: float = 0.0
 
         for ev in events:
@@ -184,7 +186,11 @@ class InputSnapshot:
                     pointer_pos = (int(pos[0]), int(pos[1]))
                 btn = getattr(ev, "button", None)
                 if isinstance(btn, int):
+                    if held is None:
+                        held = set()
                     held.add(btn)
+                    if just_pressed is None:
+                        just_pressed = set()
                     just_pressed.add(btn)
                 mod = getattr(ev, "mod", 0)
                 if isinstance(mod, int):
@@ -195,7 +201,12 @@ class InputSnapshot:
                     pointer_pos = (int(pos[0]), int(pos[1]))
                 btn = getattr(ev, "button", None)
                 if isinstance(btn, int):
-                    held.discard(btn)
+                    if held is not None:
+                        held.discard(btn)
+                        if not held:
+                            held = None
+                    if just_released is None:
+                        just_released = set()
                     just_released.add(btn)
                 mod = getattr(ev, "mod", 0)
                 if isinstance(mod, int):
@@ -212,19 +223,23 @@ class InputSnapshot:
                 key = getattr(ev, "key", None)
                 if isinstance(key, int):
                     if kind == EventType.KEY_DOWN:
+                        if keys_pressed is None:
+                            keys_pressed = set()
                         keys_pressed.add(key)
                     else:
+                        if keys_released is None:
+                            keys_released = set()
                         keys_released.add(key)
 
         return cls(
             pointer_pos=pointer_pos,
             pointer_delta=pointer_delta,
-            buttons_held=frozenset(held),
-            buttons_just_pressed=frozenset(just_pressed),
-            buttons_just_released=frozenset(just_released),
+            buttons_held=empty_int_set if held is None else frozenset(held),
+            buttons_just_pressed=empty_int_set if just_pressed is None else frozenset(just_pressed),
+            buttons_just_released=empty_int_set if just_released is None else frozenset(just_released),
             modifiers=modifiers,
-            keys_just_pressed=frozenset(keys_pressed),
-            keys_just_released=frozenset(keys_released),
+            keys_just_pressed=empty_int_set if keys_pressed is None else frozenset(keys_pressed),
+            keys_just_released=empty_int_set if keys_released is None else frozenset(keys_released),
             accumulated_wheel_delta=wheel_delta,
         )
 

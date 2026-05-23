@@ -1,5 +1,6 @@
 """Tests for DataGridControl and TextInputControl."""
 import unittest
+from types import SimpleNamespace
 
 import pygame
 from pygame import Rect
@@ -184,6 +185,92 @@ class TestDataGridControlGeometry(unittest.TestCase):
         self.assertEqual(250, offsets[2])
 
 
+class _CountingGridFont:
+    def __init__(self):
+        self.render_calls = 0
+
+    def render(self, text, _antialias, _color):
+        self.render_calls += 1
+        return pygame.Surface((max(8, len(str(text)) * 8), 18)).convert_alpha()
+
+
+class _CountingGridFonts:
+    def __init__(self):
+        self.font = _CountingGridFont()
+
+    def scaled_size(self, scale):
+        return int(16 * scale)
+
+    def font_instance(self, *_args, **_kwargs):
+        return self.font
+
+
+class _CountingTextFont:
+    def __init__(self):
+        self.text_size_calls = 0
+        self.line_height = 18
+
+    def text_size(self, text):
+        self.text_size_calls += 1
+        return (len(str(text)) * 8, self.line_height)
+
+
+class _CountingTextFonts:
+    def __init__(self):
+        self.font = _CountingTextFont()
+
+    def scaled_size(self, scale):
+        return int(16 * scale)
+
+    def font_instance(self, *_args, **_kwargs):
+        return self.font
+
+
+class TestDataGridControlDrawCaching(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.display.set_mode((1, 1))
+
+    def _make_theme(self):
+        return SimpleNamespace(
+            background=(30, 30, 30),
+            panel=(50, 50, 60),
+            text=(220, 220, 220),
+            highlight=(80, 120, 200),
+            border=(80, 80, 90),
+            focus=(100, 160, 255),
+            dark=(20, 20, 20),
+            medium=(120, 120, 120),
+            fonts=_CountingGridFonts(),
+        )
+
+    def test_text_cache_reuses_surfaces_when_visible_set_fits_cache(self):
+        columns = [GridColumn("value", "Value")]
+        rows = [GridRow({"value": f"row-{index}"}) for index in range(20)]
+        dg = DataGridControl("dg", Rect(0, 0, 320, 800), columns=columns, rows=rows)
+        theme = self._make_theme()
+        surface = pygame.Surface((320, 800)).convert_alpha()
+
+        dg.draw(surface, theme)
+        first_render_calls = theme.fonts.font.render_calls
+
+        dg.draw(surface, theme)
+
+        self.assertGreater(first_render_calls, 0)
+        self.assertEqual(first_render_calls, theme.fonts.font.render_calls)
+
+    def test_text_cache_stays_bounded_across_large_draw(self):
+        columns = [GridColumn("value", "Value")]
+        rows = [GridRow({"value": f"row-{index}"}) for index in range(300)]
+        dg = DataGridControl("dg", Rect(0, 0, 320, 8000), columns=columns, rows=rows)
+        theme = self._make_theme()
+        surface = pygame.Surface((320, 8000)).convert_alpha()
+
+        dg.draw(surface, theme)
+
+        self.assertLessEqual(len(dg._text_cache), 256)
+
+
 # ===========================================================================
 # TextInputControl
 # ===========================================================================
@@ -332,6 +419,35 @@ class TestTextInputControlFocusedKeyConsumption(unittest.TestCase):
 
         self.assertTrue(consumed)
         self.assertEqual(2, ti._cursor_pos)
+
+
+class TestTextInputControlCaching(unittest.TestCase):
+    def test_display_mapping_reused_for_same_formatted_value(self):
+        ti = TextInputControl(
+            "ti",
+            Rect(0, 0, 300, 30),
+            value="1234",
+            display_value_provider=lambda: "1,234",
+        )
+
+        first = ti._build_display_raw_mapping()
+        second = ti._build_display_raw_mapping()
+
+        self.assertIs(first[0], second[0])
+        self.assertIs(first[1], second[1])
+
+    def test_get_char_index_reuses_prefix_width_cache(self):
+        fonts = _CountingTextFonts()
+        theme = SimpleNamespace(fonts=fonts)
+        ti = TextInputControl("ti", Rect(0, 0, 300, 30), value="hello world")
+
+        first_idx = ti.get_char_index_at_pixel(40, theme=theme)
+        first_calls = fonts.font.text_size_calls
+        second_idx = ti.get_char_index_at_pixel(40, theme=theme)
+
+        self.assertEqual(first_idx, second_idx)
+        self.assertGreater(first_calls, 0)
+        self.assertEqual(first_calls, fonts.font.text_size_calls)
 
 
 if __name__ == "__main__":

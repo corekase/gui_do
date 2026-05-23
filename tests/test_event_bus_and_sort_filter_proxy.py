@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from gui_do.events.event_bus import EventBus
 from gui_do.data.sort_filter_proxy import SortFilterProxySource
@@ -90,6 +91,52 @@ class TestEventBus(unittest.TestCase):
         bus.publish("ev", "y")
 
         self.assertEqual(["x", "y"], received)
+
+    def test_scoped_publish_delivers_to_unscoped_and_matching_scoped_subscribers(self):
+        bus = EventBus()
+        unscoped_received = []
+        scoped_received = []
+        bus.subscribe("ev", unscoped_received.append)
+        bus.subscribe("ev", scoped_received.append, scope="scene_a")
+
+        bus.publish("ev", "x", scope="scene_a")
+
+        self.assertEqual(["x"], unscoped_received)
+        self.assertEqual(["x"], scoped_received)
+
+    def test_telemetry_enabled_publish_uses_single_outer_span(self):
+        class _Span:
+            def __init__(self, collector, system, point):
+                self._collector = collector
+                self._system = system
+                self._point = point
+
+            def __enter__(self):
+                self._collector.entered.append((self._system, self._point))
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return None
+
+        class _Collector:
+            def __init__(self):
+                self._enabled = True
+                self.entered = []
+
+            def span(self, system, point, metadata=None):
+                return _Span(self, system, point)
+
+        collector = _Collector()
+        bus = EventBus()
+        received = []
+        bus.subscribe("ev", lambda payload: received.append(("a", payload)))
+        bus.subscribe("ev", lambda payload: received.append(("b", payload)))
+
+        with mock.patch("gui_do.events.event_bus.telemetry_collector", return_value=collector):
+            bus.publish("ev", 7)
+
+        self.assertEqual([("a", 7), ("b", 7)], received)
+        self.assertEqual([("event_bus", "publish")], collector.entered)
 
     def test_unsubscribe_scope_removes_all_matching(self):
         bus = EventBus()

@@ -54,6 +54,7 @@ class AnimatedImageControl(UiNode):
         super().__init__(control_id, rect)
         self._animation = animation
         self._scale = scale
+        self._scaled_frame_cache: dict[tuple[int, tuple[int, int]], pygame.Surface] = {}
 
     # ------------------------------------------------------------------
     # Properties
@@ -66,6 +67,7 @@ class AnimatedImageControl(UiNode):
     @animation.setter
     def animation(self, value: FrameAnimation) -> None:
         self._animation = value
+        self._scaled_frame_cache.clear()
         self.invalidate()
 
     @property
@@ -75,6 +77,8 @@ class AnimatedImageControl(UiNode):
     @scale.setter
     def scale(self, value: bool) -> None:
         self._scale = bool(value)
+        if not self._scale:
+            self._scaled_frame_cache.clear()
         self.invalidate()
 
     def accepts_mouse_focus(self) -> bool:
@@ -97,5 +101,12 @@ class AnimatedImageControl(UiNode):
             return
         frame_surf = self._animation.current_surface
         if self._scale and frame_surf.get_size() != self.rect.size:
-            frame_surf = pygame.transform.smoothscale(frame_surf, self.rect.size)
+            cache_key = (id(frame_surf), self.rect.size)
+            cached = self._scaled_frame_cache.get(cache_key)
+            if cached is None:
+                cached = pygame.transform.smoothscale(frame_surf, self.rect.size)
+                if len(self._scaled_frame_cache) >= 8:
+                    self._scaled_frame_cache.clear()
+                self._scaled_frame_cache[cache_key] = cached
+            frame_surf = cached
         surface.blit(frame_surf, self.rect)

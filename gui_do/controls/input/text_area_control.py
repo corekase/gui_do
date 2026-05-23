@@ -50,15 +50,19 @@ class TextAreaControl(AbstractTextInputControl):
             return abs_offset
         if not line_text:
             return abs_offset
-        width_cache: dict[int, int] = {}
+        cache_key = (id(font), line_text)
+        if self._line_prefix_width_cache_key != cache_key:
+            self._line_prefix_width_cache_key = cache_key
+            self._line_prefix_width_cache.clear()
 
         def measure(n):
-            cached = width_cache.get(n)
+            cached = self._line_prefix_width_cache.get(n)
             if cached is not None:
                 return cached
             px, _ = font.text_size(line_text[:n])
-            width_cache[n] = int(px)
-            return px
+            measured = int(px)
+            self._line_prefix_width_cache[n] = measured
+            return measured
         lo = 0
         hi = len(line_text)
         while lo < hi:
@@ -116,6 +120,8 @@ class TextAreaControl(AbstractTextInputControl):
         self._font_size: Optional[int] = None if font_size is None else max(6, int(font_size))
         self.tab_index = 0  # focusable by default
         self.key_activatable = False  # K_RETURN inserts newline, not button-activate
+        self._line_prefix_width_cache_key = None
+        self._line_prefix_width_cache: dict[int, int] = {}
 
         # Cursor / selection (absolute char offsets into self._value)
         self._cursor_pos: int = len(self._value)

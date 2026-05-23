@@ -16,6 +16,16 @@ class _ListSource:
         return self._items[index]
 
 
+class _CountingListSource(_ListSource):
+    def __init__(self, items):
+        super().__init__(items)
+        self.item_at_calls = 0
+
+    def item_at(self, index):
+        self.item_at_calls += 1
+        return super().item_at(index)
+
+
 # ===========================================================================
 # Initial state
 # ===========================================================================
@@ -114,6 +124,15 @@ class TestSortFilterProxyCombined(unittest.TestCase):
         proxy.set_sort_key(lambda x: x)
         items = [proxy.item_at(i) for i in range(proxy.item_count())]
         self.assertEqual([4, 5, 8], items)
+
+    def test_filter_then_sort_fetches_each_source_item_once_during_recompute(self):
+        src = _CountingListSource([5, 2, 8, 1, 4])
+        proxy = SortFilterProxySource(src)
+        proxy.set_filter(lambda x: x > 3)
+        proxy.set_sort_key(lambda x: x)
+
+        self.assertEqual(3, proxy.item_count())
+        self.assertEqual(5, src.item_at_calls)
 
 
 # ===========================================================================

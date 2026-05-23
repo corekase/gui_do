@@ -1,7 +1,7 @@
 """NotificationPanelControl — overlay panel rendering a NotificationCenter log."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import pygame
 from pygame import Rect
@@ -67,6 +67,8 @@ class NotificationPanelControl(OverlayPanelControl):
         self._title_font_role: str = "notification_panel.title"
         self._body_font_role: str = "notification_panel.body"
         self._ts_font_role: str = "notification_panel.timestamp"
+        self._text_cache: dict[tuple[object, str, tuple[int, int, int]], pygame.Surface] = {}
+        self._message_fit_cache: dict[tuple[object, str, int], str] = {}
 
     _HEADER_SCALE: float = 1.125    # 18/16 — slightly larger header
     _BODY_SCALE: float = 1.0        # 16/16 — body text
@@ -207,6 +209,44 @@ class NotificationPanelControl(OverlayPanelControl):
         max_scroll = max(0, self._total_height() - lr.height)
         self._scroll_offset = max(0, min(self._scroll_offset, max_scroll))
 
+    @staticmethod
+    def _text_width(font, text: str) -> int:
+        if hasattr(font, "text_size"):
+            return int(font.text_size(text)[0])
+        return int(font.size(text)[0])
+
+    def _render_cached_text(self, font, text: str, color: tuple[int, int, int]) -> pygame.Surface:
+        cache_key = (font, str(text), tuple(color))
+        cached = self._text_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        if len(self._text_cache) >= 512:
+            self._text_cache.clear()
+        rendered = font.render(str(text), True, color)
+        self._text_cache[cache_key] = rendered
+        return rendered
+
+    def _fit_message(self, font, message: str, max_width: int) -> str:
+        if max_width <= 0:
+            return ""
+        cache_key = (font, str(message), int(max_width))
+        cached = self._message_fit_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        fitted = str(message)
+        while fitted and self._text_width(font, fitted) > max_width:
+            fitted = fitted[:-1]
+        if fitted != message and len(fitted) >= 3:
+            fitted = fitted[:-3] + "..."
+        elif fitted != message:
+            fitted = "..."[: max(0, len(fitted))]
+
+        if len(self._message_fit_cache) >= 256:
+            self._message_fit_cache.clear()
+        self._message_fit_cache[cache_key] = fitted
+        return fitted
+
     # ------------------------------------------------------------------
     # Draw
     # ------------------------------------------------------------------
@@ -234,13 +274,13 @@ class NotificationPanelControl(OverlayPanelControl):
 
         try:
             hf = theme.fonts.font_instance(self._header_font_role, size=theme.fonts.scaled_size(self._HEADER_SCALE))
-            ht = hf.render("Notifications", True, text_col)
+            ht = self._render_cached_text(hf, "Notifications", text_col)
             surface.blit(ht, (header_rect.x + _PAD, header_rect.y + (header_rect.height - ht.get_height()) // 2))
 
             # "Mark all read" button text
             if self._center.unread_count.value > 0:
                 mf = theme.fonts.font_instance(self._title_font_role, size=theme.fonts.scaled_size(self._TITLE_SCALE))
-                mt = mf.render("Mark all read", True, (180, 210, 255))
+                mt = self._render_cached_text(mf, "Mark all read", (180, 210, 255))
                 mx = header_rect.right - mt.get_width() - _PAD
                 my = header_rect.y + (header_rect.height - mt.get_height()) // 2
                 self._mark_all_rect = Rect(mx, my, mt.get_width(), mt.get_height())
@@ -288,21 +328,16 @@ class NotificationPanelControl(OverlayPanelControl):
                 tx = rr.x + 4 + _PAD
                 if body_font:
                     if rec.title:
-                        ttxt = title_font.render(rec.title, True, text_col)
+                        ttxt = self._render_cached_text(title_font, rec.title, text_col)
                         surface.blit(ttxt, (tx, rr.y + _PAD))
                         msg_y = rr.y + _PAD + ttxt.get_height() + 2
                     else:
                         msg_y = rr.y + _PAD
-                    # Truncate message to fit
-                    msg = rec.message
-                    while msg and (body_font.text_size(msg)[0] if hasattr(body_font, "text_size") else body_font.size(msg)[0]) > rr.width - tx - _PAD * 2:
-                        msg = msg[:-1]
-                    if msg != rec.message:
-                        msg = msg[:-3] + "..."
-                    mtxt = body_font.render(msg, True, muted_col if rec.read else text_col)
+                    msg = self._fit_message(body_font, rec.message, rr.width - tx - _PAD * 2)
+                    mtxt = self._render_cached_text(body_font, msg, muted_col if rec.read else text_col)
                     surface.blit(mtxt, (tx, msg_y))
                     # Timestamp
-                    ts_txt = ts_font.render(rec.timestamp, True, muted_col)
+                    ts_txt = self._render_cached_text(ts_font, rec.timestamp, muted_col)
                     surface.blit(ts_txt, (rr.right - ts_txt.get_width() - _PAD, rr.y + _PAD))
                 # Separator
                 pygame.draw.line(surface, border_col, (rr.x, rr.bottom - 1), (rr.right, rr.bottom - 1))
@@ -320,7 +355,7 @@ class NotificationPanelControl(OverlayPanelControl):
         if not self._center.all_records:
             try:
                 bf = theme.fonts.font_instance(self._body_font_role, size=theme.fonts.scaled_size(self._BODY_SCALE))
-                et = bf.render("No notifications", True, muted_col)
+                et = self._render_cached_text(bf, "No notifications", muted_col)
                 surface.blit(et, (
                     lr.x + (lr.width - et.get_width()) // 2,
                     lr.y + (lr.height - et.get_height()) // 2,

@@ -114,6 +114,8 @@ class EventBus:
 
     def publish(self, topic: str, payload: object = None, *, scope: str | None = None) -> None:
         topic_name = str(topic)
+        unscoped = None
+        scoped = None
         if scope is None:
             subscribers = self._subscribers.get(topic_name)
             if not subscribers:
@@ -143,6 +145,12 @@ class EventBus:
         collector = telemetry_collector()
         # Fast path: skip all span/metadata overhead when telemetry is off.
         if not collector._enabled:  # noqa: SLF001 — intentional lock-free check
+            if unscoped and scoped:
+                for sub in unscoped:
+                    sub.handler(payload)
+                for sub in scoped:
+                    sub.handler(payload)
+                return
             for sub in snapshot:
                 if scope is None or sub.scope is None or sub.scope == scope:
                     sub.handler(payload)
@@ -158,40 +166,13 @@ class EventBus:
         ):
             if unscoped and scoped:
                 for sub in unscoped:
-                    with collector.span(
-                        "event_bus",
-                        "publish_handler",
-                        metadata={
-                            "topic": topic_name,
-                            "scope": "" if scope is None else str(scope),
-                            "subscriber_scope": "" if sub.scope is None else str(sub.scope),
-                        },
-                    ):
-                        sub.handler(payload)
+                    sub.handler(payload)
                 for sub in scoped:
-                    with collector.span(
-                        "event_bus",
-                        "publish_handler",
-                        metadata={
-                            "topic": topic_name,
-                            "scope": "" if scope is None else str(scope),
-                            "subscriber_scope": "" if sub.scope is None else str(sub.scope),
-                        },
-                    ):
-                        sub.handler(payload)
+                    sub.handler(payload)
             else:
                 for sub in snapshot:
                     if scope is None or sub.scope is None or sub.scope == scope:
-                        with collector.span(
-                            "event_bus",
-                            "publish_handler",
-                            metadata={
-                                "topic": topic_name,
-                                "scope": "" if scope is None else str(scope),
-                                "subscriber_scope": "" if sub.scope is None else str(sub.scope),
-                            },
-                        ):
-                            sub.handler(payload)
+                        sub.handler(payload)
 
     def once(self, topic: str, handler: EventHandler, *, scope: str | None = None) -> Subscription:
         """Subscribe to *topic* and automatically unsubscribe after the first delivery.

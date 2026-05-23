@@ -8,6 +8,9 @@ from ..app.error_handling import report_nonfatal_error
 from ..app.service_scope import ServiceScope
 
 
+_EMPTY_FAILURE_POLICY: dict[str, object] = {}
+
+
 class FeatureRuntimeScope:
     """Lifecycle-owned runtime scope for one feature binding pass.
 
@@ -239,7 +242,7 @@ class FeatureOperationBus:
             self.fail(handle, KeyError(f"unknown operation: {name}"))
             return handle
         _handler, failure_policy_name = entry
-        policy = self._failure_policies.get(str(failure_policy_name), {}) if failure_policy_name is not None else {}
+        policy = self._failure_policies.get(str(failure_policy_name), _EMPTY_FAILURE_POLICY) if failure_policy_name is not None else _EMPTY_FAILURE_POLICY
         effective_timeout = timeout_seconds
         if effective_timeout is None:
             effective_timeout = policy.get("timeout_seconds")

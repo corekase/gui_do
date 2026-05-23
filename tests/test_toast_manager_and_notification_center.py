@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pygame
 from gui_do.events.gui_event import GuiEvent, EventType
+from gui_do.controls.chrome.notification_panel_control import NotificationPanelControl
 
 from gui_do.overlays.toast_manager import ToastManager, ToastHandle, ToastSeverity
 from gui_do.overlays.notification_center import NotificationCenter, NotificationRecord
@@ -171,6 +172,50 @@ class _StubToastTheme:
     fonts = _StubToastFonts()
 
 
+class _CountingNotificationFont:
+    def __init__(self):
+        self.render_calls = 0
+
+    def render(self, text, _antialias, _color):
+        self.render_calls += 1
+        return pygame.Surface((max(8, len(str(text)) * 8), 18)).convert_alpha()
+
+    def size(self, text):
+        return (max(8, len(str(text)) * 8), 18)
+
+    def text_size(self, text):
+        return self.size(text)
+
+
+class _CountingNotificationFonts:
+    def __init__(self):
+        self._fonts = {}
+
+    def scaled_size(self, scale):
+        return int(16 * scale)
+
+    def font_instance(self, role, **_kwargs):
+        if role not in self._fonts:
+            self._fonts[role] = _CountingNotificationFont()
+        return self._fonts[role]
+
+    @property
+    def total_render_calls(self):
+        return sum(font.render_calls for font in self._fonts.values())
+
+
+class _CountingNotificationTheme:
+    def __init__(self):
+        self.fonts = _CountingNotificationFonts()
+        self.panel = (30, 30, 40)
+        self.accent = (0, 60, 120)
+        self.text = (220, 220, 220)
+        self.medium = (150, 150, 160)
+        self.border = (70, 70, 85)
+        self.surface = (40, 40, 55)
+        self.dark = (15, 15, 20)
+
+
 class TestToastManagerClickHandling(unittest.TestCase):
     def setUp(self):
         self.mgr = ToastManager(_SCREEN)
@@ -265,6 +310,33 @@ class TestToastManagerClickHandling(unittest.TestCase):
         self.assertEqual(1, self.mgr.visible_count)
         self.mgr.update(0.2)
         self.assertEqual(0, self.mgr.visible_count)
+
+
+class TestNotificationPanelControlCaching(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.display.set_mode((1, 1))
+
+    def test_draw_reuses_cached_text_surfaces(self):
+        center = NotificationCenter(None)
+        center.add(
+            NotificationRecord(
+                message="Build succeeded cleanly.",
+                title="Build",
+                timestamp="2026-05-23T10:00:00",
+            )
+        )
+        panel = NotificationPanelControl("notif", pygame.Rect(0, 0, 360, 240), center)
+        theme = _CountingNotificationTheme()
+        surface = pygame.Surface((360, 240)).convert_alpha()
+
+        panel.draw(surface, theme)
+        first_render_calls = theme.fonts.total_render_calls
+
+        panel.draw(surface, theme)
+
+        self.assertGreater(first_render_calls, 0)
+        self.assertEqual(first_render_calls, theme.fonts.total_render_calls)
 
 
 # ===========================================================================

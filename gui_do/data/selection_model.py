@@ -77,9 +77,19 @@ class SelectionModel:
         self._selected: Set[int] = set()
         self._anchor: Optional[int] = None
         self._active: Optional[int] = None
+        self._range_bounds: Optional[tuple[int, int]] = None
         self._listeners: List[SelectionChangeCallback] = []
         if on_change is not None:
             self._listeners.append(on_change)
+
+    def _update_range_bounds(self) -> None:
+        if self._anchor is None or self._active is None:
+            self._range_bounds = None
+            return
+        self._range_bounds = (
+            min(self._anchor, self._active),
+            max(self._anchor, self._active),
+        )
 
     # ------------------------------------------------------------------
     # Subscription
@@ -129,6 +139,7 @@ class SelectionModel:
                 self._anchor = None
             if self._active is not None and self._active >= self._item_count:
                 self._active = None
+            self._update_range_bounds()
             self._fire()
 
     @property
@@ -143,10 +154,9 @@ class SelectionModel:
         if not self._valid(index):
             return False
         if self._mode is SelectionMode.RANGE:
-            if self._anchor is None or self._active is None:
+            if self._range_bounds is None:
                 return index in self._selected
-            lo = min(self._anchor, self._active)
-            hi = max(self._anchor, self._active)
+            lo, hi = self._range_bounds
             return lo <= index <= hi
         return index in self._selected
 
@@ -182,6 +192,7 @@ class SelectionModel:
             self._selected.add(index)
         self._anchor = index
         self._active = index
+        self._update_range_bounds()
         self._fire()
 
     def deselect(self, index: int) -> None:
@@ -209,6 +220,7 @@ class SelectionModel:
                 self._selected.add(index)
         self._anchor = index
         self._active = index
+        self._update_range_bounds()
         self._fire()
 
     def set_anchor(self, index: int) -> None:
@@ -218,6 +230,7 @@ class SelectionModel:
         self._anchor = index
         if self._active is None:
             self._active = index
+        self._update_range_bounds()
         self._fire()
 
     def set_active(self, index: int) -> None:
@@ -227,6 +240,7 @@ class SelectionModel:
         self._active = index
         if self._anchor is None:
             self._anchor = index
+        self._update_range_bounds()
         self._fire()
 
     def select_all(self) -> None:
@@ -244,6 +258,7 @@ class SelectionModel:
         self._selected.clear()
         self._anchor = None
         self._active = None
+        self._range_bounds = None
         self._fire()
 
     def is_selected(self, index: int) -> bool:
@@ -258,10 +273,9 @@ class SelectionModel:
         return 0 <= int(index) < self._item_count
 
     def _range_set(self) -> Set[int]:
-        if self._anchor is None or self._active is None:
+        if self._range_bounds is None:
             return set(self._selected)
-        lo = min(self._anchor, self._active)
-        hi = max(self._anchor, self._active)
+        lo, hi = self._range_bounds
         return set(range(lo, hi + 1))
 
     def _fire(self) -> None:
