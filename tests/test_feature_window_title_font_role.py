@@ -85,6 +85,7 @@ class TestFeatureWindowTitleFontRole(unittest.TestCase):
             {
                 "include_window_lower_button": True,
                 "include_window_hide_image_button": False,
+                "menus_enabled": True,
             },
             window.kwargs["titlebar_controls"],
         )

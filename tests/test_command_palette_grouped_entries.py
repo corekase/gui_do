@@ -75,6 +75,23 @@ class _WindowPresentationStub:
         return self._windows.get(str(key))
 
 
+class _WindowPresentationMenuSourceStub:
+    def __init__(self):
+        self._windows = {
+            "systems": _WindowStub("systems_window", "Systems", "main", visible=True),
+            "life": _WindowStub("life_window", "Conway's Game of Life", "main", visible=False),
+            "mandel": _WindowStub("mandel_window", "Mandelbrot", "main", visible=False),
+        }
+
+    def menu_windows(self, *, scene_name=None):
+        _ = scene_name
+        return (
+            (_BindingStub("systems", 1), self._windows["systems"]),
+            (_BindingStub("life", 2), self._windows["life"]),
+            (_BindingStub("mandel", 3), self._windows["mandel"]),
+        )
+
+
 class _FeatureRegistryStub:
     def __init__(self):
         self._features = {}
@@ -214,6 +231,32 @@ class TestCommandPaletteGroupedEntries(unittest.TestCase):
             [
                 "scene:control_showcase",
                 "custom:refresh",
+                "window:main:systems_window",
+                "window:main:life_window",
+                "window:main:mandel_window",
+            ],
+            entry_ids,
+        )
+
+    def test_window_group_prefers_shared_menu_window_source_order(self):
+        manager = CommandPaletteManager(_OverlayStub())
+        app = _AppStub()
+        window_presentation = _WindowPresentationMenuSourceStub()
+
+        manager.configure_builtin_entry_groups(
+            app,
+            window_presentation=window_presentation,
+            include_scene_entries=False,
+            include_window_entries=True,
+            group_order=("windows",),
+            custom_entries_provider=None,
+        )
+
+        manager._before_show_callback()
+        entry_ids = [entry.entry_id for entry in manager.entries()]
+
+        self.assertEqual(
+            [
                 "window:main:systems_window",
                 "window:main:life_window",
                 "window:main:mandel_window",

@@ -699,6 +699,30 @@ class MenuStripControl(UiNode):
             self._set_dynamic_flyout_min_width(self._window_menu.label, [])
             return []
 
+        presentation_menu_windows = getattr(self._window_presentation, "menu_windows", None)
+        if callable(presentation_menu_windows):
+            try:
+                active_scene_name = str(getattr(self._app, "active_scene_name", "") or "") if self._app is not None else ""
+                pairs = tuple(
+                    presentation_menu_windows(
+                        scene_name=active_scene_name if active_scene_name else None,
+                    )
+                    or ()
+                )
+            except Exception:
+                pairs = None
+
+            if pairs is not None:
+                items: List[ContextMenuItem] = []
+                for _binding, window in pairs:
+                    window_name = str(getattr(window, "title", "") or window.control_id)
+                    item = ContextMenuItem(window_name, action=lambda target=window: self._toggle_window(target))
+                    setattr(item, "_menu_window_checkbox", True)
+                    setattr(item, "_menu_window_visible", bool(window.visible))
+                    items.append(item)
+                self._set_auto_window_menu_flyout_min_width(self._window_menu.label, items, theme=getattr(self._app, "theme", None))
+                return items
+
         # Get all windows from the scene
         windows: List[UiNode] = [node for node in scene._walk_nodes() if node.is_window()]  # noqa: SLF001
 

@@ -398,6 +398,75 @@ class _StubHostForPresentation:
 
 
 class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
+    def test_titlebar_controls_default_menus_enabled_true(self):
+        app = _StubAppForRaiseRelayout()
+        window = _StubWindowNode("window", visible=True)
+        window.scene_name = "main"
+        host = _StubHostForPresentation(app, "feature", _StubWindowFeature(window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window("managed", feature_attribute_name="feature")
+
+        binding = model.get_binding("managed")
+
+        self.assertTrue(bool(binding.titlebar_controls.get("menus_enabled", False)))
+
+    def test_menu_windows_uses_canonical_order_and_filters_menus_disabled(self):
+        app = _StubAppForRaiseRelayout()
+
+        systems_window = _StubWindowNode("systems_window", visible=True)
+        systems_window.scene_name = "main"
+        systems_window.title = "Systems"
+
+        life_window = _StubWindowNode("life_window", visible=True)
+        life_window.scene_name = "main"
+        life_window.title = "Conway's Game of Life"
+
+        mandel_window = _StubWindowNode("mandel_window", visible=True)
+        mandel_window.scene_name = "main"
+        mandel_window.title = "Mandelbrot"
+
+        non_menu_window = _StubWindowNode("non_menu_window", visible=True)
+        non_menu_window.scene_name = "main"
+        non_menu_window.title = "Non-Menu"
+
+        class _Host:
+            pass
+
+        host = _Host()
+        host.app = app
+        host.systems_feature = _StubWindowFeature(systems_window)
+        host.life_feature = _StubWindowFeature(life_window)
+        host.mandel_feature = _StubWindowFeature(mandel_window)
+        host.non_menu_feature = _StubWindowFeature(non_menu_window)
+
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window(
+            "non_menu",
+            feature_attribute_name="non_menu_feature",
+            task_panel_slot_index=None,
+            titlebar_controls={"menus_enabled": False},
+        )
+        model.register_feature_window(
+            "mandel",
+            feature_attribute_name="mandel_feature",
+            task_panel_slot_index=3,
+        )
+        model.register_feature_window(
+            "systems",
+            feature_attribute_name="systems_feature",
+            task_panel_slot_index=1,
+        )
+        model.register_feature_window(
+            "life",
+            feature_attribute_name="life_feature",
+            task_panel_slot_index=2,
+        )
+
+        ordered_pairs = model.menu_windows(scene_name="main")
+        ordered_keys = [binding.key for binding, _window in ordered_pairs]
+
+        self.assertEqual(["systems", "life", "mandel"], ordered_keys)
+
     def test_show_visible_window_raises_without_global_tile_relayout(self):
         app = _StubAppForRaiseRelayout()
 

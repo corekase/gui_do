@@ -97,6 +97,19 @@ class _StubHost:
         self.app = app
 
 
+class _StubWindowPresentationMenuSource:
+    def __init__(self, windows):
+        self._windows = tuple(windows)
+
+    def menu_windows(self, *, scene_name=None):
+        _ = scene_name
+        pairs = []
+        for index, window in enumerate(self._windows, start=1):
+            binding = type("_Binding", (), {"key": f"k{index}", "task_panel_slot_index": index})()
+            pairs.append((binding, window))
+        return tuple(pairs)
+
+
 class _StubWindowContainer:
     def __init__(self):
         self.added = []
@@ -226,6 +239,35 @@ class TestMenuStripControl(unittest.TestCase):
         self.assertIsNotNone(windows_entry)
         labels = [item.label for item in windows_entry.items]
         self.assertIn("Systems Demo", labels)
+
+    def test_windows_menu_uses_shared_presentation_source_order(self):
+        scene_nodes = [
+            _StubWindowNode("non_menu_window", "Non-Menu", visible=True),
+            _StubWindowNode("systems_window", "Systems", visible=True),
+            _StubWindowNode("life_window", "Conway's Game of Life", visible=True),
+            _StubWindowNode("mandel_window", "Mandelbrot", visible=True),
+        ]
+        app = _StubApp(scene=_StubScene(scene_nodes))
+        presentation = _StubWindowPresentationMenuSource(
+            (
+                scene_nodes[1],
+                scene_nodes[2],
+                scene_nodes[3],
+            )
+        )
+
+        menu = MenuStripControl(
+            "menu",
+            app=app,
+            scene_name="main",
+            window_menu=WindowMenuOptions(shown=True),
+            window_presentation=presentation,
+        )
+
+        windows_entry = next((entry for entry in menu.entries if entry.label == "Window"), None)
+        self.assertIsNotNone(windows_entry)
+        labels = [item.label for item in windows_entry.items]
+        self.assertEqual(["Systems", "Conway's Game of Life", "Mandelbrot"], labels)
 
     def test_open_windows_flyout_auto_refreshes_when_visibility_changes(self):
         window = _StubWindowNode("systems_window", "Systems Demo", visible=False)

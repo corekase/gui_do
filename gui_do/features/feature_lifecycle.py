@@ -891,6 +891,7 @@ class FeatureWindowPresentationModel:
             return {
                 "include_window_lower_button": True,
                 "include_window_hide_image_button": True,
+                "menus_enabled": True,
             }
         if isinstance(spec, dict):
             raw = spec
@@ -898,13 +899,55 @@ class FeatureWindowPresentationModel:
             raw = {
                 "include_window_lower_button": getattr(spec, "include_window_lower_button", None),
                 "include_window_hide_image_button": getattr(spec, "include_window_hide_image_button", None),
+                "menus_enabled": getattr(spec, "menus_enabled", None),
             }
         lower_value = raw.get("include_window_lower_button")
         hide_value = raw.get("include_window_hide_image_button")
+        menus_enabled_value = raw.get("menus_enabled")
         return {
             "include_window_lower_button": True if lower_value is None else bool(lower_value),
             "include_window_hide_image_button": True if hide_value is None else bool(hide_value),
+            "menus_enabled": True if menus_enabled_value is None else bool(menus_enabled_value),
         }
+
+    @staticmethod
+    def _window_binding_sort_key(binding: "FeatureWindowBinding") -> tuple[int, str]:
+        slot_index = getattr(binding, "task_panel_slot_index", None)
+        if slot_index is None:
+            return (10_000, str(getattr(binding, "key", "")))
+        return (int(slot_index), str(getattr(binding, "key", "")))
+
+    def ordered_bindings(self) -> tuple[FeatureWindowBinding, ...]:
+        """Return bindings in canonical window-list order for shared UI surfaces."""
+        bindings = tuple(self._bindings.values())
+        with_slots = [b for b in bindings if getattr(b, "task_panel_slot_index", None) is not None]
+        without_slots = [b for b in bindings if getattr(b, "task_panel_slot_index", None) is None]
+        with_slots.sort(key=self._window_binding_sort_key)
+        return tuple([*with_slots, *without_slots])
+
+    @staticmethod
+    def _binding_menus_enabled(binding: "FeatureWindowBinding") -> bool:
+        titlebar_controls = getattr(binding, "titlebar_controls", {})
+        if not isinstance(titlebar_controls, dict):
+            return True
+        return bool(titlebar_controls.get("menus_enabled", True))
+
+    def menu_windows(self, *, scene_name: str | None = None) -> tuple[tuple[FeatureWindowBinding, object], ...]:
+        """Return canonical, menu-eligible (binding, window) pairs for shared window menus."""
+        target_scene = None if scene_name is None else str(scene_name)
+        ordered: list[tuple[FeatureWindowBinding, object]] = []
+        for binding in self.ordered_bindings():
+            if not self._binding_menus_enabled(binding):
+                continue
+            window = self.get_window(binding.key)
+            if window is None:
+                continue
+            if target_scene is not None:
+                window_scene = str(getattr(window, "scene_name", "") or "")
+                if window_scene and window_scene != target_scene:
+                    continue
+            ordered.append((binding, window))
+        return tuple(ordered)
 
     def register_feature_window(
         self,

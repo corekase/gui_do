@@ -1023,6 +1023,17 @@ class CommandPaletteManager:
         active_scene = self._selection_scene_key(app)
         active_scene_windows = self._active_scene_window_set(app)
         presentation = self._window_presentation
+        presentation_menu_windows = getattr(presentation, "menu_windows", None)
+        if callable(presentation_menu_windows):
+            try:
+                pairs = tuple(
+                    presentation_menu_windows(scene_name=active_scene if active_scene else None) or ()
+                )
+            except Exception:
+                pairs = None
+            if pairs is not None:
+                return [window for _binding, window in pairs]
+
         if presentation is not None and hasattr(presentation, "bindings"):
             bindings = tuple(getattr(presentation, "bindings")() or ())
             sorted_bindings = sorted(
