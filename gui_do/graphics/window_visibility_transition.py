@@ -34,6 +34,7 @@ class WindowVisibilityTransitionController:
         self._target_center = (0.0, 0.0)
         self._render_size = (1, 1)
         self._track_window_tiling_target = False
+        self._frozen_tiling_target_center: Optional[tuple[float, float]] = None
         self._transition_mode = "hide_show"
         self._post_transition_tile_app = None
         self._post_transition_tile_pending = False
@@ -117,7 +118,7 @@ class WindowVisibilityTransitionController:
 
     def _resolved_target_center(self) -> tuple[float, float]:
         if self._track_window_tiling_target:
-            target = self._resolved_window_tiling_target_center()
+            target = self._frozen_tiling_target_center
             if target is not None:
                 return target
             return tuple(map(float, pygame.Rect(self.window.rect).center))
@@ -152,6 +153,7 @@ class WindowVisibilityTransitionController:
         if transition_mode == "grow_shrink":
             start_center = current_center
             self._track_window_tiling_target = False
+            self._frozen_tiling_target_center = None
         else:
             target_center_rect = self._resolve_anchor_rect(app, binding)
             if bool(visible):
@@ -160,9 +162,11 @@ class WindowVisibilityTransitionController:
                 if self._active:
                     start_center = current_center
                 self._track_window_tiling_target = True
+                self._frozen_tiling_target_center = (float(target_center[0]), float(target_center[1]))
             else:
                 start_center = current_center
                 self._track_window_tiling_target = False
+                self._frozen_tiling_target_center = None
                 if target_center_rect is not None:
                     target_center = (
                         float(target_center_rect.centerx),
@@ -200,35 +204,50 @@ class WindowVisibilityTransitionController:
     def _issue_post_transition_tile(self) -> None:
         if not self._post_transition_tile_pending:
             return
-        app = self._post_transition_tile_app
         self._post_transition_tile_pending = False
-        self._post_transition_tile_app = None
-        tile_windows = getattr(app, "tile_windows", None) if app is not None else None
-        if not callable(tile_windows):
-            return
         is_show = self._target_progress >= 0.5
         if is_show:
             parent = getattr(self.window, "parent", None)
             raise_window = getattr(parent, "_raise_window", None)
             if callable(raise_window):
                 raise_window(self.window)
-        try:
-            if is_show:
-                tile_windows(
-                    newly_visible=(self.window,),
-                    raised_windows=(self.window,),
-                    as_visibility_event=True,
-                )
-            else:
-                tile_windows()
-        except TypeError:
-            if is_show:
-                try:
-                    tile_windows(newly_visible=(self.window,), as_visibility_event=True)
-                except TypeError:
-                    tile_windows()
-            else:
-                tile_windows()
+        return
+
+    def _finalize_show_handoff_position(self) -> None:
+        if self._target_progress < 0.5:
+            return
+        target_rect = getattr(self.window, "_window_tiling_target_rect", None)
+        frozen_target = self._frozen_tiling_target_center
+        if not isinstance(target_rect, pygame.Rect) and frozen_target is None:
+            return
+
+        current = pygame.Rect(getattr(self.window, "rect", pygame.Rect(0, 0, 0, 0)))
+        if frozen_target is not None:
+            width = int(current.width)
+            height = int(current.height)
+            if isinstance(target_rect, pygame.Rect):
+                width = int(target_rect.width)
+                height = int(target_rect.height)
+            resolved = pygame.Rect(0, 0, max(1, width), max(1, height))
+            resolved.center = (int(round(frozen_target[0])), int(round(frozen_target[1])))
+            target_rect = resolved
+
+        move_by = getattr(self.window, "move_by", None)
+        if callable(move_by):
+            dx = int(target_rect.x - current.x)
+            dy = int(target_rect.y - current.y)
+            if dx != 0 or dy != 0:
+                move_by(dx, dy)
+
+        setattr(self.window, "_window_tiling_target_rect", pygame.Rect(target_rect))
+
+        setattr(self.window, "_window_tiling_animating", False)
+
+        app = self._post_transition_tile_app
+        tweens = getattr(app, "tweens", None) if app is not None else None
+        cancel_for_tag = getattr(tweens, "cancel_all_for_tag", None)
+        if callable(cancel_for_tag):
+            cancel_for_tag(f"window_tiling:{id(self.window)}")
 
     def update(self, dt_seconds: float) -> None:
         if not self._active:
@@ -239,6 +258,7 @@ class WindowVisibilityTransitionController:
         self._elapsed_seconds = self._duration_seconds
         self._start_progress = self._target_progress
         self._start_center = self._resolved_target_center()
+        self._finalize_show_handoff_position()
         self._active = False
         self._issue_post_transition_tile()
 

@@ -14,6 +14,7 @@ from gui_do.features.feature_lifecycle import (
     place_control,
     place_control_specs,
     place_control_unlabeled,
+    set_window_visible_state,
 )
 
 pygame.init()
@@ -375,6 +376,21 @@ class _StubAppForToggleOpenWithTilingDisabled:
         )
 
 
+class _StubTweens:
+    def __init__(self):
+        self.canceled_tags = []
+
+    def cancel_all_for_tag(self, tag: str) -> int:
+        self.canceled_tags.append(str(tag))
+        return 1
+
+
+class _StubAppForTilingTweenCancel(_StubAppForRaiseRelayout):
+    def __init__(self):
+        super().__init__()
+        self.tweens = _StubTweens()
+
+
 class _StubHostForPresentation:
     def __init__(self, app, feature_attr_name: str, feature_obj):
         self.app = app
@@ -463,6 +479,88 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         self.assertEqual(1, len(app.calls))
         self.assertTrue(bool(app.calls[0]["as_visibility_event"]))
         self.assertTrue(bool(app.calls[0]["force"]))
+
+    def test_visibility_flip_cancels_stale_window_tiling_tween(self):
+        app = _StubAppForTilingTweenCancel()
+        window = _StubWindowNode("life_window", visible=True)
+        setattr(window, "_window_tiling_animating", True)
+        host = _StubHostForPresentation(app, "life_feature", _StubWindowFeature(window))
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window("life", feature_attribute_name="life_feature")
+
+        model.set_visible("life", False)
+
+        expected_tag = f"window_tiling:{id(window)}"
+        self.assertIn(expected_tag, app.tweens.canceled_tags)
+        self.assertFalse(bool(getattr(window, "_window_tiling_animating", True)))
+
+    def test_first_show_primes_chrome_layout_before_tile_windows(self):
+        class _ThemeStub:
+            pass
+
+        class _WindowForPrime:
+            def __init__(self):
+                self.visible = False
+                self.parent = None
+                self.window_effects = {
+                    "shear_enabled": True,
+                    "hide_show_enabled": True,
+                    "grow_shrink_enabled": False,
+                }
+                self.rect = Rect(0, 0, 160, 224)
+                self.prime_calls = 0
+
+            def ensure_chrome_layout(self, _theme):
+                self.prime_calls += 1
+                # Simulate first-draw chrome metric expansion.
+                self.rect.height = 240
+
+            def ensure_visibility_transition_controller(self):
+                return None
+
+            def begin_visibility_transition(self, *_args, **_kwargs):
+                return None
+
+            def move_by(self, dx, dy):
+                self.rect.x += int(dx)
+                self.rect.y += int(dy)
+
+        class _AppForPrime(_StubAppForRaiseRelayout):
+            def __init__(self):
+                super().__init__()
+                self.theme = _ThemeStub()
+                self.heights_seen = []
+
+            def tile_windows(
+                self,
+                newly_visible=None,
+                *,
+                raised_windows=None,
+                as_visibility_event: bool = False,
+                force: bool = False,
+            ):
+                if newly_visible is not None:
+                    self.heights_seen.extend(int(getattr(w, "rect", Rect(0, 0, 0, 0)).height) for w in newly_visible)
+                return super().tile_windows(
+                    newly_visible=newly_visible,
+                    raised_windows=raised_windows,
+                    as_visibility_event=as_visibility_event,
+                    force=force,
+                )
+
+        app = _AppForPrime()
+        window = _WindowForPrime()
+
+        set_window_visible_state(
+            window,
+            True,
+            app=app,
+            tile_windows=app.tile_windows,
+            binding=None,
+        )
+
+        self.assertEqual(1, window.prime_calls)
+        self.assertEqual([240], app.heights_seen)
 
 
 if __name__ == "__main__":

@@ -347,7 +347,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
                     show_controller._start_center,
                 )
 
-    def test_show_transition_targets_solved_tile_position_and_tracks_relayout(self):
+    def test_show_transition_freezes_solved_tile_target_during_animation(self):
         app = _StubApp()
         app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
         binding = _StubBinding("show_demo")
@@ -378,10 +378,46 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         window._window_tiling_target_rect = Rect(200, 260, window.rect.width, window.rect.height)
         mid_center_after = controller._current_center()
 
-        self.assertGreater(mid_center_after[0], mid_center_before[0])
-        self.assertGreater(mid_center_after[1], mid_center_before[1])
+        self.assertEqual(mid_center_before, mid_center_after)
 
-    def test_show_transition_completion_retiles_with_raised_window_hint(self):
+    def test_show_transition_completion_uses_frozen_target_when_external_retile_changes_target(self):
+        app = _StubApp()
+        app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
+        binding = _StubBinding("show_demo")
+        window = _ShowTileStubWindow()
+        window.visible = False
+        window.rect.topleft = (300, 220)
+        window.parent = _RaiseParentStub()
+
+        initial_target = Rect(120, 140, window.rect.width, window.rect.height)
+        external_target = Rect(260, 280, window.rect.width, window.rect.height)
+
+        def _tile_windows(*args, **kwargs):
+            app.tile_windows(*args, **kwargs)
+            window._window_tiling_target_rect = Rect(initial_target)
+
+        set_window_visible_state(
+            window,
+            True,
+            tile_windows=_tile_windows,
+            app=app,
+            binding=binding,
+        )
+
+        controller = window.visibility_transition_controller
+        self.assertIsNotNone(controller)
+        self.assertEqual((float(initial_target.centerx), float(initial_target.centery)), controller._resolved_target_center())
+
+        # Simulate a different window visibility relayout changing this window's
+        # tiling target while the show transition is already in flight.
+        window._window_tiling_target_rect = Rect(external_target)
+        window.update(controller.base_duration_seconds)
+
+        self.assertFalse(controller.is_active())
+        self.assertEqual(initial_target.topleft, window.rect.topleft)
+        self.assertEqual(initial_target.topleft, getattr(window, "_window_tiling_target_rect").topleft)
+
+    def test_show_transition_completion_does_not_retile_and_only_re_raises(self):
         app = _StubApp()
         app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
         binding = _StubBinding("show_demo")
@@ -401,6 +437,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
             app=app,
             binding=binding,
         )
+        pre_completion_tile_count = len(app.tile_windows_calls)
         pre_completion_raise_count = len(window.parent.raised)
 
         controller = window.visibility_transition_controller
@@ -408,13 +445,42 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         window.update(controller.base_duration_seconds)
 
         self.assertFalse(controller.is_active())
-        self.assertGreaterEqual(len(app.tile_windows_calls), 2)
-        _args, kwargs = app.tile_windows_calls[-1]
-        self.assertEqual((window,), kwargs.get("newly_visible"))
-        self.assertEqual((window,), kwargs.get("raised_windows"))
-        self.assertTrue(bool(kwargs.get("as_visibility_event")))
+        self.assertEqual(pre_completion_tile_count, len(app.tile_windows_calls))
         self.assertEqual(pre_completion_raise_count + 1, len(window.parent.raised))
         self.assertIs(window, window.parent.raised[-1])
+
+    def test_show_transition_completion_snaps_live_window_to_solved_target(self):
+        app = _StubApp()
+        app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
+        binding = _StubBinding("show_demo")
+        window = _ShowTileStubWindow()
+        window.visible = False
+        window.rect.topleft = (300, 220)
+        window.parent = _RaiseParentStub()
+
+        solved_target = Rect(120, 140, window.rect.width, window.rect.height)
+
+        def _tile_windows(*args, **kwargs):
+            app.tile_windows(*args, **kwargs)
+            window._window_tiling_target_rect = Rect(solved_target)
+
+        set_window_visible_state(
+            window,
+            True,
+            tile_windows=_tile_windows,
+            app=app,
+            binding=binding,
+        )
+
+        # Simulate lagging live geometry relative to solved target near completion.
+        window.rect.topleft = (solved_target.x - 40, solved_target.y + 26)
+
+        controller = window.visibility_transition_controller
+        self.assertIsNotNone(controller)
+        window.update(controller.base_duration_seconds)
+
+        self.assertFalse(controller.is_active())
+        self.assertEqual(solved_target.topleft, window.rect.topleft)
 
     def test_near_complete_reverse_uses_elapsed_time_not_remaining_time(self):
         app = _StubApp()
@@ -498,6 +564,28 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         )
 
         self.assertEqual(1, app.focus.clear_calls)
+
+    def test_hide_transition_completion_does_not_issue_additional_retile(self):
+        app = _StubApp()
+        window = _ShowTileStubWindow()
+        window.visible = True
+
+        set_window_visible_state(
+            window,
+            False,
+            tile_windows=app.tile_windows,
+            app=app,
+            binding=None,
+        )
+
+        controller = window.visibility_transition_controller
+        self.assertIsNotNone(controller)
+        self.assertEqual(1, len(app.tile_windows_calls))
+
+        window.update(controller.base_duration_seconds)
+
+        self.assertFalse(controller.is_active())
+        self.assertEqual(1, len(app.tile_windows_calls))
 
     def test_register_feature_window_rejects_conflicting_transition_modes(self):
         model = FeatureWindowPresentationModel(SimpleNamespace(app=None), tile_windows=None)

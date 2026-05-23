@@ -675,6 +675,24 @@ def set_window_visible_state(
         if callable(app_tile_windows):
             tile_windows = app_tile_windows
 
+    tile_windows_supports_immediate_windows = False
+    if callable(tile_windows):
+        try:
+            params = inspect.signature(tile_windows).parameters.values()
+            tile_windows_supports_immediate_windows = any(
+                (p.kind == inspect.Parameter.VAR_KEYWORD) or (p.name == "immediate_windows")
+                for p in params
+            )
+        except (TypeError, ValueError):
+            tile_windows_supports_immediate_windows = False
+
+    transition_show_immediate_window = False
+
+    def _transition_tiling_kwargs() -> dict[str, tuple[object, ...]]:
+        if transition_show_immediate_window and tile_windows_supports_immediate_windows and window is not None:
+            return {"immediate_windows": (window,)}
+        return {}
+
     tiling_enabled: bool | None = None
     if app is not None:
         is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
@@ -717,6 +735,21 @@ def set_window_visible_state(
         except Exception:
             return False
 
+    def _cancel_window_tiling_motion() -> None:
+        if window is None:
+            return
+        setattr(window, "_window_tiling_animating", False)
+        if app is None:
+            return
+        tweens = getattr(app, "tweens", None)
+        cancel_for_tag = getattr(tweens, "cancel_all_for_tag", None)
+        if not callable(cancel_for_tag):
+            return
+        try:
+            cancel_for_tag(f"window_tiling:{id(window)}")
+        except Exception:
+            return
+
     window_effects = normalize_window_effects_spec(
         getattr(window, "window_effects", None),
         operation="set_window_visible_state",
@@ -726,8 +759,19 @@ def set_window_visible_state(
         and (window_effects["hide_show_enabled"] or window_effects["grow_shrink_enabled"])
         and hasattr(window, "begin_visibility_transition")
     )
+    transition_show_immediate_window = bool(use_transition and is_visible)
     if use_transition and hasattr(window, "ensure_visibility_transition_controller"):
         window.ensure_visibility_transition_controller()
+    if becoming_visible and window is not None and app is not None:
+        ensure_chrome_layout = getattr(window, "ensure_chrome_layout", None)
+        theme = getattr(app, "theme", None)
+        if callable(ensure_chrome_layout) and theme is not None:
+            try:
+                ensure_chrome_layout(theme)
+            except Exception:
+                pass
+    if window is not None and is_visible != was_visible:
+        _cancel_window_tiling_motion()
     if becoming_visible:
         raise_window_in_parent(window)
     if window is not None and is_visible:
@@ -745,9 +789,15 @@ def set_window_visible_state(
                                 raised_windows=(window,),
                                 as_visibility_event=True,
                                 force=True,
+                                **_transition_tiling_kwargs(),
                             )
                         else:
-                            tile_windows(newly_visible=(window,), as_visibility_event=True, force=True)
+                            tile_windows(
+                                newly_visible=(window,),
+                                as_visibility_event=True,
+                                force=True,
+                                **_transition_tiling_kwargs(),
+                            )
                     except TypeError:
                         try:
                             tile_windows(newly_visible=(window,), as_visibility_event=True)
@@ -765,9 +815,14 @@ def set_window_visible_state(
                             newly_visible=(window,),
                             raised_windows=(window,),
                             as_visibility_event=True,
+                            **_transition_tiling_kwargs(),
                         )
                     else:
-                        tile_windows(newly_visible=(window,), as_visibility_event=True)
+                        tile_windows(
+                            newly_visible=(window,),
+                            as_visibility_event=True,
+                            **_transition_tiling_kwargs(),
+                        )
                 except TypeError:
                     tile_windows()
         else:

@@ -1588,6 +1588,8 @@ class GuiApplication:
         raised_windows=None,
         as_visibility_event: bool = False,
         force: bool = False,
+        immediate: bool = False,
+        immediate_windows=None,
     ) -> None:
         if as_visibility_event and not force and newly_visible is None and raised_windows is None:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
@@ -1602,6 +1604,8 @@ class GuiApplication:
         self.window_tiling.arrange_windows(
             newly_visible=newly_visible,
             raised_windows=raised_windows,
+            immediate=bool(immediate),
+            immediate_windows=immediate_windows,
             force=bool(force),
         )
 

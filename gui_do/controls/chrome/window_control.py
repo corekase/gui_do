@@ -739,7 +739,6 @@ class WindowControl(UiNode):
         self._sync_content_host_rect()
         visible_for_visuals = bool(self.visible or force_visible_visuals)
         factory = theme.graphics_factory
-        font_revision = factory.font_revision()
         if not self.restore_pristine(surface):
             self._draw_default_window_background(
                 surface,
@@ -747,32 +746,7 @@ class WindowControl(UiNode):
                 factory,
                 visible_for_visuals=visible_for_visuals,
             )
-        chrome_key = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
-        if self._chrome is None or self._chrome_size != chrome_key:
-            start = perf_counter()
-            self._chrome = factory.build_window_chrome_visuals(
-                self.rect.width,
-                self.titlebar_height,
-                self.title,
-                title_font_role=self.title_font_role,
-            )
-            old_titlebar_height = self.titlebar_height
-            old_total_height = int(self.rect.height)
-            chrome_height = self._chrome.title_bar_active.get_height()
-            self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, chrome_height)
-            self.rect.height = int(self._content_size[1] + self.titlebar_height)
-            if self.titlebar_height != old_titlebar_height:
-                self._mark_content_host_rect_dirty()
-                self._sync_content_host_rect()
-            if self.titlebar_height != old_titlebar_height or int(self.rect.height) != old_total_height:
-                self._notify_presenter_resized()
-            self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
-            first_frame_profiler().record_once(
-                "control.first_draw",
-                f"window:{self.control_id}",
-                (perf_counter() - start) * 1000.0,
-                detail=f"title={self.title}",
-            )
+        self.ensure_chrome_layout(theme, record_profile=True)
         title_bitmap = self._chrome.title_bar_active if self.active else self._chrome.title_bar_inactive
         title_rect = self.title_bar_rect()
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)
@@ -815,6 +789,39 @@ class WindowControl(UiNode):
                     child.draw(surface, theme)
         finally:
             surface.set_clip(previous_clip)
+
+    def ensure_chrome_layout(self, theme: "ColorTheme", *, record_profile: bool = False) -> None:
+        factory = theme.graphics_factory
+        font_revision = factory.font_revision()
+        chrome_key = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
+        if self._chrome is not None and self._chrome_size == chrome_key:
+            return
+
+        start = perf_counter()
+        self._chrome = factory.build_window_chrome_visuals(
+            self.rect.width,
+            self.titlebar_height,
+            self.title,
+            title_font_role=self.title_font_role,
+        )
+        old_titlebar_height = self.titlebar_height
+        old_total_height = int(self.rect.height)
+        chrome_height = self._chrome.title_bar_active.get_height()
+        self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, chrome_height)
+        self.rect.height = int(self._content_size[1] + self.titlebar_height)
+        if self.titlebar_height != old_titlebar_height:
+            self._mark_content_host_rect_dirty()
+            self._sync_content_host_rect()
+        if self.titlebar_height != old_titlebar_height or int(self.rect.height) != old_total_height:
+            self._notify_presenter_resized()
+        self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
+        if record_profile:
+            first_frame_profiler().record_once(
+                "control.first_draw",
+                f"window:{self.control_id}",
+                (perf_counter() - start) * 1000.0,
+                detail=f"title={self.title}",
+            )
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         transition_controller = self.visibility_transition_controller

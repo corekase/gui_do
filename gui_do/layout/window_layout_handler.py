@@ -674,17 +674,19 @@ class WindowLayoutHandler:
         scene_snapshot: Optional[Dict[str, object]],
         *,
         immediate: bool,
+        immediate_windows: Optional[Iterable[object]] = None,
         center_fallback: Optional[set[object]] = None,
     ) -> None:
         duration = 0.0 if immediate else WINDOW_TILING_ANIMATION_DURATION_SECONDS
         center_fallback = center_fallback or set()
+        immediate_window_set = set(immediate_windows or ())
         for window, target_x, target_y in targets:
             if window in center_fallback:
                 clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
             else:
                 clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
             self._set_window_tiling_target(window, int(clamped_x), int(clamped_y))
-            if duration <= 0.0:
+            if duration <= 0.0 or window in immediate_window_set:
                 setattr(window, "_window_tiling_animating", False)
                 current = Rect(window.rect)
                 window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
@@ -1090,6 +1092,7 @@ class WindowLayoutHandler:
         *,
         include_hidden: bool = False,
         immediate: bool = False,
+        immediate_windows: Optional[Iterable[object]] = None,
         force: bool = False,
     ) -> None:
         scene_snapshot = self._scene_layout_snapshot()
@@ -1105,7 +1108,8 @@ class WindowLayoutHandler:
             target.center = work.center
             clamped_x, clamped_y = self._clamp_target(only_window, int(target.x), int(target.y), scene_snapshot)
             self._set_window_tiling_target(only_window, int(clamped_x), int(clamped_y))
-            if immediate:
+            immediate_window_set = set(immediate_windows or ())
+            if immediate or only_window in immediate_window_set:
                 current = Rect(only_window.rect)
                 only_window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
             else:
@@ -1299,6 +1303,7 @@ class WindowLayoutHandler:
             window_rects,
             scene_snapshot,
             immediate=immediate,
+            immediate_windows=immediate_windows,
             center_fallback=center_fallback,
         )
 
