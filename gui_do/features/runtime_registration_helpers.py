@@ -8,6 +8,7 @@ def _normalize_titlebar_controls_spec(spec) -> dict:
         return {
             "include_window_lower_button": True,
             "include_window_hide_image_button": True,
+            "menus_enabled": True,
         }
     if isinstance(spec, dict):
         raw = spec
@@ -15,12 +16,15 @@ def _normalize_titlebar_controls_spec(spec) -> dict:
         raw = {
             "include_window_lower_button": getattr(spec, "include_window_lower_button", None),
             "include_window_hide_image_button": getattr(spec, "include_window_hide_image_button", None),
+            "menus_enabled": getattr(spec, "menus_enabled", None),
         }
     lower_value = raw.get("include_window_lower_button")
     hide_value = raw.get("include_window_hide_image_button")
+    menus_enabled_value = raw.get("menus_enabled")
     return {
         "include_window_lower_button": True if lower_value is None else bool(lower_value),
         "include_window_hide_image_button": True if hide_value is None else bool(hide_value),
+        "menus_enabled": True if menus_enabled_value is None else bool(menus_enabled_value),
     }
 
 

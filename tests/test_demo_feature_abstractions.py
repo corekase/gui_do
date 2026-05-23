@@ -400,6 +400,7 @@ class _StubWindowSpec:
         self.task_panel_style = task_panel_style
         self.task_panel_slot_index = task_panel_slot_index
         self.accessibility_label = accessibility_label
+        self.titlebar_controls = None
 
 
 class _StubPointerPacket:
@@ -1610,6 +1611,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
                 accessibility_label="Extra Window",
             )
         ]
+        specs[0].titlebar_controls = WindowTitlebarControlsSpec(menus_enabled=False)
 
         register_window_presentation_specs(presentation, specs)
 
@@ -1625,6 +1627,14 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual("toggle", kwargs["task_panel_style"])
         self.assertEqual(1, kwargs["task_panel_slot_index"])
         self.assertEqual("Extra Window", kwargs["accessibility_label"])
+        self.assertEqual(
+            {
+                "include_window_lower_button": True,
+                "include_window_hide_image_button": True,
+                "menus_enabled": False,
+            },
+            kwargs["titlebar_controls"],
+        )
 
     # ------------------------------------------------------------------
     # TabLayoutContext

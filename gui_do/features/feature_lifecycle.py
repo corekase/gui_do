@@ -917,13 +917,75 @@ class FeatureWindowPresentationModel:
             return (10_000, str(getattr(binding, "key", "")))
         return (int(slot_index), str(getattr(binding, "key", "")))
 
-    def ordered_bindings(self) -> tuple[FeatureWindowBinding, ...]:
-        """Return bindings in canonical window-list order for shared UI surfaces."""
+    def _resolve_scene_name(self, scene_name: str | None = None) -> str | None:
+        if scene_name is not None:
+            resolved = str(scene_name).strip()
+            return resolved or None
+        app = getattr(self.host, "app", None)
+        active_scene_name = str(getattr(app, "active_scene_name", "") or "").strip()
+        return active_scene_name or None
+
+    def _binding_scene_name(self, binding: "FeatureWindowBinding") -> str | None:
+        feature = getattr(self.host, binding.feature_attribute_name, None)
+        if feature is None:
+            return None
+        scene_name = str(getattr(feature, "scene_name", "") or "").strip()
+        if scene_name:
+            return scene_name
+        window = getattr(feature, "window", None)
+        if window is None:
+            return None
+        window_scene_name = str(getattr(window, "scene_name", "") or "").strip()
+        return window_scene_name or None
+
+    def ordered_bindings(self, *, scene_name: str | None = None) -> tuple[FeatureWindowBinding, ...]:
+        """Return bindings in canonical order, optionally scoped to one scene."""
+        target_scene = self._resolve_scene_name(scene_name)
         bindings = tuple(self._bindings.values())
+        if target_scene is not None:
+            filtered: list[FeatureWindowBinding] = []
+            for binding in bindings:
+                binding_scene = self._binding_scene_name(binding)
+                if binding_scene is None or binding_scene == target_scene:
+                    filtered.append(binding)
+            bindings = tuple(filtered)
         with_slots = [b for b in bindings if getattr(b, "task_panel_slot_index", None) is not None]
         without_slots = [b for b in bindings if getattr(b, "task_panel_slot_index", None) is None]
         with_slots.sort(key=self._window_binding_sort_key)
         return tuple([*with_slots, *without_slots])
+
+    def _scene_contains_window(self, scene_name: str, window: object) -> bool:
+        app = getattr(self.host, "app", None)
+        if app is None:
+            return False
+
+        target_scene = None
+        if str(getattr(app, "active_scene_name", "") or "") == str(scene_name):
+            target_scene = getattr(app, "scene", None)
+        if target_scene is None:
+            runtimes = getattr(app, "_scenes", None)
+            if isinstance(runtimes, dict):
+                runtime = runtimes.get(str(scene_name))
+                if runtime is not None:
+                    target_scene = getattr(runtime, "scene", None)
+        if target_scene is None:
+            return False
+
+        walk_nodes = getattr(target_scene, "_walk_nodes", None)
+        if not callable(walk_nodes):
+            return False
+        for node in walk_nodes():
+            if node is window:
+                return True
+        return False
+
+    def _window_matches_scene(self, window: object, scene_name: str | None) -> bool:
+        if scene_name is None:
+            return True
+        window_scene = str(getattr(window, "scene_name", "") or "").strip()
+        if window_scene:
+            return window_scene == scene_name
+        return self._scene_contains_window(scene_name, window)
 
     @staticmethod
     def _binding_menus_enabled(binding: "FeatureWindowBinding") -> bool:
@@ -934,18 +996,16 @@ class FeatureWindowPresentationModel:
 
     def menu_windows(self, *, scene_name: str | None = None) -> tuple[tuple[FeatureWindowBinding, object], ...]:
         """Return canonical, menu-eligible (binding, window) pairs for shared window menus."""
-        target_scene = None if scene_name is None else str(scene_name)
+        target_scene = self._resolve_scene_name(scene_name)
         ordered: list[tuple[FeatureWindowBinding, object]] = []
-        for binding in self.ordered_bindings():
+        for binding in self.ordered_bindings(scene_name=target_scene):
             if not self._binding_menus_enabled(binding):
                 continue
             window = self.get_window(binding.key)
             if window is None:
                 continue
-            if target_scene is not None:
-                window_scene = str(getattr(window, "scene_name", "") or "")
-                if window_scene and window_scene != target_scene:
-                    continue
+            if not self._window_matches_scene(window, target_scene):
+                continue
             ordered.append((binding, window))
         return tuple(ordered)
 

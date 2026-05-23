@@ -397,6 +397,33 @@ class _StubHostForPresentation:
         setattr(self, feature_attr_name, feature_obj)
 
 
+class _StubSceneForMembership:
+    def __init__(self, nodes):
+        self._nodes = list(nodes)
+
+    def _walk_nodes(self):
+        return list(self._nodes)
+
+
+class _StubRuntimeForMembership:
+    def __init__(self, scene):
+        self.scene = scene
+
+
+class _StubAppWithScenes:
+    def __init__(self, active_scene_name: str, scenes: dict):
+        self.active_scene_name = str(active_scene_name)
+        self._scenes = {
+            str(name): _StubRuntimeForMembership(scene)
+            for name, scene in scenes.items()
+        }
+        self.scene = self._scenes[self.active_scene_name].scene
+
+    def tile_windows(self, *args, **kwargs):
+        _ = args, kwargs
+        return None
+
+
 class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
     def test_titlebar_controls_default_menus_enabled_true(self):
         app = _StubAppForRaiseRelayout()
@@ -466,6 +493,94 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         ordered_keys = [binding.key for binding, _window in ordered_pairs]
 
         self.assertEqual(["systems", "life", "mandel"], ordered_keys)
+
+    def test_menu_windows_is_scoped_per_scene(self):
+        app = _StubAppForRaiseRelayout()
+
+        systems_window = _StubWindowNode("systems_window", visible=True)
+        systems_window.scene_name = "main"
+        systems_window.title = "Systems"
+
+        logs_window = _StubWindowNode("logs_window", visible=True)
+        logs_window.scene_name = "control_showcase"
+        logs_window.title = "Logs"
+
+        class _MainFeature:
+            scene_name = "main"
+
+            def __init__(self, window):
+                self.window = window
+
+        class _ShowcaseFeature:
+            scene_name = "control_showcase"
+
+            def __init__(self, window):
+                self.window = window
+
+        class _Host:
+            pass
+
+        host = _Host()
+        host.app = app
+        host.systems_feature = _MainFeature(systems_window)
+        host.logs_feature = _ShowcaseFeature(logs_window)
+
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window(
+            "systems",
+            feature_attribute_name="systems_feature",
+            task_panel_slot_index=1,
+        )
+        model.register_feature_window(
+            "logs",
+            feature_attribute_name="logs_feature",
+            task_panel_slot_index=1,
+        )
+
+        main_pairs = model.menu_windows(scene_name="main")
+        showcase_pairs = model.menu_windows(scene_name="control_showcase")
+
+        self.assertEqual(["systems"], [binding.key for binding, _window in main_pairs])
+        self.assertEqual(["logs"], [binding.key for binding, _window in showcase_pairs])
+
+    def test_menu_windows_scene_membership_fallback_includes_window_without_scene_name(self):
+        systems_window = _StubWindowNode("systems_window", visible=True)
+        systems_window.scene_name = ""
+        systems_window.title = "Systems"
+
+        main_scene = _StubSceneForMembership([systems_window])
+        showcase_scene = _StubSceneForMembership([])
+        app = _StubAppWithScenes(
+            "main",
+            {
+                "main": main_scene,
+                "control_showcase": showcase_scene,
+            },
+        )
+
+        class _FeatureWithoutScene:
+            def __init__(self, window):
+                self.window = window
+
+        class _Host:
+            pass
+
+        host = _Host()
+        host.app = app
+        host.systems_feature = _FeatureWithoutScene(systems_window)
+
+        model = FeatureWindowPresentationModel(host, tile_windows=app.tile_windows)
+        model.register_feature_window(
+            "systems",
+            feature_attribute_name="systems_feature",
+            task_panel_slot_index=1,
+        )
+
+        main_pairs = model.menu_windows(scene_name="main")
+        showcase_pairs = model.menu_windows(scene_name="control_showcase")
+
+        self.assertEqual(["systems"], [binding.key for binding, _window in main_pairs])
+        self.assertEqual([], [binding.key for binding, _window in showcase_pairs])
 
     def test_show_visible_window_raises_without_global_tile_relayout(self):
         app = _StubAppForRaiseRelayout()
