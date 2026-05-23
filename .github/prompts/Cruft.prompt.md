@@ -1,92 +1,80 @@
 ---
 name: Cruft
-description: Removes dead code, stale imports, shims/facades/redirects, and other compatibility cruft aggressively based on evidence; proceeds automatically once evidence-based criteria are met
+description: Evidence-first cruft removal pass that deletes proven dead code, collapses shims/facades/redirects, and rewrites callers toward the one clean API
 ---
 
 ## Role
 
-You are an agent performing a cruft-removal pass on this package. Your default behavior is to remove dead, obsolete, redirected, and compatibility-only structures rather than preserve them. Work subsystem by subsystem in the order produced by the Discovery Phase. After completing each subsystem, run the test suite before moving on.
+You are an agent performing a cruft-removal pass on this package. Your default behavior is to remove proven dead, obsolete, redirected, unused, redundant, and compatibility-only structures rather than preserve them. Prefer the direct canonical implementation over any intermediate indirection. If a compatibility layer exists, remove it and update all affected callers, tests, and the demo so the codebase converges on one clean API.
 
-## Phase 1 — Discovery
+## Operating Principles
 
-Before touching any file, collect the ground truth from the live codebase.
+1. Use the live repository as the source of truth.
+2. Do not hardcode paths, subsystem lists, package topology, or architecture assumptions into the prompt.
+3. Use the existing cruft prompt and the surrounding repository docs/tests as examples of possible cruft patterns, but only remove something when the evidence proves it is safe to delete.
+4. If something is only probably dead, gather more evidence before changing it.
+5. Prefer deletion and unirection over preservation, wrapping, fallback behavior, or compatibility scaffolding.
 
-### 1a. Enumerate Subsystems
+## Discovery
 
-List the contents of `gui_do/`. Every subdirectory is a subsystem. Record the full ordered list — this list drives every subsequent step and must not be hardcoded here. Within the `gui_do/controls/` directory, also list its subdirectories (e.g., `base`, `input`, `display`, `chrome`, `composite`, `data`, `canvas`) and treat each as a separate subsystem. Append `demo_features/` and `tests/` at the end of the list as the final two entries.
+Before touching any file, collect ground truth from the live codebase.
 
-### 1b. Enumerate and Classify the Public API
+1. Identify the files, symbols, and call paths that are actually present in the repository.
+2. Read the local tests, docs, and demo usage around any candidate removal.
+3. Find the nearest owning abstraction for each candidate and determine whether the code is still reachable or only kept alive by indirection.
+4. When compatibility layers hide the real producer, trace through them until you reach the canonical source.
 
-Read `gui_do/__init__.py` in full. Collect every exported name — these are the names assigned in import statements at module scope or listed in `__all__`. Start with this as the **Exported API Set**.
+## Cruft Targets
 
-Determine removal eligibility based on evidence: usage analysis, test coverage validation, and contract compliance.
+Remove only when the evidence supports safe deletion or safe collapse. Typical cruft includes:
 
-Use evidence, not export status, as the deciding factor. Exported but unused/obsolete symbols are removal targets if evidence supports it.
+1. Dead imports, including imports kept only for legacy redirects or obsolete module layout.
+2. Unused private functions, methods, constants, and module-level helpers that are not referenced in the live codebase, tests, or demo.
+3. Entire files that are unreachable and have no live consumers.
+4. Dead branches, obsolete guards, and conditionals that are provably false in the current codebase.
+5. Stale test helpers, fixtures, and shared factories that no longer support any live test.
+6. Shims, facades, re-export modules, redirect tables, wrapper layers, alias assignments, and other compatibility indirections.
+7. Duplicate helpers or unnecessary abstraction layers that exist only because an older shape was preserved.
 
-### 1c. Run the Test Suite
+## Redirection Rule
 
-Run `python -m unittest discover -s tests -p "test_*.py" 2>&1 | tail -3` to establish current test status before beginning cruft removal.
+When a construct redirects, forwards, aliases, or facades another construct:
 
-## Phase 2 — Subsystem Pass
+1. Remove as many intermediate hops as possible.
+2. Repoint callers directly at the producer or canonical implementation.
+3. Rewrite the API to the newer standard if that is the cleaner end state.
+4. Update every affected caller, test, and demo path in the same pass.
+5. Remove the compatibility layer after the direct path is working.
 
-For every subsystem discovered in Phase 1a, execute all four removal categories in order. After finishing all four categories for a subsystem, run the test suite to validate no critical breakages before proceeding to the next subsystem. Record every removal in an audit trail (file, symbol or construct, reason, evidence).
+Do not keep adapters, wrapper layers, fallback paths, feature flags, dual APIs, or other compatibility constructs unless the current evidence shows they are still required for correctness. The default choice is to remove them.
 
-### Category A — Dead Imports
+## Validation
 
-Scan every `.py` file in the subsystem, including `TYPE_CHECKING` blocks. Identify and remove:
-- Imports of symbols or module paths that no longer exist.
-- Imports of symbols that exist but are never referenced anywhere in the same file.
-- Relative import paths that were not updated after package reorganizations.
+Validate incrementally and keep the smallest working set possible.
 
-Remove dead imports by default, including imports that once existed only to support compatibility redirects.
+1. After each meaningful batch of removals, run the narrowest relevant tests or checks for the touched area.
+2. After a compatibility collapse or API rewrite, run the affected tests and demo-related checks that exercise the new direct path.
+3. After the full pass, run the complete test suite.
 
-### Category B — Unused Private Code
+Use test failures, contract checks, and live references to decide whether a candidate is truly removable. If a change is not proven safe, stop and gather more evidence instead of guessing.
 
-Find and remove:
-- Module-level variables and constants that are never read outside the file they are defined in.
-- Private methods and functions (names starting with `_`) that are never called from anywhere in the package, tests, or demo — confirmed by a workspace-wide reference search.
-- Entire source files that are unreachable: not imported by any other module, not a test file, not a demo entrypoint, not referenced from `gui_do/__init__.py`.
-- Function or method parameters that are accepted but silently ignored (assigned to `_`, never read) throughout the entire call chain.
+## Audit Trail
 
-For exported symbols: if they are dead/obsolete, remove them.
+Record every removal and every unirection in the audit trail with:
 
-### Category C — Compatibility Aliases and Shims
+1. File or construct removed.
+2. Why it was proven dead, stale, or compatibility-only.
+3. What direct producer or canonical API replaced it.
+4. Which callers, tests, or demo paths were updated.
 
-Find and remove:
-- Module-level name aliases of the form `NewName = OldName` or `OldName = NewName` that exist only for backward compatibility.
-- Pass-through facade modules whose entire purpose is to re-export symbols from a relocated module.
-- `getattr`/`hasattr` duck-typed probing fallbacks in production code that guard against missing attributes or methods that are now guaranteed to exist by the current class contract — verified by checking all concrete subclasses.
-- Dead conditional branches where the branch condition is permanently false given the current architecture (e.g., a version check that can never be true, a `scene_name` comparison to a scene that no longer exists). Remove only the dead branch, not the surrounding live logic.
-- Collapsed coordinator or facade classes that once delegated to another object but whose routing layer has since been inlined into the caller.
-- Redirect wiring and indirection glue (re-export hops, redirect helper tables, compatibility import paths).
+Call out high-impact removals, broad API rewrites, and any collapsed compatibility layer explicitly.
 
-When removing facades/shims/redirects, unredirect all call sites and imports to canonical modules and symbols, and move code to its proper file/folder location when necessary so the architecture remains direct and coherent.
+## Preservation Rule
 
-Treat compatibility-only layers as first-class cruft-removal targets.
+Do not preserve compatibility layers, shims, facades, redirects, aliases, or fallback branches just because they are familiar. Keep only what is demonstrably needed for correctness, and prefer the newer direct API whenever the codebase can be rewritten safely to use it.
 
-### Category D — Stale Test Infrastructure
+Git history is available if a removal needs to be restored later.
 
-In the `tests/` subsystem only: remove test helper stubs, fixture builders, or shared factory presets that are no longer consumed by any test function. Do not remove test functions themselves unless the functionality they cover was deleted during this same pass.
+## Completion
 
-## Removal Evidence and Audit Trail
-
-For all removals, record intent and impact in the audit trail. Categories of removals to track explicitly:
-- High-visibility public API surface (many exports from `gui_do/__init__.py` or widely imported modules)
-- Entire package/subsystem removals or multiple files across subsystems
-- Call site migration or contract changes
-- Large code removals (hundreds of lines or more)
-
-Document the evidence and reasoning so the removal rationale is clear. Git history is available to restore accidental removals if needed.
-
-## Preservation Rules — Do Not Remove
-
-Remove cruft aggressively. No broad protection rules apply. Everything can be removed if evidence supports cruft status and tests/contracts remain valid. Dead variables, unused methods, unreachable classes, stub code, compatibility aliases, shims, facades, redirects, and indirection layers are all removal targets when they meet the cruft criteria in Phases 2A–2D.
-
-Git history is available to restore accidental removals if needed.
-
-## After All Subsystems
-
-1. Run the full test suite and validate the result.
-2. Present the complete audit trail grouped by subsystem, listing every removed symbol, file, or construct with its reason.
-3. Separately list every compatibility alias/shim/facade/redirect that was removed and what it now points to directly.
-4. List every high-impact removal from the cruft pass with its rationale.
+When the pass is complete, present a concise audit trail grouped by removal type and include the direct replacements for any collapsed indirection or rewritten API.
