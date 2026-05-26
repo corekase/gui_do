@@ -59,6 +59,19 @@ Source-of-truth priority:
 4. Demo specs/examples
 5. Existing prose docs
 
+### Public API completeness contract
+
+The generated manual must be driven by the current exported API surface, not by a static assumption set.
+
+1. Inventory the current root-package public API from `gui_do/__init__.py` and its `__all__` definition.
+2. Use `docs/public_api_spec.md` to verify the intended public-surface grouping and tier model.
+3. Build a generation-time tier-to-chapter mapping from the current root exports.
+4. Ensure every currently exported public system family is documented in at least one main chapter and indexed in the appendix.
+5. Ensure every currently exported public type, helper family, runtime spec family, manager family, and subsystem cluster appears at least once in the manual by name or in a verified API table.
+6. Do not silently omit newer tiers or small exported subsystems just because they do not have a dedicated top-level chapter title.
+7. If an exported public API does not fit naturally into an existing chapter, document it in the closest chapter and explicitly index it in Appendix D.
+8. Clearly distinguish public APIs from advanced-runtime helpers and from infrastructure/internal exports that are not recommended for normal application code.
+
 ### Document navigation contract
 
 The generated output must include a full Table of Contents near the top.
@@ -137,6 +150,37 @@ The generated manual must include and correctly cross-link:
 14. Task-panel window-toggle identity/geometry reporting API:
    `SceneTaskPanelItemsResult.window_toggle_placements` and `TaskPanelWindowTogglePlacement`
    with panel-relative rect semantics (ignoring auto-hide offsets)
+15. Automatic window layout API and compatibility aliases:
+   `set_window_layout_enabled()`, `is_window_layout_enabled()`, `toggle_window_layout_enabled()`
+   and the compatibility `*_window_tiling_enabled()` aliases, with scene-scoped behavior
+16. Unified window z-order API and forced relayout behavior:
+   `raise_window()`, `lower_window()`, `tile_windows(..., force=True)` and how they interact
+   with automatic layout enablement
+17. Window layout handler operating contract:
+   when layout handling is disabled, automatic relayout and automatic window interference stop;
+   when enabled, raise/lower events relayout all windows through the handler; explicit one-time
+   relayout requests still run through the handler via the forced path
+18. Public API tier coverage derived from current `gui_do.__all__`, including all currently exported tiers and system families
+19. Per-scene optional facilities and bounded-area APIs, including unified window visibility management, task panel, scene menu strip, command palette, and `GuiApplication.bounded_area_rect()`
+20. Text and localization APIs, including formatter, text-flow, text-search, string-table, and locale-registry systems
+21. Advanced data and collection APIs, including virtual item sources, async data loading, sort/filter proxies, object pooling, caches, and diff calculators
+22. Graphics and rendering APIs, including render targets, draw phases, scene graph, particle systems, tile maps, asset registries, compositors, and debugging overlays
+23. Introspection and inspection APIs, including scene spatial index, property registry, property inspector models, and inspection workflows
+24. Advanced runtime and bootstrapping helpers, including feature/runtime helper families, presenter/tab helpers, host-action declaration helpers, runtime wiring helpers, and routed-runtime setup/shutdown helpers
+25. Audio APIs, including sound cues, sound-bank registries, and sound-event bus patterns
+26. Accessibility APIs, including accessibility tree, roles, live announcements, politeness, and accessibility bus patterns
+27. Theme invalidation APIs, including automatic visual cache invalidation on theme switch
+28. Undo-context routing APIs, including named undo/redo stack routing and selection guidance
+29. Async form-validation APIs, including debounced cross-field validation flows
+30. Scoped service-graph APIs, including typed service keys, scopes, and scope stacks
+31. Cancelable dataflow-pipeline APIs, including cancellation tokens, stages, pipeline handles, and stale-generation behavior
+32. Transactional app-state store APIs, including selectors, transactions, and snapshot semantics
+33. Adaptive constraint layout v2 APIs, including adaptive policies and priority-based constraints
+34. Virtualization core APIs, including measure policy, recycle pool, virtualized windows, and virtualization engine responsibilities
+35. Interaction state machine APIs, including phases, contexts, guarded transitions, and input-phase coordination
+36. Schema-driven form runtime APIs, including field graph schemas, validation policies, and schema runtime behaviors
+37. Portable snapshot and migration APIs, including schema versions, versioned snapshots, migration registries, migration steps, and snapshot migrator workflows
+38. Infrastructure and internal caution guidance for exports that are public but not recommended as normal application entry points, such as low-level runtime engine helpers
 
 ### Appendix contract
 
@@ -156,6 +200,12 @@ Appendix F is mandatory and must cover all discovered spec families and subspecs
 3. Purpose
 4. Default or notable behavior
 5. Cross-reference chapter
+
+Appendix D is mandatory as a true API coverage index and must include:
+1. Every currently exported root-package public symbol grouped by current tier/system
+2. A chapter or appendix target for every exported symbol family
+3. Tier-to-chapter mapping for all current tiers discovered from `gui_do/__init__.py`
+4. Explicit entries for advanced-runtime helpers, optional facilities, and public-but-not-primary APIs
 
 ### Special normalization and cleanup
 
@@ -186,6 +236,9 @@ Before finishing, verify:
 7. Appendix F covers discovered specs and subspecs.
 8. Obsolete content removed.
 9. pygame-ce string no longer appears.
+10. Every currently exported root-package public API family discovered from `gui_do.__all__` is documented somewhere in the manual.
+11. Appendix D includes a complete current API quick index and tier-to-chapter mapping.
+12. Public systems introduced in tiers beyond the core chapter names are not omitted.
 
 ## Input List (Section-by-Section Targets)
 
@@ -206,9 +259,11 @@ Use this as the terse generation input list. Expand each item using the Program 
    build, bind_runtime, route, update, draw; message coordination; routed lifecycle helpers
 9. Systems: Application Bootstrap and Host Configuration through State and Observables
 10. Systems: Controls and Control Composition through Overlays, Dialogs, Notifications, and Command Surfaces (include command palette two-bind model in Overlays, Dialogs, Notifications, and Command Surfaces)
-11. Systems: Scene, Window, and Task-Panel Presentation Models through Theme, Styling, and Visual Systems (include unified window-visibility guidance in Scene, Window, and Task-Panel Presentation Models)
+11. Systems: Scene, Window, and Task-Panel Presentation Models through Theme, Styling, and Visual Systems (include unified window-visibility guidance and automatic-layout API guidance in Scene, Window, and Task-Panel Presentation Models)
 11a. In Scene, Window, and Task-Panel Presentation Models, explicitly document task-panel window-toggle placement and geometry reporting APIs with verified demo usage examples
+11b. In Layout Systems and Scene, Window, and Task-Panel Presentation Models, explicitly document automatic layout enable/disable semantics, handler-controlled raise/lower relayout behavior, compatibility tiling aliases, and the explicit F3-style one-time relayout path using `tile_windows(..., force=True)`
 12. Systems: Text, Input, Forms, and Validation Systems through Telemetry, Introspection, and Operational Hooks
+12a. Within the existing system chapters, explicitly cover the remaining exported public tiers that may not be obvious from chapter names: text/localization, advanced data/collections, graphics/rendering, introspection/inspection, advanced runtime/bootstrap helpers, audio, accessibility, theme invalidation, undo-context routing, async form validation, scoped service graph, cancelable dataflow pipeline, transactional app state store, adaptive constraint layout v2, virtualization core, interaction state machines, schema-driven form runtime, and snapshot/migration APIs
 13. Integration patterns and composition recipes
 14. End-to-end reference application listing with validation checklist
 15. Testing, diagnostics, reliability, maintainer diff checklist
