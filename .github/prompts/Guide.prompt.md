@@ -20,11 +20,42 @@ The program generates and maintains:
 You are generating or updating README.md and TUTORIAL.md from the current repository state.
 Discover everything from source code, docs, tests, and demo features at runtime.
 
+### Core generation standard
+
+1. Be verbose, comprehensive, and high-signal where depth improves user success.
+2. Prefer depth over broad but shallow lists.
+3. Longer is better only when new content adds practical value.
+4. Explain both how and why for important design and workflow decisions.
+5. Do not be redundant or repetitive; avoid rephrasing the same point across adjacent sections.
+6. Use progressive explanation: fundamentals first, then composition, then advanced patterns.
+
+### Depth and anti-redundancy policy
+
+For each substantial tutorial topic, include when material exists:
+1. Problem framing and learner objective.
+2. Conceptual model and lifecycle placement.
+3. Runtime behavior and ownership semantics.
+4. API map and role of key symbols.
+5. Decision guidance and tradeoffs.
+6. Failure modes and recovery guidance.
+7. Verification cues (tests, demos, or implementation anchors).
+
+Redundancy guardrails:
+1. Explain a concept deeply at its primary section.
+2. In later sections, link back and add only new context.
+3. Avoid repeating identical checklists; tailor them to section goals.
+4. Avoid duplicate code snippets unless the second snippet demonstrates a meaningfully different constraint.
+
 ### Workflow context
 
 This prompt runs after the Manual prompt in the project workflow.
 Treat MANUAL.md as current, authoritative reference material.
 Use MANUAL.md for deep-system links and avoid duplicating full reference detail that belongs there.
+
+Guide-writing posture:
+1. README.md is discovery-oriented and motivational.
+2. TUTORIAL.md is execution-oriented and learning-complete.
+3. Default to expanding TUTORIAL.md depth rather than adding reference-style bulk to README.md.
 
 ### Execution model (strict)
 
@@ -51,6 +82,19 @@ This prompt always handles both target files in one run.
 4. Use only API names verified from current gui_do/__init__.py exports.
 5. Keep README.md high-level and motivational, not a reference manual.
 6. Keep TUTORIAL.md stepwise, complete, and runnable.
+7. Keep terminology consistent across README.md, TUTORIAL.md, and MANUAL.md.
+8. Prefer explicit transitions that explain why each tutorial step is introduced when it is.
+
+### TUTORIAL-first quality profile
+
+When tradeoffs are required, prioritize TUTORIAL.md quality.
+
+TUTORIAL.md should:
+1. Read as a cohesive learning journey, not disconnected recipes.
+2. Include enough implementation detail for a reader to reproduce outcomes without hidden assumptions.
+3. Show both baseline paths and at least one advanced/production-ready refinement path where relevant.
+4. Provide short checkpoints that confirm expected behavior after major milestones.
+5. Make lifecycle safety, runtime ownership, and teardown discipline explicit whenever state, subscriptions, routing, or async behavior appear.
 
 ### Discovery protocol (required)
 
@@ -63,7 +107,17 @@ Before writing either file, collect current facts from:
 6. pyproject.toml and dependency requirement files (for example requirements-ci.txt) to discover install-time dependencies users must install manually when using --no-deps
 7. Existing README.md and TUTORIAL.md when present
 
+Before writing each major section, identify section-specific evidence from the discovered sources.
+Do not include claims that cannot be tied to current code/tests/docs.
+
 Use discovered data only. Do not assume names from memory.
+
+Source-of-truth priority:
+1. Current runtime behavior in gui_do code
+2. Tests asserting behavior
+3. Runtime/contracts docs
+4. demo_features usage
+5. Existing prose docs
 
 ### README.md contract
 
@@ -108,6 +162,7 @@ README.md content rules:
 5. In Installation, explicitly use `python -m pip install -e . --no-deps` rather than creating a virtual environment workflow or a dependency-installing editable install command.
 6. In Installation, list the discovered dependencies users must install manually because `--no-deps` skips dependency installation.
 7. In Installation, state that manual dependency installation is required because building binary dependencies can be problematic on Windows.
+8. Keep code examples minimal and orientation-focused; defer deep implementation to TUTORIAL.md and MANUAL.md.
 
 ### TUTORIAL.md contract
 
@@ -138,6 +193,28 @@ TUTORIAL.md content rules:
 8. In Installation and Setup, list the discovered dependencies users must install manually because `--no-deps` skips dependency installation.
 9. In Installation and Setup, state that manual dependency installation is required because building binary dependencies can be problematic on Windows.
 
+TUTORIAL.md depth contract:
+1. Each major section must include purpose, implementation steps, and expected runtime outcome.
+2. Each major section must include at least one introspected code example unless no direct usage exists.
+3. For API-dense sections, include both a minimal example and an applied integration example.
+4. Include explicit "why this step now" transitions between sections.
+5. For behavior-sensitive topics (ownership, routing, teardown, cancellation, migration), include boundary-case examples.
+6. Add concise troubleshooting notes near the step where the error is likely to appear.
+
+TUTORIAL.md code example contract:
+1. Source examples from current gui_do/, tests/, demo_features/, docs/, or existing tutorial/readme content when verified.
+2. Prefer adapting real snippets over inventing unverified code.
+3. Preserve semantic behavior when trimming setup for readability.
+4. Validate all symbol names, fields, and call patterns against current implementation.
+5. If no direct snippet exists, provide the smallest valid inferred example and label it as inferred.
+6. In accompanying prose, state expected output/behavior and include at least one caution note for non-trivial examples.
+
+TUTORIAL.md progression contract:
+1. Ensure each section consumes artifacts created earlier in the tutorial project.
+2. Ensure no step depends on code that has not yet been introduced.
+3. Ensure milestone listings are synchronized with the latest step content.
+4. Ensure final complete listing is internally consistent and runnable.
+
 ### Major systems and runtime faculties coverage
 
 Across README.md and TUTORIAL.md:
@@ -145,6 +222,12 @@ Across README.md and TUTORIAL.md:
 2. Cover each major system at an appropriate level.
 3. Explain declarative wiring versus imperative feature behavior.
 4. Link each major concept to the corresponding MANUAL.md section when deeper detail is needed.
+
+For each covered major system in TUTORIAL.md, include:
+1. What problem it solves in the tutorial project.
+2. Which public APIs are used and why.
+3. One applied snippet in the tutorial project context.
+4. One common mistake and how to avoid it.
 
 ### demo_features organization convention
 
@@ -169,6 +252,9 @@ After generating README.md and TUTORIAL.md, verify and fix:
 10. Installation commands in both files use `python -m pip install -e . --no-deps` when describing editable installation.
 11. Installation sections in both files include a dependency list discovered from repository dependency files for manual installation.
 12. Installation sections in both files explain the Windows binary dependency rationale for manual dependency installation with `--no-deps`.
+13. TUTORIAL.md sections include introspected examples wherever evidence allows.
+14. Any inferred examples are explicitly labeled and justified by nearby verified patterns.
+15. TUTORIAL.md progression remains continuous with no forward references to not-yet-introduced code.
 
 ### Final enrichment pass (required and single)
 
@@ -179,6 +265,8 @@ This pass must:
 3. Improve narrative continuity across tutorial sections.
 4. Preserve required section order and contracts.
 5. Keep README concise and keep TUTORIAL comprehensive.
+6. Remove repeated explanations and duplicate snippets that do not add new value.
+7. Improve transitions and milestone validation cues in TUTORIAL.md.
 
 ### Completion gates
 
@@ -191,10 +279,14 @@ Before finishing, verify:
 6. MANUAL.md links are present where deeper detail is expected.
 7. pygame-ce is absent.
 8. Double-underscore identifiers are correctly formatted.
+9. TUTORIAL.md includes introspected, validated examples for all major API/system sections where discoverable evidence exists.
+10. Any inferred tutorial examples are clearly labeled and behaviorally consistent with discovered patterns.
+11. TUTORIAL.md maintains a continuous, runnable project narrative from first feature to complete listing.
 
 ## Input List
 
 Use this as the terse generation input list. Expand each item using the Program rules above.
+For each TUTORIAL.md item, include motivation, implementation steps, introspected code example(s), expected outcome, and a brief troubleshooting note.
 
 1. Discovery inventory from code, docs, demos, and existing docs
 2. README.md update-or-generate decision

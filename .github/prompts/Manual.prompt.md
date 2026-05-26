@@ -21,10 +21,30 @@ Do not use stale assumptions. Discover everything from code, tests, docs, and de
 ### Core generation standard
 
 1. Be verbose, comprehensive, and high-signal.
-2. Longer is better when it adds substance, clarity, and practical value.
-3. Do not be redundant or repetitive.
-4. Explain both how and why for every major concept.
-5. Prefer progressive explanations over repetitive bullet dumps.
+2. Prefer depth over breadth-only listing: explain behavior, intent, tradeoffs, and practical usage.
+3. Longer is better only when added text contributes new information.
+4. Do not be redundant or repetitive; do not restate the same guidance in slightly different wording.
+5. Explain both how and why for every major concept.
+6. Prefer progressive explanations over repetitive bullet dumps.
+7. Keep each section self-contained enough to be useful on its own, while still linking to related sections instead of re-explaining them in full.
+
+### Depth and anti-redundancy policy
+
+For each substantial topic, include all of the following when material exists:
+1. Problem framing: what the capability solves.
+2. Conceptual model: how it fits into gui_do architecture and lifecycle.
+3. Operational behavior: what happens at runtime, including ordering and ownership.
+4. API surface map: primary public types/functions and how they relate.
+5. Decision guidance: when to choose pattern A vs pattern B.
+6. Failure modes: common mistakes, edge cases, and anti-patterns.
+7. Verification guidance: what tests/docs/demos confirm the described behavior.
+
+Redundancy guardrails:
+1. Introduce a concept once in depth at its primary location.
+2. In later chapters, reference the primary location and add only new context specific to that chapter.
+3. Avoid repeating identical checklists; use chapter-specific variants.
+4. Avoid repeating the same API list unless new grouping or interpretation is added.
+5. Avoid repeating near-identical examples; vary scenario, constraints, and objective.
 
 ### Code example standard
 
@@ -32,15 +52,36 @@ Do not use stale assumptions. Discover everything from code, tests, docs, and de
 2. Every example must be introspected and verified against the current gui_do codebase at generation time.
 3. Examples must use current public API names and valid field names.
 4. Examples must explain how and why the shown pattern works.
-5. If a section is concept-heavy, still include at least one concise, relevant code example unless impossible.
+5. Each non-trivial example should include expected behavior and at least one caution note.
+6. Prefer examples that reflect real usage patterns in tests and demo_features rather than synthetic placeholders.
+7. If a section is concept-heavy, still include at least one concise, relevant code example unless impossible.
+
+Example coverage requirements:
+1. For each system chapter, include examples for the primary API path and at least one advanced path when available.
+2. For each required topical coverage item, include at least one code example unless no runnable or assertable usage exists in discovered sources.
+3. When a topic exposes multiple commonly paired APIs, include a combined example showing realistic composition.
+4. When an API is behavior-sensitive (ownership, lifecycle, routing, teardown, cancellation, migration), include an example that demonstrates the behavior boundary explicitly.
+
+Example sourcing and extraction policy:
+1. Source examples from current code in gui_do/, tests/, docs/, and demo_features/ via discovery.
+2. Prefer adapting real, current usage snippets over inventing new unverified patterns.
+3. If adapting snippets, preserve semantic behavior while trimming unrelated setup for readability.
+4. Do not include pseudo-code presented as executable code.
+5. If no direct usage exists for a public API, provide the smallest valid example inferred from adjacent verified patterns and explicitly mark it as inferred.
+
+Example validation contract:
+1. Confirm all referenced symbols exist in current exports or owning modules at generation time.
+2. Confirm all constructor fields, options, and method names match current implementation.
+3. Confirm example flow is consistent with current lifecycle and routing contracts.
+4. Where possible, anchor each example to at least one validating source location (test, demo, or implementation site) in accompanying prose.
+5. Reject and regenerate any example that conflicts with discovered runtime behavior.
 
 ### Execution model (strict)
 
 1. Generate serially only.
 2. Never perform parallel generation.
-3. Never generate multiple sections concurrently.
-4. Complete one section, then continue to the next.
-5. If partial update mode is requested, still process selected sections serially in listed order.
+3. Complete one section before starting the next.
+4. If partial update mode is requested, still process selected sections serially in listed order.
 
 Rationale: parallel section generation can hang and can produce inconsistent cross-links.
 
@@ -51,6 +92,9 @@ Before writing each section, perform a targeted discovery pass across:
 2. Relevant tests that assert behavior
 3. Relevant docs under docs/
 4. Relevant demo usage under demo_features/
+
+Before drafting each section, identify the exact evidence set that supports that section and prioritize the most behavior-defining sources first.
+Do not include claims that cannot be tied to discovered code/tests/contracts.
 
 Source-of-truth priority:
 1. Current runtime behavior in gui_do code
@@ -71,6 +115,7 @@ The generated manual must be driven by the current exported API surface, not by 
 6. Do not silently omit newer tiers or small exported subsystems just because they do not have a dedicated top-level chapter title.
 7. If an exported public API does not fit naturally into an existing chapter, document it in the closest chapter and explicitly index it in Appendix D.
 8. Clearly distinguish public APIs from advanced-runtime helpers and from infrastructure/internal exports that are not recommended for normal application code.
+9. When a symbol is public but specialized, provide a brief usage-boundary note (who should use it and when).
 
 ### Document navigation contract
 
@@ -79,6 +124,7 @@ The generated output must include a full Table of Contents near the top.
 2. Every section heading must include a link back to Table of Contents directly below the heading:
    [Back to Table of Contents](#table-of-contents)
 3. All cross-references must resolve.
+4. Cross-references should be purposeful: use them to avoid repetition and to help readers traverse conceptual dependencies.
 
 ### Document structure contract
 
@@ -125,9 +171,19 @@ Each system chapter must include:
 4. Typical usage flow
 5. Minimal verified example
 6. At least one advanced pattern
-7. Common mistakes and anti-patterns
-8. Cross-links to related chapters
-9. Back-to-TOC link
+7. Design tradeoffs and decision criteria
+8. Common mistakes and anti-patterns
+9. Diagnostics and verification touchpoints (tests, traces, assertions, or introspection hooks)
+10. Performance and scaling considerations when relevant
+11. Cross-links to related chapters
+12. Back-to-TOC link
+
+Chapter depth targets:
+1. Do not stop at API listing; explain orchestration and lifecycle interactions.
+2. Clarify how chapter-local concepts connect to routed runtime, ownership, and teardown disciplines.
+3. Include both an onboarding-friendly baseline path and an advanced path.
+4. Use concise tables when they improve scanability, but accompany tables with interpretation text.
+5. Ensure examples are distributed through the chapter rather than clustered only at the end.
 
 ### Required topical coverage
 
@@ -182,6 +238,15 @@ The generated manual must include and correctly cross-link:
 37. Portable snapshot and migration APIs, including schema versions, versioned snapshots, migration registries, migration steps, and snapshot migrator workflows
 38. Infrastructure and internal caution guidance for exports that are public but not recommended as normal application entry points, such as low-level runtime engine helpers
 
+For each required topical item above, provide:
+1. Scope definition and motivation.
+2. Runtime or lifecycle placement.
+3. Public API references and role mapping.
+4. At least one practical usage or integration example when feasible.
+5. Pitfalls or constraints that prevent misuse.
+6. Cross-links to related topical items and relevant chapter anchors.
+7. Evidence note indicating whether the example is directly sourced or inferred from verified patterns.
+
 ### Appendix contract
 
 Appendix must include at least:
@@ -200,12 +265,14 @@ Appendix F is mandatory and must cover all discovered spec families and subspecs
 3. Purpose
 4. Default or notable behavior
 5. Cross-reference chapter
+6. Validation notes or contract-test pointers when available
 
 Appendix D is mandatory as a true API coverage index and must include:
 1. Every currently exported root-package public symbol grouped by current tier/system
 2. A chapter or appendix target for every exported symbol family
 3. Tier-to-chapter mapping for all current tiers discovered from `gui_do/__init__.py`
 4. Explicit entries for advanced-runtime helpers, optional facilities, and public-but-not-primary APIs
+5. Short selection guidance for high-confusion symbol families (when to use one API family over another)
 
 ### Special normalization and cleanup
 
@@ -213,6 +280,7 @@ Appendix D is mandatory as a true API coverage index and must include:
 2. Replace all occurrences of pygame-ce with pygame.
 3. Remove obsolete, stale, or superseded content.
 4. Ensure no placeholder markers remain.
+5. Normalize terminology across chapters so the same concept is named consistently.
 
 ### Final enrichment pass (mandatory and single)
 
@@ -222,7 +290,8 @@ This pass must:
 2. Improve explanations where depth is insufficient.
 3. Add missing code examples where appropriate.
 4. Improve markdown structure and cross-link clarity.
-5. Preserve section order and avoid unnecessary rewrites.
+5. Remove newly introduced repetition, duplicated bullets, and circular explanations.
+6. Preserve section order and avoid unnecessary rewrites.
 
 ### Completion gates
 
@@ -239,10 +308,17 @@ Before finishing, verify:
 10. Every currently exported root-package public API family discovered from `gui_do.__all__` is documented somewhere in the manual.
 11. Appendix D includes a complete current API quick index and tier-to-chapter mapping.
 12. Public systems introduced in tiers beyond the core chapter names are not omitted.
+13. Every major chapter includes both conceptual explanation and verified operational guidance.
+14. No section primarily repeats content already established elsewhere without adding new context.
+15. Every chapter and topical item includes code examples wherever discovered evidence allows.
+16. All examples are introspected against current implementation and use current symbol names and fields.
+17. Any inferred examples are explicitly labeled as inferred and justified by nearby verified patterns.
 
 ## Input List (Section-by-Section Targets)
 
 Use this as the terse generation input list. Expand each item using the Program rules above.
+For each item, produce detail that includes: motivation, operational behavior, concrete APIs, usage pattern, and verification notes.
+For each item, include introspected code examples whenever possible, and include at least one example for every API-dense subsection.
 
 1. Title and purpose framing for gui_do manual audience and intent
 2. Full navigable TOC with internal links
