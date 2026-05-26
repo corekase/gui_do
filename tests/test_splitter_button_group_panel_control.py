@@ -392,6 +392,40 @@ def _move_window_to(window: WindowControl, x: int, y: int) -> None:
 
 
 class TestPanelControlWindowDrag(unittest.TestCase):
+    def test_titlebar_drag_start_cancels_window_tiling_motion(self):
+        class _StubTweens:
+            def __init__(self):
+                self.cancelled_tags = []
+
+            def cancel_all_for_tag(self, tag):
+                self.cancelled_tags.append(tag)
+                return 1
+
+        panel = PanelControl("panel", Rect(0, 0, 800, 600))
+        window = WindowControl("win", (260, 180), "Window")
+        _move_window_to(window, 100, 80)
+        panel.add(window)
+
+        app = _StubApp()
+        app.tweens = _StubTweens()
+
+        setattr(window, "_window_tiling_animating", True)
+        setattr(window, "_window_tiling_target_rect", Rect(340, 220, window.rect.width, window.rect.height))
+
+        down = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=0,
+            pos=(130, 90),
+            button=1,
+        )
+        consumed = panel.on_event_capture(down, app)
+
+        self.assertTrue(consumed)
+        self.assertEqual([f"window_tiling:{id(window)}"], app.tweens.cancelled_tags)
+        self.assertFalse(bool(getattr(window, "_window_tiling_animating", True)))
+        target_rect = getattr(window, "_window_tiling_target_rect")
+        self.assertEqual(window.rect.topleft, target_rect.topleft)
+
     def test_titlebar_drag_uses_mouse_anchor_in_shear_mode(self):
         panel = PanelControl("panel", Rect(0, 0, 800, 600))
         window = WindowControl("win", (260, 180), "Window")

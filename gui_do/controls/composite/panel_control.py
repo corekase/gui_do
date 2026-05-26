@@ -161,6 +161,23 @@ class PanelControl(UiNode):
         app.set_logical_pointer_position((int(pointer_pos[0]), int(pointer_pos[1])), apply_constraints=False)
         self._drag_pointer_sync_pending = True
 
+    def _cancel_window_tiling_motion(self, window: UiNode, app: "GuiApplication") -> None:
+        """Stop per-window tiling animation so drag stays mouse-anchored."""
+        tweens = getattr(app, "tweens", None)
+        cancel_for_tag = getattr(tweens, "cancel_all_for_tag", None)
+        if callable(cancel_for_tag):
+            try:
+                cancel_for_tag(f"window_tiling:{id(window)}")
+            except Exception:
+                pass
+        setattr(window, "_window_tiling_animating", False)
+        rect = Rect(getattr(window, "rect", Rect(0, 0, 0, 0)))
+        setattr(
+            window,
+            "_window_tiling_target_rect",
+            Rect(int(rect.x), int(rect.y), int(rect.width), int(rect.height)),
+        )
+
     def _mark_constraints_dirty(self) -> None:
         self._constraints_dirty = self.constraints is not None
 
@@ -845,6 +862,7 @@ class PanelControl(UiNode):
                             int(raw[1] - window.rect.top),
                         )
                         self._drag_blocked_last = False
+                        self._cancel_window_tiling_motion(window, app)
                         if getattr(window, "window_effects", {}).get("shear_enabled", True):
                             focus_manager = getattr(app, "focus", None)
                             if focus_manager is not None and hasattr(focus_manager, "clear_focus"):
