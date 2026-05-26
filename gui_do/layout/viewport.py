@@ -34,7 +34,7 @@ Usage::
 from __future__ import annotations
 
 import math
-from typing import Callable, Optional
+from typing import Callable, Optional, List, Tuple
 
 from pygame import Rect
 

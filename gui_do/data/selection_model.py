@@ -29,7 +29,7 @@ Usage::
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Optional, Set
+from typing import Callable, Optional, Set, FrozenSet, List
 
 
 # ---------------------------------------------------------------------------

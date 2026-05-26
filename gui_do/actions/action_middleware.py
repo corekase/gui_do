@@ -48,7 +48,7 @@ A middleware is any callable with the signature::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
     from ..events.gui_event import GuiEvent

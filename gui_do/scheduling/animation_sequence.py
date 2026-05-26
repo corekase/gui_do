@@ -1,7 +1,7 @@
 """AnimationSequence — composable sequential and parallel animation builder."""
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Dict, List
 
 from .tween_manager import Easing, TweenManager
 

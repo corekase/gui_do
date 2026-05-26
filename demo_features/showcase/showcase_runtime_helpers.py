@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 from pygame import Rect
 
 from gui_do import (
+    apply_category_visibility,
     draw_controls_prewarm,
 )
-from gui_do.controls.visibility_helpers import TabCategoryVisibilityManager
 from gui_do.features.scene_task_panel_builder import (
     SceneNavTaskButtonSpec,
     SceneTaskPanelBuilder,
@@ -50,19 +50,29 @@ def set_active_category(feature: ShowcaseFeature, host, key: str) -> None:
     if key not in valid_keys or key == feature._active_category_key:
         return
     feature._active_category_key = key
-    feature._apply_category_visibility(host)
+    apply_active_category_visibility(feature, host)
 
 
 def apply_active_category_visibility(feature: ShowcaseFeature, host) -> None:
     reg = feature._registry
-    manager = TabCategoryVisibilityManager(category_fn=category_for_row)
-    manager.apply(
-        active_category=feature._active_category_key,
+    apply_category_visibility(
+        active_key=feature._active_category_key,
         placed_controls=reg.placed_controls if reg is not None else [],
         control_labels=reg.control_labels if reg is not None else [],
-        focus_controller=host.app.focus,
-        fallback_focus_target=feature._category_tabs,
+        category_fn=category_for_row,
     )
+
+    focus_controller = host.app.focus
+    focused = getattr(focus_controller, "focused", None)
+    if focused is None:
+        return
+    if getattr(focused, "visible", True):
+        return
+    fallback_focus_target = feature._category_tabs
+    if fallback_focus_target is None:
+        return
+    if getattr(fallback_focus_target, "visible", False) and getattr(fallback_focus_target, "enabled", False):
+        focus_controller.set_focus(fallback_focus_target)
 
 
 def build_scene_task_panel(feature: ShowcaseFeature, host) -> None:

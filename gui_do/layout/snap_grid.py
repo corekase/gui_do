@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List, Tuple
 
 import pygame
 from pygame import Rect, Surface

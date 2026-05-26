@@ -31,7 +31,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import pygame
 from pygame import Rect
@@ -39,7 +39,8 @@ from pygame import Rect
 if TYPE_CHECKING:
     from ..overlays.overlay_manager import OverlayManager, OverlayHandle
     from ..actions.action_registry import ActionRegistry
-    from ..actions.key_chord_manager import KeyChordManager
+    from ..actions.key_chord_manager import KeyChord, KeyChordManager
+    from ..controls.composite.overlay_panel_control import OverlayPanelControl
 
 
 def _wrap_text(font, text: str, max_width: int) -> List[str]:

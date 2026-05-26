@@ -39,7 +39,7 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..graphics.dirty_region import DirtyRegionTracker

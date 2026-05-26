@@ -48,6 +48,7 @@ Thread safety: this class is single-threaded and intended to be driven from
 the main event loop.
 """
 from __future__ import annotations
+from typing import List, Sequence, Tuple
 
 from dataclasses import dataclass
 

@@ -1,7 +1,7 @@
 """TimePickerControl — hour/minute selector with spin-button affordances."""
 from __future__ import annotations
 
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING, Tuple
 
 import pygame
 from pygame import Rect

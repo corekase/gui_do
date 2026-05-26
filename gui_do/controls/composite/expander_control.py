@@ -1,7 +1,7 @@
 """ExpanderControl — collapsible section with animated height transition."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 import pygame
 from pygame import Rect
@@ -101,7 +101,7 @@ class ExpanderControl(UiNode):
     @property
     def total_height(self) -> int:
         """Current rendered height including header and animated body."""
-        return _HEADER_H + int(self._current_body_height)
+        return self._header_h(None) + int(self._current_body_height)
 
     def add_child(self, control: UiNode) -> UiNode:
         """Add a child control to the expander body."""

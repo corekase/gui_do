@@ -48,7 +48,7 @@ Usage — with dirty tracking::
 """
 from __future__ import annotations
 
-from typing import Optional, Protocol, runtime_checkable, TYPE_CHECKING
+from typing import Optional, Protocol, runtime_checkable, TYPE_CHECKING, Tuple
 
 from pygame import Rect
 

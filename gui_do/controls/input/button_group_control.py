@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Callable, ClassVar, Optional
+from typing import Callable, ClassVar, Optional, Dict
 from typing import TYPE_CHECKING
 
 from pygame import Rect

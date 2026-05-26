@@ -60,7 +60,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, TypeVar, Tuple
 
 
 T = TypeVar("T")

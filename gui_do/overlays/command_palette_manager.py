@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections import Counter
-from typing import Callable, Optional, Sequence, TYPE_CHECKING
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Dict, List
 
 import pygame
 from pygame import Rect

@@ -1,7 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
+
+if TYPE_CHECKING:
+    import pygame
+
+    from ..app.scene import Scene
+    from ..graphics.built_in_graphics_factory import BuiltInGraphicsFactory
+    from ..layout.window_layout_handler import WindowLayoutHandler
+    from ..overlays.drag_drop_manager import DragDropManager
+    from ..overlays.overlay_manager import OverlayManager
+    from ..scheduling.task_scheduler import TaskScheduler
+    from ..scheduling.timers import Timers
+    from ..scheduling.tween_manager import TweenManager
+    from ..theme.color_theme import ColorTheme
 
 
 @dataclass

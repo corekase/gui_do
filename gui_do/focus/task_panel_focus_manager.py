@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Optional
 
 from ..events.gui_event import EventType
 from ..controls.base.ui_node import UiNode

@@ -41,7 +41,7 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Sequence, List, Optional
 
 
 class FocusRing:

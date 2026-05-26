@@ -27,7 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from bisect import bisect_right
 from collections import defaultdict
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, List
 
 
 # ---------------------------------------------------------------------------

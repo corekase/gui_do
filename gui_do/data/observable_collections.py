@@ -20,15 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Iterator,
-    Optional,
-    TypeVar,
-)
+from typing import Any, Callable, Dict, Generic, Iterable, Iterator, List, Optional, TypeVar
 
 T = TypeVar("T")
 K = TypeVar("K")

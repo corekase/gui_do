@@ -4,8 +4,8 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
 from collections.abc import Mapping
-from .font_role_setup import setup_standard_font_roles as setup_standard_font_roles
-from .lifecycle_models import FrameTimer as FrameTimer, PlacedControl
+from .font_role_setup import setup_standard_font_roles
+from .lifecycle_models import FrameTimer, PlacedControl
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Deque

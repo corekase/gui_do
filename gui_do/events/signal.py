@@ -43,7 +43,7 @@ Binding interop::
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, Optional, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeVar, List
 
 T = TypeVar("T")
 

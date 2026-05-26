@@ -7,7 +7,7 @@ where multiple in-flight requests may be superseded by newer ones.
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
+from typing import Any, Callable, Generic, Iterable, Optional, TypeVar, List
 
 __all__ = ["CancellationToken", "PipelineStage", "DataflowPipeline", "PipelineHandle"]
 

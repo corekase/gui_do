@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import colorsys
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING, Tuple
 
 import pygame
 from pygame import Rect

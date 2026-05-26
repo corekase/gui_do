@@ -18,7 +18,7 @@ Usage
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 

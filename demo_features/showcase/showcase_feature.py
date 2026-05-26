@@ -171,7 +171,7 @@ class ShowcaseFeature(Feature):
         )
 
         if self.rect.width <= 0 or self.rect.height <= 0:
-            self.rect = self._default_rect(host)
+            self.rect = default_rect_helper(self, host)
 
         self._registry = ControlRegistry(host.control_showcase_root)
 
@@ -190,7 +190,7 @@ class ShowcaseFeature(Feature):
             Rect(root_content_rect.left, root_content_rect.top, root_content_rect.width, tab_strip_h),
             build_tab_builder_specs(self.SHOWCASE_CATEGORY_TABS, builder_prefix="", builder_suffix=""),
             selected_key=self._active_category_key,
-            on_change=lambda key: self._set_active_category(host, key),
+            on_change=lambda key: set_active_category_helper(self, host, key),
         )
         category_tabs.set_accessibility(role="tablist", label="Showcase categories")
         self._registry.add_control(category_tabs)
@@ -209,9 +209,9 @@ class ShowcaseFeature(Feature):
         row_gap = self.ROW_GAP
 
         # Pre-compute column widths per category so control factories get correct dimensions
-        data_col_w = self._col_width(content_rect, self.DATA_COLUMNS)
-        advanced_col_w = self._col_width(content_rect, self.ADVANCED_COLUMNS)
-        extended_col_w = self._col_width(content_rect, self.EXTENDED_COLUMNS)
+        data_col_w = col_width_helper(self, content_rect, self.DATA_COLUMNS)
+        advanced_col_w = col_width_helper(self, content_rect, self.ADVANCED_COLUMNS)
+        extended_col_w = col_width_helper(self, content_rect, self.EXTENDED_COLUMNS)
 
         self._showcase_notification_center = build_notification_center(
             (
@@ -239,8 +239,8 @@ class ShowcaseFeature(Feature):
             )
             self._registry.register(specs)
 
-        self._build_scene_task_panel(host)
-        self._apply_category_visibility(host)
+        build_scene_task_panel_helper(self, host)
+        apply_active_category_visibility_helper(self, host)
         self._initial_focus_control = host.control_showcase_menu_bar
         self._pending_initial_focus = True
 
@@ -286,21 +286,6 @@ class ShowcaseFeature(Feature):
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
-
-    def _col_width(self, bounds: Rect, num_cols: int) -> int:
-        return col_width_helper(self, bounds, num_cols)
-
-    def _default_rect(self, host) -> Rect:
-        return default_rect_helper(self, host)
-
-    def _set_active_category(self, host, key: str) -> None:
-        set_active_category_helper(self, host, key)
-
-    def _apply_category_visibility(self, host) -> None:
-        apply_active_category_visibility_helper(self, host)
-
-    def _build_scene_task_panel(self, host) -> None:
-        build_scene_task_panel_helper(self, host)
 
     def _on_live_slider_value(self, value: object) -> None:
         if self._live_slider_label is None:

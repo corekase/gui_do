@@ -37,7 +37,7 @@ from __future__ import annotations
 
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict, List, Sequence
 
 
 @dataclass(frozen=True)

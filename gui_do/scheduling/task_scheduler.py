@@ -9,7 +9,7 @@ import inspect
 from queue import Empty, Queue
 from threading import Condition, RLock
 from time import perf_counter
-from typing import Any, Callable, Hashable, Optional
+from typing import Any, Callable, Hashable, Optional, Deque, Dict, List, Set
 
 from ..telemetry.telemetry import telemetry_collector
 

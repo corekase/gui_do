@@ -27,7 +27,7 @@ is always the active one.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from .focus_manager import FocusManager

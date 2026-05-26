@@ -1,7 +1,7 @@
 """ThemeManager — named themes with design token resolution."""
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any, List, Optional
 
 from ..data.presentation_model import ObservableValue
 

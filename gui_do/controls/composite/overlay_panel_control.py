@@ -1,7 +1,7 @@
 """OverlayPanelControl — PanelControl subclass that renders as an overlay."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from pygame import Rect
 

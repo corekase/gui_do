@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from enum import Enum, auto
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, TypeVar, List, Optional, Tuple
 
 __all__ = [
     "MeasurePolicy",

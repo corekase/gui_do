@@ -43,7 +43,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, Generator, Optional, List
 
 
 # ---------------------------------------------------------------------------

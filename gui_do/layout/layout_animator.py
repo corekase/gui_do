@@ -23,7 +23,7 @@ All animation is done through :class:`~gui_do.TweenManager` using
 """
 from __future__ import annotations
 
-from typing import Any, Sequence, TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING, Dict, List
 
 from pygame import Rect
 

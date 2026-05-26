@@ -37,7 +37,7 @@ names pass through unchanged to the global theme.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..theme.theme_manager import DesignTokens
