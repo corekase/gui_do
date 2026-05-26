@@ -1649,7 +1649,7 @@ class GuiApplication:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
             if callable(snapshot_fn):
                 newly_visible = snapshot_fn()
-        if not self.is_window_layout_enabled():
+        if not force and not self.is_window_layout_enabled():
             return
         self.window_tiling.arrange_windows(
             newly_visible=newly_visible,

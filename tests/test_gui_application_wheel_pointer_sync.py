@@ -43,7 +43,10 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
             with patch.object(app.window_tiling, "arrange_windows") as arrange_mock:
                 app.tile_windows(raised_windows=(raised,), as_visibility_event=True, force=True)
 
-        arrange_mock.assert_not_called()
+        arrange_mock.assert_called_once()
+        kwargs = arrange_mock.call_args.kwargs
+        self.assertIsNone(kwargs.get("newly_visible"))
+        self.assertEqual((raised,), kwargs.get("raised_windows"))
 
     def test_force_tiling_does_not_snapshot_newly_visible_when_as_visibility_event(self):
         app = GuiApplication(pygame.Surface((320, 240)))
@@ -56,7 +59,9 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
             with patch.object(app.window_tiling, "arrange_windows") as arrange_mock:
                 app.tile_windows(as_visibility_event=True, force=True)
 
-        arrange_mock.assert_not_called()
+        arrange_mock.assert_called_once()
+        kwargs = arrange_mock.call_args.kwargs
+        self.assertIsNone(kwargs.get("newly_visible"))
 
 
 if __name__ == "__main__":

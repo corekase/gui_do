@@ -1098,7 +1098,7 @@ class WindowLayoutHandler:
     ) -> None:
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
-        if not self.enabled or not windows:
+        if (not self.enabled and not force) or not windows:
             return
         work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
@@ -1332,7 +1332,7 @@ class WindowLayoutHandler:
         """
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
-        if not self.enabled or not windows:
+        if (not self.enabled and not force) or not windows:
             return
         if window not in windows:
             self.arrange_windows(
