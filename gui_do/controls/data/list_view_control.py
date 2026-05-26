@@ -1,6 +1,7 @@
 """ListViewControl — virtualized scrollable list with selection."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Callable, Optional, TYPE_CHECKING, Any, Dict, List
 
@@ -32,6 +33,7 @@ class ListItem:
 SelectCallback = Optional[Callable[[int, "ListItem"], None]]
 
 _SCROLLBAR_WIDTH = 12
+_TEXT_CACHE_LIMIT = 256
 
 
 class ListViewControl(_VirtualizedScrollListBase):
@@ -62,6 +64,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         self._hovered_index: int = -1
         self.tab_index = 0
         self._draw_font_role: str = "list_view.row"
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
 
         if 0 <= selected_index < len(self._items):
             self._selected_indices = [selected_index]
@@ -367,6 +370,17 @@ class ListViewControl(_VirtualizedScrollListBase):
         """Return item index at pixel y (relative to control top)."""
         return (y + self._scroll_offset) // self._row_height
 
+    def _get_cached_text_surface(self, font, cache_key: tuple, label: str, color) -> "pygame.Surface":
+        surface = self._text_cache.get(cache_key)
+        if surface is not None:
+            self._text_cache.move_to_end(cache_key)
+            return surface
+        surface = font.render(label, True, color)
+        self._text_cache[cache_key] = surface
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return surface
+
     # ------------------------------------------------------------------
     # UiNode overrides
     # ------------------------------------------------------------------
@@ -544,7 +558,8 @@ class ListViewControl(_VirtualizedScrollListBase):
         bg_color = theme.background
         pygame.draw.rect(surface, bg_color, r)
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
+        font_size = theme.fonts.scaled_size(self._FONT_SCALE)
+        font = theme.fonts.font_instance(self._draw_font_role, size=font_size)
         vh = self._viewport_height()
         if self._parent_scroll_view() is not None and not self._show_scrollbar:
             # Parent ScrollView movement determines visibility; render full list
@@ -580,7 +595,8 @@ class ListViewControl(_VirtualizedScrollListBase):
             text_color = theme.text
             if not item.enabled:
                 text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
-            text_surf = font.render(item.label, True, text_color)
+            cache_key = (self._draw_font_role, font_size, item.label, text_color)
+            text_surf = self._get_cached_text_surface(font, cache_key, item.label, text_color)
             surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
         surface.set_clip(clip)

@@ -235,26 +235,25 @@ class TextFlow:
         result = []
         for span in self._spans:
             color = span.color if span.color is not None else theme.text
+            font = self._get_font(span, theme)
             parts = span.text.split("\n")
             for part_idx, part in enumerate(parts):
                 if part_idx > 0:
                     result.append(None)  # paragraph break
                 words = part.split()
                 for word_text in words:
-                    surf = self._render_word(word_text, span, color, theme)
+                    surf = self._render_word(word_text, font, color)
                     if surf is not None:
                         w, h = surf.get_size()
                         try:
-                            font = self._get_font(span, theme)
                             ascent = font.get_ascent() if font is not None else h
                         except Exception:
                             ascent = h
                         result.append(_Word(surface=surf, width=w, height=h, ascent=ascent))
         return result
 
-    def _render_word(self, text: str, span: TextSpan, color, theme: "ColorTheme"):
+    def _render_word(self, text: str, font, color):
         try:
-            font = self._get_font(span, theme)
             if font is None:
                 return None
             return font.render(text, True, color)

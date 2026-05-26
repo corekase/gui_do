@@ -60,6 +60,7 @@ class SpinnerControl(_TextEditFocusBase):
         self._edit_text: str = ""
         self._btn_font_role: str = "spinner.button"
         self._val_font_role: str = "spinner.value"
+        self._arrow_cache: dict[tuple[int, tuple[int, int, int], str], "pygame.Surface"] = {}
 
     _BTN_FONT_SCALE: float = 0.875   # 14/16 — compact arrow glyphs
     _VAL_FONT_SCALE: float = 1.125   # 18/16 — slightly larger value display
@@ -196,8 +197,8 @@ class SpinnerControl(_TextEditFocusBase):
             raise RuntimeError("SpinnerControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
         text_color = theme.text
         font = theme.fonts.font_instance(self._btn_font_role, size=theme.fonts.scaled_size(self._BTN_FONT_SCALE))
-        up_surf = font.render("▲", True, text_color)
-        dn_surf = font.render("▼", True, text_color)
+        up_surf = self._get_arrow_surface(font, text_color, "▲")
+        dn_surf = self._get_arrow_surface(font, text_color, "▼")
         surface.blit(
             up_surf,
             (
@@ -237,6 +238,15 @@ class SpinnerControl(_TextEditFocusBase):
         up = Rect(r.right - _BTN_W * 2, r.y + 1, _BTN_W - 1, r.height // 2 - 1)
         dn = Rect(r.right - _BTN_W * 2, r.y + r.height // 2, _BTN_W - 1, r.height - r.height // 2 - 1)
         return up, dn
+
+    def _get_arrow_surface(self, font, color, label: str) -> "pygame.Surface":
+        cache_key = (font.point_size, color, label)
+        cached = self._arrow_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        rendered = font.render(label, True, color)
+        self._arrow_cache[cache_key] = rendered
+        return rendered
 
     def _clamp(self, v: Union[int, float]) -> Union[int, float]:
         result = float(v)

@@ -200,10 +200,8 @@ class ToolbarControl(UiNode):
             is_hovered = idx == self._hovered_index and item_enabled
             is_pressed = idx == self._pressed_index and item_enabled
 
-            label_surf = theme.render_text(
-                item.label, role=self._font_role, size=font_size
-            )
-            label_w, label_h = label_surf.get_size()
+            font = fonts.font_instance(self._font_role, size=font_size)
+            label_w, label_h = font.text_size(item.label)
             btn_w = label_w + pad_x * 2
             btn_rect = Rect(x, r.top, btn_w, r.height)
             self._hit_rects.append(Rect(btn_rect))
@@ -220,10 +218,7 @@ class ToolbarControl(UiNode):
             else:
                 text_color = theme.text
 
-            label_surf = theme.render_text(
-                item.label, role=self._font_role,
-                size=font_size, color=text_color,
-            )
+            label_surf = font.render(item.label, True, text_color)
             text_y = r.top + (r.height - label_surf.get_height()) // 2
             surface.blit(label_surf, (x + pad_x, text_y))
             x += btn_w + _BTN_GAP

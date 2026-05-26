@@ -1,6 +1,7 @@
 """PropertyInspectorPanel — scrollable UI control that renders a PropertyInspectorModel."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 import pygame
@@ -20,6 +21,7 @@ _HEADER_HEIGHT = 22
 _ROW_HEIGHT = 24
 _SCROLLBAR_WIDTH = 12
 _LABEL_FRACTION = 0.45  # portion of content width reserved for property label
+_TEXT_CACHE_LIMIT = 256
 
 
 class _InspectorRow:
@@ -87,6 +89,7 @@ class PropertyInspectorPanel(UiNode):
         self._selected_prop: Optional[InspectedProperty] = None
         self._scrollbar_dragging: bool = False
         self._scrollbar_drag_anchor: int = 0
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
 
         self._rebuild()
         self.tab_index = 0
@@ -290,7 +293,7 @@ class PropertyInspectorPanel(UiNode):
             if y + h >= r.y and y <= r.bottom:
                 if row.is_header:
                     pygame.draw.rect(surface, header_bg, row_rect)
-                    surf = font.render(row.group_name, True, header_text)
+                    surf = self._get_cached_text_surface(font, row.group_name, header_text)
                     surface.blit(surf, (row_rect.x + 6, row_rect.y + (h - surf.get_height()) // 2))
                 else:
                     if row.prop is not None:
@@ -299,7 +302,7 @@ class PropertyInspectorPanel(UiNode):
                         pygame.draw.rect(surface, row_bg, row_rect)
                         # Label (left side)
                         lbl = row.prop.descriptor.label or row.prop.descriptor.name
-                        lbl_surf = font.render(lbl, True, text_color)
+                        lbl_surf = self._get_cached_text_surface(font, lbl, text_color)
                         surface.blit(lbl_surf, (row_rect.x + 4, row_rect.y + (h - lbl_surf.get_height()) // 2))
                         # Value (right side)
                         try:
@@ -307,7 +310,7 @@ class PropertyInspectorPanel(UiNode):
                         except Exception:
                             val_str = "—"
                         vc = text_color if is_selected else val_color
-                        val_surf = font.render(val_str, True, vc)
+                        val_surf = self._get_cached_text_surface(font, val_str, vc)
                         surface.blit(val_surf, (val_x + 4, row_rect.y + (h - val_surf.get_height()) // 2))
                         alt = not alt
 
@@ -321,3 +324,15 @@ class PropertyInspectorPanel(UiNode):
             handle = self._scrollbar_handle_rect()
             if handle is not None:
                 pygame.draw.rect(surface, theme.medium, handle, border_radius=2)
+
+    def _get_cached_text_surface(self, font, text: str, color) -> "pygame.Surface":
+        cache_key = (self._draw_font_role, text, color)
+        cached = self._text_cache.get(cache_key)
+        if cached is not None:
+            self._text_cache.move_to_end(cache_key)
+            return cached
+        rendered = font.render(text, True, color)
+        self._text_cache[cache_key] = rendered
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return rendered

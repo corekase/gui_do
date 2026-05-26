@@ -1,6 +1,7 @@
 """TabControl — tabbed container with a tab bar and swappable content panel."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, List, Optional
 
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 
 _TAB_H = 32       # height of the tab bar strip
 _TAB_PAD_H = 12   # horizontal padding per tab label
+_TEXT_CACHE_LIMIT = 128
 
 
 @dataclass
@@ -78,18 +80,22 @@ class TabControl(UiNode):
 
         # Determine initial selection
         self._selected_key: Optional[str] = None
+        self._selected_item: Optional[TabItem] = None
         if self._items:
             self._selected_key = self._items[0].key
+            self._selected_item = self._items[0]
         if selected_key is not None:
             for item in self._items:
                 if item.key == selected_key:
                     self._selected_key = selected_key
+                    self._selected_item = item
                     break
 
         # Track tab button rects for hit testing
         self._tab_rects: List[Rect] = []
         # Number of tab bar rows (updated during draw/build_tab_rects)
         self._tab_rows: int = 1
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
 
         # Mount tracking
 
@@ -111,6 +117,7 @@ class TabControl(UiNode):
             if item.key == key and item.enabled:
                 if self._selected_key != key:
                     self._selected_key = key
+                    self._selected_item = item
                     self.invalidate()
                     if self._on_change is not None:
                         self._on_change(key)
@@ -122,6 +129,7 @@ class TabControl(UiNode):
         self._items.append(item)
         if self._selected_key is None and item.enabled:
             self._selected_key = item.key
+            self._selected_item = item
         self.invalidate()
 
     def remove_item(self, key: str) -> bool:
@@ -132,9 +140,11 @@ class TabControl(UiNode):
                 if self._selected_key == key:
                     # Advance to next enabled tab
                     self._selected_key = None
+                    self._selected_item = None
                     for candidate in self._items:
                         if candidate.enabled:
                             self._selected_key = candidate.key
+                            self._selected_item = candidate
                             break
                     if self._on_change is not None and self._selected_key is not None:
                         self._on_change(self._selected_key)
@@ -166,19 +176,30 @@ class TabControl(UiNode):
         strip_h = self._tab_strip_h()
         return Rect(self.rect.left, self.rect.top + strip_h, self.rect.width, max(0, self.rect.height - strip_h))
 
+    def _get_cached_text_surface(self, font, cache_key: tuple, label: str, color) -> "pygame.Surface":
+        surface = self._text_cache.get(cache_key)
+        if surface is not None:
+            self._text_cache.move_to_end(cache_key)
+            return surface
+        surface = font.render(label, True, color)
+        self._text_cache[cache_key] = surface
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return surface
+
     def _build_tab_rects(self, theme: "ColorTheme") -> List[Rect]:
         rects: List[Rect] = []
         x = self.rect.left + self._horizontal_padding
         y = self.rect.top
         right_padding = max(0, self._horizontal_padding - 1) if self._horizontal_padding > 0 else 0
         max_x = self.rect.right - right_padding
+        font_size = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
+        font = theme.fonts.font_instance(self._font_role, size=font_size)
         for item in self._items:
             try:
-                fs = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
-                w, _ = theme.fonts.font_instance(self._font_role, size=fs).text_size(item.label)
+                w, _ = font.text_size(item.label)
             except Exception:
-                fs = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
-                w = len(item.label) * (fs // 2)
+                w = len(item.label) * (font_size // 2)
             tab_w = w + _TAB_PAD_H * 2
             # Wrap to next row if this tab would overflow the right edge
             if x + tab_w > max_x and x > self.rect.left + self._horizontal_padding:
@@ -266,6 +287,8 @@ class TabControl(UiNode):
         pygame.draw.rect(surface, bg_color, strip_rect)
 
         # Draw tab buttons
+        font_size = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
+        font = theme.fonts.font_instance(self._font_role, size=font_size)
         for i, item in enumerate(self._items):
             tab_rect = tab_rects[i] if i < len(tab_rects) else None
             if tab_rect is None:
@@ -276,9 +299,8 @@ class TabControl(UiNode):
                 tab_bg = theme.background
                 pygame.draw.rect(surface, tab_bg, tab_rect)
             tab_color = theme.text if is_enabled else theme.medium
-            label_surf = theme.render_text(
-                item.label, role=self._font_role, size=self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE), color=tab_color
-            )
+            cache_key = (self._font_role, font_size, item.label, tab_color)
+            label_surf = self._get_cached_text_surface(font, cache_key, item.label, tab_color)
             lw, lh = label_surf.get_size()
             lx = tab_rect.left + (tab_rect.width - lw) // 2
             ly = tab_rect.top + (tab_rect.height - lh) // 2
@@ -294,11 +316,7 @@ class TabControl(UiNode):
         pygame.draw.rect(surface, theme.background, content_rect)
 
         # Draw active content node
-        selected_content: Optional[UiNode] = None
-        for item in self._items:
-            if item.key == self._selected_key and item.content is not None:
-                selected_content = item.content
-                break
+        selected_content: Optional[UiNode] = self._selected_item.content if self._selected_item is not None else None
         if selected_content is not None and selected_content.visible:
             # Position content node within content area
             selected_content.rect.topleft = (content_rect.left, content_rect.top)

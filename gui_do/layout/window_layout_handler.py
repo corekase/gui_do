@@ -1100,6 +1100,7 @@ class WindowLayoutHandler:
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
         if (not self.enabled and not force) or not windows:
             return
+        window_set = set(windows)
         work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
             return
@@ -1140,7 +1141,7 @@ class WindowLayoutHandler:
             for candidate in newly_visible:
                 if candidate in seen_new:
                     continue
-                if candidate not in windows:
+                if candidate not in window_set:
                     continue
                 if not bool(getattr(candidate, "visible", False)):
                     continue
@@ -1149,12 +1150,12 @@ class WindowLayoutHandler:
                 seen_new.add(candidate)
         if raised_windows is not None:
             for candidate in raised_windows:
-                if candidate in windows and bool(getattr(candidate, "visible", False)):
+                if candidate in window_set and bool(getattr(candidate, "visible", False)):
                     promoted_raised.add(candidate)
         demoted_lowered: set[object] = set()
         if demoted_windows is not None:
             for candidate in demoted_windows:
-                if candidate in windows and bool(getattr(candidate, "visible", False)):
+                if candidate in window_set and bool(getattr(candidate, "visible", False)):
                     demoted_lowered.add(candidate)
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
@@ -1222,25 +1223,34 @@ class WindowLayoutHandler:
                     work,
                 )
 
-            if int(forced_centered_new) > int(relaxed_centered_new):
+            forced_centered_new = int(forced_centered_new)
+            relaxed_centered_new = int(relaxed_centered_new)
+            forced_overlap = int(forced_overlap)
+            relaxed_overlap = int(relaxed_overlap)
+            forced_centered_all = int(forced_centered_all)
+            relaxed_centered_all = int(relaxed_centered_all)
+            forced_layers = int(forced_layers)
+            relaxed_layers = int(relaxed_layers)
+
+            if forced_centered_new > relaxed_centered_new:
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
                 layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
+            elif forced_overlap > 0 and relaxed_overlap < forced_overlap:
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
                 layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif int(forced_overlap) == 0 and int(relaxed_overlap) == 0:
-                if int(relaxed_centered_all) < int(forced_centered_all):
+            elif forced_overlap == 0 and relaxed_overlap == 0:
+                if relaxed_centered_all < forced_centered_all:
                     targets = relaxed_targets
                     center_fallback = relaxed_fallback
                     layer_groups = [list(layer) for layer in relaxed_layer_groups]
                 # Keep row membership unless relaxation is a substantial win.
-                elif int(relaxed_layers) + 2 < int(forced_layers):
+                elif relaxed_layers + 2 < forced_layers:
                     targets = relaxed_targets
                     center_fallback = relaxed_fallback
                     layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif int(relaxed_layers) + 1 < int(forced_layers):
+            elif relaxed_layers + 1 < forced_layers:
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
                 layer_groups = [list(layer) for layer in relaxed_layer_groups]

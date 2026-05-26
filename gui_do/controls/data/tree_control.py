@@ -1,6 +1,7 @@
 """TreeControl — virtualized hierarchical tree view with expand/collapse."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Callable, Optional, TYPE_CHECKING, Any, List
 
@@ -24,6 +25,7 @@ _INDENT_WIDTH = 18
 _ROW_HEIGHT = 26
 _ARROW_SIZE = 8
 _SCROLLBAR_WIDTH = 12
+_TEXT_CACHE_LIMIT = 256
 
 
 @dataclass
@@ -111,6 +113,7 @@ class TreeControl(_VirtualizedScrollListBase):
         self._selected_row_index: int = -1
         self._rows: List[_FlatRow] = []
         self._draw_font_role: str = "tree.row"
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
         self._rebuild_rows()
         self.tab_index = 0
 
@@ -305,6 +308,17 @@ class TreeControl(_VirtualizedScrollListBase):
         handle_y = self.rect.y + int((self._scroll_offset / max_scroll) * (self.rect.height - handle_h))
         return Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_WIDTH - 4, handle_h)
 
+    def _get_cached_text_surface(self, font, cache_key: tuple, label: str, color) -> "pygame.Surface":
+        surface = self._text_cache.get(cache_key)
+        if surface is not None:
+            self._text_cache.move_to_end(cache_key)
+            return surface
+        surface = font.render(label, True, color)
+        self._text_cache[cache_key] = surface
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return surface
+
     # ------------------------------------------------------------------
     # UiNode overrides
     # ------------------------------------------------------------------
@@ -449,7 +463,8 @@ class TreeControl(_VirtualizedScrollListBase):
         sel_col = theme.highlight
         arrow_col = theme.medium
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
+        font_size = theme.fonts.scaled_size(self._FONT_SCALE)
+        font = theme.fonts.font_instance(self._draw_font_role, size=font_size)
 
         vr = self._visible_rect()
         pygame.draw.rect(surface, bg, self.rect)
@@ -492,7 +507,8 @@ class TreeControl(_VirtualizedScrollListBase):
                 text_x = vr.x + depth * self._indent_width + self._indent_width + 2
                 col = disabled_col if not node.enabled else text_col
                 if font:
-                    txt = font.render(node.label, True, col)
+                    cache_key = (self._draw_font_role, font_size, node.label, col)
+                    txt = self._get_cached_text_surface(font, cache_key, node.label, col)
                     surface.blit(txt, (text_x, row_y + (self._row_height - txt.get_height()) // 2))
         finally:
             surface.set_clip(old_clip)

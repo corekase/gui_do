@@ -57,6 +57,7 @@ class DropdownControl(UiNode):
         self._font_role: str = font_role
         self._max_visible_items: int = max(1, int(max_visible_items))
         self._is_open: bool = False
+        self._arrow_cache: dict[tuple[int, tuple[int, int, int]], "pygame.Surface"] = {}
         self.tab_index = 0
         self._draw_font_role: str = "dropdown.option"
 
@@ -255,12 +256,22 @@ class DropdownControl(UiNode):
         pygame.draw.rect(surface, theme.medium, r, border_radius=3)
         pygame.draw.rect(surface, theme.text, r, 1, border_radius=3)
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
+        font_size = theme.fonts.scaled_size(self._FONT_SCALE)
+        font = theme.fonts.font_instance(self._draw_font_role, size=font_size)
         opt = self.selected_option
         label = opt.label if opt is not None else self._placeholder
         text_color = theme.text
         text_surf = font.render(label, True, text_color)
         surface.blit(text_surf, (r.x + 6, r.y + (r.height - text_surf.get_height()) // 2))
 
-        arrow_surf = font.render(_ARROW, True, text_color)
+        arrow_surf = self._get_arrow_surface(font, font_size, text_color)
         surface.blit(arrow_surf, (r.right - arrow_surf.get_width() - 6, r.y + (r.height - arrow_surf.get_height()) // 2))
+
+    def _get_arrow_surface(self, font, font_size: int, color) -> "pygame.Surface":
+        cache_key = (font_size, color)
+        cached = self._arrow_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        rendered = font.render(_ARROW, True, color)
+        self._arrow_cache[cache_key] = rendered
+        return rendered

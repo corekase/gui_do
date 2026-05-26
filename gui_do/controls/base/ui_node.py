@@ -294,7 +294,7 @@ class UiNode:
         focused_child = None
         if hasattr(app, 'focus') and app.focus is not None:
             focused_node = app.focus.focused_node
-            if focused_node is not None and focused_node in children:
+            if focused_node is not None and focused_node.parent is self:
                 focused_child = focused_node
 
         # If there's a focused child, handle it first for event priority

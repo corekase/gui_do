@@ -1,6 +1,7 @@
 """Menu strip control with static and dynamic scene/window menu sections."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Sequence, Tuple
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 
 
 _ENTRY_PADDING_X = 12
+_TEXT_CACHE_LIMIT = 128
 
 
 @dataclass
@@ -145,6 +147,7 @@ class MenuStripControl(UiNode):
         self._draw_font_role: str = "menu_bar.entry"
         self._entry_rects_cache_key: Optional[tuple] = None
         self._entry_rects_cache: List[Rect] = []
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
         self._dynamic_flyout_min_width_by_label: Dict[str, int] = {}
         self._window_order_rank_by_scene: Dict[str, Dict[str, int]] = {}
         self._window_order_next_by_scene: Dict[str, int] = {}
@@ -467,7 +470,8 @@ class MenuStripControl(UiNode):
                 pygame.draw.rect(surface, hover_col, r)
             col = disabled_col if not entry.enabled else text_col
             if font:
-                txt = font.render(entry.label, True, col)
+                cache_key = (self._draw_font_role, self._FONT_SCALE, entry.label, col)
+                txt = self._get_cached_text_surface(font, cache_key, entry.label, col)
                 surface.blit(txt, (r.x + _ENTRY_PADDING_X, r.y + (r.height - txt.get_height()) // 2))
 
     # ------------------------------------------------------------------
@@ -485,6 +489,7 @@ class MenuStripControl(UiNode):
         self._entries = list(entries)
         self._entry_rects_cache_key = None
         self._entry_rects_cache = []
+        self._text_cache.clear()
 
         def _index_for_label(label: Optional[str]) -> int:
             if label is None:
@@ -512,6 +517,17 @@ class MenuStripControl(UiNode):
                 )
             )
         return (str(entry.label), bool(entry.enabled), tuple(items), entry.flyout_min_width)
+
+    def _get_cached_text_surface(self, font, cache_key: tuple, label: str, color) -> "pygame.Surface":
+        surface = self._text_cache.get(cache_key)
+        if surface is not None:
+            self._text_cache.move_to_end(cache_key)
+            return surface
+        surface = font.render(label, True, color)
+        self._text_cache[cache_key] = surface
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return surface
 
     def _refresh_open_flyout_if_needed(self) -> None:
         app = self._last_app if self._last_app is not None else self._app

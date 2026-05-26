@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import calendar
+from collections import OrderedDict
 from datetime import date
 from typing import Callable, Optional, TYPE_CHECKING
 
@@ -27,6 +28,7 @@ _CELL_H_RATIO: float = 1.5        # calendar cell height ratio
 _CAL_NAV_BTN_W_RATIO: float = 1.5 # prev/next navigation button width ratio
 
 _DAY_NAMES = ("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
+_TEXT_CACHE_LIMIT = 256
 
 
 class DatePickerControl(UiNode):
@@ -68,6 +70,7 @@ class DatePickerControl(UiNode):
         self._btn_hovered = False
         self._field_hovered = False
         self._cal_hovered_day: Optional[int] = None   # 1-based or None
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
         self.tab_index = 0
 
     # ------------------------------------------------------------------
@@ -215,10 +218,8 @@ class DatePickerControl(UiNode):
 
         # Value text
         val_color = theme.dark if not self.enabled else theme.text
-        val_surf = theme.render_text(
-            self._value.isoformat(), role=self._font_role,
-            size=font_size, color=val_color,
-        )
+        font = theme.fonts.font_instance(self._font_role, size=font_size)
+        val_surf = self._get_cached_text_surface(font, self._value.isoformat(), val_color)
         ty = field_rect.top + (field_h - val_surf.get_height()) // 2
         surface.blit(val_surf, (field_rect.left + 6, ty))
 
@@ -364,14 +365,15 @@ class DatePickerControl(UiNode):
         hdr_rect = Rect(cr.left, cr.top, cr.width, header_h)
         pygame.draw.rect(surface, theme.medium, hdr_rect)
         lbl = f"< {calendar.month_abbr[self._nav_month]} {self._nav_year} >"
-        hdr_surf = theme.render_text(lbl, role=self._font_role, size=font_size)
+        font = theme.fonts.font_instance(self._font_role, size=font_size)
+        hdr_surf = self._get_cached_text_surface(font, lbl, theme.text)
         hx = cr.left + (cr.width - hdr_surf.get_width()) // 2
         hy = cr.top + (header_h - hdr_surf.get_height()) // 2
         surface.blit(hdr_surf, (hx, hy))
 
         # Day-name row
         for col, name in enumerate(_DAY_NAMES):
-            dn_surf = theme.render_text(name, role=self._font_role, size=font_size, color=theme.dark)
+            dn_surf = self._get_cached_text_surface(font, name, theme.dark)
             dx = cr.left + col * cell_w + (cell_w - dn_surf.get_width()) // 2
             dy = cr.top + header_h + (day_lbl_h - dn_surf.get_height()) // 2
             surface.blit(dn_surf, (dx, dy))
@@ -402,9 +404,30 @@ class DatePickerControl(UiNode):
                     day_color = theme.dark
                 else:
                     day_color = theme.text
-                day_surf = theme.render_text(str(day), role=self._font_role, size=font_size, color=day_color)
+                day_surf = self._get_cached_text_surface(font, str(day), day_color)
                 dx = cell_rect.left + (cell_rect.width - day_surf.get_width()) // 2
                 dy = cell_rect.top + (cell_rect.height - day_surf.get_height()) // 2
                 surface.blit(day_surf, (dx, dy))
                 if is_today and not is_selected:
                     pygame.draw.rect(surface, theme.highlight, cell_rect, 1)
+
+    def _get_cached_text_surface(self, font, text: str, color) -> "pygame.Surface":
+        cache_key = (
+            self._font_role,
+            font.point_size,
+            self._value.year,
+            self._value.month,
+            self._nav_year,
+            self._nav_month,
+            text,
+            color,
+        )
+        cached = self._text_cache.get(cache_key)
+        if cached is not None:
+            self._text_cache.move_to_end(cache_key)
+            return cached
+        rendered = font.render(text, True, color)
+        self._text_cache[cache_key] = rendered
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return rendered

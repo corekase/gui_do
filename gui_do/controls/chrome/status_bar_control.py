@@ -1,6 +1,7 @@
 """StatusBarControl — thin persistent strip at the bottom of a scene for structured status slots."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List, Optional
 
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 _FONT_SCALE: float = 0.875          # 14/16 — small but readable status text
 _SLOT_PAD_X_RATIO: float = 0.5     # horizontal text padding per slot
 _SEP_W: int = 1                      # separator line width (px)
+_TEXT_CACHE_LIMIT = 128
 
 
 @dataclass
@@ -64,6 +66,7 @@ class StatusBarControl(UiNode):
         super().__init__(control_id, rect)
         self._slots: List[StatusSlot] = list(slots or [])
         self._font_role = font_role
+        self._text_cache: OrderedDict[tuple, "pygame.Surface"] = OrderedDict()
         self.tab_index = -1
 
     # ------------------------------------------------------------------
@@ -119,12 +122,11 @@ class StatusBarControl(UiNode):
 
         x = r.left + 2
         text_color = theme.text if self.enabled else theme.dark
+        font = fonts.font_instance(self._font_role, size=font_size)
 
         for slot in self._slots:
-            label_surf = theme.render_text(
-                slot.text, role=self._font_role,
-                size=font_size, color=text_color,
-            )
+            cache_key = (self._font_role, font_size, slot.text, text_color)
+            label_surf = self._get_cached_text_surface(font, cache_key, slot.text, text_color)
             text_w, text_h = label_surf.get_size()
             slot_w = slot.width if slot.width is not None else (text_w + pad_x * 2)
 
@@ -143,3 +145,14 @@ class StatusBarControl(UiNode):
                 sep_color = theme.dark if self.enabled else theme.medium
                 pygame.draw.line(surface, sep_color, (x, r.top + 2), (x, r.bottom - 3))
                 x += _SEP_W + 2
+
+    def _get_cached_text_surface(self, font, cache_key: tuple, text: str, color) -> "pygame.Surface":
+        cached = self._text_cache.get(cache_key)
+        if cached is not None:
+            self._text_cache.move_to_end(cache_key)
+            return cached
+        rendered = font.render(text, True, color)
+        self._text_cache[cache_key] = rendered
+        if len(self._text_cache) > _TEXT_CACHE_LIMIT:
+            self._text_cache.popitem(last=False)
+        return rendered
