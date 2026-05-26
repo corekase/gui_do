@@ -21,7 +21,7 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
 
         self.assertEqual((123, 77), app.logical_pointer_pos)
 
-    def test_visibility_event_centers_new_window_when_tiling_disabled(self):
+    def test_visibility_event_does_not_move_new_window_when_layout_disabled(self):
         app = GuiApplication(pygame.Surface((320, 240)))
         window = WindowControl("w", (100, 80), "Window")
         window.visible = True
@@ -30,10 +30,7 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
 
         app.tile_windows(newly_visible=(window,), as_visibility_event=True)
 
-        bounds = app.surface.get_rect()
-        expected_left = int((bounds.width - window.rect.width) / 2)
-        expected_top = int((bounds.height - window.rect.height) / 2)
-        self.assertEqual((expected_left, expected_top), window.rect.topleft)
+        self.assertEqual((0, 0), window.rect.topleft)
 
     def test_visibility_event_with_raised_windows_does_not_expand_newly_visible_snapshot(self):
         app = GuiApplication(pygame.Surface((320, 240)))
@@ -46,10 +43,7 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
             with patch.object(app.window_tiling, "arrange_windows") as arrange_mock:
                 app.tile_windows(raised_windows=(raised,), as_visibility_event=True, force=True)
 
-        arrange_mock.assert_called_once()
-        kwargs = arrange_mock.call_args.kwargs
-        self.assertIsNone(kwargs.get("newly_visible"))
-        self.assertEqual((raised,), kwargs.get("raised_windows"))
+        arrange_mock.assert_not_called()
 
     def test_force_tiling_does_not_snapshot_newly_visible_when_as_visibility_event(self):
         app = GuiApplication(pygame.Surface((320, 240)))
@@ -62,9 +56,7 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
             with patch.object(app.window_tiling, "arrange_windows") as arrange_mock:
                 app.tile_windows(as_visibility_event=True, force=True)
 
-        arrange_mock.assert_called_once()
-        kwargs = arrange_mock.call_args.kwargs
-        self.assertIsNone(kwargs.get("newly_visible"))
+        arrange_mock.assert_not_called()
 
 
 if __name__ == "__main__":

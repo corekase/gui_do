@@ -600,7 +600,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
                 },
             )
 
-    def test_show_when_tiling_disabled_centers_only_target_window_and_skips_tile_solve(self):
+    def test_show_when_layout_disabled_skips_tile_solve_and_leaves_window_position_unchanged(self):
         app = _StubApp(tiling_enabled=False)
         window = _ShowTileStubWindow()
         other = _ShowTileStubWindow()
@@ -619,10 +619,8 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         )
 
         self.assertEqual(0, len(app.tile_windows_calls))
-        self.assertEqual(1, len(app.window_tiling.center_windows_calls))
-        centered_windows = app.window_tiling.center_windows_calls[0]
-        self.assertEqual((window,), centered_windows)
-        self.assertEqual(app.surface.get_rect().center, window.rect.center)
+        self.assertEqual(0, len(app.window_tiling.center_windows_calls))
+        self.assertEqual((12, 18), window.rect.topleft)
         self.assertEqual(other_start.topleft, other.rect.topleft)
 
     def test_menu_bar_window_list_routes_through_window_presentation(self):

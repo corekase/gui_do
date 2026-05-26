@@ -1545,22 +1545,31 @@ class GuiApplication:
         """Render dedicated screen features behind scene controls each frame."""
         self.features.draw_direct_features(surface, theme)
 
-    def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:
+    def set_window_layout_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         tiling.set_enabled(enabled, relayout=relayout)
 
-    def is_window_tiling_enabled(self, scene_name: Optional[str] = None) -> bool:
+    def is_window_layout_enabled(self, scene_name: Optional[str] = None) -> bool:
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         return bool(getattr(tiling, "enabled", False))
 
-    def toggle_window_tiling_enabled(self, *, relayout: bool = True, scene_name: Optional[str] = None) -> bool:
-        next_enabled = not self.is_window_tiling_enabled(scene_name=scene_name)
-        self.set_window_tiling_enabled(
+    def toggle_window_layout_enabled(self, *, relayout: bool = True, scene_name: Optional[str] = None) -> bool:
+        next_enabled = not self.is_window_layout_enabled(scene_name=scene_name)
+        self.set_window_layout_enabled(
             next_enabled,
             relayout=bool(relayout and next_enabled),
             scene_name=scene_name,
         )
         return next_enabled
+
+    def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:
+        self.set_window_layout_enabled(enabled, relayout=relayout, scene_name=scene_name)
+
+    def is_window_tiling_enabled(self, scene_name: Optional[str] = None) -> bool:
+        return self.is_window_layout_enabled(scene_name=scene_name)
+
+    def toggle_window_tiling_enabled(self, *, relayout: bool = True, scene_name: Optional[str] = None) -> bool:
+        return self.toggle_window_layout_enabled(relayout=relayout, scene_name=scene_name)
 
     def configure_window_tiling(
         self,
@@ -1581,6 +1590,51 @@ class GuiApplication:
             relayout=relayout,
         )
 
+    def raise_window(self, window, *, scene_name: Optional[str] = None) -> bool:
+        if window is None:
+            return False
+        tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
+        parent = getattr(window, "parent", None)
+        if self.is_window_layout_enabled(scene_name=scene_name):
+            arrange_windows = getattr(tiling, "arrange_windows", None)
+            if callable(arrange_windows):
+                arrange_windows(raised_windows=(window,), force=True)
+                set_active = getattr(parent, "_set_active_window", None)
+                if callable(set_active):
+                    set_active(window)
+                return True
+        raise_window = getattr(parent, "_raise_window", None)
+        if callable(raise_window):
+            raise_window(window)
+            return True
+        return False
+
+    def lower_window(self, window, *, scene_name: Optional[str] = None) -> bool:
+        if window is None:
+            return False
+        tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
+        parent = getattr(window, "parent", None)
+        if self.is_window_layout_enabled(scene_name=scene_name):
+            arrange_windows = getattr(tiling, "arrange_windows", None)
+            if callable(arrange_windows):
+                arrange_windows(demoted_windows=(window,), force=True)
+                top_visible = getattr(parent, "_top_visible_window", None)
+                set_active = getattr(parent, "_set_active_window", None)
+                clear_active = getattr(parent, "_clear_active_windows", None)
+                if callable(top_visible) and callable(set_active):
+                    target = top_visible()
+                    if target is None:
+                        if callable(clear_active):
+                            clear_active()
+                    else:
+                        set_active(target)
+                return True
+        lower_window = getattr(parent, "_lower_window", None)
+        if callable(lower_window):
+            lower_window(window)
+            return True
+        return False
+
     def tile_windows(
         self,
         newly_visible=None,
@@ -1595,11 +1649,7 @@ class GuiApplication:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
             if callable(snapshot_fn):
                 newly_visible = snapshot_fn()
-        if not force and not self.is_window_tiling_enabled():
-            if newly_visible is not None:
-                center_windows = getattr(self.window_tiling, "center_windows", None)
-                if callable(center_windows):
-                    center_windows(tuple(newly_visible))
+        if not self.is_window_layout_enabled():
             return
         self.window_tiling.arrange_windows(
             newly_visible=newly_visible,

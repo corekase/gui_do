@@ -53,10 +53,12 @@ class PanelControl(UiNode):
         # Re-apply window layout from post-drag positions.
         if app is not None:
             tile_windows = getattr(app, "tile_windows", None)
-            is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
+            is_window_layout_enabled = getattr(app, "is_window_layout_enabled", None)
+            if not callable(is_window_layout_enabled):
+                is_window_layout_enabled = getattr(app, "is_window_tiling_enabled", None)
             auto_layout_enabled = True
-            if callable(is_window_tiling_enabled):
-                auto_layout_enabled = bool(is_window_tiling_enabled())
+            if callable(is_window_layout_enabled):
+                auto_layout_enabled = bool(is_window_layout_enabled())
             if auto_layout_enabled:
                 window_tiling = getattr(app, "window_tiling", None)
                 arrange_drop = getattr(window_tiling, "arrange_windows_for_drop", None)
@@ -274,6 +276,10 @@ class PanelControl(UiNode):
                 window.visible = False
             return True
         if request == "lower":
+            lower_window = getattr(app, "lower_window", None) if app is not None else None
+            if callable(lower_window) and bool(lower_window(window)):
+                return True
+
             self._lower_window(window)
             new_top = self._top_visible_window()
             if new_top is None:
@@ -281,16 +287,17 @@ class PanelControl(UiNode):
             else:
                 self._set_active_window(new_top)
 
-            # Lowering changes draw order and can expose stale gaps from the
-            # previous layering solve; trigger a tile-now style relayout so
-            # animations and placement update immediately.
+            # Legacy fallback for callers that do not yet expose the app-level
+            # lower_window helper. The new app API handles the enabled path.
             window_tiling = getattr(app, "window_tiling", None) if app is not None else None
             arrange_drop = getattr(window_tiling, "arrange_windows_for_drop", None) if window_tiling is not None else None
             tile_windows = getattr(app, "tile_windows", None) if app is not None else None
-            is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None) if app is not None else None
+            is_window_layout_enabled = getattr(app, "is_window_layout_enabled", None) if app is not None else None
+            if not callable(is_window_layout_enabled):
+                is_window_layout_enabled = getattr(app, "is_window_tiling_enabled", None) if app is not None else None
             auto_layout_enabled = True
-            if callable(is_window_tiling_enabled):
-                auto_layout_enabled = bool(is_window_tiling_enabled())
+            if callable(is_window_layout_enabled):
+                auto_layout_enabled = bool(is_window_layout_enabled())
             if auto_layout_enabled:
                 used_drop_relayout = False
                 if callable(arrange_drop):
@@ -826,7 +833,11 @@ class PanelControl(UiNode):
                     self._set_active_window(window)
                     # Titlebar drag
                     if window.title_bar_rect().collidepoint(raw):
-                        self._raise_window(window)
+                        raise_window = getattr(app, "raise_window", None)
+                        if callable(raise_window):
+                            raise_window(window)
+                        else:
+                            self._raise_window(window)
                         self._drag_window = window
                         self._drag_last_pos = raw
                         self._drag_offset = (
@@ -846,7 +857,11 @@ class PanelControl(UiNode):
                         event.stop_propagation()
                         return True
                     # If click is in window but not chrome, raise window
-                    self._raise_window(window)
+                    raise_window = getattr(app, "raise_window", None)
+                    if callable(raise_window):
+                        raise_window(window)
+                    else:
+                        self._raise_window(window)
                     break
 
         # --- End window chrome handling ---

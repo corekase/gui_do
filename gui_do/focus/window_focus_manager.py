@@ -211,9 +211,13 @@ class WindowFocusManager:
             return
 
         parent = getattr(window, "parent", None)
-        raise_window = getattr(parent, "_raise_window", None)
+        raise_window = getattr(app, "raise_window", None)
         if callable(raise_window):
             raise_window(window)
+        else:
+            raise_window = getattr(parent, "_raise_window", None)
+            if callable(raise_window):
+                raise_window(window)
 
         focus = getattr(app, "focus", None)
         if focus is not None:

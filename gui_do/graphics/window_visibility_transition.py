@@ -207,10 +207,14 @@ class WindowVisibilityTransitionController:
         self._post_transition_tile_pending = False
         is_show = self._target_progress >= 0.5
         if is_show:
-            parent = getattr(self.window, "parent", None)
-            raise_window = getattr(parent, "_raise_window", None)
+            raise_window = getattr(self._post_transition_tile_app, "raise_window", None)
             if callable(raise_window):
                 raise_window(self.window)
+            else:
+                parent = getattr(self.window, "parent", None)
+                raise_window = getattr(parent, "_raise_window", None)
+                if callable(raise_window):
+                    raise_window(self.window)
         return
 
     def _finalize_show_handoff_position(self) -> None:

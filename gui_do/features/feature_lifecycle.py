@@ -686,15 +686,6 @@ def set_window_visible_state(
             return {"immediate_windows": (window,)}
         return {}
 
-    tiling_enabled: bool | None = None
-    if app is not None:
-        is_window_tiling_enabled = getattr(app, "is_window_tiling_enabled", None)
-        if callable(is_window_tiling_enabled):
-            try:
-                tiling_enabled = bool(is_window_tiling_enabled())
-            except Exception:
-                tiling_enabled = None
-
     def _center_single_window_without_tiling() -> bool:
         if app is None or window is None:
             return False
@@ -766,63 +757,48 @@ def set_window_visible_state(
     if window is not None and is_visible != was_visible:
         _cancel_window_tiling_motion()
     if becoming_visible:
-        raise_window_in_parent(window)
+        raise_window = getattr(app, "raise_window", None) if app is not None else None
+        if callable(raise_window):
+            raise_window(window)
+        else:
+            raise_window_in_parent(window)
     if window is not None and is_visible:
         window.visible = True
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
         toggle.pushed = is_visible
-    if tile_windows is not None:
+    layout_enabled = True
+    if app is not None:
+        is_window_layout_enabled = getattr(app, "is_window_layout_enabled", None)
+        if not callable(is_window_layout_enabled):
+            is_window_layout_enabled = getattr(app, "is_window_tiling_enabled", None)
+        if callable(is_window_layout_enabled):
+            try:
+                layout_enabled = bool(is_window_layout_enabled())
+            except Exception:
+                layout_enabled = True
+
+    if tile_windows is not None and layout_enabled:
         if is_visible and window is not None:
-            if tiling_enabled is False:
-                if from_toggle:
-                    try:
-                        if becoming_visible:
-                            tile_windows(
-                                newly_visible=(window,),
-                                raised_windows=(window,),
-                                as_visibility_event=True,
-                                force=True,
-                                **_transition_tiling_kwargs(),
-                            )
-                        else:
-                            tile_windows(
-                                newly_visible=(window,),
-                                as_visibility_event=True,
-                                force=True,
-                                **_transition_tiling_kwargs(),
-                            )
-                    except TypeError:
-                        try:
-                            tile_windows(newly_visible=(window,), as_visibility_event=True)
-                        except TypeError:
-                            tile_windows()
-                elif not _center_single_window_without_tiling():
-                    try:
-                        tile_windows(newly_visible=(window,), as_visibility_event=True)
-                    except TypeError:
-                        tile_windows()
-            else:
-                try:
-                    if becoming_visible:
-                        tile_windows(
-                            newly_visible=(window,),
-                            raised_windows=(window,),
-                            as_visibility_event=True,
-                            **_transition_tiling_kwargs(),
-                        )
-                    else:
-                        tile_windows(
-                            newly_visible=(window,),
-                            as_visibility_event=True,
-                            **_transition_tiling_kwargs(),
-                        )
-                except TypeError:
-                    tile_windows()
+            try:
+                if becoming_visible:
+                    tile_windows(
+                        newly_visible=(window,),
+                        raised_windows=(window,),
+                        as_visibility_event=True,
+                        **_transition_tiling_kwargs(),
+                    )
+                else:
+                    tile_windows(
+                        newly_visible=(window,),
+                        as_visibility_event=True,
+                        **_transition_tiling_kwargs(),
+                    )
+            except TypeError:
+                tile_windows()
         else:
             if window is not None:
                 window.visible = False
-            if tiling_enabled is not False:
-                tile_windows()
+            tile_windows()
     elif window is not None:
         window.visible = is_visible
 

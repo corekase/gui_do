@@ -347,7 +347,7 @@ class WindowLayoutHandler:
 
     def set_enabled(self, enabled: bool, relayout: bool = True) -> None:
         self.enabled = bool(enabled)
-        if relayout:
+        if relayout and self.enabled:
             self.arrange_windows()
 
     def configure(
@@ -367,7 +367,7 @@ class WindowLayoutHandler:
             self.avoid_task_panel = bool(avoid_task_panel)
         if center_on_failure is not None:
             self.center_on_failure = bool(center_on_failure)
-        if relayout:
+        if relayout and self.enabled:
             self.arrange_windows()
 
     def read_settings(self) -> Dict[str, object]:
@@ -1089,6 +1089,7 @@ class WindowLayoutHandler:
         self,
         newly_visible: Optional[Iterable[object]] = None,
         raised_windows: Optional[Iterable[object]] = None,
+        demoted_windows: Optional[Iterable[object]] = None,
         *,
         include_hidden: bool = False,
         immediate: bool = False,
@@ -1097,7 +1098,7 @@ class WindowLayoutHandler:
     ) -> None:
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
-        if (not self.enabled and not force) or not windows:
+        if not self.enabled or not windows:
             return
         work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
@@ -1150,6 +1151,11 @@ class WindowLayoutHandler:
             for candidate in raised_windows:
                 if candidate in windows and bool(getattr(candidate, "visible", False)):
                     promoted_raised.add(candidate)
+        demoted_lowered: set[object] = set()
+        if demoted_windows is not None:
+            for candidate in demoted_windows:
+                if candidate in windows and bool(getattr(candidate, "visible", False)):
+                    demoted_lowered.add(candidate)
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
             solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible
@@ -1294,6 +1300,7 @@ class WindowLayoutHandler:
             targets,
             window_rects,
             preferred_layer_tail=set(layer_tail_hint),
+            demote_to_back=set(demoted_lowered),
             promote_to_top=set(promoted_raised),
             explicit_layers=layer_groups,
         )
@@ -1325,7 +1332,7 @@ class WindowLayoutHandler:
         """
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
-        if (not self.enabled and not force) or not windows:
+        if not self.enabled or not windows:
             return
         if window not in windows:
             self.arrange_windows(

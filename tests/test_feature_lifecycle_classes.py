@@ -650,7 +650,7 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         self.assertEqual(1, len(app.calls))
         self.assertEqual((raised_window,), app.calls[0]["raised_windows"])
 
-    def test_task_panel_toggle_open_forces_relayout_when_tiling_disabled(self):
+    def test_task_panel_toggle_open_does_not_relayout_when_tiling_disabled(self):
         app = _StubAppForToggleOpenWithTilingDisabled()
         window = _StubWindowNode("life_window", visible=False)
         host = _StubHostForPresentation(app, "life_feature", _StubWindowFeature(window))
@@ -660,9 +660,7 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         model.set_visible("life", True, from_toggle=True)
 
         self.assertTrue(window.visible)
-        self.assertEqual(1, len(app.calls))
-        self.assertTrue(bool(app.calls[0]["as_visibility_event"]))
-        self.assertTrue(bool(app.calls[0]["force"]))
+        self.assertEqual(0, len(app.calls))
 
     def test_visibility_flip_cancels_stale_window_tiling_tween(self):
         app = _StubAppForTilingTweenCancel()

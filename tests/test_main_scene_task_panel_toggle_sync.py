@@ -70,7 +70,7 @@ class TestMainSceneTaskPanelToggleSync(unittest.TestCase):
         return demo
 
     def test_programmatic_visibility_syncs_all_task_panel_toggles(self):
-        demo = self._make_demo()
+        demo = self._make_demo(tiling_enabled=True)
 
         demo.window_presentation.set_visible("life", True)
         demo.window_presentation.set_visible("mandel", True)
