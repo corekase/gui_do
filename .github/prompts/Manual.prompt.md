@@ -146,6 +146,11 @@ Generate sections in this fixed order:
 15. FAQ and Troubleshooting
 16. Appendix
 
+Meta-instruction rendering rule:
+1. Treat all prompt control headings (for example: "Required topical coverage", "Final enrichment pass", "Completion gates", and "Operating note") as generation instructions only.
+2. Do not emit these control headings verbatim in MANUAL.md.
+3. Integrate their outcomes into the normal manual chapters and appendices instead of adding meta-process sections.
+
 Main Systems Reference fixed chapter order:
 1. Application Bootstrap and Host Configuration
 2. Feature Lifecycle and Feature Types
@@ -186,6 +191,10 @@ Chapter depth targets:
 5. Ensure examples are distributed through the chapter rather than clustered only at the end.
 
 ### Required topical coverage
+
+Instruction-only block: this section defines mandatory coverage requirements.
+Do not create a standalone MANUAL.md heading named "Required topical coverage" or "Required Topical Coverage Matrix".
+Integrate these topics into the relevant system chapters and appendices, with cross-links and evidence notes inline.
 
 The generated manual must include and correctly cross-link:
 1. Data-driven runtime model and lifecycle model
@@ -284,6 +293,10 @@ Appendix D is mandatory as a true API coverage index and must include:
 
 ### Final enrichment pass (mandatory and single)
 
+Instruction-only block: execute this pass internally.
+Do not add a MANUAL.md section titled "Final Enrichment Pass" (or equivalent process-report heading).
+Apply the improvements directly in-place so the final document reads as a finished manual, not as generation logs.
+
 After all sections are generated, run exactly one final enrichment pass across the full document.
 This pass must:
 1. Find opportunities to inline additional insights and best practices.
@@ -348,7 +361,7 @@ For each item, include introspected code examples whenever possible, and include
 18. FAQ and troubleshooting
 19. Appendices A-E
 20. Appendix F specifications and option reference for all discovered spec families and subspecs
-21. Single final enrichment pass across complete document
+21. Apply one internal final enrichment pass across the complete document (instruction only; do not emit a section for it)
 
 ## Operating note
 

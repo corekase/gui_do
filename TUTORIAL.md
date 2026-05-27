@@ -1,890 +1,536 @@
-# gui_do Tutorial: Build Pulse Desk
-
 ## Introduction
 
-This tutorial builds one continuous project, Pulse Desk, to teach `gui_do` from startup bootstrap through feature communication and action routing.
+This tutorial walks through the repository’s runnable demo as one continuous project. The goal is not just to show isolated API calls, but to explain how the pieces in [gui_do_demo.py](gui_do_demo.py), [demo_features/demo_config.py](demo_features/demo_config.py), and the feature packages under [demo_features/](demo_features) fit together.
 
-Labeling policy used in this document:
+The tutorial follows the same design stance as the codebase and the manual:
 
-- Blocks marked "Introspected anchor" are adapted directly from current repository code/tests/docs patterns.
-- Blocks marked "Inferred example" are minimal valid tutorial constructions derived from those verified patterns.
+- use the root package exports from `gui_do` as the supported application surface;
+- assemble runtime behavior from declarative specs whenever the framework already provides that path;
+- treat subscriptions, feature-owned state, and routed work as lifecycle-managed resources;
+- keep the demo organized by feature package, not by one-off modules.
 
-You will build:
+For deeper subsystem coverage while you read, keep [MANUAL.md](MANUAL.md#title-and-purpose) open. The manual explains the architecture and the export tiers in more depth; this tutorial focuses on the sequence of decisions that gets the demo running.
 
-- A `RoutedFeature` that owns reactive state.
-- A second `RoutedFeature` that receives cross-feature messages.
-- A small keyboard/action layer with `ActionRegistry` and `InputMap`.
-- A spec-driven host config bootstrapped by `build_host_application_config` and `bootstrap_host_application`.
-
-Why this project shape:
-
-- It mirrors how this repository’s demo keeps entrypoints thin and pushes composition into config/spec code.
-- It gives you both a baseline path and an advanced refinement path while keeping one narrative.
-
-Introspected anchor (from `gui_do_demo.py`, adapted verbatim usage):
-
-```python
-from gui_do import bootstrap_host_application
-from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
-
-
-class GuiDoDemo:
-    def __init__(self) -> None:
-        bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
-```
-
-Expected outcome after this tutorial: you can structure a maintainable `gui_do` application without relying on private/internal imports.
-
-Troubleshooting note:
-
-- If you are unsure whether a symbol is public, verify it exists on the root `gui_do` import surface before using it.
-
-Verification cues:
-
-- `tests/test_core_only_bootstrap_contracts.py`
-- `tests/test_runtime_operating_contracts.py`
-- `docs/runtime_operating_contracts.md`
-
-Why this step now: before coding, you need a clear target architecture so each subsequent section adds one capability without hidden assumptions.
+Why this section now: before writing any feature code, you need the mental model for where the host lives, where feature packages live, and why the public API is intentionally tiered.
 
 ## Core Concepts
 
-Pulse Desk uses four concepts throughout the entire build.
+The repo’s demo is built around four concepts that recur throughout the rest of the tutorial.
 
-1. Bootstrap is declarative.
-2. Features own behavior and lifecycle hooks.
-3. Messages connect features without tight coupling.
-4. Runtime ownership requires explicit cleanup discipline.
+1. The host bootstraps the application through `bootstrap_host_application()` and a host config built from spec objects.
+2. Feature packages own scene-level behavior, runtime bindings, and any helper modules they need.
+3. Observable state carries data through the runtime without requiring every consumer to poll.
+4. Routed and logic features split communication and update work into ownership-aware pieces.
 
-### Concept 1: Declarative bootstrap
+The public root package is the preferred import surface. That is the reason the examples in this tutorial use names such as `Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`, `ObservableValue`, `ActionManager`, and `KeyChordManager` from `gui_do` instead of importing from private submodules.
 
-`HostApplicationBindingSpec` captures host-level wiring, then `build_host_application_config` normalizes all shorthand into runtime-ready specs.
-
-Introspected anchor (adapted from `demo_features/demo_config.py`):
+An inferred minimal skeleton looks like this:
 
 ```python
-from gui_do import (
-    HostApplicationBindingSpec,
-    SceneBundleBindingSpec,
-    build_host_application_config,
-)
+from gui_do import Feature, ObservableValue
 
-config = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
-        initial_scene_name="main",
-        scene_bundle_entries=(
-            SceneBundleBindingSpec(scene_name="main", make_initial=True),
-        ),
-    )
-)
+
+class CounterFeature(Feature):
+    def __init__(self) -> None:
+        super().__init__("counter", scene_name="main")
+        self.count = ObservableValue(0)
+
+    def increment(self) -> int:
+        self.count.value += 1
+        return self.count.value
 ```
 
-### Concept 2: Feature types
+Expected runtime outcome: the feature owns its state, and any observer subscribed to `count` can react when the value changes.
 
-`gui_do` supports multiple feature styles; the repository demo uses all three frequently.
+Caution: observable state is only useful when ownership is clear. If a feature creates subscriptions or background work, it should also define where that work is released.
 
-- `DirectFeature`: direct event/update/draw path (used by moving-shapes backdrop).
-- `LogicFeature`: command-driven domain logic.
-- `RoutedFeature`: message-topic handler map plus runtime wiring.
-
-Introspected anchor (adapted from `demo_features/moving_shapes/moving_shapes_backdrop_feature.py`):
-
-```python
-from gui_do import DirectFeature
-
-
-class MovingBackdrop(DirectFeature):
-    def on_direct_update(self, host, dt_seconds: float) -> None:
-        pass
-
-    def draw_direct(self, host, surface, theme) -> None:
-        pass
-```
-
-### Concept 3: Message envelopes
-
-`FeatureMessage` provides normalized payload access (`topic`, `command`, `event`).
-
-Introspected anchor (adapted from `tests/test_feature_lifecycle_classes.py`):
-
-```python
-from gui_do import FeatureMessage
-
-msg = FeatureMessage(sender="a", target="b", payload={"topic": "activity.append", "value": 3})
-assert msg.topic == "activity.append"
-assert msg.get("value") == 3
-```
-
-### Concept 4: Ownership and cleanup
-
-Subscriptions should always be released predictably during runtime shutdown.
-
-Introspected anchor (adapted from `tests/test_observable_value_binding_invalidation.py` behavior):
-
-```python
-from gui_do import ObservableValue
-
-count = ObservableValue(0)
-unsubscribe = count.subscribe(lambda value: print(value))
-# ... later in shutdown path
-unsubscribe()
-```
-
-Troubleshooting note:
-
-- If a callback appears to fire after feature teardown, verify every subscription has a corresponding unsubscribe path in `shutdown_runtime`.
-
-Verification cues:
-
-- `tests/test_feature_lifecycle_classes.py`
-- `tests/test_observable_value_binding_invalidation.py`
-
-Why this step now: these concepts define every implementation decision in later sections.
+Evidence: the repo’s feature packages, the root exports in [gui_do/__init__.py](gui_do/__init__.py), and the runtime contracts in [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md).
 
 ## Installation and Setup
 
-Install editable source without dependency resolution first:
+Install the project in editable mode without automatic dependency resolution:
 
 ```bash
 python -m pip install -e . --no-deps
 ```
 
-Then install dependencies manually because `--no-deps` skips them.
+Then install the discovered dependencies manually:
 
-Runtime dependencies discovered from `pyproject.toml`:
+- `pygame`
+- `numpy`
+- `coverage` if you plan to run the test and coverage workflow
 
-- `pygame>=2.0`
-- `numpy>=1.24`
+Manual installation matters on Windows because binary dependency builds can be fragile, and the repository intentionally avoids forcing a wheel/build decision during the editable install step.
 
-Install command:
-
-```bash
-python -m pip install "pygame>=2.0" "numpy>=1.24"
-```
-
-Optional tooling discovered from repository dependency files:
-
-- `coverage`
-- `pytest`
-
-Optional install command:
+After installation, run the demo entrypoint from the repository root:
 
 ```bash
-python -m pip install coverage pytest
+python gui_do_demo.py
 ```
 
-Why manual dependency installation is called out explicitly:
+Expected runtime outcome: the demo opens using the configuration assembled in `demo_features/demo_config.py`.
 
-- On Windows, binary dependency builds can fail for environment-specific reasons.
-- Installing dependencies directly gives clearer control and faster troubleshooting than relying on implicit transitive resolution.
+Troubleshooting: if the app fails before opening a window, check that `pygame` and `numpy` are installed in the active environment and that the editable install was done from the repository root.
 
-Create this tutorial workspace layout:
-
-```text
-pulse_desk/
-  __init__.py
-  features/
-    __init__.py
-    pulse_feature.py
-run_pulse_desk.py
-```
-
-Initial package files:
-
-```python
-# pulse_desk/__init__.py
-"""Pulse Desk tutorial package."""
-```
-
-```python
-# pulse_desk/features/__init__.py
-"""Feature package for the Pulse Desk tutorial."""
-```
-
-Troubleshooting note:
-
-- If `python -m pip install -e . --no-deps` succeeds but imports fail at runtime, install runtime dependencies manually first before debugging feature code.
-
-Verification cues:
-
-- `pyproject.toml`
-- `requirements-ci.txt`
-- [MANUAL.md](MANUAL.md#4-feature-organization-conventions)
-
-Why this step now: a stable environment and folder boundary prevent false errors while we add actual runtime behavior.
+Why this section now: once the environment can launch the demo, every later step becomes easy to verify against a real runtime instead of a hypothetical one.
 
 ## Your First Feature
 
-Now we implement the first feature, `PulseFeature`, as a `RoutedFeature` with a reactive counter.
+The first feature in the demo is the main-scene feature. It is the place where the host’s scene surface gets built and where the runtime behavior for the main scene is bound.
 
-Problem framing:
-
-- We need one feature that owns local state and can report updates to other features.
-
-Implementation file:
-
-Inferred example (derived from verified `RoutedFeature`, `ObservableValue`, and message-routing patterns in demo features and lifecycle tests):
+The repository entrypoint stays thin:
 
 ```python
-# pulse_desk/features/pulse_feature.py
-from gui_do import ObservableValue, RoutedFeature
-
-
-class PulseFeature(RoutedFeature):
-    """Owns a reactive counter and emits activity messages."""
-
-    def __init__(self) -> None:
-        super().__init__("pulse_counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self._count_unsubscribe = None
-
-    def bind_runtime(self, host) -> None:
-        # Lifecycle-safe subscription: retained and explicitly released in shutdown_runtime.
-        self._count_unsubscribe = self.count.subscribe(lambda value: self._emit_activity(value))
-
-    def shutdown_runtime(self, host) -> None:
-        if callable(self._count_unsubscribe):
-            self._count_unsubscribe()
-            self._count_unsubscribe = None
-
-    def increment(self) -> None:
-        self.count.value = int(self.count.value) + 1
-
-    def _emit_activity(self, value: int) -> None:
-        self.send_message(
-            "activity_feed",
-            {"topic": "activity.append", "line": f"Pulse incremented to {value}"},
-        )
-```
-
-Checkpoint:
-
-- You now have a feature with lifecycle-safe reactive behavior.
-- No UI controls yet, but state and outbound messaging are in place.
-
-Milestone listing (first runnable shell):
-
-```python
-# run_pulse_desk.py
 from gui_do import bootstrap_host_application
-from pulse_desk.config import PULSE_CONFIG
+
+from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
 
 
-class PulseDeskApp:
+class GuiDoDemo:
+    """Interactive demo app showcasing gui_do controls and scene workflows."""
+
     def __init__(self) -> None:
-        bootstrap_host_application(self, PULSE_CONFIG)
+        bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
 
 
 if __name__ == "__main__":
-    PulseDeskApp().app.run_entrypoint(target_fps=PULSE_CONFIG.target_fps)
+    GuiDoDemo().app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
 ```
 
-Troubleshooting note:
+The main feature itself is built as a normal `Feature` subclass. In the repo, [demo_features/main/main_feature.py](demo_features/main/main_feature.py) does two things that matter for this tutorial:
 
-- Calling `send_message` before feature registration raises runtime errors. Keep message sends inside lifecycle hooks or user actions that run after bootstrap.
+- `build()` calls a helper that constructs the main scene surface;
+- `bind_runtime()` wires the runtime spec, including the exit key behavior for the main scene.
 
-Verification cues:
+An excerpted version of that pattern is:
 
-- `gui_do/features/feature_lifecycle.py` (`Feature.send_message`, `RoutedFeature`)
-- `tests/test_feature_lifecycle_classes.py`
+```python
+from gui_do import Feature, ShortcutHelpOverlay, ToastSeverity
 
-Why this step now: this creates the smallest meaningful unit that later sections can observe, route, and automate.
+
+class MainFeature(Feature):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "screen_rect", "scene_presentation", "window_presentation", "action_registry"),
+        "bind_runtime": ("app",),
+    }
+
+    def __init__(self) -> None:
+        super().__init__("main_demo", scene_name="main")
+        self._help_overlay: ShortcutHelpOverlay | None = None
+
+    def build(self, host) -> None:
+        ...
+
+    def bind_runtime(self, host) -> None:
+        ...
+```
+
+Expected runtime outcome: the main scene becomes the host’s entry scene, the scene surface is constructed, and the runtime hooks are installed before the update loop begins.
+
+Troubleshooting: if the scene does not appear, verify that `initial_scene_name` in the demo config points at a declared scene bundle and that the feature entry name matches the bootstrap config.
+
+Milestone listing so far:
+
+- `gui_do_demo.py`
+- `demo_features/demo_config.py`
+- `demo_features/main/main_feature.py`
 
 ## Reactive State: Making the UI Respond
 
-Next, refine the first feature by introducing transactional state for derived data.
+This section explains how the demo keeps values reactive instead of manually copying state through every layer. The repository’s showcase feature is the clearest example because it combines `ObservableValue` with an observable effect spec.
 
-Problem framing:
-
-- Raw counters are useful, but we also want a stable state snapshot and atomically-updated metadata.
-
-Implementation update:
-
-Inferred example (derived from verified `AppStateStore` and `StateTransaction` behavior in tests):
+The direct pattern in [demo_features/showcase/showcase_feature.py](demo_features/showcase/showcase_feature.py) is:
 
 ```python
-# pulse_desk/features/pulse_feature.py
-from gui_do import AppStateStore, ObservableValue, RoutedFeature, StateTransaction
+from gui_do import ObservableValue, ObservableEffectSpec, RoutedRuntimeSpec
 
 
-class PulseFeature(RoutedFeature):
-    def __init__(self) -> None:
-        super().__init__("pulse_counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self.store = AppStateStore({"count": 0, "status": "idle"})
-        self._count_unsubscribe = None
+class ShowcaseFeature(...):
+    def __init__(self, rect=None) -> None:
+        ...
+        self._live_slider_value = ObservableValue(float(self.SLIDER_DEFAULT_VALUE))
 
     def bind_runtime(self, host) -> None:
-        self._count_unsubscribe = self.count.subscribe(self._on_count_changed)
-
-    def shutdown_runtime(self, host) -> None:
-        if callable(self._count_unsubscribe):
-            self._count_unsubscribe()
-            self._count_unsubscribe = None
-
-    def increment(self) -> None:
-        self.count.value = int(self.count.value) + 1
-
-    def _on_count_changed(self, value: int) -> None:
-        with StateTransaction(self.store):
-            self.store.dispatch({"count": int(value)})
-            self.store.dispatch({"status": "active" if int(value) > 0 else "idle"})
-        self._emit_activity(int(value))
-
-    def _emit_activity(self, value: int) -> None:
-        self.send_message(
-            "activity_feed",
-            {"topic": "activity.append", "line": f"Pulse incremented to {value}"},
+        runtime_spec = RoutedRuntimeSpec(
+            scene_name=_CONTROLS_RUNTIME_SPEC.scene_name,
+            task_panel_focus_toggles=tuple(_CONTROLS_RUNTIME_SPEC.task_panel_focus_toggles),
+            command_palette=_CONTROLS_RUNTIME_SPEC.command_palette,
+            global_pointer_actions=tuple(_CONTROLS_RUNTIME_SPEC.global_pointer_actions),
+            observable_effects=(
+                ObservableEffectSpec(
+                    handler=self._on_live_slider_value,
+                    observable_attr_name="_live_slider_value",
+                    invoke_immediately=True,
+                ),
+            ),
         )
 ```
 
-Runtime behavior and ownership semantics:
+That tells the runtime to re-run the handler when the observable value changes, and it also requests an immediate first invocation so the UI starts from a consistent state.
 
-- `ObservableValue` notifies on value changes.
-- `StateTransaction` ensures grouped state patches commit atomically.
-- Subscription teardown remains explicit in `shutdown_runtime`.
-
-Introspected anchor (adapted from `tests/test_app_state_store.py`):
+An inferred cleanup pattern for a feature-owned subscription looks like this:
 
 ```python
-from gui_do import AppStateStore, StateTransaction
+from gui_do import ObservableValue
 
-store = AppStateStore({"a": 0, "b": 0})
-with StateTransaction(store):
-    store.dispatch({"a": 1})
-    store.dispatch({"b": 2})
+
+class CounterFeature:
+    def __init__(self) -> None:
+        self.count = ObservableValue(0)
+        self._release_callbacks = []
+
+    def bind(self) -> None:
+        unsubscribe = self.count.subscribe(self._on_count_changed)
+        self._release_callbacks.append(unsubscribe)
+
+    def shutdown(self) -> None:
+        for release in self._release_callbacks:
+            release()
+        self._release_callbacks.clear()
+
+    def _on_count_changed(self, value: int) -> None:
+        ...
 ```
 
-Checkpoint:
+Expected runtime outcome: the observer sees updates while the feature is active, and teardown releases the subscription deterministically.
 
-- Counter changes now update both observable and store-backed state safely.
+Caution: do not let a subscription outlive the feature that created it. The runtime contracts explicitly care about teardown discipline, so this is not a cosmetic detail.
 
-Troubleshooting note:
+Troubleshooting: if a handler keeps firing after a feature is gone, check whether the subscription is stored in the feature’s runtime scope or released in shutdown.
 
-- If you see partial updates, make sure grouped `dispatch` calls happen inside one `StateTransaction` context.
+Milestone listing at this point:
 
-Verification cues:
-
-- `tests/test_observable_value_binding_invalidation.py`
-- `tests/test_app_state_store.py`
-- [MANUAL.md](MANUAL.md#94-state-and-observables)
-
-Why this step now: reactive and transactional state gives us reliable data to share with additional features.
+- `gui_do_demo.py`
+- `demo_features/demo_config.py`
+- `demo_features/main/main_feature.py`
+- `demo_features/showcase/showcase_feature.py`
 
 ## Feature Types
 
-Before adding the second feature, clarify when to choose each feature type.
+The repo uses different feature base classes for different jobs:
 
-### Minimal examples
+- `Feature` for ordinary scene-owned feature logic and lifecycle hooks;
+- `DirectFeature` for drawing and update work that acts directly on the frame surface;
+- `LogicFeature` for companion logic that registers runnable tasks or algorithm work;
+- `RoutedFeature` for features that exchange structured messages with other parts of the runtime.
+
+The demo gives one real example of each. `MainFeature` is a `Feature`. `MovingShapesBackdropFeature` is a `DirectFeature` that animates and draws cached sprites. `MandelbrotLogicFeature` is a `LogicFeature` that registers iterative and recursive Mandelbrot tasks. `LifeFeature` is a `RoutedFeature` that owns the Conway’s Game of Life window and message handling.
+
+An inferred public-surface example of the four base classes is:
 
 ```python
-from gui_do import DirectFeature, LogicFeature, RoutedFeature
+from gui_do import DirectFeature, Feature, FeatureMessage, LogicFeature, RoutedFeature
 
 
-class BackgroundRenderFeature(DirectFeature):
-    def on_direct_update(self, host, dt_seconds: float) -> None:
-        pass
+class SceneFeature(Feature):
+    ...
 
 
-class DomainMathFeature(LogicFeature):
-    def on_logic_command(self, host, message) -> None:
-        pass
+class BackdropFeature(DirectFeature):
+    ...
 
 
-class WindowOrchestrationFeature(RoutedFeature):
+class AlgorithmFeature(LogicFeature):
+    ...
+
+
+class RoutedSceneFeature(RoutedFeature):
     def message_handlers(self):
-        return {"topic.name": self._handle_topic}
+        return {"demo.topic": self._on_message}
 
-    def _handle_topic(self, host, message) -> None:
-        pass
+    def _on_message(self, _host, message: FeatureMessage) -> None:
+        ...
 ```
 
-Applied guidance for Pulse Desk:
+Expected runtime outcome: each feature type receives the lifecycle and routing support it is designed for, instead of inheriting a one-size-fits-all API.
 
-- Keep `PulseFeature` as `RoutedFeature` because it reacts to topic messages and runtime hooks.
-- Keep any pure transformation service as `LogicFeature` when command routing is dominant.
-- Add `DirectFeature` only if you need direct draw/update loops that bypass control pipelines.
+Why this distinction matters: the feature base class is a design signal. When the runtime work is mostly visual and immediate, `DirectFeature` fits better; when the work is logic-only and reusable, `LogicFeature` keeps it separated; when messages or lifecycle events must cross a boundary, `RoutedFeature` makes the contract explicit.
 
-Common mistake:
-
-- Putting domain logic and rendering logic into one large `Feature` class makes teardown and testing harder.
-
-Troubleshooting note:
-
-- If your feature has no `message_handlers` topics but still subclasses `RoutedFeature`, consider whether `Feature` or `LogicFeature` is a cleaner fit.
-
-Verification cues:
-
-- `demo_features/moving_shapes/moving_shapes_backdrop_feature.py`
-- `demo_features/life/life_feature.py`
-- `demo_features/life/life_logic_feature.py`
-- [MANUAL.md](MANUAL.md#92-feature-lifecycle-and-feature-types)
-
-Why this step now: type boundaries reduce design churn before we wire inter-feature communication.
+Troubleshooting: if a feature feels overcomplicated, the most common mistake is using the wrong base class and then compensating with ad hoc hooks. Move the behavior to the closest matching feature type first.
 
 ## A Second Feature and Feature Communication
 
-Now add `ActivityFeature`, then connect it to `PulseFeature` message output.
+The demo becomes more interesting once the first scene is no longer alone. The repository’s second major story is feature communication, and the clearest example is the pairing between the Life feature and its logic companion.
 
-Problem framing:
-
-- We need a second feature that receives updates without directly reaching into first-feature internals.
-
-Implementation file:
-
-Inferred example (derived from verified `RoutedFeature.message_handlers` usage in demo features):
+In [demo_features/life/life_feature.py](demo_features/life/life_feature.py), the routed feature declares message handlers and updates local state when the companion logic sends back data:
 
 ```python
-# pulse_desk/features/activity_feature.py
-from gui_do import RoutedFeature
+from gui_do import FeatureMessage, RoutedFeature, WindowControl
 
 
-class ActivityFeature(RoutedFeature):
-    """Receives pulse activity lines and keeps a bounded feed."""
-
+class LifeFeature(RoutedFeature):
     def __init__(self) -> None:
-        super().__init__("activity_feed", scene_name="main")
-        self.lines: list[str] = []
+        super().__init__("life_simulation", scene_name="main")
+        self.life_cells = set()
 
     def message_handlers(self):
         return {
-            "activity.append": self._on_activity_append,
-            "activity.clear": self._on_activity_clear,
+            "life.logic": self._handle_life_logic_message,
         }
 
-    def _on_activity_append(self, host, message) -> None:
-        line = str(message.get("line", ""))
-        if not line:
+    def _handle_life_logic_message(self, _host, message: FeatureMessage) -> None:
+        if message.event != "life.state":
             return
-        self.lines.append(line)
-        self.lines = self.lines[-10:]
-
-    def _on_activity_clear(self, host, message) -> None:
-        self.lines.clear()
+        cells = message.get("cells")
+        if cells is not None:
+            self.life_cells = set(cells)
 ```
 
-Update config to register both features:
+The companion logic feature in [demo_features/mandelbrot/mandelbrot_logic_feature.py](demo_features/mandelbrot/mandelbrot_logic_feature.py) shows the other side of the split: a `LogicFeature` registers runnable work during `bind_runtime()` and keeps the computational heavy lifting separate from presentation.
 
-Inferred example (derived from verified host bootstrap binding patterns in `demo_features/demo_config.py`):
-
-```python
-# pulse_desk/config.py
-from gui_do import (
-    ActionBindingSpec,
-    HostApplicationBindingSpec,
-    SceneBundleBindingSpec,
-    build_host_application_config,
-)
-
-from pulse_desk.features.activity_feature import ActivityFeature
-from pulse_desk.features.pulse_feature import PulseFeature
-
-
-PULSE_CONFIG = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
-        initial_scene_name="main",
-        scene_bundle_entries=(
-            SceneBundleBindingSpec(
-                scene_name="main",
-                make_initial=True,
-                emit_nav_action_spec=False,
-                pristine_asset="demo_features/data/images/backdrop.jpg",
-                prewarm=True,
-            ),
-        ),
-        feature_entries=(
-            ("pulse_feature", PulseFeature),
-            ("activity_feature", ActivityFeature),
-        ),
-        action_entries=(
-            ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
-            ActionBindingSpec(kind="palette_toggle", action_id="palette_toggle", label="Toggle Command Palette"),
-        ),
-        target_fps=60,
-    )
-)
-```
-
-Introspected anchor for routed message handling (adapted from `demo_features/life/life_feature.py`):
+An inferred communication pattern that mirrors the repo is:
 
 ```python
-from gui_do import FeatureMessage, RoutedFeature
+from gui_do import FeatureMessage, LogicFeature, RoutedFeature
 
 
-class RoutedSample(RoutedFeature):
+class LogicPart(LogicFeature):
+    def bind_runtime(self, host) -> None:
+        ...
+
+
+class ViewPart(RoutedFeature):
     def message_handlers(self):
-        return {"logic.topic": self._handle_logic}
+        return {"demo.logic": self._on_logic_message}
 
-    def _handle_logic(self, host, message: FeatureMessage) -> None:
-        if message.event == "state":
-            pass
+    def _on_logic_message(self, _host, message: FeatureMessage) -> None:
+        self.latest_value = message.get("value")
 ```
 
-Checkpoint:
+Expected runtime outcome: the logic feature can process work independently while the routed feature reacts to the resulting messages and keeps presentation state in sync.
 
-- Incrementing pulse state now emits feed lines to the second feature.
+Troubleshooting: if the UI is not updating, check the topic name first. A routed feature only receives the messages it declares a handler for, and mismatched topics fail silently by design.
 
-Troubleshooting note:
+Milestone listing now includes the second feature path:
 
-- If communication fails silently, verify target feature names exactly match constructor names (`pulse_counter`, `activity_feed`).
+- `gui_do_demo.py`
+- `demo_features/demo_config.py`
+- `demo_features/main/main_feature.py`
+- `demo_features/showcase/showcase_feature.py`
+- `demo_features/life/life_feature.py`
+- `demo_features/mandelbrot/mandelbrot_logic_feature.py`
 
-Verification cues:
-
-- `gui_do/features/feature_lifecycle.py` (`FeatureManager.send_message`)
-- `tests/test_feature_lifecycle_classes.py`
-- [MANUAL.md](MANUAL.md#99-scene-window-and-task-panel-presentation-models)
-
-Why this step now: once two features communicate through message contracts, you have the core architecture pattern used by larger `gui_do` applications.
+Why this section now: once one feature can talk to another, you can separate compute from presentation without inventing new coupling rules for every subsystem.
 
 ## Actions and Keyboard Shortcuts
 
-Now add a reusable action layer that can trigger project behavior from keyboard shortcuts.
+The demo’s command and shortcut layer uses the public action and input APIs to keep behavior explicit. The main ideas are:
 
-Problem framing:
+- `ActionBindingSpec` and `build_action_specs()` normalize declarative action declarations;
+- `ActionManager` stores action handlers and key bindings;
+- `InputMap` records one-step key bindings;
+- `KeyChordManager` handles multi-step chords.
 
-- We need stable action descriptors for command surfaces and separately managed key bindings for user overrides.
-
-Implementation file:
-
-Inferred example (derived from verified `ActionRegistry` and `InputMap` behavior in source/tests):
+The repository already exercises these APIs in tests. A compact example from [tests/test_new_factory_utilities.py](tests/test_new_factory_utilities.py) is:
 
 ```python
-# pulse_desk/actions.py
-import pygame
-
-from gui_do import ActionManager, ActionRegistry, InputMap
+from gui_do import ActionBindingSpec, ActionSpec, build_action_specs
 
 
-def build_action_system(increment_callback):
-    actions = ActionManager()
-    registry = ActionRegistry()
-    keymap = InputMap()
+passthrough = ActionSpec(
+    action_id="custom",
+    label="Custom",
+    kind="scene_nav",
+    target="main",
+    category="Scenes",
+)
 
-    registry.declare(
-        "pulse.increment",
-        "Increment Pulse",
-        callback=lambda context, event: increment_callback() or True,
-        category="Pulse",
-        shortcut_hint="Ctrl+I",
-        description="Increase pulse count by one.",
+built = build_action_specs(
+    (
+        ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
+        ActionBindingSpec(kind="scene_nav", action_id="nav_tools", label="Go Tools", target="tools", category="Scenes"),
+        ActionBindingSpec(kind="palette_toggle", action_id="palette_toggle", label="Toggle Command Palette (F5)"),
+        passthrough,
     )
-
-    registry.bind_into(actions)
-
-    keymap.declare("pulse.increment", key=pygame.K_i, mod=pygame.KMOD_CTRL, label="Increment Pulse")
-    keymap.apply(actions)
-
-    return actions, registry, keymap
+)
 ```
 
-How this integrates with project lifecycle:
-
-- Build action system after bootstrap, once feature instances exist.
-- Bind callback to `PulseFeature.increment`.
-
-Introspected anchor (adapted from `gui_do/actions/input_map.py` and tests):
+The imperative side of the API is just as direct:
 
 ```python
-from gui_do import ActionManager, InputMap
+from gui_do import ActionManager, ChordStep, InputMap, KeyChord, KeyChordManager
+
 
 actions = ActionManager()
-imap = InputMap()
-imap.declare("edit.copy", key=67, mod=64, label="Copy")
-imap.apply(actions)
+actions.register_action("file.save", lambda event: True)
+actions.bind_key(83, "file.save")
+
+shortcuts = InputMap()
+shortcuts.declare("file.save", key=83, label="Save")
+
+chords = KeyChordManager(actions)
+chords.bind(KeyChord([ChordStep(75, 4), ChordStep(67, 4)]), "file.save")
 ```
 
-Checkpoint:
+Expected runtime outcome: actions can be triggered from keyboard input, scene navigation actions can be generated from bindings, and multi-step chords remain separate from single-key shortcuts.
 
-- You have one canonical action definition and one keyboard mapping path.
+Caution: use `InputMap` for declarative bindings and `ActionManager` for dispatch. Mixing the two responsibilities makes it harder to reason about who owns the shortcut state.
 
-Failure modes and recovery:
+Troubleshooting: if a shortcut does not fire, check the binding order and the action id first. The tests show that duplicate binds may be ignored, missing targets are rejected, and unknown kinds raise errors.
 
-- Binding reserved accessibility keys (for example Tab) is blocked by action routing safeguards.
-- If a key does not trigger, verify the action is registered before `InputMap.apply`.
+Milestone listing:
 
-Troubleshooting note:
-
-- If callbacks appear to do nothing, confirm your callback returns truthy or a meaningful side effect and that the correct `ActionManager` instance is used.
-
-Verification cues:
-
-- `tests/test_action_registry_and_input_map.py`
-- `tests/test_input_map_and_chord.py`
-- [MANUAL.md](MANUAL.md#93-events-actions-input-mapping-and-routing)
-
-Why this step now: after feature communication is working, action routing gives you user-facing control entry points.
+- `demo_features/demo_config.py` declares the demo actions.
+- `tests/test_action_middleware_and_theme_manager.py` and `tests/test_input_map_and_chord.py` cover the public shortcut behavior.
 
 ## Spec Reference for Builders
 
-This section summarizes the spec builders you used and when to choose each.
+This section is a reference for the builder functions that assemble the demo’s runtime configuration. The important takeaway is that the builders do validation and normalization, while the binding specs remain the human-authored description of what should exist.
 
-### API map used in this tutorial
+The most important builders for the demo are:
 
-- `HostApplicationBindingSpec`: top-level host declaration.
-- `SceneBundleBindingSpec`: scene setup/runtime/action/root bundle shorthand.
-- `ActionBindingSpec`: high-level action declarations for common kinds.
-- `build_host_application_config`: normalizes shorthand into a runtime-ready config.
-- `bootstrap_host_application`: materializes display, app, features, actions, and scene helpers.
+- `build_host_application_config()` for the top-level runtime config;
+- `build_scene_bundle_specs()` for scene, runtime-scene, root, and navigation spec assembly;
+- `build_feature_window_bundle_specs()` for pairing features with windows and task-panel entries;
+- `build_action_specs()` for validating and normalizing action declarations;
+- `build_window_toggle_specs()` for scene/window visibility wiring;
+- `build_scene_setup_specs()` and `build_runtime_scene_specs()` for scene-local runtime assembly.
 
-### Minimal builder path (baseline)
+The repository’s tests show the builder contract clearly. A direct example from [tests/test_new_factory_utilities.py](tests/test_new_factory_utilities.py) is:
 
 ```python
 from gui_do import (
+    ActionBindingSpec,
+    CursorBindingSpec,
     HostApplicationBindingSpec,
+    RuntimeSceneBindingSpec,
     SceneBundleBindingSpec,
+    SceneTransitionStyle,
+    TelemetryConfig,
+    WindowToggleBindingSpec,
     build_host_application_config,
 )
+
 
 config = build_host_application_config(
     HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
+        display_size=(800, 600),
+        window_title="Test App",
+        fonts={"default": {"file": "font.ttf", "size": 12}},
         initial_scene_name="main",
-        scene_bundle_entries=(SceneBundleBindingSpec(scene_name="main", make_initial=True),),
+        scene_entries=(("main", "Main"),),
+        feature_entries=(("_main_feature", object()),),
+        window_entries=(WindowToggleBindingSpec("main", "_main_feature", task_panel_slot_index=1),),
+        runtime_scene_entries=(RuntimeSceneBindingSpec("main", "asset.png", True, False),),
+        action_entries=(ActionBindingSpec(kind="exit", action_id="exit", label="Exit"),),
+        static_accessibility_entries=(("exit_button", "Exit"),),
+        font_role_entries=(("title", 14, "default"),),
+        cursor_entries=(CursorBindingSpec("normal", "cursor.png", (1, 1)),),
+        scene_default_transition_style=SceneTransitionStyle.FADE,
+        scene_default_transition_duration=0.25,
+        telemetry=TelemetryConfig(enabled=False),
+        target_fps=144,
     )
 )
 ```
 
-### Applied refinement path (production-friendly)
+Expected runtime outcome: the builder returns a normalized config object whose derived scene, feature, action, cursor, and telemetry specs are ready for bootstrap.
 
-Add explicit runtime defaults and action declarations as your app grows:
+Troubleshooting: if a builder raises a validation error, check the field family first. Most builder failures come from a missing scene target, an unsupported action kind, or a bundle entry that does not match the expected shape.
 
-- Use `prewarm=True` for scenes where first draw latency matters.
-- Add `ActionBindingSpec` entries for command palette and explicit scene navigation.
-- Keep scene/feature naming consistent to avoid routing mismatches.
-
-Common mistake:
-
-- Mixing inconsistent scene names across features, scene bundles, and action targets.
-
-Troubleshooting note:
-
-- If bootstrap succeeds but behavior is missing, inspect your generated config object first; most issues originate from incomplete spec declarations.
-
-Verification cues:
-
-- `demo_features/demo_config.py`
-- `tests/test_data_driven_runtime_specs.py`
-- [MANUAL.md](MANUAL.md#91-application-bootstrap-and-host-configuration)
-- [MANUAL.md](MANUAL.md#8-core-workflow-build-bind-route-update-draw)
-
-Why this step now: a spec map consolidates everything built so far and prepares you to reason about complete listings.
+Why this section now: at this point in the tutorial, you already know what the app is doing; the builder reference explains how the repo turns a declarative description into the runtime object graph.
 
 ## Complete Project Listing
 
-This section shows the full final project with all tutorial steps integrated.
+This is the runnable project that the tutorial has been describing.
 
-Inferred complete listing (assembled from the verified patterns used in earlier sections).
-
-```python
-# pulse_desk/__init__.py
-"""Pulse Desk tutorial package."""
+```text
+.
+├── gui_do_demo.py
+├── MANUAL.md
+├── README.md
+├── TUTORIAL.md
+├── docs/
+│   ├── architecture.md
+│   ├── architecture_boundary_spec.md
+│   ├── demo_feature_layout.md
+│   ├── event_system_spec.md
+│   ├── library_demo_separation_contract.md
+│   ├── package_contracts.md
+│   ├── public_api_spec.md
+│   ├── runtime_operating_contracts.md
+│   └── unified_layout_spec.md
+├── demo_features/
+│   ├── __init__.py
+│   ├── demo_config.py
+│   ├── data/
+│   ├── life/
+│   │   ├── __init__.py
+│   │   ├── life_feature.py
+│   │   ├── life_logic_feature.py
+│   │   ├── life_logic_helpers.py
+│   │   ├── life_presenter.py
+│   │   ├── life_runtime_helpers.py
+│   │   └── life_specs.py
+│   ├── main/
+│   │   ├── __init__.py
+│   │   ├── main_build_helpers.py
+│   │   ├── main_feature.py
+│   │   └── main_specs.py
+│   ├── mandelbrot/
+│   │   ├── __init__.py
+│   │   ├── mandelbrot_canvas_helpers.py
+│   │   ├── mandelbrot_feature.py
+│   │   ├── mandelbrot_logic_feature.py
+│   │   ├── mandelbrot_presenter.py
+│   │   ├── mandelbrot_runtime_helpers.py
+│   │   ├── mandelbrot_scheduling_helpers.py
+│   │   ├── mandelbrot_specs.py
+│   │   └── mandelbrot_status_event.py
+│   ├── moving_shapes/
+│   │   ├── __init__.py
+│   │   ├── moving_shapes_backdrop_feature.py
+│   │   ├── moving_shapes_specs.py
+│   │   └── shape_sprite_state.py
+│   ├── showcase/
+│   │   ├── __init__.py
+│   │   ├── showcase_advanced_helpers.py
+│   │   ├── showcase_basics_helpers.py
+│   │   ├── showcase_data_helpers.py
+│   │   ├── showcase_extended_helpers.py
+│   │   ├── showcase_feature.py
+│   │   ├── showcase_helpers.py
+│   │   ├── showcase_inspectable.py
+│   │   ├── showcase_runtime_helpers.py
+│   │   └── showcase_specs.py
+│   └── systems/
+│       ├── __init__.py
+│       ├── systems_commands.py
+│       ├── systems_data_helpers.py
+│       ├── systems_feature.py
+│       ├── systems_graphics_helpers.py
+│       ├── systems_helpers.py
+│       ├── systems_history_helpers.py
+│       ├── systems_infrastructure_helpers.py
+│       ├── systems_models.py
+│       ├── systems_motion_helpers.py
+│       ├── systems_persistence_helpers.py
+│       ├── systems_presenter.py
+│       ├── systems_scheduling_helpers.py
+│       ├── systems_state_helpers.py
+│       ├── systems_text_helpers.py
+│       ├── systems_theme_helpers.py
+│       └── systems_validation_helpers.py
+├── gui_do/
+│   ├── __init__.py
+│   ├── _version.py
+│   └── ... tiered subsystem packages matching the export surface
+├── tests/
+│   ├── test_public_api_exports.py
+│   ├── test_public_api_docs_contracts.py
+│   ├── test_package_contracts_public_api.py
+│   └── ... contract and behavior coverage for the runtime, builders, and demo features
+└── pyproject.toml
 ```
 
-```python
-# pulse_desk/features/__init__.py
-"""Feature package for the Pulse Desk tutorial."""
-```
+The important structural takeaway is that each feature package keeps its own public boundary in `__init__.py`, while bootstrap orchestration stays in `demo_features/demo_config.py`.
 
-```python
-# pulse_desk/features/pulse_feature.py
-from gui_do import AppStateStore, ObservableValue, RoutedFeature, StateTransaction
+Expected runtime outcome: if you follow this layout in a new app, you get a consistent import boundary, predictable feature ownership, and a demo structure that maps directly to the runtime contract documents.
 
-
-class PulseFeature(RoutedFeature):
-    """Owns a reactive counter and emits activity messages."""
-
-    def __init__(self) -> None:
-        super().__init__("pulse_counter", scene_name="main")
-        self.count = ObservableValue(0)
-        self.store = AppStateStore({"count": 0, "status": "idle"})
-        self._count_unsubscribe = None
-
-    def bind_runtime(self, host) -> None:
-        self._count_unsubscribe = self.count.subscribe(self._on_count_changed)
-
-    def shutdown_runtime(self, host) -> None:
-        if callable(self._count_unsubscribe):
-            self._count_unsubscribe()
-            self._count_unsubscribe = None
-
-    def increment(self) -> None:
-        self.count.value = int(self.count.value) + 1
-
-    def _on_count_changed(self, value: int) -> None:
-        with StateTransaction(self.store):
-            self.store.dispatch({"count": int(value)})
-            self.store.dispatch({"status": "active" if int(value) > 0 else "idle"})
-        self.send_message(
-            "activity_feed",
-            {"topic": "activity.append", "line": f"Pulse incremented to {value}"},
-        )
-```
-
-```python
-# pulse_desk/features/activity_feature.py
-from gui_do import RoutedFeature
-
-
-class ActivityFeature(RoutedFeature):
-    """Receives pulse activity lines and keeps a bounded feed."""
-
-    def __init__(self) -> None:
-        super().__init__("activity_feed", scene_name="main")
-        self.lines: list[str] = []
-
-    def message_handlers(self):
-        return {
-            "activity.append": self._on_activity_append,
-            "activity.clear": self._on_activity_clear,
-        }
-
-    def _on_activity_append(self, host, message) -> None:
-        line = str(message.get("line", ""))
-        if not line:
-            return
-        self.lines.append(line)
-        self.lines = self.lines[-10:]
-
-    def _on_activity_clear(self, host, message) -> None:
-        self.lines.clear()
-```
-
-```python
-# pulse_desk/actions.py
-import pygame
-
-from gui_do import ActionManager, ActionRegistry, InputMap
-
-
-def build_action_system(increment_callback):
-    actions = ActionManager()
-    registry = ActionRegistry()
-    keymap = InputMap()
-
-    registry.declare(
-        "pulse.increment",
-        "Increment Pulse",
-        callback=lambda context, event: increment_callback() or True,
-        category="Pulse",
-        shortcut_hint="Ctrl+I",
-        description="Increase pulse count by one.",
-    )
-
-    registry.bind_into(actions)
-
-    keymap.declare("pulse.increment", key=pygame.K_i, mod=pygame.KMOD_CTRL, label="Increment Pulse")
-    keymap.apply(actions)
-
-    return actions, registry, keymap
-```
-
-```python
-# pulse_desk/config.py
-from gui_do import (
-    ActionBindingSpec,
-    HostApplicationBindingSpec,
-    SceneBundleBindingSpec,
-    build_host_application_config,
-)
-
-from pulse_desk.features.activity_feature import ActivityFeature
-from pulse_desk.features.pulse_feature import PulseFeature
-
-
-PULSE_CONFIG = build_host_application_config(
-    HostApplicationBindingSpec(
-        display_size=(1280, 720),
-        window_title="Pulse Desk",
-        fonts={"default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14}},
-        initial_scene_name="main",
-        scene_bundle_entries=(
-            SceneBundleBindingSpec(
-                scene_name="main",
-                make_initial=True,
-                emit_nav_action_spec=False,
-                pristine_asset="demo_features/data/images/backdrop.jpg",
-                prewarm=True,
-            ),
-        ),
-        feature_entries=(
-            ("pulse_feature", PulseFeature),
-            ("activity_feature", ActivityFeature),
-        ),
-        action_entries=(
-            ActionBindingSpec(kind="exit", action_id="exit", label="Exit", category="File"),
-            ActionBindingSpec(kind="palette_toggle", action_id="palette_toggle", label="Toggle Command Palette"),
-        ),
-        target_fps=60,
-    )
-)
-```
-
-```python
-# run_pulse_desk.py
-from gui_do import bootstrap_host_application
-
-from pulse_desk.config import PULSE_CONFIG
-
-
-class PulseDeskApp:
-    def __init__(self) -> None:
-        bootstrap_host_application(self, PULSE_CONFIG)
-
-
-if __name__ == "__main__":
-    app = PulseDeskApp()
-
-    # Optional integration: wire local action system after bootstrap.
-    from pulse_desk.actions import build_action_system
-
-    pulse_feature = app.app.features.get("pulse_counter")
-    if pulse_feature is not None:
-        app._local_actions, app._local_registry, app._local_keymap = build_action_system(pulse_feature.increment)
-
-    app.app.run_entrypoint(target_fps=PULSE_CONFIG.target_fps)
-```
-
-Milestone validation checklist:
-
-- App bootstraps from one config object.
-- `PulseFeature` updates state and emits message envelopes.
-- `ActivityFeature` receives topic messages and maintains bounded history.
-- Action system can invoke `PulseFeature.increment` through a declared action.
-
-Troubleshooting note:
-
-- If local action shortcuts are not reflected in app-wide routing, wire the same `ActionRegistry`/`InputMap` concepts into your app-level action manager path once your integration design is finalized.
-
-Why this step now: this is the synchronized snapshot before moving to extension paths.
+Troubleshooting: when a project starts to feel unstructured, check whether feature-specific code has leaked out of its package root. That is usually the first sign the runtime boundaries are getting blurry.
 
 ## Next Steps
 
-You now have a complete baseline project and an advanced refinement path.
-
-Recommended continuation order:
-
-1. Add visible controls and bind them to `PulseFeature.increment` and `ActivityFeature.lines`.
-2. Promote local action wiring into app-level action routing so key handling shares one manager.
-3. Add persistence (`WorkspacePersistenceManager`, snapshots, or settings) for count/feed restoration.
-4. Add telemetry and diagnostics hooks for update/message timing.
-5. Extend scene model with additional `SceneBundleBindingSpec` entries and explicit navigation actions.
-
-Deep-link references for those expansions:
-
-- [MANUAL.md](MANUAL.md#91-application-bootstrap-and-host-configuration)
-- [MANUAL.md](MANUAL.md#92-feature-lifecycle-and-feature-types)
-- [MANUAL.md](MANUAL.md#93-events-actions-input-mapping-and-routing)
-- [MANUAL.md](MANUAL.md#911-persistence-and-workspacesession-state)
-- [MANUAL.md](MANUAL.md#916-telemetry-introspection-and-operational-hooks)
-
-Final caution:
-
-- Keep imports on the root `gui_do` surface in application code to stay aligned with public-surface stability policy and reduce migration cost as internals evolve.
+1. Read [MANUAL.md](MANUAL.md#how-to-use-this-manual) for the subsystem reference and the export-tier guidance.
+2. Review [docs/runtime_operating_contracts.md](docs/runtime_operating_contracts.md) before changing routing, focus, layout, or teardown behavior.
+3. Run [gui_do_demo.py](gui_do_demo.py) after you make a change so the demo remains the final integration check.
