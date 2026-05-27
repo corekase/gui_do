@@ -1164,6 +1164,7 @@ class WindowLayoutHandler:
             # newly-visible windows are tailed, keeping their old row-head
             # break markers can over-fragment solves into single-window layers.
             force_row_before = {w for w in force_row_before if w not in trailing_set}
+        preserve_row_structure = len(spatial_rows) > 1
 
         def _solve_with_order(order: list[object]) -> tuple[
             list[tuple[object, int, int]],
@@ -1232,28 +1233,29 @@ class WindowLayoutHandler:
             forced_layers = int(forced_layers)
             relaxed_layers = int(relaxed_layers)
 
-            if forced_centered_new > relaxed_centered_new:
-                targets = relaxed_targets
-                center_fallback = relaxed_fallback
-                layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif forced_overlap > 0 and relaxed_overlap < forced_overlap:
-                targets = relaxed_targets
-                center_fallback = relaxed_fallback
-                layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif forced_overlap == 0 and relaxed_overlap == 0:
-                if relaxed_centered_all < forced_centered_all:
+            if not (preserve_row_structure and forced_overlap == 0 and relaxed_overlap == 0):
+                if forced_centered_new > relaxed_centered_new:
                     targets = relaxed_targets
                     center_fallback = relaxed_fallback
                     layer_groups = [list(layer) for layer in relaxed_layer_groups]
-                # Keep row membership unless relaxation is a substantial win.
-                elif relaxed_layers + 2 < forced_layers:
+                elif forced_overlap > 0 and relaxed_overlap < forced_overlap:
                     targets = relaxed_targets
                     center_fallback = relaxed_fallback
                     layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif relaxed_layers + 1 < forced_layers:
-                targets = relaxed_targets
-                center_fallback = relaxed_fallback
-                layer_groups = [list(layer) for layer in relaxed_layer_groups]
+                elif forced_overlap == 0 and relaxed_overlap == 0:
+                    if relaxed_centered_all < forced_centered_all:
+                        targets = relaxed_targets
+                        center_fallback = relaxed_fallback
+                        layer_groups = [list(layer) for layer in relaxed_layer_groups]
+                    # Keep row membership unless relaxation is a substantial win.
+                    elif relaxed_layers + 2 < forced_layers:
+                        targets = relaxed_targets
+                        center_fallback = relaxed_fallback
+                        layer_groups = [list(layer) for layer in relaxed_layer_groups]
+                elif relaxed_layers + 1 < forced_layers:
+                    targets = relaxed_targets
+                    center_fallback = relaxed_fallback
+                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
 
             centered_new = 0
             if trailing_newly_visible:
@@ -1524,6 +1526,8 @@ class WindowLayoutHandler:
         else:
             solve_rows = [list(row) for row in rows if row]
 
+        preserve_row_structure = len(rows) > 1
+
         # Preserve row boundaries from the spatial insertion model while solving.
         solve_order = [w for row in solve_rows for w in row]
         force_row_before = {row[0] for row in solve_rows[1:] if row}
@@ -1556,21 +1560,22 @@ class WindowLayoutHandler:
         relaxed_drop_target = next(((tx, ty) for w, tx, ty in relaxed_targets if w is window), None)
         drop_proximity_tolerance = max(12, int(self.gap * 2))
 
-        if int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
-            use_relaxed = True
-            if forced_drop_target is not None and relaxed_drop_target is not None:
-                forced_drop_dy = abs(int(forced_drop_target[1]) - int(drop_y))
-                relaxed_drop_dy = abs(int(relaxed_drop_target[1]) - int(drop_y))
-                if int(relaxed_drop_dy) > int(forced_drop_dy) + int(drop_proximity_tolerance):
-                    use_relaxed = False
-            if use_relaxed:
+        if not (preserve_row_structure and int(forced_overlap) == 0 and int(relaxed_overlap) == 0):
+            if int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
+                use_relaxed = True
+                if forced_drop_target is not None and relaxed_drop_target is not None:
+                    forced_drop_dy = abs(int(forced_drop_target[1]) - int(drop_y))
+                    relaxed_drop_dy = abs(int(relaxed_drop_target[1]) - int(drop_y))
+                    if int(relaxed_drop_dy) > int(forced_drop_dy) + int(drop_proximity_tolerance):
+                        use_relaxed = False
+                if use_relaxed:
+                    targets = relaxed_targets
+                    center_fallback = relaxed_fallback
+                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
+            elif int(relaxed_layers) + 1 < int(forced_layers):
                 targets = relaxed_targets
                 center_fallback = relaxed_fallback
                 layer_groups = [list(layer) for layer in relaxed_layer_groups]
-        elif int(relaxed_layers) + 1 < int(forced_layers):
-            targets = relaxed_targets
-            center_fallback = relaxed_fallback
-            layer_groups = [list(layer) for layer in relaxed_layer_groups]
 
         original_targets = list(targets)
         targets, center_fallback = self._fit_pass_repack_layers(

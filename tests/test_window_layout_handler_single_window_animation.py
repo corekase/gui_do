@@ -1186,6 +1186,56 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         self.assertEqual([back, mid_peer, front, raised], list(parent.children))
 
+    def test_arrange_windows_keeps_multi_row_structure_when_raising_window(self):
+        top_left = _WindowNode(20, 20, 120, 90, visible=True)
+        top_right = _WindowNode(180, 20, 120, 90, visible=True)
+        bottom_left = _WindowNode(20, 180, 120, 90, visible=True)
+        bottom_right = _WindowNode(180, 180, 120, 90, visible=True)
+
+        parent = _ParentNode([top_left, top_right, bottom_left, bottom_right])
+        top_left.parent = parent
+        top_right.parent = parent
+        bottom_left.parent = parent
+        bottom_right.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        forced_targets = [
+            (top_left, 290, 60),
+            (top_right, 420, 60),
+            (bottom_left, 290, 200),
+            (bottom_right, 420, 200),
+        ]
+        relaxed_targets = [
+            (top_left, 40, 60),
+            (top_right, 170, 60),
+            (bottom_left, 40, 200),
+            (bottom_right, 170, 200),
+        ]
+
+        captured_targets = []
+
+        def _capture_fit_pass(targets, *_args, **_kwargs):
+            captured_targets.append(list(targets))
+            return (targets, set())
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (forced_targets, set(), 2),
+                (relaxed_targets, set(), 2),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=_capture_fit_pass):
+                handler.arrange_windows(raised_windows=(bottom_left,), immediate=True)
+
+        self.assertGreaterEqual(len(captured_targets), 1)
+        self.assertEqual(forced_targets, captured_targets[0])
+
     def test_arrange_windows_for_drop_demoted_window_is_forced_to_back(self):
         back = _WindowNode(20, 20, 120, 90, visible=True)
         mid = _WindowNode(170, 20, 120, 90, visible=True)
