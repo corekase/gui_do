@@ -1190,6 +1190,26 @@ class WindowLayoutHandler:
         solve_order = [w for row in solve_rows for w in row]
         base_solve_order = list(solve_order)
         force_row_before = {row[0] for row in solve_rows[1:] if row}
+
+        # Explicit z-intent ordering for solve input:
+        # - raised windows should solve in the trailing segment
+        # - demoted windows should solve in the leading segment
+        # This keeps geometry solve intent aligned with z-order intent rather
+        # than applying promotion/demotion only at final z normalization.
+        if promoted_raised:
+            promoted_tail = [w for w in solve_order if w in promoted_raised]
+            if promoted_tail:
+                promoted_set = set(promoted_tail)
+                solve_order = [w for w in solve_order if w not in promoted_set] + promoted_tail
+                force_row_before = {w for w in force_row_before if w not in promoted_set}
+
+        if demoted_lowered:
+            demoted_head = [w for w in solve_order if w in demoted_lowered]
+            if demoted_head:
+                demoted_set = set(demoted_head)
+                solve_order = demoted_head + [w for w in solve_order if w not in demoted_set]
+                force_row_before = {w for w in force_row_before if w not in demoted_set}
+
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
             solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible

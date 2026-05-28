@@ -221,14 +221,27 @@ class WindowVisibilityTransitionController:
 
         current = pygame.Rect(getattr(self.window, "rect", pygame.Rect(0, 0, 0, 0)))
         if frozen_target is not None:
-            width = int(current.width)
-            height = int(current.height)
-            if isinstance(target_rect, pygame.Rect):
-                width = int(target_rect.width)
-                height = int(target_rect.height)
-            resolved = pygame.Rect(0, 0, max(1, width), max(1, height))
-            resolved.center = (int(round(frozen_target[0])), int(round(frozen_target[1])))
-            target_rect = resolved
+            frozen_center = (int(round(frozen_target[0])), int(round(frozen_target[1])))
+            live_target = target_rect if isinstance(target_rect, pygame.Rect) else None
+            if isinstance(live_target, pygame.Rect):
+                live_center = (int(live_target.centerx), int(live_target.centery))
+                # If another relayout updated this window's target while the
+                # show transition was running, prefer that live target to
+                # avoid snapping back to stale pre-relayout geometry.
+                if abs(live_center[0] - frozen_center[0]) > 1 or abs(live_center[1] - frozen_center[1]) > 1:
+                    target_rect = pygame.Rect(live_target)
+                else:
+                    width = int(live_target.width)
+                    height = int(live_target.height)
+                    resolved = pygame.Rect(0, 0, max(1, width), max(1, height))
+                    resolved.center = frozen_center
+                    target_rect = resolved
+            else:
+                width = int(current.width)
+                height = int(current.height)
+                resolved = pygame.Rect(0, 0, max(1, width), max(1, height))
+                resolved.center = frozen_center
+                target_rect = resolved
 
         move_by = getattr(self.window, "move_by", None)
         if callable(move_by):

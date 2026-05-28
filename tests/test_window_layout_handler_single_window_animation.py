@@ -1186,7 +1186,7 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         self.assertEqual([back, mid_peer, front, raised], list(parent.children))
 
-    def test_raised_windows_solve_order_uses_live_z_order_within_spatial_row(self):
+    def test_raised_windows_solve_order_tails_raised_window_within_spatial_row(self):
         left = _WindowNode(20, 20, 120, 90, visible=True)
         middle = _WindowNode(170, 20, 120, 90, visible=True)
         raised = _WindowNode(320, 20, 120, 90, visible=True)
@@ -1215,7 +1215,7 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
                 handler.arrange_windows(raised_windows=(raised,), immediate=True)
 
         self.assertGreaterEqual(len(captured_orders), 1)
-        self.assertEqual([left, raised, middle], captured_orders[0])
+        self.assertEqual([left, middle, raised], captured_orders[0])
 
     def test_arrange_windows_keeps_multi_row_structure_when_raising_window(self):
         top_left = _WindowNode(20, 20, 120, 90, visible=True)

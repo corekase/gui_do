@@ -404,7 +404,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
 
         self.assertEqual(mid_center_before, mid_center_after)
 
-    def test_show_transition_completion_uses_frozen_target_when_external_retile_changes_target(self):
+    def test_show_transition_completion_prefers_live_target_when_external_retile_changes_target(self):
         app = _StubApp()
         app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
         binding = _StubBinding("show_demo")
@@ -438,8 +438,8 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         window.update(controller.base_duration_seconds)
 
         self.assertFalse(controller.is_active())
-        self.assertEqual(initial_target.topleft, window.rect.topleft)
-        self.assertEqual(initial_target.topleft, getattr(window, "_window_tiling_target_rect").topleft)
+        self.assertEqual(external_target.topleft, window.rect.topleft)
+        self.assertEqual(external_target.topleft, getattr(window, "_window_tiling_target_rect").topleft)
 
     def test_show_transition_completion_does_not_retile_or_re_raise(self):
         app = _StubApp()
