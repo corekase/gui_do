@@ -867,15 +867,12 @@ class PanelControl(UiNode):
                     window_tiling = getattr(app, "window_tiling", None)
                     is_top_z = getattr(window_tiling, "is_top_z_order_for_group", None)
                     if in_titlebar:
-                        # Start drag as before
-                        if callable(is_top_z) and is_top_z(window):
-                            self._set_active_window(window)
+                        # Raise window on drag start WITHOUT layout solve
+                        raise_window = getattr(app, "raise_window", None)
+                        if callable(raise_window):
+                            raise_window(window, relayout=False)
                         else:
-                            raise_window = getattr(app, "raise_window", None)
-                            if callable(raise_window):
-                                raise_window(window)
-                            else:
-                                self._raise_window(window)
+                            self._raise_window(window)
                         self._drag_window = window
                         self._drag_last_pos = raw
                         self._drag_offset = (
