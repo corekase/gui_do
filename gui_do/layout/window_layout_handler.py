@@ -1201,6 +1201,9 @@ class WindowLayoutHandler:
             if promoted_tail:
                 promoted_set = set(promoted_tail)
                 solve_order = [w for w in solve_order if w not in promoted_set] + promoted_tail
+                # Raised windows are intentionally tailed for top-layer solve
+                # intent; stale row-head markers for these windows can pin
+                # them to pre-raise slots and block centered top placement.
                 force_row_before = {w for w in force_row_before if w not in promoted_set}
 
         if demoted_lowered:
@@ -1208,6 +1211,9 @@ class WindowLayoutHandler:
             if demoted_head:
                 demoted_set = set(demoted_head)
                 solve_order = demoted_head + [w for w in solve_order if w not in demoted_set]
+                # Demoted windows are intentionally headed for back-layer solve
+                # intent; stale row-head markers for these windows should not
+                # force old slot boundaries.
                 force_row_before = {w for w in force_row_before if w not in demoted_set}
 
         if trailing_newly_visible:
