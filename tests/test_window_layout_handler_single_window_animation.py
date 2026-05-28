@@ -1186,6 +1186,37 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         self.assertEqual([back, mid_peer, front, raised], list(parent.children))
 
+    def test_raised_windows_solve_order_uses_live_z_order_within_spatial_row(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        middle = _WindowNode(170, 20, 120, 90, visible=True)
+        raised = _WindowNode(320, 20, 120, 90, visible=True)
+
+        # Keep all windows in one spatial row; live z-order differs from x-order.
+        parent = _ParentNode([left, raised, middle])
+        left.parent = parent
+        middle.parent = parent
+        raised.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        captured_orders = []
+
+        def _capture_order(ordered_windows, _window_rects, _work, *, prefer_vertical, force_row_before=None):
+            _ = prefer_vertical, force_row_before
+            captured_orders.append(list(ordered_windows))
+            targets = [(w, 80 + (idx * 160), 120) for idx, w in enumerate(ordered_windows)]
+            return (targets, set(), 1)
+
+        with patch.object(handler, "_solve_layered_targets", side_effect=_capture_order):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        self.assertGreaterEqual(len(captured_orders), 1)
+        self.assertEqual([left, raised, middle], captured_orders[0])
+
     def test_arrange_windows_keeps_multi_row_structure_when_raising_window(self):
         top_left = _WindowNode(20, 20, 120, 90, visible=True)
         top_right = _WindowNode(180, 20, 120, 90, visible=True)

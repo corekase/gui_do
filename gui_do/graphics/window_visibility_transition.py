@@ -205,16 +205,10 @@ class WindowVisibilityTransitionController:
         if not self._post_transition_tile_pending:
             return
         self._post_transition_tile_pending = False
-        is_show = self._target_progress >= 0.5
-        if is_show:
-            raise_window = getattr(self._post_transition_tile_app, "raise_window", None)
-            if callable(raise_window):
-                raise_window(self.window)
-            else:
-                parent = getattr(self.window, "parent", None)
-                raise_window = getattr(parent, "_raise_window", None)
-                if callable(raise_window):
-                    raise_window(self.window)
+        # Visibility mutation already performs canonical z-order updates.
+        # Do not issue a deferred completion raise: it can override newer user
+        # intent (e.g. another window raised while this transition was active)
+        # and reintroduce stale layout until the next explicit relayout.
         return
 
     def _finalize_show_handoff_position(self) -> None:

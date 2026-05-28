@@ -78,18 +78,34 @@ class WindowLayoutHandler:
         return bool(node.is_window())
 
     def _ensure_registration(self, windows: Iterable[object]) -> None:
-        current = set(windows)
+        ordered = list(windows)
         self._registration_order = {
-            w: idx for w, idx in self._registration_order.items() if w in current
+            window: index
+            for index, window in enumerate(ordered)
         }
-        for window in windows:
-            if window not in self._registration_order:
-                self._registration_order[window] = self._next_order
-                self._next_order += 1
+        self._next_order = int(len(ordered))
 
     def prime_registration(self) -> None:
         """Register current scene windows without performing layout."""
         self._ensure_registration(self._scene_windows())
+
+    def promote_window_registration(self, window: object) -> None:
+        """Sync registration to current graph order after promotion."""
+        if window is None:
+            return
+        self._ensure_registration(self._scene_windows())
+
+    def demote_window_registration(self, window: object) -> None:
+        """Sync registration to current graph order after demotion."""
+        if window is None:
+            return
+        self._ensure_registration(self._scene_windows())
+
+    def remove_window_registration(self, window: object) -> None:
+        """Remove one window from layout registration metadata."""
+        if window is None:
+            return
+        self._registration_order.pop(window, None)
 
     def _visible_windows(self) -> List[object]:
         return self._ordered_windows(include_hidden=False)
@@ -1127,9 +1143,6 @@ class WindowLayoutHandler:
         layout_rects = {w: self._layout_reference_rect(w) for w in windows}
         prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
         spatial_rows = self._spatial_rows(windows, layout_rects)
-        solve_order = [w for row in spatial_rows for w in row]
-        base_solve_order = list(solve_order)
-        force_row_before = {row[0] for row in spatial_rows[1:] if row}
 
         # Visibility-event hint: newly shown windows should enter from the
         # trailing solve segment so existing visible layout stabilizes first.
@@ -1157,6 +1170,26 @@ class WindowLayoutHandler:
             for candidate in demoted_windows:
                 if candidate in window_set and bool(getattr(candidate, "visible", False)):
                     demoted_lowered.add(candidate)
+
+        # For explicit z-intent events (raise/lower), solve rows should follow
+        # current graph z-order within each spatial row so placement updates
+        # are derived from the same ordering graph as window stacking.
+        solve_rows = [list(row) for row in spatial_rows]
+        if promoted_raised or demoted_lowered:
+            solve_rows = [
+                sorted(
+                    list(row),
+                    key=lambda w: (
+                        int(self._window_current_z_index(w)),
+                        int(layout_rects[w].centerx),
+                    ),
+                )
+                for row in solve_rows
+            ]
+
+        solve_order = [w for row in solve_rows for w in row]
+        base_solve_order = list(solve_order)
+        force_row_before = {row[0] for row in solve_rows[1:] if row}
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
             solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible

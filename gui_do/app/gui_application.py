@@ -1595,6 +1595,14 @@ class GuiApplication:
         method_name = "_raise_window" if to_front else "_lower_window"
         reorder = getattr(parent, method_name, None)
         if not callable(reorder):
+            parent_children = getattr(parent, "children", None)
+            if isinstance(parent_children, list) and window in parent_children:
+                parent_children.remove(window)
+                if to_front:
+                    parent_children.append(window)
+                else:
+                    parent_children.insert(0, window)
+                return parent, True
             scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
             nodes = getattr(scene, "nodes", None)
             if not isinstance(nodes, list) or window not in nodes:
@@ -1613,6 +1621,9 @@ class GuiApplication:
             return False
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         parent, reordered = self._mutate_window_z_order(window, to_front=True, scene_name=scene_name)
+        promote_registration = getattr(tiling, "promote_window_registration", None)
+        if callable(promote_registration):
+            promote_registration(window)
         if bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name):
             arrange_windows = getattr(tiling, "arrange_windows", None)
             if callable(arrange_windows):
@@ -1628,6 +1639,9 @@ class GuiApplication:
             return False
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         parent, reordered = self._mutate_window_z_order(window, to_front=False, scene_name=scene_name)
+        demote_registration = getattr(tiling, "demote_window_registration", None)
+        if callable(demote_registration):
+            demote_registration(window)
         if bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name):
             arrange_windows = getattr(tiling, "arrange_windows", None)
             if callable(arrange_windows):
@@ -1659,6 +1673,14 @@ class GuiApplication:
             snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
             if callable(snapshot_fn):
                 newly_visible = snapshot_fn()
+        if force and raised_windows is None and newly_visible is None:
+            snapshot_fn = getattr(self.window_tiling, "visible_windows_snapshot", None)
+            if callable(snapshot_fn):
+                visible_windows = tuple(snapshot_fn())
+                if visible_windows:
+                    # Keep explicit tile-now consistent with the most recent
+                    # graph z-order intent by promoting the current top window.
+                    raised_windows = (visible_windows[-1],)
         if not force and not self.is_window_layout_enabled():
             return
         self.window_tiling.arrange_windows(

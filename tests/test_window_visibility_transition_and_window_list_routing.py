@@ -76,6 +76,7 @@ class _StubWindowTiling:
     def __init__(self, surface: _StubSurface):
         self._surface = surface
         self.center_windows_calls = []
+        self.removed_registration = []
 
     def center_windows(self, windows):
         items = tuple(windows)
@@ -92,6 +93,9 @@ class _StubWindowTiling:
             dy = int(target_y - int(rect.y))
             if dx != 0 or dy != 0:
                 move_by(dx, dy)
+
+    def remove_window_registration(self, window):
+        self.removed_registration.append(window)
 
 
 class _StubBinding:
@@ -437,7 +441,7 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         self.assertEqual(initial_target.topleft, window.rect.topleft)
         self.assertEqual(initial_target.topleft, getattr(window, "_window_tiling_target_rect").topleft)
 
-    def test_show_transition_completion_does_not_retile_and_only_re_raises(self):
+    def test_show_transition_completion_does_not_retile_or_re_raise(self):
         app = _StubApp()
         app._nodes["show_demo"] = _StubNode(Rect(20, 20, 48, 22))
         binding = _StubBinding("show_demo")
@@ -466,8 +470,9 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
 
         self.assertFalse(controller.is_active())
         self.assertEqual(pre_completion_tile_count, len(app.tile_windows_calls))
-        self.assertEqual(pre_completion_raise_count + 1, len(window.parent.raised))
-        self.assertIs(window, window.parent.raised[-1])
+        self.assertEqual(pre_completion_raise_count, len(window.parent.raised))
+        self.assertEqual(1, len(app.raise_calls))
+        self.assertEqual(False, app.raise_calls[-1]["relayout"])
 
     def test_show_transition_completion_snaps_live_window_to_solved_target(self):
         app = _StubApp()
@@ -642,6 +647,22 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         self.assertEqual(0, len(app.window_tiling.center_windows_calls))
         self.assertEqual((12, 18), window.rect.topleft)
         self.assertEqual(other_start.topleft, other.rect.topleft)
+
+    def test_hide_removes_window_from_layout_registration_metadata(self):
+        app = _StubApp()
+        window = _ShowTileStubWindow()
+        window.visible = True
+
+        set_window_visible_state(
+            window,
+            False,
+            tile_windows=app.tile_windows,
+            app=app,
+            binding=None,
+        )
+
+        self.assertFalse(window.visible)
+        self.assertEqual([window], app.window_tiling.removed_registration)
 
     def test_menu_bar_window_list_routes_through_window_presentation(self):
         presentation = _PresentationStub(return_value=True)
