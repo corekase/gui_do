@@ -475,6 +475,35 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             ),
         )
 
+    def test_lower_event_large_demoted_window_does_not_force_gap_in_top_windows(self):
+        non_menu = _WindowNode(860, 460, 220, 120, visible=True)
+        systems = _WindowNode(192, 106, 1536, 864, visible=True)
+        life = _WindowNode(300, 200, 620, 656, visible=True)
+        mandel = _WindowNode(950, 200, 676, 644, visible=True)
+        scene = _Scene([non_menu, life, mandel, systems])
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        # Lower the large Systems window; top windows should repack without
+        # preserving an artificial center gap for the demoted backdrop window.
+        handler.arrange_windows(demoted_windows=(systems,), immediate=True)
+
+        self.assertFalse(self._rects_overlap(life.rect, mandel.rect))
+
+        left, right = (life, mandel) if life.rect.centerx <= mandel.rect.centerx else (mandel, life)
+        horizontal_gap = max(0, int(right.rect.left - left.rect.right))
+        self.assertLessEqual(
+            horizontal_gap,
+            int(handler.gap) + 48,
+            (
+                f"gap={horizontal_gap} life={life.rect} mandel={mandel.rect} "
+                f"systems={systems.rect} non_menu={non_menu.rect}"
+            ),
+        )
+
     def test_newly_visible_window_prefers_base_order_when_trailing_order_keeps_it_centered(self):
         non_menu = _WindowNode(100, 40, 150, 56, visible=True)
         systems = _WindowNode(20, 420, 600, 420, visible=True)

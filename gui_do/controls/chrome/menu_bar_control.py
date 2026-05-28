@@ -898,7 +898,10 @@ class MenuStripControl(UiNode):
                 if next_visible:
                     tile_windows(newly_visible=(window,), raised_windows=(window,), as_visibility_event=True)
                 else:
-                    tile_windows()
+                    try:
+                        tile_windows(as_visibility_event=True, force=True)
+                    except TypeError:
+                        tile_windows()
 
     @staticmethod
     def _resolve_builtin_visibility_setter(app: "GuiApplication", window):

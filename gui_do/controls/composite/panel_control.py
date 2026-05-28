@@ -296,7 +296,10 @@ class PanelControl(UiNode):
                 window.visible = False
                 tile_windows = getattr(app, "tile_windows", None) if app is not None else None
                 if callable(tile_windows):
-                    tile_windows()
+                    try:
+                        tile_windows(as_visibility_event=True, force=True)
+                    except TypeError:
+                        tile_windows()
             return True
         if request == "lower":
             lower_window = getattr(app, "lower_window", None) if app is not None else None
