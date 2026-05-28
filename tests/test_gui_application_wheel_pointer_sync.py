@@ -93,10 +93,10 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
 
         observed_orders = []
 
-        def _arrange_windows(**_kwargs):
+        def _arrange_drop(*_args, **_kwargs):
             observed_orders.append(list(app.scene.nodes))
 
-        with patch.object(app.window_tiling, "arrange_windows", side_effect=_arrange_windows):
+        with patch.object(app.window_tiling, "arrange_windows_for_drop", side_effect=_arrange_drop):
             self.assertTrue(app.lower_window(second))
 
         self.assertEqual(1, len(observed_orders))
@@ -158,15 +158,19 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
         app.scene.add(first)
         app.scene.add(second)
 
-        with patch.object(app.window_tiling, "arrange_windows") as arrange_mock:
+        with (
+            patch.object(app.window_tiling, "arrange_windows") as arrange_mock,
+            patch.object(app.window_tiling, "arrange_windows_for_drop") as drop_mock,
+        ):
             self.assertTrue(app.raise_window(first))
             self.assertTrue(app.lower_window(second))
 
-        self.assertEqual(2, arrange_mock.call_count)
+        self.assertEqual(1, arrange_mock.call_count)
+        self.assertEqual(1, drop_mock.call_count)
         first_kwargs = arrange_mock.call_args_list[0].kwargs
-        second_kwargs = arrange_mock.call_args_list[1].kwargs
+        second_kwargs = drop_mock.call_args_list[0].kwargs
         self.assertEqual({"raised_windows": (first,), "force": True}, first_kwargs)
-        self.assertEqual({"demoted_windows": (second,), "force": True}, second_kwargs)
+        self.assertEqual({"force": True, "demoted_windows": (second,)}, second_kwargs)
 
     def test_layout_registration_tracks_live_scene_graph_order(self):
         app = GuiApplication(pygame.Surface((320, 240)))

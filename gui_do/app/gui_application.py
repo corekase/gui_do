@@ -1643,6 +1643,35 @@ class GuiApplication:
         if callable(demote_registration):
             demote_registration(window)
         if bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name):
+            arrange_drop = getattr(tiling, "arrange_windows_for_drop", None)
+            if callable(arrange_drop):
+                bounded_area_rect = getattr(self, "bounded_area_rect", None)
+                if callable(bounded_area_rect):
+                    bounds = Rect(bounded_area_rect(scene_name=scene_name))
+                else:
+                    runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
+                    surface = getattr(runtime, "surface", None)
+                    bounds = Rect(surface.get_rect()) if surface is not None else Rect(0, 0, 0, 0)
+                gap = int(getattr(tiling, "gap", 16))
+                drop_point = (int(window.rect.centerx), int(bounds.bottom + max(4, gap * 2)))
+                try:
+                    arrange_drop(window, drop_point, force=True, demoted_windows=(window,))
+                except TypeError:
+                    try:
+                        arrange_drop(window, drop_point, force=True)
+                    except TypeError:
+                        arrange_drop(window, drop_point, demoted_windows=(window,))
+                top_visible = getattr(parent, "_top_visible_window", None)
+                set_active = getattr(parent, "_set_active_window", None)
+                clear_active = getattr(parent, "_clear_active_windows", None)
+                if callable(top_visible) and callable(set_active):
+                    target = top_visible()
+                    if target is None:
+                        if callable(clear_active):
+                            clear_active()
+                    else:
+                        set_active(target)
+                return True
             arrange_windows = getattr(tiling, "arrange_windows", None)
             if callable(arrange_windows):
                 arrange_windows(demoted_windows=(window,), force=True)

@@ -504,6 +504,24 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             ),
         )
 
+    def test_lower_event_recenters_remaining_top_windows_after_demoting_backdrop(self):
+        non_menu = _WindowNode(860, 460, 220, 120, visible=True)
+        systems = _WindowNode(192, 106, 1536, 864, visible=True)
+        life = _WindowNode(40, 200, 620, 656, visible=True)
+        mandel = _WindowNode(1240, 200, 676, 644, visible=True)
+        scene = _Scene([non_menu, life, mandel, systems])
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        handler.arrange_windows(demoted_windows=(systems,), immediate=True)
+
+        # Top windows should repack around center after backdrop demotion.
+        top_center_x = int((life.rect.centerx + mandel.rect.centerx) / 2)
+        self.assertLessEqual(abs(top_center_x - app.surface.get_rect().centerx), int(handler.gap) + 32)
+
     def test_newly_visible_window_prefers_base_order_when_trailing_order_keeps_it_centered(self):
         non_menu = _WindowNode(100, 40, 150, 56, visible=True)
         systems = _WindowNode(20, 420, 600, 420, visible=True)
