@@ -1867,6 +1867,50 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             list(parent.children),
         )
 
+    def test_arrange_windows_for_drop_demotion_repacks_remaining_top_layer(self):
+        lowered = _WindowNode(760, 80, 320, 240, visible=True)
+        life = _WindowNode(40, 212, 620, 656, visible=True)
+        mandel = _WindowNode(1244, 218, 676, 644, visible=True)
+
+        parent = _ParentNode([life, mandel, lowered])
+        life.parent = parent
+        mandel.parent = parent
+        lowered.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        solved_targets = [
+            (life, 40, 212),
+            (mandel, 1244, 218),
+            (lowered, 760, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 2),
+                (solved_targets, set(), 2),
+            ],
+        ):
+            with patch.object(
+                handler,
+                "_fit_pass_repack_layers",
+                return_value=(solved_targets, set()),
+            ):
+                handler.arrange_windows_for_drop(
+                    lowered,
+                    (lowered.rect.centerx, app.surface.get_rect().bottom + 40),
+                    immediate=True,
+                    demoted_windows=(lowered,),
+                )
+
+        top_center_x = int((life.rect.centerx + mandel.rect.centerx) / 2)
+        self.assertLessEqual(abs(top_center_x - app.surface.get_rect().centerx), int(handler.gap) + 32)
+
     def test_arrange_windows_for_drop_promoted_window_is_forced_to_top(self):
         back = _WindowNode(20, 20, 120, 90, visible=True)
         mid = _WindowNode(170, 20, 120, 90, visible=True)
