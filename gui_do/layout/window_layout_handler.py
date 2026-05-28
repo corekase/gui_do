@@ -1443,6 +1443,12 @@ class WindowLayoutHandler:
                 raised_z = self._window_current_z_index(raised_window)
                 peer_z_threshold = raised_z - 1
 
+                def _is_backdrop_window(rect: Rect) -> bool:
+                    return bool(
+                        int(rect.width) >= int(work.width * 0.75)
+                        and int(rect.height) >= int(work.height * 0.75)
+                    )
+
                 other_target_rects: list[Rect] = []
                 for window, x, y in targets:
                     if window is raised_window or window not in window_rects:
@@ -1450,6 +1456,8 @@ class WindowLayoutHandler:
                     if self._window_current_z_index(window) < peer_z_threshold:
                         continue
                     wr = window_rects[window]
+                    if _is_backdrop_window(wr):
+                        continue
                     ox, oy = self._clamp_target(window, int(x), int(y), scene_snapshot)
                     other_target_rects.append(Rect(int(ox), int(oy), int(wr.width), int(wr.height)))
 
@@ -1462,65 +1470,59 @@ class WindowLayoutHandler:
                     )
                     return any(candidate_rect.colliderect(other_rect) for other_rect in other_target_rects)
 
-                # Prefer the solver's own target when it is already non-overlapping
-                # with peer obstacles — the solver has full multi-window context and
-                # may have already produced an optimal side-by-side layout.
-                solver_raw = next(
-                    ((int(x), int(y)) for w, x, y in targets if w is raised_window),
-                    None,
+                # Prefer centered placement against peer obstacles so lower-z
+                # background windows cannot reserve gaps inside higher-z solves.
+                centered_x, centered_y = self._clamp_target(
+                    raised_window,
+                    int(raised_center_x),
+                    int(raised_center_y),
+                    scene_snapshot,
                 )
-                if solver_raw is not None:
-                    sx, sy = self._clamp_target(
-                        raised_window, solver_raw[0], solver_raw[1], scene_snapshot
+                selected_x, selected_y = int(centered_x), int(centered_y)
+                if _collides_with_others(int(selected_x), int(selected_y)):
+                    candidate_x_positions = [int(raised_center_x)]
+                    for other_rect in other_target_rects:
+                        candidate_x_positions.append(int(other_rect.left - int(raised_rect.width) - int(self.gap)))
+                        candidate_x_positions.append(int(other_rect.right + int(self.gap)))
+
+                    solver_raw = next(
+                        ((int(x), int(y)) for w, x, y in targets if w is raised_window),
+                        None,
                     )
-                    if not _collides_with_others(int(sx), int(sy)):
-                        selected_x, selected_y = int(sx), int(sy)
-                    else:
-                        selected_x, selected_y = self._clamp_target(
+                    if solver_raw is not None:
+                        candidate_x_positions.append(int(solver_raw[0]))
+
+                    best_candidate: tuple[int, int] | None = None
+                    best_distance = 10 ** 9
+                    for candidate_x in candidate_x_positions:
+                        clamped_x, clamped_y = self._clamp_target(
                             raised_window,
-                            int(raised_center_x),
+                            int(candidate_x),
                             int(raised_center_y),
                             scene_snapshot,
                         )
-                        if _collides_with_others(int(selected_x), int(selected_y)):
-                            step = max(1, int(raised_rect.width) + int(self.gap))
-                            search_radius = max(2, len(targets) + 2)
-                            found = False
-                            for idx in range(1, search_radius + 1):
-                                for direction in (1, -1):
-                                    candidate_x = int(raised_center_x) + int(direction * idx * step)
-                                    candidate_y = int(raised_center_y)
-                                    clamped_x, clamped_y = self._clamp_target(
-                                        raised_window,
-                                        candidate_x,
-                                        candidate_y,
-                                        scene_snapshot,
-                                    )
-                                    if not _collides_with_others(int(clamped_x), int(clamped_y)):
-                                        selected_x, selected_y = int(clamped_x), int(clamped_y)
-                                        found = True
-                                        break
-                                if found:
-                                    break
-                else:
-                    selected_x, selected_y = self._clamp_target(
-                        raised_window,
-                        int(raised_center_x),
-                        int(raised_center_y),
-                        scene_snapshot,
-                    )
-                    if _collides_with_others(int(selected_x), int(selected_y)):
-                        step = max(1, int(raised_rect.width) + int(self.gap))
-                        search_radius = max(2, len(targets) + 2)
+                        if _collides_with_others(int(clamped_x), int(clamped_y)):
+                            continue
+                        distance = abs(int(clamped_x) - int(raised_center_x))
+                        if distance < best_distance:
+                            best_distance = int(distance)
+                            best_candidate = (int(clamped_x), int(clamped_y))
+
+                    if best_candidate is not None:
+                        selected_x, selected_y = best_candidate
+                    else:
+                        # Dense fallback search by small increments around center
+                        # to find the nearest clamped non-overlapping x-position.
+                        step = max(1, int(self.gap))
+                        max_scan = max(int(work.width) + int(raised_rect.width), step)
                         found = False
-                        for idx in range(1, search_radius + 1):
+                        for delta in range(step, max_scan + step, step):
                             for direction in (1, -1):
-                                candidate_x = int(raised_center_x) + int(direction * idx * step)
-                                candidate_y = int(raised_center_y)
+                                candidate_x = int(raised_center_x) + int(direction * delta)
                                 clamped_x, clamped_y = self._clamp_target(
                                     raised_window,
                                     candidate_x,
-                                    candidate_y,
+                                    int(raised_center_y),
                                     scene_snapshot,
                                 )
                                 if not _collides_with_others(int(clamped_x), int(clamped_y)):
@@ -1529,6 +1531,20 @@ class WindowLayoutHandler:
                                     break
                             if found:
                                 break
+
+                    if best_candidate is None and not found:
+                        solver_raw = next(
+                            ((int(x), int(y)) for w, x, y in targets if w is raised_window),
+                            None,
+                        )
+                        if solver_raw is not None:
+                            sx, sy = self._clamp_target(
+                                raised_window,
+                                int(solver_raw[0]),
+                                int(solver_raw[1]),
+                                scene_snapshot,
+                            )
+                            selected_x, selected_y = int(sx), int(sy)
 
                 targets = [
                     (window, int(selected_x), int(selected_y))
@@ -1607,6 +1623,11 @@ class WindowLayoutHandler:
                 if self._window_current_z_index(window) < peer_z_threshold_3:
                     continue
                 wr = window_rects[window]
+                if (
+                    int(wr.width) >= int(work.width * 0.75)
+                    and int(wr.height) >= int(work.height * 0.75)
+                ):
+                    continue
                 cx, cy = self._clamp_target(window, int(x), int(y), scene_snapshot)
                 occupied_rects.append(Rect(int(cx), int(cy), int(wr.width), int(wr.height)))
 

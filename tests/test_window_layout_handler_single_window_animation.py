@@ -433,6 +433,48 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             f"Life {life.rect} and Mandel {mandel.rect} overlap after sequential raises",
         )
 
+    def test_lower_z_non_menu_does_not_reserve_gap_in_higher_z_raise_solves(self):
+        non_menu = _WindowNode(860, 460, 220, 120, visible=True)
+        systems = _WindowNode(192, 106, 1536, 864, visible=True)
+        life = _WindowNode(300, 200, 620, 656, visible=True)
+        mandel = _WindowNode(950, 200, 676, 644, visible=True)
+        # Back -> front: non_menu (lowest), life, mandel, systems.
+        scene = _Scene([non_menu, life, mandel, systems])
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        handler.arrange_windows(immediate=True)
+
+        # Raise Systems first, then Life, then Mandelbrot via separate task-panel raises.
+        scene.nodes.remove(systems)
+        scene.nodes.append(systems)
+        handler.arrange_windows(raised_windows=(systems,), immediate=True)
+
+        scene.nodes.remove(life)
+        scene.nodes.append(life)
+        handler.arrange_windows(raised_windows=(life,), immediate=True)
+
+        scene.nodes.remove(mandel)
+        scene.nodes.append(mandel)
+        handler.arrange_windows(raised_windows=(mandel,), immediate=True)
+
+        self.assertFalse(self._rects_overlap(life.rect, mandel.rect))
+
+        left, right = (life, mandel) if life.rect.centerx <= mandel.rect.centerx else (mandel, life)
+        horizontal_gap = max(0, int(right.rect.left - left.rect.right))
+
+        # The low-z non_menu window sits behind Systems and should not force a
+        # large preserved gap between the two higher-z windows.
+        self.assertLessEqual(
+            horizontal_gap,
+            int(handler.gap) + 48,
+            (
+                f"gap={horizontal_gap} life={life.rect} mandel={mandel.rect} "
+                f"systems={systems.rect} non_menu={non_menu.rect}"
+            ),
+        )
+
     def test_newly_visible_window_prefers_base_order_when_trailing_order_keeps_it_centered(self):
         non_menu = _WindowNode(100, 40, 150, 56, visible=True)
         systems = _WindowNode(20, 420, 600, 420, visible=True)
