@@ -1590,12 +1590,30 @@ class GuiApplication:
             relayout=relayout,
         )
 
-    def raise_window(self, window, *, scene_name: Optional[str] = None) -> bool:
+    def _mutate_window_z_order(self, window, *, to_front: bool, scene_name: Optional[str] = None) -> tuple[object, bool]:
+        parent = getattr(window, "parent", None)
+        method_name = "_raise_window" if to_front else "_lower_window"
+        reorder = getattr(parent, method_name, None)
+        if not callable(reorder):
+            scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
+            nodes = getattr(scene, "nodes", None)
+            if not isinstance(nodes, list) or window not in nodes:
+                return parent, False
+            nodes.remove(window)
+            if to_front:
+                nodes.append(window)
+            else:
+                nodes.insert(0, window)
+            return parent if parent is not None else scene, True
+        reorder(window)
+        return parent, True
+
+    def raise_window(self, window, *, relayout: bool = True, scene_name: Optional[str] = None) -> bool:
         if window is None:
             return False
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
-        parent = getattr(window, "parent", None)
-        if self.is_window_layout_enabled(scene_name=scene_name):
+        parent, reordered = self._mutate_window_z_order(window, to_front=True, scene_name=scene_name)
+        if bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name):
             arrange_windows = getattr(tiling, "arrange_windows", None)
             if callable(arrange_windows):
                 arrange_windows(raised_windows=(window,), force=True)
@@ -1603,18 +1621,14 @@ class GuiApplication:
                 if callable(set_active):
                     set_active(window)
                 return True
-        raise_window = getattr(parent, "_raise_window", None)
-        if callable(raise_window):
-            raise_window(window)
-            return True
-        return False
+        return bool(reordered)
 
-    def lower_window(self, window, *, scene_name: Optional[str] = None) -> bool:
+    def lower_window(self, window, *, relayout: bool = True, scene_name: Optional[str] = None) -> bool:
         if window is None:
             return False
         tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
-        parent = getattr(window, "parent", None)
-        if self.is_window_layout_enabled(scene_name=scene_name):
+        parent, reordered = self._mutate_window_z_order(window, to_front=False, scene_name=scene_name)
+        if bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name):
             arrange_windows = getattr(tiling, "arrange_windows", None)
             if callable(arrange_windows):
                 arrange_windows(demoted_windows=(window,), force=True)
@@ -1629,11 +1643,7 @@ class GuiApplication:
                     else:
                         set_active(target)
                 return True
-        lower_window = getattr(parent, "_lower_window", None)
-        if callable(lower_window):
-            lower_window(window)
-            return True
-        return False
+        return bool(reordered)
 
     def tile_windows(
         self,

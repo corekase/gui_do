@@ -27,6 +27,8 @@ class _StubApp:
     def __init__(self, *, tiling_enabled: bool = True):
         self._nodes = {}
         self.tile_windows_calls = []
+        self.raise_calls = []
+        self.lower_calls = []
         self.surface = _StubSurface((800, 600))
         self._tiling_enabled = bool(tiling_enabled)
         self.window_tiling = _StubWindowTiling(self.surface)
@@ -39,6 +41,24 @@ class _StubApp:
 
     def is_window_tiling_enabled(self, scene_name=None) -> bool:
         return self._tiling_enabled
+
+    def raise_window(self, window, *, relayout: bool = True, scene_name=None) -> bool:
+        _ = scene_name
+        self.raise_calls.append({"window": window, "relayout": bool(relayout)})
+        parent = getattr(window, "parent", None)
+        raise_window = getattr(parent, "_raise_window", None)
+        if callable(raise_window):
+            raise_window(window)
+        return True
+
+    def lower_window(self, window, *, relayout: bool = True, scene_name=None) -> bool:
+        _ = scene_name
+        self.lower_calls.append({"window": window, "relayout": bool(relayout)})
+        parent = getattr(window, "parent", None)
+        lower_window = getattr(parent, "_lower_window", None)
+        if callable(lower_window):
+            lower_window(window)
+        return True
 
 
 class _StubSurface:
@@ -637,6 +657,17 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
         self.assertEqual([window], presentation.calls)
         self.assertFalse(window.visible)
 
+    def test_menu_bar_builtin_window_toggle_reorders_before_relayout(self):
+        app = _StubApp()
+        window = _StubWindow()
+        menu = MenuStripControl("menu", app=app)
+
+        menu._toggle_window(window)
+
+        self.assertTrue(window.visible)
+        self.assertEqual([{"window": window, "relayout": False}], app.raise_calls)
+        self.assertEqual((window,), app.tile_windows_calls[0][1]["raised_windows"])
+
     def test_command_palette_window_list_routes_through_window_presentation(self):
         presentation = _PresentationStub(return_value=True)
         window = _StubWindow()
@@ -647,6 +678,18 @@ class TestWindowVisibilityTransitionAndWindowListRouting(unittest.TestCase):
 
         self.assertEqual([window], presentation.calls)
         self.assertFalse(window.visible)
+
+    def test_command_palette_builtin_window_toggle_demotes_before_hide_relayout(self):
+        app = _StubApp()
+        window = _StubWindow()
+        window.visible = True
+        manager = CommandPaletteManager(_OverlayStub())
+
+        manager._toggle_builtin_window(app, window)
+
+        self.assertFalse(window.visible)
+        self.assertEqual([{"window": window, "relayout": False}], app.lower_calls)
+        self.assertEqual(1, len(app.tile_windows_calls))
 
 
 if __name__ == "__main__":

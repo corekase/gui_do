@@ -63,6 +63,44 @@ class TestGuiApplicationWheelPointerSync(unittest.TestCase):
         kwargs = arrange_mock.call_args.kwargs
         self.assertIsNone(kwargs.get("newly_visible"))
 
+    def test_raise_window_reorders_parent_before_relayout(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        app.set_window_tiling_enabled(True, relayout=False)
+        first = WindowControl("first", (100, 80), "First")
+        second = WindowControl("second", (100, 80), "Second")
+        app.scene.add(first)
+        app.scene.add(second)
+
+        observed_orders = []
+
+        def _arrange_windows(**_kwargs):
+            observed_orders.append(list(app.scene.nodes))
+
+        with patch.object(app.window_tiling, "arrange_windows", side_effect=_arrange_windows):
+            self.assertTrue(app.raise_window(first))
+
+        self.assertEqual(1, len(observed_orders))
+        self.assertIs(first, observed_orders[0][-1])
+
+    def test_lower_window_reorders_parent_before_relayout(self):
+        app = GuiApplication(pygame.Surface((320, 240)))
+        app.set_window_tiling_enabled(True, relayout=False)
+        first = WindowControl("first", (100, 80), "First")
+        second = WindowControl("second", (100, 80), "Second")
+        app.scene.add(first)
+        app.scene.add(second)
+
+        observed_orders = []
+
+        def _arrange_windows(**_kwargs):
+            observed_orders.append(list(app.scene.nodes))
+
+        with patch.object(app.window_tiling, "arrange_windows", side_effect=_arrange_windows):
+            self.assertTrue(app.lower_window(second))
+
+        self.assertEqual(1, len(observed_orders))
+        self.assertIs(second, observed_orders[0][0])
+
 
 if __name__ == "__main__":
     unittest.main()

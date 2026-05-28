@@ -1173,11 +1173,19 @@ class CommandPaletteManager:
         if setter is not None:
             setter(next_visible)
             return
+        if next_visible:
+            raise_window = getattr(app, "raise_window", None)
+            if callable(raise_window):
+                raise_window(window, relayout=False)
+        else:
+            lower_window = getattr(app, "lower_window", None)
+            if callable(lower_window):
+                lower_window(window, relayout=False)
         window.visible = next_visible
         tile_windows = getattr(app, "tile_windows", None)
         if callable(tile_windows):
             if next_visible:
-                tile_windows(newly_visible=(window,), as_visibility_event=True)
+                tile_windows(newly_visible=(window,), raised_windows=(window,), as_visibility_event=True)
             else:
                 tile_windows()
 

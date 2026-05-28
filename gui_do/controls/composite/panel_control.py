@@ -290,7 +290,13 @@ class PanelControl(UiNode):
     def _dispatch_window_titlebar_control_action(self, window: UiNode, request: str, app: "GuiApplication") -> bool:
         if request == "hide":
             if not self._set_window_visible_state(window, False, app):
+                lower_window = getattr(app, "lower_window", None) if app is not None else None
+                if callable(lower_window):
+                    lower_window(window, relayout=False)
                 window.visible = False
+                tile_windows = getattr(app, "tile_windows", None) if app is not None else None
+                if callable(tile_windows):
+                    tile_windows()
             return True
         if request == "lower":
             lower_window = getattr(app, "lower_window", None) if app is not None else None

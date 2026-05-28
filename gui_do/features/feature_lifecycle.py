@@ -759,9 +759,15 @@ def set_window_visible_state(
     if becoming_visible:
         raise_window = getattr(app, "raise_window", None) if app is not None else None
         if callable(raise_window):
-            raise_window(window)
+            raise_window(window, relayout=False)
         else:
             raise_window_in_parent(window)
+    elif window is not None and was_visible and not is_visible:
+        lower_window = getattr(app, "lower_window", None) if app is not None else None
+        if callable(lower_window):
+            lower_window(window, relayout=False)
+        else:
+            lower_window_in_parent(window)
     if window is not None and is_visible:
         window.visible = True
     if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
@@ -821,6 +827,17 @@ def raise_window_in_parent(window) -> bool:
     if not callable(raise_window):
         return False
     raise_window(window)
+    return True
+
+
+def lower_window_in_parent(window) -> bool:
+    if window is None:
+        return False
+    parent = getattr(window, "parent", None)
+    lower_window = getattr(parent, "_lower_window", None)
+    if not callable(lower_window):
+        return False
+    lower_window(window)
     return True
 
 
@@ -1078,6 +1095,10 @@ class FeatureWindowPresentationModel:
     def show(self, key: str) -> None:
         window = self.get_window(key)
         if window is not None and getattr(window, "visible", False):
+            app = getattr(self.host, "app", None)
+            raise_window = getattr(app, "raise_window", None) if app is not None else None
+            if callable(raise_window) and bool(raise_window(window)):
+                return
             raise_window_in_parent(window)
             return
         self.set_visible(key, True)
