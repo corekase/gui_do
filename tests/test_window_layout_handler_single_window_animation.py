@@ -397,6 +397,42 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         self.assertFalse(self._rects_overlap(life.rect, mandel.rect))
 
+    def test_task_panel_raise_both_life_and_mandel_from_behind_systems_no_overlap(self):
+        # Scenario: Systems (large, ~80% screen), Life and Mandelbrot visible.
+        # Systems is raised to front, then Life raised from task panel, then
+        # Mandelbrot raised from task panel.  Life and Mandelbrot must not overlap.
+        systems = _WindowNode(192, 106, 1536, 864, visible=True)
+        life = _WindowNode(300, 200, 620, 656, visible=True)
+        mandel = _WindowNode(950, 200, 676, 644, visible=True)
+        scene = _Scene([life, mandel, systems])  # systems already at top z-order
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Step 1: initial layout with all three windows visible
+        handler.arrange_windows(immediate=True)
+
+        # Step 2: raise Systems (simulate raise_window mutating z-order first)
+        scene.nodes.remove(systems)
+        scene.nodes.append(systems)
+        handler.arrange_windows(raised_windows=(systems,), immediate=True)
+
+        # Step 3: raise Life from task panel (separate arrange_windows call)
+        scene.nodes.remove(life)
+        scene.nodes.append(life)
+        handler.arrange_windows(raised_windows=(life,), immediate=True)
+        life_rect_after = Rect(life.rect)
+
+        # Step 4: raise Mandelbrot from task panel (separate arrange_windows call)
+        scene.nodes.remove(mandel)
+        scene.nodes.append(mandel)
+        handler.arrange_windows(raised_windows=(mandel,), immediate=True)
+
+        self.assertFalse(
+            self._rects_overlap(life.rect, mandel.rect),
+            f"Life {life.rect} and Mandel {mandel.rect} overlap after sequential raises",
+        )
+
     def test_newly_visible_window_prefers_base_order_when_trailing_order_keeps_it_centered(self):
         non_menu = _WindowNode(100, 40, 150, 56, visible=True)
         systems = _WindowNode(20, 420, 600, 420, visible=True)
