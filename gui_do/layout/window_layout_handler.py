@@ -9,8 +9,31 @@ from pygame import Rect
 WINDOW_TILING_ANIMATION_DURATION_SECONDS = 0.5
 
 
+
+
 class WindowLayoutHandler:
+    def is_top_level_window(self, window: object) -> bool:
+        """Return True if the window is not overlapped by any later window in z-order (drawn after it)."""
+        windows = self._visible_windows()
+        if window not in windows:
+            return False
+        window_rect = self._full_window_rect(window)
+        # Z-order: last in list is topmost (drawn last)
+        try:
+            idx = windows.index(window)
+        except ValueError:
+            return False
+        for later_window in windows[idx+1:]:
+            later_rect = self._full_window_rect(later_window)
+            if window_rect.colliderect(later_rect):
+                return False
+        return True
+
     """Arrange window-like scene nodes into a non-overlapping tiled grid."""
+
+    def is_top_z_order_for_group(self, window: object) -> bool:
+        """Return True if the window is not overlapped by any later window in z-order (drawn after it)."""
+        return self.is_top_level_window(window)
 
     def __init__(self, app, scene=None) -> None:
         self.app = app
@@ -702,12 +725,14 @@ class WindowLayoutHandler:
             else:
                 clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
             self._set_window_tiling_target(window, int(clamped_x), int(clamped_y))
-            if duration <= 0.0 or window in immediate_window_set:
-                setattr(window, "_window_tiling_animating", False)
-                current = Rect(window.rect)
-                window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
-            else:
-                self._animate_window_to(window, clamped_x, clamped_y, duration=duration)
+            current = Rect(window.rect)
+            # Only move if position actually changes
+            if int(clamped_x) != int(current.x) or int(clamped_y) != int(current.y):
+                if duration <= 0.0 or window in immediate_window_set:
+                    setattr(window, "_window_tiling_animating", False)
+                    window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
+                else:
+                    self._animate_window_to(window, clamped_x, clamped_y, duration=duration)
 
     @staticmethod
     def _overlap_pair_count(

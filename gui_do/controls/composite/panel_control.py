@@ -857,13 +857,25 @@ class PanelControl(UiNode):
                     continue
                 if window.rect.collidepoint(raw):
                     self._set_active_window(window)
-                    # Titlebar drag
-                    if window.title_bar_rect().collidepoint(raw):
-                        raise_window = getattr(app, "raise_window", None)
-                        if callable(raise_window):
-                            raise_window(window)
+                    # Titlebar drag detection (assume y < titlebar_height is titlebar, or use a method if available)
+                    titlebar_height = getattr(window, "titlebar_height", 32)
+                    in_titlebar = False
+                    if hasattr(window, "is_in_titlebar"):
+                        in_titlebar = window.is_in_titlebar(raw)
+                    else:
+                        in_titlebar = (raw[1] - window.rect.top) < titlebar_height
+                    window_tiling = getattr(app, "window_tiling", None)
+                    is_top_z = getattr(window_tiling, "is_top_z_order_for_group", None)
+                    if in_titlebar:
+                        # Start drag as before
+                        if callable(is_top_z) and is_top_z(window):
+                            self._set_active_window(window)
                         else:
-                            self._raise_window(window)
+                            raise_window = getattr(app, "raise_window", None)
+                            if callable(raise_window):
+                                raise_window(window)
+                            else:
+                                self._raise_window(window)
                         self._drag_window = window
                         self._drag_last_pos = raw
                         self._drag_offset = (
@@ -883,12 +895,21 @@ class PanelControl(UiNode):
                         event.prevent_default()
                         event.stop_propagation()
                         return True
-                    # If click is in window but not chrome, raise window
-                    raise_window = getattr(app, "raise_window", None)
-                    if callable(raise_window):
-                        raise_window(window)
                     else:
-                        self._raise_window(window)
+                        # Not a drag: only raise if not already top z-order for group
+                        if callable(is_top_z) and is_top_z(window):
+                            # Already top, just set active, do NOT consume event
+                            self._set_active_window(window)
+                            # Let event propagate to children (controls)
+                            return self._dispatch_children(event, app, reverse=False, theme=theme)
+                        else:
+                            raise_window = getattr(app, "raise_window", None)
+                            if callable(raise_window):
+                                raise_window(window)
+                            else:
+                                self._raise_window(window)
+                            # Do not consume event, let it propagate
+                            return self._dispatch_children(event, app, reverse=False, theme=theme)
                     break
 
         # --- End window chrome handling ---

@@ -1624,7 +1624,9 @@ class GuiApplication:
         promote_registration = getattr(tiling, "promote_window_registration", None)
         if callable(promote_registration):
             promote_registration(window)
-        if bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name):
+
+        is_layout_enabled = bool(relayout) and self.is_window_layout_enabled(scene_name=scene_name)
+        if is_layout_enabled:
             arrange_windows = getattr(tiling, "arrange_windows", None)
             if callable(arrange_windows):
                 arrange_windows(raised_windows=(window,), force=True)
