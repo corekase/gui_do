@@ -807,7 +807,10 @@ def set_window_visible_state(
                 remove_registration = getattr(getattr(app, "window_tiling", None), "remove_window_registration", None)
                 if callable(remove_registration):
                     remove_registration(window)
-            tile_windows()
+            try:
+                tile_windows(as_visibility_event=True, force=True)
+            except TypeError:
+                tile_windows()
     elif window is not None:
         window.visible = is_visible
 

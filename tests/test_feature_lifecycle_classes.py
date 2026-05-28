@@ -699,6 +699,8 @@ class TestFeatureWindowPresentationModelRaise(unittest.TestCase):
         self.assertIs(parent.children[0], hidden_window)
         self.assertEqual([{"window": hidden_window, "relayout": False}], app.lower_calls)
         self.assertEqual(1, len(app.calls))
+        self.assertTrue(app.calls[0]["as_visibility_event"])
+        self.assertTrue(app.calls[0]["force"])
 
     def test_task_panel_toggle_open_does_not_relayout_when_tiling_disabled(self):
         app = _StubAppForToggleOpenWithTilingDisabled()
