@@ -100,6 +100,17 @@ def add_window_toggle_task_panel_controls(
         tab_index = int(assigned_slot) if assigned_slot is not None else int(next_tab_index)
         next_tab_index = max(next_tab_index + 1, tab_index + 1)
 
+        def _toggle_visibility(pushed, _key=binding.key):
+            window_presentation.set_visible(
+                _key,
+                bool(pushed),
+                from_toggle=True,
+            )
+
+        # Mark this callback so the button can avoid duplicate set_visible
+        # when it already routed through app.window_presentation directly.
+        setattr(_toggle_visibility, "_window_presentation_visibility_handler", True)
+
         toggle = task_panel.add(
             WindowToggleButtonControl(
                 binding.task_panel_toggle_button_id or f"show_{binding.key}",
@@ -108,13 +119,7 @@ def add_window_toggle_task_panel_controls(
                 binding.task_panel_label or binding.key.title(),
                 binding.task_panel_label or binding.key.title(),
                 pushed=False,
-                on_toggle=(
-                    lambda pushed, _key=binding.key: window_presentation.set_visible(
-                        _key,
-                        bool(pushed),
-                        from_toggle=True,
-                    )
-                ),
+                on_toggle=_toggle_visibility,
                 on_show=(
                     lambda _key=binding.key: window_presentation.show(_key)
                 ),

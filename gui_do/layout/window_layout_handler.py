@@ -1140,9 +1140,6 @@ class WindowLayoutHandler:
             return
 
         window_rects = {w: self._full_window_rect(w) for w in windows}
-        layout_rects = {w: self._layout_reference_rect(w) for w in windows}
-        prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
-        spatial_rows = self._spatial_rows(windows, layout_rects)
 
         # Visibility-event hint: newly shown windows should enter from the
         # trailing solve segment so existing visible layout stabilizes first.
@@ -1170,6 +1167,17 @@ class WindowLayoutHandler:
             for candidate in demoted_windows:
                 if candidate in window_set and bool(getattr(candidate, "visible", False)):
                     demoted_lowered.add(candidate)
+
+        # Explicit z-intent solves (raise/lower) should be recomputed from live
+        # geometry, not prior tiling targets, so stale target metadata cannot
+        # pin row/layer grouping to an outdated layout solution.
+        use_live_layout_reference = bool(promoted_raised or demoted_lowered)
+        layout_rects = {
+            w: (self._full_window_rect(w) if use_live_layout_reference else self._layout_reference_rect(w))
+            for w in windows
+        }
+        prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
+        spatial_rows = self._spatial_rows(windows, layout_rects)
 
         # For explicit z-intent events (raise/lower), solve rows should follow
         # current graph z-order within each spatial row so placement updates
@@ -1217,6 +1225,7 @@ class WindowLayoutHandler:
                 force_row_before = {w for w in force_row_before if w not in demoted_set}
 
         priority_windows: list[object] = []
+        raised_priority_windows: list[object] = []
         if trailing_newly_visible or promoted_raised:
             seen_priority: set[object] = set()
             priority_set = set(trailing_newly_visible) | set(promoted_raised)
@@ -1224,6 +1233,8 @@ class WindowLayoutHandler:
                 if candidate in priority_set and candidate not in seen_priority:
                     priority_windows.append(candidate)
                     seen_priority.add(candidate)
+                if candidate in promoted_raised:
+                    raised_priority_windows.append(candidate)
 
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
@@ -1232,7 +1243,9 @@ class WindowLayoutHandler:
             # newly-visible windows are tailed, keeping their old row-head
             # break markers can over-fragment solves into single-window layers.
             force_row_before = {w for w in force_row_before if w not in trailing_set}
-        preserve_row_structure = len(spatial_rows) > 1
+        # Explicit z-intent operations should be treated as fresh layout intent,
+        # not constrained by prior row-structure preservation.
+        preserve_row_structure = len(spatial_rows) > 1 and not (promoted_raised or demoted_lowered)
 
         def _solve_with_order(order: list[object]) -> tuple[
             list[tuple[object, int, int]],
@@ -1266,6 +1279,8 @@ class WindowLayoutHandler:
             relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
             forced_centered_new = 0
             relaxed_centered_new = 0
+            forced_centered_raised = 0
+            relaxed_centered_raised = 0
             forced_centered_all = self._count_centered_targets(
                 forced_targets,
                 windows,
@@ -1291,9 +1306,24 @@ class WindowLayoutHandler:
                     window_rects,
                     work,
                 )
+            if raised_priority_windows:
+                forced_centered_raised = self._count_centered_targets(
+                    forced_targets,
+                    raised_priority_windows,
+                    window_rects,
+                    work,
+                )
+                relaxed_centered_raised = self._count_centered_targets(
+                    relaxed_targets,
+                    raised_priority_windows,
+                    window_rects,
+                    work,
+                )
 
             forced_centered_new = int(forced_centered_new)
             relaxed_centered_new = int(relaxed_centered_new)
+            forced_centered_raised = int(forced_centered_raised)
+            relaxed_centered_raised = int(relaxed_centered_raised)
             forced_overlap = int(forced_overlap)
             relaxed_overlap = int(relaxed_overlap)
             forced_centered_all = int(forced_centered_all)
@@ -1301,8 +1331,28 @@ class WindowLayoutHandler:
             forced_layers = int(forced_layers)
             relaxed_layers = int(relaxed_layers)
 
-            if not (preserve_row_structure and forced_overlap == 0 and relaxed_overlap == 0):
-                if forced_centered_new > relaxed_centered_new:
+            if (
+                raised_priority_windows
+                and forced_overlap == 0
+                and relaxed_overlap == 0
+                and forced_centered_raised > relaxed_centered_raised
+            ):
+                # Preserve explicit raise centering when the forced solve
+                # already places raised windows closer to centered intent.
+                pass
+
+            elif (
+                raised_priority_windows
+                and forced_overlap == 0
+                and relaxed_overlap == 0
+                and relaxed_centered_raised > forced_centered_raised
+            ):
+                targets = relaxed_targets
+                center_fallback = relaxed_fallback
+                layer_groups = [list(layer) for layer in relaxed_layer_groups]
+
+            elif not (preserve_row_structure and forced_overlap == 0 and relaxed_overlap == 0):
+                if trailing_newly_visible and forced_centered_new > relaxed_centered_new:
                     targets = relaxed_targets
                     center_fallback = relaxed_fallback
                     layer_groups = [list(layer) for layer in relaxed_layer_groups]
@@ -1375,6 +1425,117 @@ class WindowLayoutHandler:
         )
         if targets != original_targets:
             layer_groups = None
+
+        if len(promoted_raised) == 1:
+            # Explicit single-window raise should converge to centered placement
+            # independent of how many sibling windows were previously behind it.
+            raised_window = next(iter(promoted_raised))
+            if raised_window in window_rects:
+                raised_rect = window_rects[raised_window]
+                raised_center_x, raised_center_y = self._center_target(work, raised_rect)
+
+                other_target_rects: list[Rect] = []
+                for window, x, y in targets:
+                    if window is raised_window or window not in window_rects:
+                        continue
+                    wr = window_rects[window]
+                    other_target_rects.append(Rect(int(x), int(y), int(wr.width), int(wr.height)))
+
+                def _collides_with_others(candidate_x: int, candidate_y: int) -> bool:
+                    candidate_rect = Rect(
+                        int(candidate_x),
+                        int(candidate_y),
+                        int(raised_rect.width),
+                        int(raised_rect.height),
+                    )
+                    return any(candidate_rect.colliderect(other_rect) for other_rect in other_target_rects)
+
+                selected_x, selected_y = self._clamp_target(
+                    raised_window,
+                    int(raised_center_x),
+                    int(raised_center_y),
+                    scene_snapshot,
+                )
+                if _collides_with_others(int(selected_x), int(selected_y)):
+                    step = max(1, int(raised_rect.width) + int(self.gap))
+                    search_radius = max(2, len(targets) + 2)
+                    found = False
+                    for idx in range(1, search_radius + 1):
+                        for direction in (1, -1):
+                            candidate_x = int(raised_center_x) + int(direction * idx * step)
+                            candidate_y = int(raised_center_y)
+                            clamped_x, clamped_y = self._clamp_target(
+                                raised_window,
+                                candidate_x,
+                                candidate_y,
+                                scene_snapshot,
+                            )
+                            if not _collides_with_others(int(clamped_x), int(clamped_y)):
+                                selected_x, selected_y = int(clamped_x), int(clamped_y)
+                                found = True
+                                break
+                        if found:
+                            break
+
+                targets = [
+                    (window, int(selected_x), int(selected_y))
+                    if window is raised_window
+                    else (window, int(x), int(y))
+                    for window, x, y in targets
+                ]
+        elif len(promoted_raised) > 1:
+            target_map = {window: (int(x), int(y)) for window, x, y in targets}
+            raised_order = [window for window, _x, _y in targets if window in promoted_raised]
+
+            raised_overlap = 0
+            for idx in range(len(raised_order)):
+                a = raised_order[idx]
+                if a not in target_map or a not in window_rects:
+                    continue
+                ax, ay = target_map[a]
+                ar = window_rects[a]
+                a_rect = Rect(int(ax), int(ay), int(ar.width), int(ar.height))
+                for jdx in range(idx + 1, len(raised_order)):
+                    b = raised_order[jdx]
+                    if b not in target_map or b not in window_rects:
+                        continue
+                    bx, by = target_map[b]
+                    br = window_rects[b]
+                    b_rect = Rect(int(bx), int(by), int(br.width), int(br.height))
+                    if a_rect.colliderect(b_rect):
+                        raised_overlap += 1
+
+            if int(raised_overlap) > 0 and raised_order:
+                total_width = 0
+                for idx, window in enumerate(raised_order):
+                    wr = window_rects.get(window)
+                    if wr is None:
+                        continue
+                    total_width += int(wr.width)
+                    if idx > 0:
+                        total_width += int(self.gap)
+                start_x = int(work.x + max(0, (int(work.width) - int(total_width)) // 2))
+                cursor_x = int(start_x)
+                raised_positions: dict[object, tuple[int, int]] = {}
+                for window in raised_order:
+                    wr = window_rects.get(window)
+                    if wr is None:
+                        continue
+                    centered_x, centered_y = self._center_target(work, wr)
+                    _ = centered_x
+                    raised_positions[window] = (int(cursor_x), int(centered_y))
+                    cursor_x += int(wr.width) + int(self.gap)
+
+                targets = [
+                    (
+                        window,
+                        int(raised_positions[window][0]),
+                        int(raised_positions[window][1]),
+                    )
+                    if window in raised_positions
+                    else (window, int(x), int(y))
+                    for window, x, y in targets
+                ]
 
         self._normalize_window_z_order_from_targets(
             targets,

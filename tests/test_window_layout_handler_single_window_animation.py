@@ -1217,7 +1217,40 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         self.assertGreaterEqual(len(captured_orders), 1)
         self.assertEqual([left, middle, raised], captured_orders[0])
 
-    def test_arrange_windows_keeps_multi_row_structure_when_raising_window(self):
+    def test_raised_window_spatial_rows_use_live_geometry_over_stale_target_rect(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        raised = _WindowNode(20, 200, 120, 90, visible=True)
+        right = _WindowNode(170, 20, 120, 90, visible=True)
+
+        # Stale target metadata points to a different row than live geometry.
+        setattr(raised, "_window_tiling_target_rect", Rect(320, 20, 120, 90))
+
+        parent = _ParentNode([left, raised, right])
+        left.parent = parent
+        raised.parent = parent
+        right.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 420), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+        initial_raised_pos = raised.rect.topleft
+
+        original_spatial_rows = handler._spatial_rows
+        captured_rect = {}
+
+        def _capture_spatial_rows(windows, layout_rects):
+            _ = windows
+            captured_rect["raised"] = Rect(layout_rects[raised])
+            return original_spatial_rows(windows, layout_rects)
+
+        with patch.object(handler, "_spatial_rows", side_effect=_capture_spatial_rows):
+            handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        self.assertIn("raised", captured_rect)
+        self.assertEqual(initial_raised_pos, captured_rect["raised"].topleft)
+
+    def test_arrange_windows_raising_window_can_keep_forced_when_it_better_centers_raised(self):
         top_left = _WindowNode(20, 20, 120, 90, visible=True)
         top_right = _WindowNode(180, 20, 120, 90, visible=True)
         bottom_left = _WindowNode(20, 180, 120, 90, visible=True)
@@ -1266,6 +1299,222 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
 
         self.assertGreaterEqual(len(captured_targets), 1)
         self.assertEqual(forced_targets, captured_targets[0])
+
+    def test_arrange_windows_raise_prefers_relaxed_when_it_centers_raised_without_overlap(self):
+        top_left = _WindowNode(20, 20, 120, 90, visible=True)
+        top_right = _WindowNode(180, 20, 120, 90, visible=True)
+        raised = _WindowNode(20, 180, 120, 90, visible=True)
+        bottom_right = _WindowNode(180, 180, 120, 90, visible=True)
+
+        parent = _ParentNode([top_left, top_right, raised, bottom_right])
+        top_left.parent = parent
+        top_right.parent = parent
+        raised.parent = parent
+        bottom_right.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Both solutions are non-overlapping. Relaxed provides centered
+        # placement for the raised window, while forced keeps stale row shape.
+        forced_targets = [
+            (top_left, 120, 40),
+            (top_right, 280, 40),
+            (raised, 120, 190),
+            (bottom_right, 280, 190),
+        ]
+        relaxed_targets = [
+            (top_left, 80, 40),
+            (top_right, 240, 40),
+            (raised, 290, 190),
+            (bottom_right, 450, 190),
+        ]
+
+        captured_targets = []
+
+        def _capture_fit_pass(targets, *_args, **_kwargs):
+            captured_targets.append(list(targets))
+            return (targets, set())
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (forced_targets, set(), 2),
+                (relaxed_targets, set(), 2),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=_capture_fit_pass):
+                handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        self.assertGreaterEqual(len(captured_targets), 1)
+        self.assertEqual(relaxed_targets, captured_targets[0])
+
+    def test_raised_window_selection_ignores_newly_visible_centering_heuristic(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        raised = _WindowNode(180, 20, 120, 90, visible=True)
+        right = _WindowNode(340, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([left, raised, right])
+        left.parent = parent
+        raised.parent = parent
+        right.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Forced keeps raised centered; relaxed does not. For raise-only
+        # events, the newly-visible centered heuristic should not force relaxed.
+        forced_targets = [
+            (left, 80, 80),
+            (raised, 290, 80),
+            (right, 500, 80),
+        ]
+        relaxed_targets = [
+            (left, 60, 80),
+            (raised, 180, 80),
+            (right, 300, 80),
+        ]
+
+        captured_targets = []
+
+        def _capture_fit_pass(targets, *_args, **_kwargs):
+            captured_targets.append(list(targets))
+            return (targets, set())
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (forced_targets, set(), 1),
+                (relaxed_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=_capture_fit_pass):
+                handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        self.assertGreaterEqual(len(captured_targets), 1)
+        self.assertEqual(forced_targets, captured_targets[0])
+
+    def test_single_raised_window_final_target_is_centered_with_multiple_peers(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        raised = _WindowNode(180, 20, 120, 90, visible=True)
+        right = _WindowNode(340, 20, 120, 90, visible=True)
+        front = _WindowNode(500, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([left, raised, right, front])
+        left.parent = parent
+        raised.parent = parent
+        right.parent = parent
+        front.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Solver-selected targets intentionally place raised off-center.
+        solved_targets = [
+            (left, 80, 80),
+            (raised, 140, 80),
+            (right, 320, 80),
+            (front, 500, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        work = handler._work_area_rect(handler._scene_layout_snapshot())
+        expected_x, expected_y = handler._center_target(work, Rect(0, 0, raised.rect.width, raised.rect.height))
+        self.assertEqual((expected_x, expected_y), (raised.rect.x, raised.rect.y))
+
+    def test_multiple_raised_windows_reflow_to_non_overlapping_centered_row(self):
+        back = _WindowNode(20, 20, 120, 90, visible=True)
+        raised_a = _WindowNode(180, 20, 120, 90, visible=True)
+        raised_b = _WindowNode(340, 20, 120, 90, visible=True)
+        front = _WindowNode(500, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([back, raised_a, raised_b, front])
+        back.parent = parent
+        raised_a.parent = parent
+        raised_b.parent = parent
+        front.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 760, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Solver-selected targets intentionally overlap raised windows.
+        solved_targets = [
+            (back, 80, 80),
+            (raised_a, 220, 80),
+            (raised_b, 220, 80),
+            (front, 500, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(raised_a, raised_b), immediate=True)
+
+        self.assertFalse(self._rects_overlap(raised_a.rect, raised_b.rect))
+
+    def test_single_raised_window_chooses_nearest_non_overlapping_center_slot(self):
+        left = _WindowNode(20, 20, 120, 90, visible=True)
+        centered_peer = _WindowNode(180, 20, 120, 90, visible=True)
+        raised = _WindowNode(340, 20, 120, 90, visible=True)
+
+        parent = _ParentNode([left, centered_peer, raised])
+        left.parent = parent
+        centered_peer.parent = parent
+        raised.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        work = handler._work_area_rect(handler._scene_layout_snapshot())
+        center_x, center_y = handler._center_target(work, Rect(0, 0, centered_peer.rect.width, centered_peer.rect.height))
+
+        # Solver-selected targets place an existing peer at centered slot.
+        solved_targets = [
+            (left, 80, 80),
+            (centered_peer, center_x, center_y),
+            (raised, 500, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(raised,), immediate=True)
+
+        self.assertFalse(self._rects_overlap(centered_peer.rect, raised.rect))
 
     def test_arrange_windows_for_drop_demoted_window_is_forced_to_back(self):
         back = _WindowNode(20, 20, 120, 90, visible=True)

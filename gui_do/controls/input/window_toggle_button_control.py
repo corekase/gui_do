@@ -51,6 +51,16 @@ class WindowToggleButtonControl(ToggleControl):
         # fallback when window resolution is temporarily unavailable.
         should_raise_visible = bool(is_visible or (window is None and self.pushed))
 
+        def _notify_toggle(pushed: bool) -> None:
+            if self.on_toggle is None:
+                return
+            skip_for_presentation = bool(
+                window_presentation is not None
+                and getattr(self.on_toggle, "_window_presentation_visibility_handler", False)
+            )
+            if not skip_for_presentation:
+                self.on_toggle(bool(pushed))
+
         if event.is_mouse_down(1) and inside:
             if should_raise_visible:
                 self.pushed = True
@@ -61,28 +71,25 @@ class WindowToggleButtonControl(ToggleControl):
                     self.on_show()
             else:
                 self.pushed = True
-                if self.on_toggle is not None:
-                    self.on_toggle(True)
                 if window_presentation is not None:
                     window_presentation.set_visible(self.window_id, True, from_toggle=True)
+                _notify_toggle(True)
             return True
 
         if event.is_mouse_down(3) and inside:
             if is_open:
                 self.pushed = False
-                if self.on_toggle is not None:
-                    self.on_toggle(False)
                 if window_presentation is not None:
                     window_presentation.set_visible(self.window_id, False, from_toggle=True)
+                _notify_toggle(False)
             return True
 
         if event.is_key_down():
             if not is_visible:
                 self.pushed = True
-                if self.on_toggle is not None:
-                    self.on_toggle(True)
                 if window_presentation is not None:
                     window_presentation.set_visible(self.window_id, True, from_toggle=True)
+                _notify_toggle(True)
             return True
 
         return False
