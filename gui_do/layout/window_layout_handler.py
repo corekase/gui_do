@@ -1216,6 +1216,15 @@ class WindowLayoutHandler:
                 # force old slot boundaries.
                 force_row_before = {w for w in force_row_before if w not in demoted_set}
 
+        priority_windows: list[object] = []
+        if trailing_newly_visible or promoted_raised:
+            seen_priority: set[object] = set()
+            priority_set = set(trailing_newly_visible) | set(promoted_raised)
+            for candidate in solve_order:
+                if candidate in priority_set and candidate not in seen_priority:
+                    priority_windows.append(candidate)
+                    seen_priority.add(candidate)
+
         if trailing_newly_visible:
             trailing_set = set(trailing_newly_visible)
             solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible
@@ -1269,16 +1278,16 @@ class WindowLayoutHandler:
                 window_rects,
                 work,
             )
-            if trailing_newly_visible:
+            if priority_windows:
                 forced_centered_new = self._count_centered_targets(
                     forced_targets,
-                    trailing_newly_visible,
+                    priority_windows,
                     window_rects,
                     work,
                 )
                 relaxed_centered_new = self._count_centered_targets(
                     relaxed_targets,
-                    trailing_newly_visible,
+                    priority_windows,
                     window_rects,
                     work,
                 )
@@ -1317,10 +1326,10 @@ class WindowLayoutHandler:
                     layer_groups = [list(layer) for layer in relaxed_layer_groups]
 
             centered_new = 0
-            if trailing_newly_visible:
+            if priority_windows:
                 centered_new = self._count_centered_targets(
                     targets,
-                    trailing_newly_visible,
+                    priority_windows,
                     window_rects,
                     work,
                 )
