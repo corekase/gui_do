@@ -377,6 +377,26 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         self.assertGreaterEqual(mandel.rect.top, menu_bottom)
         self.assertGreaterEqual(systems.rect.top, menu_bottom)
 
+    def test_task_panel_show_sequence_systems_life_mandel_does_not_overlap(self):
+        systems = _WindowNode(260, 40, 1536, 864, visible=True)
+        life = _WindowNode(20, 20, 620, 656, visible=False)
+        mandel = _WindowNode(20, 20, 676, 644, visible=False)
+        scene = _Scene([systems, life, mandel])
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Systems is shown first, then task-panel toggles show Life, then Mandelbrot.
+        handler.arrange_windows(immediate=True)
+
+        life.visible = True
+        handler.arrange_windows(newly_visible=(life,), raised_windows=(life,), immediate=True)
+
+        mandel.visible = True
+        handler.arrange_windows(newly_visible=(mandel,), raised_windows=(mandel,), immediate=True)
+
+        self.assertFalse(self._rects_overlap(life.rect, mandel.rect))
+
     def test_newly_visible_window_prefers_base_order_when_trailing_order_keeps_it_centered(self):
         non_menu = _WindowNode(100, 40, 150, 56, visible=True)
         systems = _WindowNode(20, 420, 600, 420, visible=True)
@@ -1400,7 +1420,7 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         self.assertGreaterEqual(len(captured_targets), 1)
         self.assertEqual(forced_targets, captured_targets[0])
 
-    def test_single_raised_window_final_target_is_centered_with_multiple_peers(self):
+    def test_single_raised_window_final_target_avoids_peer_overlap_with_multiple_peers(self):
         left = _WindowNode(20, 20, 120, 90, visible=True)
         raised = _WindowNode(180, 20, 120, 90, visible=True)
         right = _WindowNode(340, 20, 120, 90, visible=True)
@@ -1436,9 +1456,9 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
                 handler.arrange_windows(raised_windows=(raised,), immediate=True)
 
-        work = handler._work_area_rect(handler._scene_layout_snapshot())
-        expected_x, expected_y = handler._center_target(work, Rect(0, 0, raised.rect.width, raised.rect.height))
-        self.assertEqual((expected_x, expected_y), (raised.rect.x, raised.rect.y))
+        self.assertFalse(self._rects_overlap(raised.rect, left.rect))
+        self.assertFalse(self._rects_overlap(raised.rect, right.rect))
+        self.assertFalse(self._rects_overlap(raised.rect, front.rect))
 
     def test_multiple_raised_windows_reflow_to_non_overlapping_centered_row(self):
         back = _WindowNode(20, 20, 120, 90, visible=True)
@@ -1463,6 +1483,41 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
             (raised_a, 220, 80),
             (raised_b, 220, 80),
             (front, 500, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(raised_a, raised_b), immediate=True)
+
+        self.assertFalse(self._rects_overlap(raised_a.rect, raised_b.rect))
+
+    def test_multiple_wide_raised_windows_wrap_instead_of_clamp_overlap(self):
+        raised_a = _WindowNode(20, 20, 350, 100, visible=True)
+        raised_b = _WindowNode(400, 20, 350, 100, visible=True)
+        peer = _WindowNode(20, 160, 140, 90, visible=True)
+
+        parent = _ParentNode([peer, raised_a, raised_b])
+        peer.parent = parent
+        raised_a.parent = parent
+        raised_b.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 700, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Force overlap so multi-raised reflow path is exercised.
+        solved_targets = [
+            (peer, 80, 80),
+            (raised_a, 200, 80),
+            (raised_b, 200, 80),
         ]
 
         with patch.object(
@@ -1515,6 +1570,77 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
                 handler.arrange_windows(raised_windows=(raised,), immediate=True)
 
         self.assertFalse(self._rects_overlap(centered_peer.rect, raised.rect))
+
+    def test_multiple_raised_windows_use_clamp_aware_final_deoverlap(self):
+        raised_a = _WindowNode(20, 20, 260, 90, visible=True)
+        raised_b = _WindowNode(320, 20, 260, 90, visible=True)
+        peer = _WindowNode(20, 160, 140, 90, visible=True)
+
+        parent = _ParentNode([peer, raised_a, raised_b])
+        peer.parent = parent
+        raised_a.parent = parent
+        raised_b.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 560, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Chosen targets separate in x, but after clamp in this narrow work area
+        # they can collapse and overlap unless final pass is clamp-aware.
+        solved_targets = [
+            (peer, 80, 80),
+            (raised_a, -60, 80),
+            (raised_b, 340, 80),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(raised_a, raised_b), immediate=True)
+
+        self.assertFalse(self._rects_overlap(raised_a.rect, raised_b.rect))
+
+    def test_raise_event_repacks_full_set_when_non_promoted_overlap_remains(self):
+        old_raised_a = _WindowNode(20, 20, 220, 90, visible=True)
+        old_raised_b = _WindowNode(260, 20, 220, 90, visible=True)
+        current_raised = _WindowNode(500, 20, 140, 90, visible=True)
+
+        parent = _ParentNode([old_raised_a, old_raised_b, current_raised])
+        old_raised_a.parent = parent
+        old_raised_b.parent = parent
+        current_raised.parent = parent
+
+        scene = _Scene([parent])
+        app = _App(Rect(0, 0, 620, 360), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Preexisting overlap among non-promoted windows survives base solve.
+        solved_targets = [
+            (old_raised_a, 180, 80),
+            (old_raised_b, 180, 80),
+            (current_raised, 40, 200),
+        ]
+
+        with patch.object(
+            handler,
+            "_solve_layered_targets",
+            side_effect=[
+                (solved_targets, set(), 1),
+                (solved_targets, set(), 1),
+            ],
+        ):
+            with patch.object(handler, "_fit_pass_repack_layers", side_effect=lambda t, *_a, **_k: (t, set())):
+                handler.arrange_windows(raised_windows=(current_raised,), immediate=True)
+
+        self.assertFalse(self._rects_overlap(old_raised_a.rect, old_raised_b.rect))
 
     def test_arrange_windows_for_drop_demoted_window_is_forced_to_back(self):
         back = _WindowNode(20, 20, 120, 90, visible=True)

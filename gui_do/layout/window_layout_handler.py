@@ -1426,7 +1426,9 @@ class WindowLayoutHandler:
         if targets != original_targets:
             layer_groups = None
 
-        if len(promoted_raised) == 1:
+        apply_promoted_postprocess = bool(promoted_raised and not trailing_newly_visible)
+
+        if apply_promoted_postprocess and len(promoted_raised) == 1:
             # Explicit single-window raise should converge to centered placement
             # independent of how many sibling windows were previously behind it.
             raised_window = next(iter(promoted_raised))
@@ -1439,7 +1441,8 @@ class WindowLayoutHandler:
                     if window is raised_window or window not in window_rects:
                         continue
                     wr = window_rects[window]
-                    other_target_rects.append(Rect(int(x), int(y), int(wr.width), int(wr.height)))
+                    ox, oy = self._clamp_target(window, int(x), int(y), scene_snapshot)
+                    other_target_rects.append(Rect(int(ox), int(oy), int(wr.width), int(wr.height)))
 
                 def _collides_with_others(candidate_x: int, candidate_y: int) -> bool:
                     candidate_rect = Rect(
@@ -1483,7 +1486,7 @@ class WindowLayoutHandler:
                     else (window, int(x), int(y))
                     for window, x, y in targets
                 ]
-        elif len(promoted_raised) > 1:
+        elif apply_promoted_postprocess and len(promoted_raised) > 1:
             target_map = {window: (int(x), int(y)) for window, x, y in targets}
             raised_order = [window for window, _x, _y in targets if window in promoted_raised]
 
@@ -1506,36 +1509,124 @@ class WindowLayoutHandler:
                         raised_overlap += 1
 
             if int(raised_overlap) > 0 and raised_order:
-                total_width = 0
-                for idx, window in enumerate(raised_order):
-                    wr = window_rects.get(window)
-                    if wr is None:
-                        continue
-                    total_width += int(wr.width)
-                    if idx > 0:
-                        total_width += int(self.gap)
-                start_x = int(work.x + max(0, (int(work.width) - int(total_width)) // 2))
-                cursor_x = int(start_x)
-                raised_positions: dict[object, tuple[int, int]] = {}
-                for window in raised_order:
-                    wr = window_rects.get(window)
-                    if wr is None:
-                        continue
-                    centered_x, centered_y = self._center_target(work, wr)
-                    _ = centered_x
-                    raised_positions[window] = (int(cursor_x), int(centered_y))
-                    cursor_x += int(wr.width) + int(self.gap)
+                # Reflow raised windows with the same row-packing strategy used
+                # by drop solves so wide raised groups can wrap into multiple
+                # centered rows instead of collapsing after clamp.
+                packed_raised, remaining_raised, fallback_raised = self._pack_single_layer(
+                    raised_order,
+                    window_rects,
+                    work,
+                    prefer_vertical=False,
+                    enforce_vertical_pair_cap=False,
+                )
+                if not remaining_raised and not fallback_raised:
+                    centered_raised = self._center_layer_in_work(packed_raised, window_rects, work)
+                    raised_positions = {
+                        window: (int(x), int(y))
+                        for window, x, y in centered_raised
+                    }
+                    targets = [
+                        (
+                            window,
+                            int(raised_positions[window][0]),
+                            int(raised_positions[window][1]),
+                        )
+                        if window in raised_positions
+                        else (window, int(x), int(y))
+                        for window, x, y in targets
+                    ]
 
+        if apply_promoted_postprocess:
+            target_by_window = {window: (int(x), int(y)) for window, x, y in targets}
+            promoted_order = [window for window, _x, _y in targets if window in promoted_raised and window in window_rects]
+
+            occupied_rects: list[Rect] = []
+            for window, x, y in targets:
+                if window in promoted_raised or window not in window_rects:
+                    continue
+                wr = window_rects[window]
+                cx, cy = self._clamp_target(window, int(x), int(y), scene_snapshot)
+                occupied_rects.append(Rect(int(cx), int(cy), int(wr.width), int(wr.height)))
+
+            resolved_positions: dict[object, tuple[int, int]] = {}
+            for window in promoted_order:
+                if window not in target_by_window:
+                    continue
+                wr = window_rects[window]
+                base_x, base_y = target_by_window[window]
+
+                col_step = max(1, int(wr.width) + int(self.gap))
+                row_step = max(1, int(wr.height) + int(self.gap))
+                y_offsets = (0, row_step, -row_step, row_step * 2, -(row_step * 2))
+                search_radius = max(2, len(targets) + 2)
+
+                selected_x, selected_y = self._clamp_target(window, int(base_x), int(base_y), scene_snapshot)
+                selected_rect = Rect(int(selected_x), int(selected_y), int(wr.width), int(wr.height))
+                if any(selected_rect.colliderect(existing) for existing in occupied_rects):
+                    found = False
+                    for radius in range(1, search_radius + 1):
+                        for y_offset in y_offsets:
+                            for direction in (1, -1):
+                                candidate_x = int(base_x) + int(direction * radius * col_step)
+                                candidate_y = int(base_y) + int(y_offset)
+                                cx, cy = self._clamp_target(window, candidate_x, candidate_y, scene_snapshot)
+                                candidate_rect = Rect(int(cx), int(cy), int(wr.width), int(wr.height))
+                                if any(candidate_rect.colliderect(existing) for existing in occupied_rects):
+                                    continue
+                                selected_x, selected_y = int(cx), int(cy)
+                                selected_rect = candidate_rect
+                                found = True
+                                break
+                            if found:
+                                break
+                        if found:
+                            break
+
+                resolved_positions[window] = (int(selected_x), int(selected_y))
+                occupied_rects.append(selected_rect)
+
+            if resolved_positions:
                 targets = [
                     (
                         window,
-                        int(raised_positions[window][0]),
-                        int(raised_positions[window][1]),
+                        int(resolved_positions[window][0]),
+                        int(resolved_positions[window][1]),
                     )
-                    if window in raised_positions
+                    if window in resolved_positions
                     else (window, int(x), int(y))
                     for window, x, y in targets
                 ]
+
+            # Final safeguard for promoted events: if any overlap survives after
+            # clamp-aware promoted placement (including overlap among previously
+            # raised non-promoted windows), repack the full target set.
+            clamped_targets = []
+            for window, x, y in targets:
+                if window not in window_rects:
+                    continue
+                cx, cy = self._clamp_target(window, int(x), int(y), scene_snapshot)
+                clamped_targets.append((window, int(cx), int(cy)))
+
+            if int(self._overlap_pair_count(clamped_targets, window_rects)) > 0:
+                all_order = [window for window, _x, _y in clamped_targets]
+                packed_all, remaining_all, fallback_all = self._pack_single_layer(
+                    all_order,
+                    window_rects,
+                    work,
+                    prefer_vertical=prefer_vertical,
+                    enforce_vertical_pair_cap=False,
+                )
+                if remaining_all or fallback_all:
+                    packed_all, remaining_all, fallback_all = self._pack_single_layer(
+                        all_order,
+                        window_rects,
+                        work,
+                        prefer_vertical=False,
+                        enforce_vertical_pair_cap=False,
+                    )
+                if not remaining_all and not fallback_all:
+                    targets = self._center_layer_in_work(packed_all, window_rects, work)
+                    layer_groups = None
 
         self._normalize_window_z_order_from_targets(
             targets,
