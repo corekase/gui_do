@@ -1837,6 +1837,8 @@ class WindowLayoutHandler:
                 selected_rows = []
 
         rows = [list(row) for row in selected_rows if row]
+        # Track if a new top row is created for conditional recentering
+        new_top_row_created = False
         if not rows:
             rows = [[window]]
         else:
@@ -1852,6 +1854,7 @@ class WindowLayoutHandler:
             if int(drop_y) < int(row_spans[0][0] - insertion_gap):
                 create_new_row = True
                 target_row_index = 0
+                new_top_row_created = True
             elif int(drop_y) > int(row_spans[-1][1] + insertion_gap):
                 create_new_row = True
                 target_row_index = len(rows)
@@ -1991,49 +1994,54 @@ class WindowLayoutHandler:
         if targets != original_targets:
             layer_groups = None
 
-        demoted_set: set[object] = set()
-        if demoted_windows is not None:
-            for candidate in demoted_windows:
-                if candidate in windows and bool(getattr(candidate, "visible", False)):
-                    demoted_set.add(candidate)
-
-        if demoted_set:
-            inferred_layers = [list(layer) for layer in (layer_groups or self._infer_target_layers(targets, window_rects))]
-            if inferred_layers:
-                top_layer = list(inferred_layers[-1])
+        # Only recenter the topmost z-layer if a new top row was NOT created by the drop
+        inferred_layers = [list(layer) for layer in (layer_groups or self._infer_target_layers(targets, window_rects))]
+        if inferred_layers and not new_top_row_created:
+            top_layer = list(inferred_layers[-1])
+            # If demoted_windows is provided, exclude demoted from top layer; otherwise, use all in top layer
+            if demoted_windows is not None:
+                demoted_set = {w for w in demoted_windows if w in windows and bool(getattr(w, "visible", False))}
                 top_non_demoted = [w for w in top_layer if w not in demoted_set and w in window_rects]
-                if len(top_non_demoted) > 1:
-                    packed_top, remaining_top, fallback_top = self._pack_single_layer(
-                        top_non_demoted,
-                        window_rects,
-                        work,
-                        prefer_vertical=prefer_vertical,
-                        enforce_vertical_pair_cap=False,
-                    )
-                    if not remaining_top and not fallback_top:
-                        centered_top = self._center_layer_in_work(packed_top, window_rects, work)
-                        centered_positions = {
-                            window: (int(x), int(y))
-                            for window, x, y in centered_top
-                        }
-                        if centered_positions:
-                            targets = [
-                                (
-                                    window,
-                                    int(centered_positions[window][0]),
-                                    int(centered_positions[window][1]),
-                                )
-                                if window in centered_positions
-                                else (window, int(x), int(y))
-                                for window, x, y in targets
-                            ]
-                            layer_groups = None
+            else:
+                top_non_demoted = [w for w in top_layer if w in window_rects]
+            if len(top_non_demoted) > 1:
+                packed_top, remaining_top, fallback_top = self._pack_single_layer(
+                    top_non_demoted,
+                    window_rects,
+                    work,
+                    prefer_vertical=prefer_vertical,
+                    enforce_vertical_pair_cap=False,
+                )
+                if not remaining_top and not fallback_top:
+                    centered_top = self._center_layer_in_work(packed_top, window_rects, work)
+                    centered_positions = {
+                        window: (int(x), int(y))
+                        for window, x, y in centered_top
+                    }
+                    if centered_positions:
+                        targets = [
+                            (
+                                window,
+                                int(centered_positions[window][0]),
+                                int(centered_positions[window][1]),
+                            )
+                            if window in centered_positions
+                            else (window, int(x), int(y))
+                            for window, x, y in targets
+                        ]
+                        layer_groups = None
 
         promoted_set: set[object] = set()
         if promoted_windows is not None:
             for candidate in promoted_windows:
                 if candidate in windows and bool(getattr(candidate, "visible", False)):
                     promoted_set.add(candidate)
+
+        # Ensure demoted_set is always defined
+        if demoted_windows is not None:
+            demoted_set = {w for w in demoted_windows if w in windows and bool(getattr(w, "visible", False))}
+        else:
+            demoted_set = set()
 
         self._normalize_window_z_order_from_targets(
             targets,

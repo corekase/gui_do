@@ -89,6 +89,39 @@ class _NoopTweens:
 
 
 class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
+    def test_lower_event_with_intermediate_layer_does_not_affect_top_layer_layout(self):
+        """
+        Regression: After lowering a large intermediate window (e.g., Systems),
+        the remaining top-z windows should repack and center as if the demoted
+        window does not exist, and their layout should not be affected by the
+        demoted/intermediate layer.
+        """
+        # Setup: non_menu (lowest), systems (intermediate, large), life, mandel (topmost)
+        non_menu = _WindowNode(860, 460, 220, 120, visible=True)
+        systems = _WindowNode(192, 106, 1536, 864, visible=True)
+        life = _WindowNode(300, 200, 620, 656, visible=True)
+        mandel = _WindowNode(950, 200, 676, 644, visible=True)
+        # Z-order: non_menu (back), systems (intermediate), life, mandel (front)
+        scene = _Scene([non_menu, systems, life, mandel])
+        app = _App(Rect(0, 0, 1920, 1080), scene)
+        handler = WindowLayoutHandler(app, scene=scene)
+        handler.enabled = True
+
+        # Initial layout
+        handler.arrange_windows(immediate=True)
+
+        # Lower the large intermediate Systems window
+        handler.arrange_windows(demoted_windows=(systems,), immediate=True)
+
+        # After demotion, only the topmost layer (life, mandel) should be packed/centered
+        # as if systems does not exist for their layout.
+        self.assertFalse(self._rects_overlap(life.rect, mandel.rect))
+        # They should be horizontally adjacent and centered as a pair
+        top_center_x = int((life.rect.centerx + mandel.rect.centerx) / 2)
+        self.assertLessEqual(abs(top_center_x - app.surface.get_rect().centerx), int(handler.gap) + 32)
+        # The systems window should not affect their y or x positions
+        self.assertGreater(life.rect.bottom, systems.rect.top)
+        self.assertGreater(mandel.rect.bottom, systems.rect.top)
     @staticmethod
     def _rects_overlap(a: Rect, b: Rect) -> bool:
         return bool(a.colliderect(b))
