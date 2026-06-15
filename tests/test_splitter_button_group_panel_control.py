@@ -855,6 +855,27 @@ class TestPanelControlFocusedWindowDrawOrder(unittest.TestCase):
 
         self.assertEqual(["lower_visible", "hiding_top"], draw_order)
 
+    def test_hiding_transition_window_at_back_of_z_order_draws_on_top(self):
+        # Reproduces the reported bug: a window being hidden is lowered to the
+        # back of the z-order before its hide animation plays. The transition
+        # must still render on top of the (visible) backdrop window above it.
+        panel = PanelControl("panel", Rect(0, 0, 800, 600), draw_background=False)
+        draw_order: list[str] = []
+        hiding_back = _OrderTrackingWindow("hiding_back", draw_order)
+        backdrop_front = _OrderTrackingWindow("backdrop_front", draw_order)
+        # hiding_back is *behind* backdrop_front in child z-order.
+        panel.children.extend([hiding_back, backdrop_front])
+        panel._set_active_window(backdrop_front)
+        hiding_back.visible = False
+        hiding_back.is_visibility_transition_renderable = lambda: True
+        app = _StubAppForDrawOrder(focused_node=backdrop_front)
+
+        surface = pygame.Surface((800, 600))
+        panel.draw_window_phase(surface, theme=None, app=app)
+
+        # Despite being lowest in z-order, the transitioning window draws last.
+        self.assertEqual(["backdrop_front", "hiding_back"], draw_order)
+
 
 if __name__ == "__main__":
     unittest.main()

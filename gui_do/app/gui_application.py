@@ -72,7 +72,10 @@ class GuiApplication:
     def _register_builtin_actions(self):
         # Register built-in tile_now action for global tiling hotkey.
         def _tile_now_action(_event=None):
-            self.tile_windows(as_visibility_event=True, force=True)
+            # Use the standard layout algorithm directly so "tile now" produces
+            # the same canonical arrangement as a normal relayout, without the
+            # z-order promotion that tile_windows(force=True) applies.
+            self.window_tiling.arrange_windows(force=True)
             return True
         self.actions.register_action("tile_now", _tile_now_action)
         self.events = EventBus()
@@ -1720,6 +1723,7 @@ class GuiApplication:
             immediate=bool(immediate),
             immediate_windows=immediate_windows,
             force=bool(force),
+            preserve_existing_rows=bool(as_visibility_event),
         )
 
     def register_font_role(

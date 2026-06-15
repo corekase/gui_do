@@ -1026,20 +1026,6 @@ class PanelControl(UiNode):
         def _should_draw_window(window: UiNode) -> bool:
             return bool(window.visible or _is_transition_renderable(window))
 
-        def _has_higher_z_transition_window_than(window: UiNode) -> bool:
-            seen = False
-            for candidate in self.children:
-                if candidate is window:
-                    seen = True
-                    continue
-                if not seen:
-                    continue
-                if not self._is_window_like(candidate):
-                    continue
-                if _is_transition_renderable(candidate):
-                    return True
-            return False
-
         if app is not None:
             self._clear_occluded_window_hovers_for_pointer(getattr(app, "logical_pointer_pos", None))
 
@@ -1049,12 +1035,28 @@ class PanelControl(UiNode):
             if callable(resolve_hint_window):
                 hint_window = resolve_hint_window()
 
-        # Draw window children strictly in child z-order.
+        # Draw window children in child z-order, but defer any window that is
+        # currently playing a visibility (show/hide) transition so it renders
+        # *on top*. While hiding, a window is lowered to the back of the z-order
+        # before its fade/shrink animation plays; without this deferral the
+        # animation would be drawn behind peers (e.g. a large backdrop window)
+        # that sit above it. Transitioning windows keep their relative z-order
+        # among themselves.
+        deferred_transition_windows: list[UiNode] = []
         for child in self.children:
             if not self._is_window_like(child):
                 continue
             if not _should_draw_window(child):
                 continue
+            if _is_transition_renderable(child):
+                deferred_transition_windows.append(child)
+                continue
+            child.draw(surface, theme)
+            if app is not None and child.visible:
+                if hint_window is None or child is hint_window:
+                    app.focus_visualizer.draw_hint_for_window(surface, theme, child)
+
+        for child in deferred_transition_windows:
             child.draw(surface, theme)
             if app is not None and child.visible:
                 if hint_window is None or child is hint_window:

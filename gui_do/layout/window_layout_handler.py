@@ -426,6 +426,48 @@ class WindowLayoutHandler:
         rows = self._spatial_rows(windows, window_rects)
         return [w for row in rows for w in row]
 
+    @staticmethod
+    def _has_tiling_target(window: object) -> bool:
+        return isinstance(getattr(window, "_window_tiling_target_rect", None), Rect)
+
+    def _row_preserving_plan(
+        self,
+        windows: List[object],
+        newly_shown: set[object],
+    ) -> tuple[List[object], set[object]]:
+        """Keep already-tiled windows on their current rows across relayouts.
+
+        Windows that were previously tiled (they carry a stable
+        ``_window_tiling_target_rect``) are grouped into their current spatial
+        rows, and a row break is forced at the head of every row after the
+        first. This gives windows a *preference to stay on their row* when a
+        peer is hidden or shown, instead of collapsing onto a single row.
+
+        Newly shown windows -- and any window without a prior tiling target --
+        are treated as free: they are appended after the preserved windows with
+        no forced break, so they flow into an existing row when they fit or
+        start a new one otherwise. When fewer than two established rows exist
+        there is nothing to preserve, so the caller's order is returned
+        unchanged for a clean pack.
+        """
+        established = [
+            w for w in windows
+            if self._has_tiling_target(w) and w not in newly_shown
+        ]
+        if len(established) < 2:
+            return list(windows), set()
+
+        ref_rects = {w: self._layout_reference_rect(w) for w in established}
+        rows = self._spatial_rows(established, ref_rects)
+        if len(rows) < 2:
+            return list(windows), set()
+
+        force_row_before = {row[0] for row in rows[1:] if row}
+        established_set = set(established)
+        preserved_order = [w for row in rows for w in row]
+        free_windows = [w for w in windows if w not in established_set]
+        return preserved_order + free_windows, force_row_before
+
     # ------------------------------------------------------------------
     # Core shelf packing
     # ------------------------------------------------------------------
@@ -491,7 +533,24 @@ class WindowLayoutHandler:
                 current_shelf
                 and (current_shelf_width + gap + window_width) > int(work.width)
             )
-            needs_new_shelf = bool(current_shelf) and (forced_break or too_wide or wrap_width)
+            # A shelf takes the height of its tallest window. Appending a tall
+            # window to a shelf opened by a shorter one can grow the shelf so
+            # the committed page overflows the work area -- which would later
+            # clamp the window off-centre. Detect that growth and force the
+            # window onto a new shelf (and, if needed, a new z-stacked page).
+            overflows_page = bool(
+                current_shelf
+                and not (forced_break or too_wide or wrap_width)
+                and self._page_height(
+                    list(current_page) + [current_shelf + [window]],
+                    window_rects,
+                    work,
+                )
+                > int(work.height)
+            )
+            needs_new_shelf = bool(current_shelf) and (
+                forced_break or too_wide or wrap_width or overflows_page
+            )
 
             if current_shelf and not needs_new_shelf:
                 current_shelf.append(window)
@@ -658,6 +717,7 @@ class WindowLayoutHandler:
         immediate: bool = False,
         immediate_windows: Optional[Iterable[object]] = None,
         force: bool = False,
+        preserve_existing_rows: bool = False,
     ) -> None:
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
@@ -678,17 +738,25 @@ class WindowLayoutHandler:
         demoted_lowered = set(self._filter_visible(demoted_windows, window_set))
         newly_shown = set(self._filter_visible(newly_visible, window_set))
 
-        # Pure order-based shelf packing: windows are packed left-to-right in
-        # registration order, wrapping to a new row by width and to a new
-        # z-stacked page by height. This is fully general -- it scales with the
-        # actual number and sizes of windows and is independent of any specific
-        # window set. Raise/lower/visibility intent only adjusts the z-layer
-        # ordering (which page a window lands on), never the geometric packing,
-        # so windows that fit side-by-side are never split into overlapping
-        # pages.
-        order = list(windows)
+        # Pure order-based shelf packing forms the baseline: windows pack
+        # left-to-right in registration order, wrapping to a new row by width
+        # and to a new z-stacked page by height. This is *position independent*
+        # and therefore idempotent -- repeating it (e.g. pressing "tile now"
+        # again) always reproduces the same canonical layout.
+        #
+        # Row preservation -- keeping already-tiled windows on their current row
+        # when a peer is hidden or shown -- is opt-in via ``preserve_existing_rows``
+        # and only used for visibility events. It is intentionally NOT applied to
+        # an explicit tile-now / plain relayout, because deriving forced row
+        # breaks from the windows' current targets is not a fixed point: each
+        # solve rewrites the targets, so re-deriving rows from them would make
+        # the layout oscillate between arrangements across repeated presses.
+        if preserve_existing_rows:
+            order, force_rows = self._row_preserving_plan(list(windows), newly_shown)
+        else:
+            order, force_rows = list(windows), set()
 
-        targets, fallback, page_layers = self._solve_layout(order, window_rects, work)
+        targets, fallback, page_layers = self._solve_layout(order, window_rects, work, force_rows)
 
         self._apply_layer_z_order(
             page_layers,

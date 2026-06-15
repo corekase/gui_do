@@ -348,6 +348,30 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         scene_windows = [n for n in scene.nodes if getattr(n, "is_window", lambda: False)()]
         self.assertEqual(scene_windows, desired)
 
+    def test_tall_window_appended_to_short_shelf_stays_on_screen(self):
+        # A tall backdrop window followed by a short window then a tall window:
+        # the short one opens shelf 2 (fits the page by its small height), but
+        # appending the tall window would grow that shelf past the work height.
+        # The tall window must wrap to its own stacked page (centered), never be
+        # left overflowing off the bottom of the screen.
+        backdrop = _WindowNode(0, 0, 1536, 864)
+        short = _WindowNode(0, 0, 640, 96)
+        tall = _WindowNode(0, 0, 676, 644)
+        handler, _app, _scene = _make_handler([backdrop, short, tall])
+        work = handler._work_area_rect(handler._scene_layout_snapshot())
+        handler.arrange_windows(force=True, immediate=True)
+        # Every window stays fully within the work area.
+        for window in (backdrop, short, tall):
+            self.assertGreaterEqual(window.rect.top, work.top)
+            self.assertLessEqual(window.rect.bottom, work.bottom)
+        # The tall window centers vertically on its own page.
+        self.assertEqual(tall.rect.centery, work.centery)
+        # No shelf/page over-packs: each solved page fits the work height.
+        for page in handler._last_solve_layers:
+            page_top = min(w.rect.top for w in page)
+            page_bottom = max(w.rect.bottom for w in page)
+            self.assertLessEqual(page_bottom - page_top, work.height)
+
     def test_too_wide_window_is_flagged_as_center_fallback(self):
         wide = _WindowNode(0, 0, 2400, 300)
         handler, _app, _scene = _make_handler([wide])
@@ -404,6 +428,92 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         handler.arrange_windows(raised_windows=(windows[0],), immediate=True)
         for window, original in zip(windows, baseline):
             self.assertEqual(window.rect, original, "raising must not move packing slots")
+
+    # ------------------------------------------------------------------
+    # Row-membership preference across visibility changes
+    # ------------------------------------------------------------------
+    def _row_tops(self, windows):
+        tops = sorted({w.rect.top for w in windows if w.visible})
+        return {t: [w for w in windows if w.visible and w.rect.top == t] for t in tops}
+
+    def test_hiding_window_keeps_peer_on_its_row(self):
+        # A 2x2 grid of narrow windows. After hiding one, the three survivors
+        # would *fit a single row* (collapse) under a clean pack. With row
+        # preservation the survivors keep their original two-row arrangement.
+        a = _WindowNode(0, 0, 500, 300)
+        b = _WindowNode(0, 0, 500, 300)
+        c = _WindowNode(0, 0, 500, 300)
+        d = _WindowNode(0, 0, 500, 300)
+        handler, _app, _scene = _make_handler([a, b, c, d])
+        # Seed the two-row arrangement via a visibility event.
+        handler.arrange_windows(immediate=True, preserve_existing_rows=True)
+        rows = self._row_tops([a, b, c, d])
+        self.assertEqual(len(rows), 2, "should start as two rows")
+        second_row_top = sorted(rows)[1]
+        row2_member = next(iter(rows[second_row_top]))
+        # Hide a window from the first row.
+        first_row_top = sorted(rows)[0]
+        hidden = rows[first_row_top][0]
+        hidden.visible = False
+        handler.remove_window_registration(hidden)
+        survivors = [w for w in (a, b, c, d) if w is not hidden]
+        # A clean pack of the survivors would fit one row; preservation must not.
+        handler.arrange_windows(force=True, immediate=True, preserve_existing_rows=True)
+        rows_after = self._row_tops(survivors)
+        self.assertEqual(len(rows_after), 2, "survivors must keep two rows")
+        self.assertEqual(row2_member.rect.top, second_row_top,
+                         "second-row window must stay on its row")
+
+    def test_tile_now_clean_pack_is_idempotent(self):
+        # Explicit tile-now (no row preservation) must converge in a single
+        # press: repeating it reproduces the exact same canonical layout.
+        a = _WindowNode(40, 40, 1536, 864)
+        b = _WindowNode(80, 80, 620, 656)
+        c = _WindowNode(120, 120, 676, 644)
+        d = _WindowNode(160, 160, 640, 96)
+        handler, _app, _scene = _make_handler([a, b, c, d])
+        handler.arrange_windows(force=True, immediate=True)
+        first = {w: Rect(w.rect) for w in (a, b, c, d)}
+        for _ in range(3):
+            handler.arrange_windows(force=True, immediate=True)
+            for w in (a, b, c, d):
+                self.assertEqual(w.rect, first[w],
+                                 "tile-now must be idempotent (single-press correct)")
+
+    def test_showing_window_restores_it_to_a_row_without_disturbing_others(self):
+        a = _WindowNode(0, 0, 700, 300)
+        b = _WindowNode(0, 0, 700, 300)
+        c = _WindowNode(0, 0, 700, 300)
+        d = _WindowNode(0, 0, 700, 300, visible=False)
+        handler, _app, _scene = _make_handler([a, b, c, d])
+        handler.arrange_windows(immediate=True, preserve_existing_rows=True)
+        established = {w: Rect(w.rect) for w in (a, b, c)}
+        # Show d.
+        d.visible = True
+        handler.arrange_windows(
+            newly_visible=(d,), raised_windows=(d,), force=True, immediate=True,
+            preserve_existing_rows=True,
+        )
+        # The already-tiled windows keep their rows/positions.
+        for window, original in established.items():
+            self.assertEqual(window.rect.top, original.top,
+                             "showing a window must not move established rows")
+        self.assertTrue(d.visible)
+
+    def test_single_established_row_still_packs_cleanly(self):
+        # When everything fits one row, hiding one leaves the rest centered on
+        # the same row (nothing to preserve, clean pack keeps them together).
+        a = _WindowNode(0, 0, 300, 200)
+        b = _WindowNode(0, 0, 300, 200)
+        c = _WindowNode(0, 0, 300, 200)
+        handler, _app, _scene = _make_handler([a, b, c])
+        handler.arrange_windows(immediate=True, preserve_existing_rows=True)
+        self.assertEqual(len(self._row_tops([a, b, c])), 1)
+        c.visible = False
+        handler.remove_window_registration(c)
+        handler.arrange_windows(force=True, immediate=True, preserve_existing_rows=True)
+        self.assertEqual(len(self._row_tops([a, b])), 1)
+        self._assert_no_overlaps([a, b])
 
     # ------------------------------------------------------------------
     # Drop / drag insertion ordering
