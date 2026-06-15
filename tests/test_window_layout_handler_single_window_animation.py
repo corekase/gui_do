@@ -537,6 +537,54 @@ class TestWindowLayoutHandlerSingleWindowAnimation(unittest.TestCase):
         # The remaining windows reflow without overlapping each other.
         self.assertFalse(self._rects_overlap(a.rect, c.rect))
 
+    def test_drag_preview_latches_slot_and_does_not_restart_within_zone(self):
+        # Once a preview animation starts, pointer movement within the same slot
+        # zone must NOT restart the tweens (no stutter).
+        a = _WindowNode(0, 0, 300, 200)
+        b = _WindowNode(0, 0, 300, 200)
+        c = _WindowNode(0, 0, 300, 200)
+        tweens = _RecordingTweens()
+        handler, _app, _scene = _make_handler([a, b, c], tweens=tweens)
+        # Settle into a real tiled row before the drag begins.
+        handler.arrange_windows(immediate=True)
+        moving = c
+        # Drop clearly to the left of every window -> insert-first zone.
+        handler.arrange_windows_during_drag(moving, (-100, a.rect.centery))
+        committed_plan = handler._drag_preview_plan
+        scheduled_after_first = len(tweens.scheduled)
+        self.assertIsNotNone(committed_plan)
+        self.assertGreater(scheduled_after_first, 0)
+        # Nudge the pointer a few pixels but stay in the same slot zone.
+        handler.arrange_windows_during_drag(moving, (-94, a.rect.centery + 4))
+        self.assertEqual(handler._drag_preview_plan, committed_plan)
+        self.assertEqual(len(tweens.scheduled), scheduled_after_first,
+                         "preview must not restart tweens within the same slot")
+
+    def test_drag_preview_updates_when_pointer_crosses_into_new_slot(self):
+        a = _WindowNode(0, 0, 300, 200)
+        b = _WindowNode(0, 0, 300, 200)
+        c = _WindowNode(0, 0, 300, 200)
+        handler, _app, _scene = _make_handler([a, b, c])
+        moving = c
+        # Drop near the far left -> moving inserts first.
+        handler.arrange_windows_during_drag(moving, (-50, 100))
+        first_plan = handler._drag_preview_plan
+        # Move far right -> moving inserts last; the slot must change.
+        handler.arrange_windows_during_drag(moving, (5000, 100))
+        self.assertNotEqual(handler._drag_preview_plan, first_plan)
+
+    def test_reset_drag_preview_clears_latched_slot(self):
+        a = _WindowNode(0, 0, 300, 200)
+        b = _WindowNode(0, 0, 300, 200)
+        c = _WindowNode(0, 0, 300, 200)
+        handler, _app, _scene = _make_handler([a, b, c])
+        handler.arrange_windows_during_drag(c, (350, 100))
+        self.assertIsNotNone(handler._drag_preview_plan)
+        handler.reset_drag_preview()
+        self.assertIsNone(handler._drag_preview_plan)
+        self.assertIsNone(handler._drag_preview_window)
+        self.assertIsNone(handler._drag_preview_rects)
+
     # ------------------------------------------------------------------
     # Region avoidance
     # ------------------------------------------------------------------

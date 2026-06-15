@@ -50,6 +50,13 @@ class WindowLayoutHandler:
         self._next_order = 0
         # Most recent page layering, exposed for diagnostics/tests.
         self._last_solve_layers: Optional[List[List[object]]] = None
+        # Drag-preview hysteresis state. While dragging, the committed drop
+        # slot (and the stable target rects it produced) are remembered so the
+        # preview animation runs to completion and is only recomputed once the
+        # pointer crosses into a different slot zone.
+        self._drag_preview_window: Optional[object] = None
+        self._drag_preview_plan: Optional[tuple] = None
+        self._drag_preview_rects: Optional[Dict[object, Rect]] = None
 
     # ------------------------------------------------------------------
     # Scene traversal / window discovery
@@ -898,12 +905,23 @@ class WindowLayoutHandler:
         The dragged ``window`` is left under the cursor (its target is skipped);
         every other window animates to the layout it would take if ``window``
         were dropped at ``pointer_point``.
+
+        To keep the preview steady, the committed drop slot is *latched*: once a
+        reflow animation begins, it is allowed to run to completion and is not
+        recomputed while the pointer stays within that slot's zone. The zone is
+        hit-tested against the stable target rects the windows are animating
+        toward (not their live, mid-animation rects), so the slot never
+        flip-flops as the windows move. Only when the pointer crosses into a
+        different slot zone is the layout re-solved and re-applied. This removes
+        the per-frame tween restarts that previously caused the preview to
+        stutter.
         """
         if not self.enabled:
             return
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
         if not windows or window not in set(windows):
+            self.reset_drag_preview()
             return
         work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
@@ -913,15 +931,68 @@ class WindowLayoutHandler:
 
         window_rects = {w: self._full_window_rect(w) for w in windows}
         other_windows = [w for w in windows if w is not window]
-        layout_rects = {w: self._full_window_rect(w) for w in windows}
-
         z_rank = self._drop_z_rank(scene_snapshot)
-        order, force_rows = self._insertion_plan_for_drop(
-            window, pointer_point, other_windows, layout_rects, z_rank
+
+        session_valid = (
+            self._drag_preview_window is window
+            and self._drag_preview_rects is not None
+            and set(self._drag_preview_rects) == set(other_windows)
         )
-        targets, fallback, _page_layers = self._solve_layout(order, window_rects, work, force_rows)
-        # Skip the dragged window so it keeps following the cursor.
+
+        if session_valid:
+            # Hit-test the pointer against the latched slot using the stable
+            # target rects. If it still resolves to the committed slot, leave
+            # the in-flight animation untouched.
+            cand_order, cand_force = self._insertion_plan_for_drop(
+                window, pointer_point, other_windows, self._drag_preview_rects, z_rank
+            )
+            cand_key = (tuple(cand_order), frozenset(cand_force))
+            if cand_key == self._drag_preview_plan:
+                return
+        else:
+            # New drag session (or the window set changed): seed the slot from
+            # the windows' current resting geometry.
+            seed_rects = {w: self._full_window_rect(w) for w in other_windows}
+            cand_order, cand_force = self._insertion_plan_for_drop(
+                window, pointer_point, other_windows, seed_rects, z_rank
+            )
+            cand_key = (tuple(cand_order), frozenset(cand_force))
+
+        targets, _fallback, _page_layers = self._solve_layout(
+            cand_order, window_rects, work, cand_force
+        )
         self._apply_targets(targets, scene_snapshot, immediate=False, skip_windows={window})
+
+        # Latch this slot together with the stable target rects so subsequent
+        # motions can be hit-tested without re-solving.
+        self._drag_preview_window = window
+        self._drag_preview_plan = cand_key
+        self._drag_preview_rects = self._targets_to_rects(
+            targets, window_rects, exclude={window}
+        )
+
+    def reset_drag_preview(self) -> None:
+        """Forget the latched drag-preview slot (call on drag start / end)."""
+        self._drag_preview_window = None
+        self._drag_preview_plan = None
+        self._drag_preview_rects = None
+
+    @staticmethod
+    def _targets_to_rects(
+        targets: List[Placement],
+        window_rects: Dict[object, Rect],
+        *,
+        exclude: Optional[set[object]] = None,
+    ) -> Dict[object, Rect]:
+        exclude = exclude or set()
+        result: Dict[object, Rect] = {}
+        for window, target_x, target_y in targets:
+            if window in exclude:
+                continue
+            size = window_rects[window]
+            result[window] = Rect(int(target_x), int(target_y), int(size.width), int(size.height))
+        return result
+
 
     # ------------------------------------------------------------------
     # Public: misc

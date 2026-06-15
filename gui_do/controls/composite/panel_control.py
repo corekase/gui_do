@@ -52,6 +52,7 @@ class PanelControl(UiNode):
 
         # Re-apply window layout from post-drag positions.
         if app is not None:
+            self._reset_window_tiling_drag_preview(app)
             tile_windows = getattr(app, "tile_windows", None)
             is_window_layout_enabled = getattr(app, "is_window_layout_enabled", None)
             if not callable(is_window_layout_enabled):
@@ -195,6 +196,18 @@ class PanelControl(UiNode):
             arrange_during_drag(window, (int(pointer_pos[0]), int(pointer_pos[1])))
         except Exception:
             pass
+
+    def _reset_window_tiling_drag_preview(self, app: "GuiApplication") -> None:
+        """Clear any latched drag-preview slot so a fresh drag starts clean."""
+        if app is None:
+            return
+        window_tiling = getattr(app, "window_tiling", None)
+        reset_preview = getattr(window_tiling, "reset_drag_preview", None)
+        if callable(reset_preview):
+            try:
+                reset_preview()
+            except Exception:
+                pass
 
     def _mark_constraints_dirty(self) -> None:
         self._constraints_dirty = self.constraints is not None
@@ -900,6 +913,7 @@ class PanelControl(UiNode):
                         )
                         self._drag_blocked_last = False
                         self._cancel_window_tiling_motion(window, app)
+                        self._reset_window_tiling_drag_preview(app)
                         if getattr(window, "window_effects", {}).get("shear_enabled", True):
                             focus_manager = getattr(app, "focus", None)
                             if focus_manager is not None and hasattr(focus_manager, "clear_focus"):
