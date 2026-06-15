@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from pygame import Rect
 
@@ -9,31 +9,34 @@ from pygame import Rect
 WINDOW_TILING_ANIMATION_DURATION_SECONDS = 0.5
 
 
+# A "placement" is a tuple of (window, x, y) describing an absolute target.
+Placement = Tuple[object, int, int]
+# A "shelf" is an ordered list of windows that share a row (aligned titlebars).
+Shelf = List[object]
+# A "page" is an ordered list of shelves packed into one work-area-sized bin.
+Page = List[Shelf]
 
 
 class WindowLayoutHandler:
-    def is_top_level_window(self, window: object) -> bool:
-        """Return True if the window is not overlapped by any later window in z-order (drawn after it)."""
-        windows = self._visible_windows()
-        if window not in windows:
-            return False
-        window_rect = self._full_window_rect(window)
-        # Z-order: last in list is topmost (drawn last)
-        try:
-            idx = windows.index(window)
-        except ValueError:
-            return False
-        for later_window in windows[idx+1:]:
-            later_rect = self._full_window_rect(later_window)
-            if window_rect.colliderect(later_rect):
-                return False
-        return True
+    """Arrange window-like scene nodes into a non-overlapping, centered tiling.
 
-    """Arrange window-like scene nodes into a non-overlapping tiled grid."""
+    The layout is a *level-oriented shelf packing* (Coffman et al. 1980,
+    "Performance Bounds for Level-Oriented Two-Dimensional Packing Algorithms";
+    Baker & Schwarz 1983, "Shelf Algorithms for Two-Dimensional Packing").
+    Windows keep their own size; they are packed left-to-right into rows
+    (shelves). When a row no longer fits horizontally a new shelf is opened, and
+    when a shelf no longer fits vertically within the work area a new *page*
+    (bin) is started. Pages share the same centered region of the work area and
+    are stacked in z-order, giving the "layers on top of each other" behaviour
+    requested for overflow. Each shelf is centered horizontally and each page is
+    centered vertically, producing balanced rows/columns. The solve runs in
+    ``O(n log n)`` and is therefore scalable for large window counts.
 
-    def is_top_z_order_for_group(self, window: object) -> bool:
-        """Return True if the window is not overlapped by any later window in z-order (drawn after it)."""
-        return self.is_top_level_window(window)
+    Windows tween to their computed targets unless an immediate move is
+    requested. All public method signatures and the window attribute contract
+    (``_window_tiling_target_rect`` / ``_window_tiling_animating``) are
+    preserved so existing callers and visual transitions continue to work.
+    """
 
     def __init__(self, app, scene=None) -> None:
         self.app = app
@@ -45,12 +48,20 @@ class WindowLayoutHandler:
         self.center_on_failure = True
         self._registration_order: Dict[object, int] = {}
         self._next_order = 0
-        self._last_solve_layers: Optional[list[list[object]]] = None
+        # Most recent page layering, exposed for diagnostics/tests.
+        self._last_solve_layers: Optional[List[List[object]]] = None
 
+    # ------------------------------------------------------------------
+    # Scene traversal / window discovery
+    # ------------------------------------------------------------------
     def _bound_scene(self):
         if self.scene is not None:
             return self.scene
         return self.app.scene
+
+    @staticmethod
+    def _is_window_like(node: object) -> bool:
+        return bool(node.is_window())
 
     def _scene_layout_snapshot(self) -> Dict[str, object]:
         """Capture one traversal of scene nodes for layout helper reuse."""
@@ -96,16 +107,12 @@ class WindowLayoutHandler:
                 windows.append(node)
         return windows
 
-    @staticmethod
-    def _is_window_like(node: object) -> bool:
-        return bool(node.is_window())
-
+    # ------------------------------------------------------------------
+    # Registration ordering
+    # ------------------------------------------------------------------
     def _ensure_registration(self, windows: Iterable[object]) -> None:
         ordered = list(windows)
-        self._registration_order = {
-            window: index
-            for index, window in enumerate(ordered)
-        }
+        self._registration_order = {window: index for index, window in enumerate(ordered)}
         self._next_order = int(len(ordered))
 
     def prime_registration(self) -> None:
@@ -130,11 +137,27 @@ class WindowLayoutHandler:
             return
         self._registration_order.pop(window, None)
 
+    def _ordered_windows(self, *, include_hidden: bool, snapshot: Optional[Dict[str, object]] = None) -> List[object]:
+        windows = self._scene_windows(snapshot)
+        self._ensure_registration(windows)
+        if include_hidden:
+            ordered = list(windows)
+        else:
+            ordered = [w for w in windows if w.visible]
+        ordered.sort(key=lambda w: self._registration_order[w])
+        return ordered
+
     def _visible_windows(self) -> List[object]:
         return self._ordered_windows(include_hidden=False)
 
+    def visible_windows_snapshot(self) -> tuple[object, ...]:
+        """Return current visible windows in registration order."""
+        return tuple(self._visible_windows())
+
+    # ------------------------------------------------------------------
+    # Work area
+    # ------------------------------------------------------------------
     def _menu_strip_bottom(self, snapshot: Optional[Dict[str, object]] = None) -> int:
-        """Return bottom y of visible+enabled menu strip controls in the bound scene."""
         if snapshot is not None:
             return int(snapshot.get("menu_bottom", 0))
         menu_bottom = 0
@@ -148,20 +171,6 @@ class WindowLayoutHandler:
                 rect = getattr(node, "rect", Rect(0, 0, 0, 0))
                 menu_bottom = max(menu_bottom, int(rect.bottom))
         return int(menu_bottom)
-
-    def _ordered_windows(self, *, include_hidden: bool, snapshot: Optional[Dict[str, object]] = None) -> List[object]:
-        windows = self._scene_windows(snapshot)
-        self._ensure_registration(windows)
-        if include_hidden:
-            ordered = list(windows)
-        else:
-            ordered = [w for w in windows if w.visible]
-        ordered.sort(key=lambda w: self._registration_order[w])
-        return ordered
-
-    def visible_windows_snapshot(self) -> tuple[object, ...]:
-        """Return current visible windows in registration order."""
-        return tuple(self._visible_windows())
 
     def _work_area_rect(self, snapshot: Optional[Dict[str, object]] = None) -> Rect:
         bounded_area_rect = getattr(self.app, "bounded_area_rect", None)
@@ -190,6 +199,9 @@ class WindowLayoutHandler:
         work.inflate_ip(-(self.padding * 2), -(self.padding * 2))
         return work
 
+    # ------------------------------------------------------------------
+    # Clamping
+    # ------------------------------------------------------------------
     def _fallback_clamp_target(
         self,
         window: object,
@@ -197,7 +209,6 @@ class WindowLayoutHandler:
         target_y: int,
         snapshot: Optional[Dict[str, object]] = None,
     ) -> tuple[int, int]:
-        """Clamp one window target to visible screen bounds with menu-strip top exclusion."""
         rect = Rect(window.rect)
         surface = getattr(self.app, "surface", None)
         if surface is None:
@@ -208,8 +219,6 @@ class WindowLayoutHandler:
         max_left = int(screen_rect.right - rect.width)
         top_limit = int(screen_rect.top)
         max_top = int(screen_rect.bottom - rect.height)
-
-        # Match drag semantics: windows cannot cross visible menu strips.
         top_limit = max(top_limit, self._menu_strip_bottom(snapshot))
 
         clamped_x = int(target_x)
@@ -218,7 +227,6 @@ class WindowLayoutHandler:
             clamped_x = min_left
         else:
             clamped_x = max(min_left, min(clamped_x, max_left))
-
         if max_top < top_limit:
             clamped_y = top_limit
         else:
@@ -232,7 +240,6 @@ class WindowLayoutHandler:
         target_y: int,
         snapshot: Optional[Dict[str, object]] = None,
     ) -> tuple[int, int]:
-        """Clamp target coordinates using the same logic as window drag bounds when available."""
         parent = getattr(window, "parent", None)
         clamp_fn = getattr(parent, "_clamp_window_drag_target", None)
         if callable(clamp_fn):
@@ -243,6 +250,9 @@ class WindowLayoutHandler:
                 pass
         return self._fallback_clamp_target(window, int(target_x), int(target_y), snapshot)
 
+    # ------------------------------------------------------------------
+    # Animation / target metadata
+    # ------------------------------------------------------------------
     def _animate_window_to(self, window: object, target_x: int, target_y: int, *, duration: float) -> bool:
         current = Rect(window.rect)
         if (current.x, current.y) == (int(target_x), int(target_y)):
@@ -296,7 +306,6 @@ class WindowLayoutHandler:
                 scheduled = True
 
         if not scheduled:
-            # Fallback for non-standard/failed tween schedulers.
             setattr(window, "_window_tiling_animating", False)
             window.move_by(int(target_x) - current.x, int(target_y) - current.y)
             return True
@@ -318,7 +327,7 @@ class WindowLayoutHandler:
 
     @staticmethod
     def _layout_reference_rect(window: object) -> Rect:
-        """Prefer stable tiling target rect when available.
+        """Prefer the stable tiling target rect when available.
 
         This preserves spatial ordering across repeated "tile now" operations,
         especially while animated movement is still converging.
@@ -327,46 +336,18 @@ class WindowLayoutHandler:
         current = Rect(getattr(window, "rect", Rect(0, 0, 0, 0)))
         if isinstance(ref, Rect):
             if bool(getattr(window, "_window_tiling_animating", False)):
-                # If animation state is stale (for example, tween cancelled by
-                # user interaction), large divergence means live geometry is
-                # authoritative again.
                 if abs(int(current.x) - int(ref.x)) > 64 or abs(int(current.y) - int(ref.y)) > 64:
                     setattr(window, "_window_tiling_animating", False)
                     return Rect(current)
                 return Rect(ref)
-            # If the live rect diverges significantly from the stored target,
-            # treat live geometry as authoritative (e.g. user drag reposition).
             if abs(int(current.x) - int(ref.x)) > 4 or abs(int(current.y) - int(ref.y)) > 4:
                 return Rect(current)
             return Rect(ref)
         return Rect(current.x, current.y, current.width, current.height)
 
-    @staticmethod
-    def _center_target(bounds: Rect, window_rect: Rect) -> tuple[int, int]:
-        target = Rect(0, 0, int(window_rect.width), int(window_rect.height))
-        target.center = bounds.center
-        return (int(target.x), int(target.y))
-
-    @staticmethod
-    def _count_centered_targets(
-        targets: list[tuple[object, int, int]],
-        windows: Iterable[object],
-        window_rects: Dict[object, Rect],
-        work: Rect,
-    ) -> int:
-        target_positions = {w: (int(x), int(y)) for w, x, y in targets}
-        centered = 0
-        for window in windows:
-            if window not in target_positions or window not in window_rects:
-                continue
-            tx, _ty = target_positions[window]
-            cx, _cy = WindowLayoutHandler._center_target(work, window_rects[window])
-            # Horizontal centering is the key visual signal for this fallback
-            # path; y can differ because layers are vertically stacked.
-            if abs(int(tx) - int(cx)) <= 1:
-                centered += 1
-        return int(centered)
-
+    # ------------------------------------------------------------------
+    # Centering helpers
+    # ------------------------------------------------------------------
     def _center_window(self, window: object, work_area: Optional[Rect] = None) -> None:
         bounds = Rect(self.app.surface.get_rect()) if work_area is None else Rect(work_area)
         rect = self._full_window_rect(window)
@@ -374,9 +355,7 @@ class WindowLayoutHandler:
         target.center = bounds.center
         self._set_window_tiling_target(window, int(target.x), int(target.y))
         current = Rect(window.rect)
-        dx = target.x - current.x
-        dy = target.y - current.y
-        window.move_by(dx, dy)
+        window.move_by(target.x - current.x, target.y - current.y)
 
     def center_windows(self, windows: Iterable[object]) -> None:
         for window in windows:
@@ -384,280 +363,15 @@ class WindowLayoutHandler:
                 continue
             self._center_window(window)
 
-    def set_enabled(self, enabled: bool, relayout: bool = True) -> None:
-        self.enabled = bool(enabled)
-        if relayout and self.enabled:
-            self.arrange_windows()
-
-    def configure(
-        self,
-        *,
-        gap: Optional[int] = None,
-        padding: Optional[int] = None,
-        avoid_task_panel: Optional[bool] = None,
-        center_on_failure: Optional[bool] = None,
-        relayout: bool = True,
-    ) -> None:
-        if gap is not None:
-            self.gap = max(0, int(gap))
-        if padding is not None:
-            self.padding = max(0, int(padding))
-        if avoid_task_panel is not None:
-            self.avoid_task_panel = bool(avoid_task_panel)
-        if center_on_failure is not None:
-            self.center_on_failure = bool(center_on_failure)
-        if relayout and self.enabled:
-            self.arrange_windows()
-
-    def read_settings(self) -> Dict[str, object]:
-        return {
-            "enabled": self.enabled,
-            "gap": self.gap,
-            "padding": self.padding,
-            "avoid_task_panel": self.avoid_task_panel,
-            "center_on_failure": self.center_on_failure,
-        }
-
     @staticmethod
-    def _prefer_vertical_packing(windows: List[object], window_rects: Dict[object, Rect]) -> bool:
-        """Infer whether current layout intent is primarily vertical.
+    def _center_target(bounds: Rect, window_rect: Rect) -> tuple[int, int]:
+        target = Rect(0, 0, int(window_rect.width), int(window_rect.height))
+        target.center = bounds.center
+        return (int(target.x), int(target.y))
 
-        Fast-path uses spread and adjacent-step dominance over registration
-        order. Ambiguous cases fall back to nearest-neighbor voting.
-        """
-        if len(windows) < 2:
-            return False
-
-        centers: Dict[object, tuple[int, int]] = {
-            w: (int(rect.centerx), int(rect.centery))
-            for w, rect in window_rects.items()
-        }
-
-        xs = [centers[w][0] for w in windows]
-        ys = [centers[w][1] for w in windows]
-        x_span = int(max(xs) - min(xs))
-        y_span = int(max(ys) - min(ys))
-
-        dominant_scale = 1.20
-        if y_span > int(x_span * dominant_scale):
-            return True
-        if x_span > int(y_span * dominant_scale):
-            return False
-
-        total_step_dx = 0
-        total_step_dy = 0
-        for idx in range(1, len(windows)):
-            prev = windows[idx - 1]
-            cur = windows[idx]
-            px, py = centers[prev]
-            cx, cy = centers[cur]
-            total_step_dx += abs(int(cx - px))
-            total_step_dy += abs(int(cy - py))
-
-        if total_step_dy > int(total_step_dx * dominant_scale):
-            return True
-        if total_step_dx > int(total_step_dy * dominant_scale):
-            return False
-
-        vertical_links = 0
-        horizontal_links = 0
-        for window in windows:
-            cx, cy = centers[window]
-            nearest = None
-            nearest_dist = None
-            for other in windows:
-                if other is window:
-                    continue
-                ox, oy = centers[other]
-                dx = int(ox - cx)
-                dy = int(oy - cy)
-                dist = (dx * dx) + (dy * dy)
-                if nearest_dist is None or dist < nearest_dist:
-                    nearest_dist = dist
-                    nearest = (abs(dx), abs(dy))
-            if nearest is None:
-                continue
-            nx, ny = nearest
-            if ny > nx:
-                vertical_links += 1
-            elif nx > ny:
-                horizontal_links += 1
-
-        return vertical_links > horizontal_links
-
-    @staticmethod
-    def _layer_column_cap(window_count: int, *, prefer_vertical: bool) -> int:
-        """Return a soft per-row column cap to keep sparse layouts readable."""
-        if window_count <= 0:
-            return 1
-        if prefer_vertical:
-            if window_count <= 2:
-                return 1
-            if window_count <= 4:
-                return 2
-            return 3
-        if window_count <= 3:
-            return 2
-        if window_count <= 6:
-            return 3
-        return max(3, int(window_count ** 0.5))
-
-    def _pack_single_layer(
-        self,
-        windows: List[object],
-        window_rects: Dict[object, Rect],
-        work: Rect,
-        *,
-        prefer_vertical: bool,
-        force_row_before: Optional[set[object]] = None,
-        enforce_vertical_pair_cap: bool = True,
-    ) -> tuple[list[tuple[object, int, int]], list[object], list[object]]:
-        """Pack one non-overlapping layer in row-major order.
-
-        Returns (placements, remaining_windows, center_fallback_windows).
-        """
-        if not windows:
-            return ([], [], [])
-
-        placements: list[tuple[object, int, int]] = []
-        center_fallback: list[object] = []
-        remaining: list[object] = []
-        hard_column_cap = 1 if (enforce_vertical_pair_cap and prefer_vertical and len(windows) <= 2) else 0
-
-        row_x = 0
-        row_y = 0
-        row_h = 0
-        row_count = 0
-
-        idx = 0
-        while idx < len(windows):
-            window = windows[idx]
-            wr = window_rects[window]
-            ww = max(1, int(wr.width))
-            wh = max(1, int(wr.height))
-            fit_h = min(int(wh), int(work.height))
-
-            too_large = ww > int(work.width)
-            if too_large:
-                center_fallback.append(window)
-                idx += 1
-                continue
-
-            if row_count == 0:
-                candidate_x = 0
-                candidate_y = row_y
-            else:
-                force_new_row = bool(force_row_before is not None and window in force_row_before)
-                if force_new_row:
-                    candidate_x = 0
-                    candidate_y = row_y + row_h + self.gap
-                elif hard_column_cap > 0 and row_count >= hard_column_cap:
-                    candidate_x = 0
-                    candidate_y = row_y + row_h + self.gap
-                else:
-                    candidate_x = row_x + self.gap
-                    candidate_y = row_y
-
-            if candidate_x + ww > int(work.width):
-                candidate_x = 0
-                candidate_y = row_y + row_h + self.gap
-
-            if candidate_y + fit_h > int(work.height):
-                remaining.extend(windows[idx:])
-                break
-
-            placements.append((window, int(candidate_x), int(candidate_y)))
-
-            if candidate_x == 0 and (row_count == 0 or candidate_y != row_y):
-                row_y = int(candidate_y)
-                row_h = int(fit_h)
-                row_count = 1
-            else:
-                row_h = max(int(row_h), int(fit_h))
-                row_count += 1
-            row_x = int(candidate_x + ww)
-            idx += 1
-
-        return (placements, remaining, center_fallback)
-
-    @staticmethod
-    def _center_layer_in_work(
-        placements: list[tuple[object, int, int]],
-        window_rects: Dict[object, Rect],
-        work: Rect,
-    ) -> list[tuple[object, int, int]]:
-        if not placements:
-            return []
-
-        # Center each row horizontally in work bounds (titlebars aligned per-row),
-        # then center the full layer vertically.
-        row_map: dict[int, list[tuple[object, int, int]]] = {}
-        for window, x, y in placements:
-            row_map.setdefault(int(y), []).append((window, int(x), int(y)))
-
-        row_centered: list[tuple[object, int, int]] = []
-        for row_y in sorted(row_map.keys()):
-            row_items = sorted(row_map[row_y], key=lambda item: int(item[1]))
-            row_min_x = min(int(x) for _w, x, _y in row_items)
-            row_max_x = max(int(x + int(window_rects[w].width)) for w, x, _y in row_items)
-            row_width = int(row_max_x - row_min_x)
-            row_left = int(work.x + max(0, (int(work.width) - row_width) // 2))
-            shift_x = int(row_left - row_min_x)
-            for window, x, y in row_items:
-                row_centered.append((window, int(x + shift_x), int(y)))
-
-        min_y = min(int(y) for _w, _x, y in row_centered)
-        max_y = max(int(y + int(window_rects[w].height)) for w, _x, y in row_centered)
-        layer_h = int(max_y - min_y)
-        centered_top = int(work.y + max(0, (int(work.height) - layer_h) // 2))
-        shift_y = int(centered_top - min_y)
-        return [(w, int(x), int(y + shift_y)) for w, x, y in row_centered]
-
-    def _solve_layered_targets(
-        self,
-        ordered_windows: List[object],
-        window_rects: Dict[object, Rect],
-        work: Rect,
-        *,
-        prefer_vertical: bool,
-        force_row_before: Optional[set[object]] = None,
-    ) -> tuple[list[tuple[object, int, int]], set[object], int]:
-        targets: list[tuple[object, int, int]] = []
-        center_fallback: set[object] = set()
-        layer_count = 0
-        solve_layers: list[list[object]] = []
-
-        pending = list(ordered_windows)
-        layer_index = 0
-        while pending:
-            layer, remaining, layer_fallback = self._pack_single_layer(
-                pending,
-                window_rects,
-                work,
-                prefer_vertical=prefer_vertical,
-                force_row_before=force_row_before,
-                enforce_vertical_pair_cap=(int(layer_index) == 0),
-            )
-            if layer or layer_fallback:
-                layer_count += 1
-            centered_layer = self._center_layer_in_work(layer, window_rects, work)
-            targets.extend(centered_layer)
-            if centered_layer:
-                solve_layers.append([w for w, _x, _y in centered_layer])
-            center_fallback.update(layer_fallback)
-
-            if not centered_layer and not layer_fallback and remaining == pending:
-                break
-            pending = remaining
-            layer_index += 1
-
-        for window in center_fallback:
-            cx, cy = self._center_target(work, window_rects[window])
-            targets.append((window, int(cx), int(cy)))
-            solve_layers.append([window])
-        self._last_solve_layers = [list(layer) for layer in solve_layers]
-        return (targets, center_fallback, int(layer_count))
-
+    # ------------------------------------------------------------------
+    # Spatial row grouping (used to derive solve order from current layout)
+    # ------------------------------------------------------------------
     def _spatial_rows(
         self,
         windows: List[object],
@@ -669,9 +383,8 @@ class WindowLayoutHandler:
 
         heights = sorted(max(1, int(window_rects[w].height)) for w in windows)
         median_h = int(heights[len(heights) // 2])
-        # Keep row grouping tolerant enough for drag jitter, but robust to
-        # tiny outlier windows that would otherwise collapse tolerance and
-        # fragment rows/layers for normal-sized windows.
+        # Tolerant enough for drag jitter, but robust to tiny outlier windows
+        # that would otherwise collapse tolerance and fragment rows.
         row_tolerance = max(8, min(int(median_h // 3), max(12, int(self.gap * 2))))
 
         rows: list[dict[str, object]] = []
@@ -706,27 +419,218 @@ class WindowLayoutHandler:
         rows = self._spatial_rows(windows, window_rects)
         return [w for row in rows for w in row]
 
+    # ------------------------------------------------------------------
+    # Core shelf packing
+    # ------------------------------------------------------------------
+    def _fit_height(self, window: object, window_rects: Dict[object, Rect], work: Rect) -> int:
+        return min(max(1, int(window_rects[window].height)), max(1, int(work.height)))
+
+    def _shelf_height(self, shelf: Shelf, window_rects: Dict[object, Rect], work: Rect) -> int:
+        if not shelf:
+            return 0
+        return max(self._fit_height(w, window_rects, work) for w in shelf)
+
+    def _page_height(self, page: Page, window_rects: Dict[object, Rect], work: Rect) -> int:
+        if not page:
+            return 0
+        total = sum(self._shelf_height(shelf, window_rects, work) for shelf in page)
+        return total + self.gap * (len(page) - 1)
+
+    def _pack_pages(
+        self,
+        order: List[object],
+        window_rects: Dict[object, Rect],
+        work: Rect,
+        force_row_before: Optional[set[object]] = None,
+    ) -> tuple[List[Page], set[object]]:
+        """Pack windows into pages of shelves (level-oriented, order preserving).
+
+        Returns the list of pages and the set of windows that are too wide to
+        fit the work area (center-fallback windows that will be clamped).
+        """
+        gap = int(self.gap)
+        force_row_before = force_row_before or set()
+        pages: List[Page] = []
+        fallback: set[object] = set()
+
+        current_page: Page = []
+        current_shelf: Shelf = []
+        current_shelf_width = 0
+
+        def close_shelf() -> None:
+            nonlocal current_shelf, current_shelf_width
+            if current_shelf:
+                current_page.append(current_shelf)
+            current_shelf = []
+            current_shelf_width = 0
+
+        def close_page() -> None:
+            nonlocal current_page
+            close_shelf()
+            if current_page:
+                pages.append(current_page)
+            current_page = []
+
+        for window in order:
+            wr = window_rects[window]
+            window_width = max(1, int(wr.width))
+            fit_h = self._fit_height(window, window_rects, work)
+            too_wide = window_width > int(work.width)
+            if too_wide:
+                fallback.add(window)
+
+            forced_break = window in force_row_before
+            wrap_width = bool(
+                current_shelf
+                and (current_shelf_width + gap + window_width) > int(work.width)
+            )
+            needs_new_shelf = bool(current_shelf) and (forced_break or too_wide or wrap_width)
+
+            if current_shelf and not needs_new_shelf:
+                current_shelf.append(window)
+                current_shelf_width += gap + window_width
+                if too_wide:
+                    close_shelf()
+                continue
+
+            # Opening a new shelf: decide whether it still fits the current page.
+            prospective: Page = list(current_page)
+            if current_shelf:
+                prospective = prospective + [current_shelf]
+            if prospective:
+                committed = self._page_height(prospective, window_rects, work)
+                prospective_height = committed + gap + fit_h
+                if prospective_height > int(work.height):
+                    close_page()
+
+            close_shelf()
+            current_shelf = [window]
+            current_shelf_width = window_width
+            if too_wide:
+                close_shelf()
+
+        close_page()
+        return pages, fallback
+
+    def _position_pages(
+        self,
+        pages: List[Page],
+        window_rects: Dict[object, Rect],
+        work: Rect,
+    ) -> tuple[List[Placement], List[List[object]]]:
+        """Center each shelf horizontally and each page vertically in the work area."""
+        targets: List[Placement] = []
+        page_layers: List[List[object]] = []
+        gap = int(self.gap)
+
+        for page in pages:
+            page_height = self._page_height(page, window_rects, work)
+            top = int(work.y) + max(0, (int(work.height) - page_height) // 2)
+            y = top
+            page_windows: List[object] = []
+            for shelf in page:
+                shelf_height = self._shelf_height(shelf, window_rects, work)
+                row_width = sum(max(1, int(window_rects[w].width)) for w in shelf) + gap * (len(shelf) - 1)
+                left = int(work.x) + max(0, (int(work.width) - row_width) // 2)
+                x = left
+                for window in shelf:
+                    window_width = max(1, int(window_rects[window].width))
+                    targets.append((window, int(x), int(y)))
+                    page_windows.append(window)
+                    x += window_width + gap
+                y += shelf_height + gap
+            page_layers.append(page_windows)
+
+        return targets, page_layers
+
+    def _solve_layout(
+        self,
+        order: List[object],
+        window_rects: Dict[object, Rect],
+        work: Rect,
+        force_row_before: Optional[set[object]] = None,
+    ) -> tuple[List[Placement], set[object], List[List[object]]]:
+        pages, fallback = self._pack_pages(order, window_rects, work, force_row_before)
+        targets, page_layers = self._position_pages(pages, window_rects, work)
+        return targets, fallback, page_layers
+
+    # ------------------------------------------------------------------
+    # Z-order normalization (deeper pages render behind nearer pages)
+    # ------------------------------------------------------------------
+    def _reorder_container(self, container: list, desired: List[object]) -> None:
+        """Reorder, in place, the slots of ``container`` occupied by ``desired``.
+
+        Only positions that currently hold windows from ``desired`` are
+        rewritten; all other nodes keep their slots. ``desired`` is ordered
+        back-to-front (lower index = drawn earlier = further back).
+        """
+        member = set(desired)
+        slots = [index for index, node in enumerate(container) if node in member]
+        ordered = [w for w in desired if w in set(container)]
+        for slot, window in zip(slots, ordered):
+            container[slot] = window
+
+    def _apply_layer_z_order(
+        self,
+        page_layers: List[List[object]],
+        demote: Optional[set[object]] = None,
+        promote: Optional[set[object]] = None,
+    ) -> None:
+        demote = demote or set()
+        promote = promote or set()
+
+        desired: List[object] = []
+        for page in page_layers:
+            desired.extend(page)
+
+        # Demoted windows go to the very back; promoted windows to the very front.
+        if demote:
+            back = [w for w in desired if w in demote]
+            rest = [w for w in desired if w not in demote]
+            desired = back + rest
+        if promote:
+            rest = [w for w in desired if w not in promote]
+            front = [w for w in desired if w in promote]
+            desired = rest + front
+
+        self._last_solve_layers = [list(page) for page in page_layers]
+
+        # Group desired windows by their container and reorder each.
+        containers: List[list] = []
+        seen_ids: set[int] = set()
+        for window in desired:
+            parent = getattr(window, "parent", None)
+            container = getattr(parent, "children", None)
+            if not isinstance(container, list) or window not in container:
+                container = getattr(self._bound_scene(), "nodes", None)
+            if isinstance(container, list) and id(container) not in seen_ids:
+                containers.append(container)
+                seen_ids.add(id(container))
+
+        for container in containers:
+            self._reorder_container(container, desired)
+
+    # ------------------------------------------------------------------
+    # Applying targets
+    # ------------------------------------------------------------------
     def _apply_targets(
         self,
-        targets: list[tuple[object, int, int]],
-        window_rects: Dict[object, Rect],
+        targets: List[Placement],
         scene_snapshot: Optional[Dict[str, object]],
         *,
         immediate: bool,
         immediate_windows: Optional[Iterable[object]] = None,
-        center_fallback: Optional[set[object]] = None,
+        skip_windows: Optional[set[object]] = None,
     ) -> None:
         duration = 0.0 if immediate else WINDOW_TILING_ANIMATION_DURATION_SECONDS
-        center_fallback = center_fallback or set()
         immediate_window_set = set(immediate_windows or ())
+        skip_windows = skip_windows or set()
         for window, target_x, target_y in targets:
-            if window in center_fallback:
-                clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
-            else:
-                clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
+            if window in skip_windows:
+                continue
+            clamped_x, clamped_y = self._clamp_target(window, int(target_x), int(target_y), scene_snapshot)
             self._set_window_tiling_target(window, int(clamped_x), int(clamped_y))
             current = Rect(window.rect)
-            # Only move if position actually changes
             if int(clamped_x) != int(current.x) or int(clamped_y) != int(current.y):
                 if duration <= 0.0 or window in immediate_window_set:
                     setattr(window, "_window_tiling_animating", False)
@@ -734,398 +638,9 @@ class WindowLayoutHandler:
                 else:
                     self._animate_window_to(window, clamped_x, clamped_y, duration=duration)
 
-    @staticmethod
-    def _overlap_pair_count(
-        targets: list[tuple[object, int, int]],
-        window_rects: Dict[object, Rect],
-    ) -> int:
-        placed: list[Rect] = []
-        for window, x, y in targets:
-            wr = window_rects[window]
-            placed.append(Rect(int(x), int(y), int(wr.width), int(wr.height)))
-
-        overlaps = 0
-        for idx in range(len(placed)):
-            a = placed[idx]
-            for jdx in range(idx + 1, len(placed)):
-                if a.colliderect(placed[jdx]):
-                    overlaps += 1
-        return int(overlaps)
-
-    def _fit_pass_repack_layers(
-        self,
-        targets: list[tuple[object, int, int]],
-        window_rects: Dict[object, Rect],
-        work: Rect,
-        *,
-        prefer_vertical: bool,
-        center_fallback: Optional[set[object]] = None,
-    ) -> tuple[list[tuple[object, int, int]], set[object]]:
-        """Best-effort cleanup pass that repacks only within inferred layers.
-
-        This pass is intentionally conservative: it only runs when the selected
-        solution still has overlap, and it is only accepted when overlap count
-        is reduced.
-        """
-        center_fallback = set(center_fallback or set())
-        if not targets:
-            return (targets, center_fallback)
-
-        original_overlap = self._overlap_pair_count(targets, window_rects)
-        if int(original_overlap) <= 0:
-            return (targets, center_fallback)
-
-        movable_targets = [(w, int(x), int(y)) for w, x, y in targets if w not in center_fallback]
-        if not movable_targets:
-            return (targets, center_fallback)
-
-        def repack_from_layer_windows(layer_windows_list: list[list[object]]) -> list[tuple[object, int, int]]:
-            repacked: list[tuple[object, int, int]] = []
-            for layer_windows in layer_windows_list:
-                if not layer_windows:
-                    continue
-                layer_rects = {
-                    w: Rect(
-                        int(next(x for lw, x, _y in movable_targets if lw is w)),
-                        int(next(y for lw, _x, y in movable_targets if lw is w)),
-                        int(window_rects[w].width),
-                        int(window_rects[w].height),
-                    )
-                    for w in layer_windows
-                }
-                layer_rows = self._spatial_rows(layer_windows, layer_rects)
-                layer_order = [w for row in layer_rows for w in row]
-                force_row_before = {row[0] for row in layer_rows[1:] if row}
-
-                layer_packed, remaining, layer_fallback = self._pack_single_layer(
-                    layer_order,
-                    window_rects,
-                    work,
-                    prefer_vertical=prefer_vertical,
-                    force_row_before=force_row_before,
-                    enforce_vertical_pair_cap=False,
-                )
-
-                if remaining or layer_fallback:
-                    repacked.extend(
-                        [
-                            (w, int(layer_rects[w].x), int(layer_rects[w].y))
-                            for w in layer_windows
-                        ]
-                    )
-                    continue
-
-                repacked.extend(self._center_layer_in_work(layer_packed, window_rects, work))
-            return repacked
-
-        # Infer depth layers from current target geometry using first-fit
-        # non-overlap grouping in existing target order.
-        layers: list[list[tuple[object, int, int]]] = []
-        for window, x, y in movable_targets:
-            wr = window_rects[window]
-            rect = Rect(int(x), int(y), int(wr.width), int(wr.height))
-            placed = False
-            for layer in layers:
-                if all(
-                    not rect.colliderect(
-                        Rect(int(lx), int(ly), int(window_rects[lw].width), int(window_rects[lw].height))
-                    )
-                    for lw, lx, ly in layer
-                ):
-                    layer.append((window, int(x), int(y)))
-                    placed = True
-                    break
-            if not placed:
-                layers.append([(window, int(x), int(y))])
-
-        repacked_targets = repack_from_layer_windows([[w for w, _x, _y in layer] for layer in layers])
-
-        # Preserve fallback windows exactly as selected by the main solver.
-        fallback_targets = [(w, int(x), int(y)) for w, x, y in targets if w in center_fallback]
-        candidate_targets = list(repacked_targets) + fallback_targets
-        candidate_overlap = self._overlap_pair_count(candidate_targets, window_rects)
-        if int(candidate_overlap) < int(original_overlap):
-            return (candidate_targets, center_fallback)
-
-        # Fallback fit strategy: repack by spatial row bands from current
-        # target positions when overlap-layer inference cannot improve.
-        target_rects = {
-            w: Rect(int(x), int(y), int(window_rects[w].width), int(window_rects[w].height))
-            for w, x, y in movable_targets
-        }
-        row_band_layers = self._spatial_rows([w for w, _x, _y in movable_targets], target_rects)
-        if row_band_layers:
-            row_band_targets = repack_from_layer_windows([list(row) for row in row_band_layers]) + fallback_targets
-            row_band_overlap = self._overlap_pair_count(row_band_targets, window_rects)
-            if int(row_band_overlap) < int(original_overlap):
-                return (row_band_targets, center_fallback)
-
-        return (targets, center_fallback)
-
-    @staticmethod
-    def _infer_target_layers(
-        targets: list[tuple[object, int, int]],
-        window_rects: Dict[object, Rect],
-    ) -> list[list[object]]:
-        """Infer front-to-back layout layers preserving per-layer target order.
-
-        Targets are emitted in layer sequence by the solver/fit passes, so we
-        keep contiguous layer groups and start a new layer when an item would
-        overlap the current layer.
-        """
-        layers: list[list[object]] = []
-        current_layer: list[object] = []
-        current_layer_rects: list[Rect] = []
-
-        for window, x, y in targets:
-            wr = window_rects[window]
-            rect = Rect(int(x), int(y), int(wr.width), int(wr.height))
-            overlaps_current = any(rect.colliderect(existing) for existing in current_layer_rects)
-
-            if overlaps_current and current_layer:
-                layers.append(list(current_layer))
-                current_layer = []
-                current_layer_rects = []
-
-            current_layer.append(window)
-            current_layer_rects.append(rect)
-
-        if current_layer:
-            layers.append(list(current_layer))
-        return layers
-
-    def _window_current_z_index(self, window: object) -> int:
-        parent = getattr(window, "parent", None)
-        if parent is not None:
-            children = getattr(parent, "children", None)
-            if isinstance(children, list) and window in children:
-                return int(children.index(window))
-        else:
-            nodes = getattr(self._bound_scene(), "nodes", None)
-            if isinstance(nodes, list) and window in nodes:
-                return int(nodes.index(window))
-        return int(self._registration_order.get(window, 0))
-
-    def _windows_top_to_back(self, windows: Iterable[object]) -> list[object]:
-        """Return windows ordered from visually top-most to back-most."""
-        return sorted(
-            list(windows),
-            key=lambda w: (
-                int(self._window_current_z_index(w)),
-                int(self._registration_order.get(w, 0)),
-            ),
-            reverse=True,
-        )
-
-    def _normalize_window_z_order_from_targets(
-        self,
-        targets: list[tuple[object, int, int]],
-        window_rects: Dict[object, Rect],
-        *,
-        preferred_layer_tail: Optional[set[object]] = None,
-        demote_to_back: Optional[set[object]] = None,
-        promote_to_top: Optional[set[object]] = None,
-        explicit_layers: Optional[list[list[object]]] = None,
-    ) -> None:
-        """Assign per-layer z-order slices so deeper layers stay behind front layers."""
-        if not targets:
-            return
-
-        layers = [list(layer) for layer in explicit_layers] if explicit_layers else self._infer_target_layers(targets, window_rects)
-        if not layers:
-            return
-
-        target_window_set = {w for w, _x, _y in targets}
-        filtered_layers: list[list[object]] = []
-        seen: set[object] = set()
-        for layer in layers:
-            kept = [w for w in layer if w in target_window_set and w not in seen]
-            if kept:
-                filtered_layers.append(kept)
-                seen.update(kept)
-        if len(seen) < len(target_window_set):
-            leftovers = [w for w, _x, _y in targets if w not in seen]
-            if leftovers:
-                filtered_layers.append(leftovers)
-        layers = filtered_layers
-        if not layers:
-            return
-
-        demoted_order: list[object] = []
-        demoted_set: set[object] = set()
-        if demote_to_back:
-            demoted_set = set(demote_to_back)
-            for window, _x, _y in targets:
-                if window in demoted_set and window not in demoted_order:
-                    demoted_order.append(window)
-
-            if demoted_order:
-                stripped_layers: list[list[object]] = []
-                for layer in layers:
-                    remaining = [w for w in layer if w not in demoted_set]
-                    if remaining:
-                        stripped_layers.append(remaining)
-                layers = [list(demoted_order)] + stripped_layers
-
-        promoted_order: list[object] = []
-        promoted_set: set[object] = set()
-        if promote_to_top:
-            promoted_set = set(promote_to_top)
-            for window, _x, _y in targets:
-                if window in promoted_set and window not in promoted_order:
-                    promoted_order.append(window)
-
-            if promoted_order:
-                stripped_layers: list[list[object]] = []
-                for layer in layers:
-                    remaining = [w for w in layer if w not in promoted_set]
-                    if remaining:
-                        stripped_layers.append(remaining)
-                stripped_layers.append(list(promoted_order))
-                layers = stripped_layers
-
-        # Render order is children list order; earlier is behind, later is front.
-        # Inferred layers are back-to-front in solved target order.
-        if demoted_set and promoted_set:
-            demoted_set = {w for w in demoted_set if w not in promoted_set}
-            demoted_order = [w for w in demoted_order if w not in promoted_set]
-
-        parent_to_ordered_windows: dict[object, list[object]] = {}
-        scene_ordered_windows: list[object] = []
-        if demoted_set or promoted_set:
-            target_window_set = {w for w, _x, _y in targets}
-            demoted_order_set = set(demoted_order)
-            promoted_order_set = set(promoted_order)
-            parent_candidates = {
-                getattr(window, "parent", None)
-                for window in target_window_set
-                if getattr(window, "parent", None) is not None
-            }
-            # Root windows (parent=None) are ordered via scene.nodes.
-            root_target_set = {w for w in target_window_set if getattr(w, "parent", None) is None}
-            if root_target_set:
-                scene_nodes = getattr(self._bound_scene(), "nodes", None)
-                if isinstance(scene_nodes, list):
-                    root_non_dp = [
-                        w for w in scene_nodes
-                        if w in root_target_set and w not in demoted_set and w not in promoted_set
-                    ]
-                    root_demoted = [w for w in demoted_order if getattr(w, "parent", None) is None]
-                    root_promoted = [w for w in promoted_order if getattr(w, "parent", None) is None]
-                    scene_ordered_windows = list(root_demoted) + list(root_non_dp) + list(root_promoted)
-            for parent in parent_candidates:
-                children = getattr(parent, "children", None)
-                if not isinstance(children, list):
-                    continue
-                parent_demoted = [
-                    w for w in demoted_order
-                    if getattr(w, "parent", None) is parent
-                ]
-                parent_promoted = [
-                    w for w in promoted_order
-                    if getattr(w, "parent", None) is parent
-                ]
-                parent_non_demoted = [
-                    child for child in children
-                    if (
-                        child in target_window_set
-                        and child not in demoted_set
-                        and child not in promoted_set
-                    )
-                ]
-                desired = list(parent_demoted) + list(parent_non_demoted) + list(parent_promoted)
-                if desired:
-                    parent_to_ordered_windows[parent] = desired
-
-            # Include any remaining targets that were not present in current
-            # parent.children ordering, preserving solved order while honoring
-            # demoted/promoted intent bands.
-            solved_order = [w for layer in layers for w in layer]
-            for window in solved_order:
-                if window in demoted_order_set or window in promoted_order_set:
-                    continue
-                parent = getattr(window, "parent", None)
-                if parent is None:
-                    continue
-                desired = parent_to_ordered_windows.setdefault(parent, [])
-                if window not in desired:
-                    insert_at = len(desired)
-                    if promoted_order:
-                        for idx, candidate in enumerate(desired):
-                            if candidate in promoted_order_set:
-                                insert_at = idx
-                                break
-                    desired.insert(insert_at, window)
-            for window in demoted_order:
-                parent = getattr(window, "parent", None)
-                if parent is None:
-                    continue
-                desired = parent_to_ordered_windows.setdefault(parent, [])
-                if window not in desired:
-                    desired.insert(0, window)
-            for window in promoted_order:
-                parent = getattr(window, "parent", None)
-                if parent is None:
-                    continue
-                desired = parent_to_ordered_windows.setdefault(parent, [])
-                if window not in desired:
-                    desired.append(window)
-        else:
-            ordered_windows: list[object] = []
-            for layer in layers:
-                # Within each layer preserve existing z-order so layer index is the
-                # primary z-order band and per-layer relative order reflects prior
-                # user interactions (focus, click, drag) rather than solve position.
-                layer_sorted = sorted(layer, key=lambda w: self._window_current_z_index(w))
-                if preferred_layer_tail:
-                    layer_head = [w for w in layer_sorted if w not in preferred_layer_tail]
-                    layer_tail = [w for w in layer_sorted if w in preferred_layer_tail]
-                    ordered_windows.extend(layer_head + layer_tail)
-                else:
-                    ordered_windows.extend(layer_sorted)
-
-            for window in ordered_windows:
-                parent = getattr(window, "parent", None)
-                if parent is None:
-                    scene_ordered_windows.append(window)
-                else:
-                    parent_to_ordered_windows.setdefault(parent, []).append(window)
-
-        for parent, desired in parent_to_ordered_windows.items():
-            children = getattr(parent, "children", None)
-            if not isinstance(children, list):
-                continue
-            if len(desired) <= 1:
-                continue
-
-            desired_set = set(desired)
-            slot_indices = [
-                idx for idx, child in enumerate(children)
-                if child in desired_set
-            ]
-            if len(slot_indices) <= 1:
-                continue
-
-            reordered = list(children)
-            for slot_idx, window in zip(slot_indices, desired):
-                reordered[slot_idx] = window
-            parent.children[:] = reordered
-
-        # Keep root-level z-order in sync with solved layered order.
-        if scene_ordered_windows:
-            scene_nodes = getattr(self._bound_scene(), "nodes", None)
-            if isinstance(scene_nodes, list) and len(scene_ordered_windows) > 1:
-                desired_set = set(scene_ordered_windows)
-                slot_indices = [
-                    idx for idx, node in enumerate(scene_nodes)
-                    if node in desired_set
-                ]
-                if len(slot_indices) > 1:
-                    reordered = list(scene_nodes)
-                    for slot_idx, window in zip(slot_indices, scene_ordered_windows):
-                        reordered[slot_idx] = window
-                    scene_nodes[:] = reordered
-
+    # ------------------------------------------------------------------
+    # Public: primary tiling
+    # ------------------------------------------------------------------
     def arrange_windows(
         self,
         newly_visible: Optional[Iterable[object]] = None,
@@ -1145,619 +660,191 @@ class WindowLayoutHandler:
         work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
             return
+
         if len(windows) == 1:
-            only_window = windows[0]
-            target = Rect(0, 0, only_window.rect.width, only_window.rect.height)
-            target.center = work.center
-            clamped_x, clamped_y = self._clamp_target(only_window, int(target.x), int(target.y), scene_snapshot)
-            self._set_window_tiling_target(only_window, int(clamped_x), int(clamped_y))
-            immediate_window_set = set(immediate_windows or ())
-            if immediate or only_window in immediate_window_set:
-                current = Rect(only_window.rect)
-                only_window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
-            else:
-                self._animate_window_to(
-                    only_window,
-                    int(clamped_x),
-                    int(clamped_y),
-                    duration=WINDOW_TILING_ANIMATION_DURATION_SECONDS,
-                )
+            self._arrange_single_window(windows[0], work, scene_snapshot, immediate, immediate_windows)
             return
 
         window_rects = {w: self._full_window_rect(w) for w in windows}
 
-        # Visibility-event hint: newly shown windows should enter from the
-        # trailing solve segment so existing visible layout stabilizes first.
-        trailing_newly_visible: list[object] = []
-        layer_tail_hint: set[object] = set()
-        promoted_raised: set[object] = set()
-        if newly_visible is not None:
-            seen_new: set[object] = set()
-            for candidate in newly_visible:
-                if candidate in seen_new:
-                    continue
-                if candidate not in window_set:
-                    continue
-                if not bool(getattr(candidate, "visible", False)):
-                    continue
-                trailing_newly_visible.append(candidate)
-                layer_tail_hint.add(candidate)
-                seen_new.add(candidate)
-        if raised_windows is not None:
-            for candidate in raised_windows:
-                if candidate in window_set and bool(getattr(candidate, "visible", False)):
-                    promoted_raised.add(candidate)
-        demoted_lowered: set[object] = set()
-        if demoted_windows is not None:
-            for candidate in demoted_windows:
-                if candidate in window_set and bool(getattr(candidate, "visible", False)):
-                    demoted_lowered.add(candidate)
+        promoted_raised = set(self._filter_visible(raised_windows, window_set))
+        demoted_lowered = set(self._filter_visible(demoted_windows, window_set))
+        newly_shown = set(self._filter_visible(newly_visible, window_set))
 
-        # Explicit z-intent solves (raise/lower) should be recomputed from live
-        # geometry, not prior tiling targets, so stale target metadata cannot
-        # pin row/layer grouping to an outdated layout solution.
-        use_live_layout_reference = bool(promoted_raised or demoted_lowered)
-        layout_rects = {
-            w: (self._full_window_rect(w) if use_live_layout_reference else self._layout_reference_rect(w))
-            for w in windows
-        }
-        prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
-        spatial_rows = self._spatial_rows(windows, layout_rects)
+        # Pure order-based shelf packing: windows are packed left-to-right in
+        # registration order, wrapping to a new row by width and to a new
+        # z-stacked page by height. This is fully general -- it scales with the
+        # actual number and sizes of windows and is independent of any specific
+        # window set. Raise/lower/visibility intent only adjusts the z-layer
+        # ordering (which page a window lands on), never the geometric packing,
+        # so windows that fit side-by-side are never split into overlapping
+        # pages.
+        order = list(windows)
 
-        # For explicit z-intent events (raise/lower), solve rows should follow
-        # current graph z-order within each spatial row so placement updates
-        # are derived from the same ordering graph as window stacking.
-        solve_rows = [list(row) for row in spatial_rows]
-        if promoted_raised or demoted_lowered:
-            solve_rows = [
-                sorted(
-                    list(row),
-                    key=lambda w: (
-                        int(self._window_current_z_index(w)),
-                        int(layout_rects[w].centerx),
-                    ),
-                )
-                for row in solve_rows
-            ]
+        targets, fallback, page_layers = self._solve_layout(order, window_rects, work)
 
-        solve_order = [w for row in solve_rows for w in row]
-        base_solve_order = list(solve_order)
-        force_row_before = {row[0] for row in solve_rows[1:] if row}
-
-        # Explicit z-intent ordering for solve input:
-        # - raised windows should solve in the trailing segment
-        # - demoted windows should solve in the leading segment
-        # This keeps geometry solve intent aligned with z-order intent rather
-        # than applying promotion/demotion only at final z normalization.
-        if promoted_raised:
-            promoted_tail = [w for w in solve_order if w in promoted_raised]
-            if promoted_tail:
-                promoted_set = set(promoted_tail)
-                solve_order = [w for w in solve_order if w not in promoted_set] + promoted_tail
-                # Raised windows are intentionally tailed for top-layer solve
-                # intent; stale row-head markers for these windows can pin
-                # them to pre-raise slots and block centered top placement.
-                force_row_before = {w for w in force_row_before if w not in promoted_set}
-
-        if demoted_lowered:
-            demoted_head = [w for w in solve_order if w in demoted_lowered]
-            if demoted_head:
-                demoted_set = set(demoted_head)
-                solve_order = demoted_head + [w for w in solve_order if w not in demoted_set]
-                # Demoted windows are intentionally headed for back-layer solve
-                # intent; stale row-head markers for these windows should not
-                # force old slot boundaries.
-                force_row_before = {w for w in force_row_before if w not in demoted_set}
-
-        priority_windows: list[object] = []
-        raised_priority_windows: list[object] = []
-        if trailing_newly_visible or promoted_raised:
-            seen_priority: set[object] = set()
-            priority_set = set(trailing_newly_visible) | set(promoted_raised)
-            for candidate in solve_order:
-                if candidate in priority_set and candidate not in seen_priority:
-                    priority_windows.append(candidate)
-                    seen_priority.add(candidate)
-                if candidate in promoted_raised:
-                    raised_priority_windows.append(candidate)
-
-        if trailing_newly_visible:
-            trailing_set = set(trailing_newly_visible)
-            solve_order = [w for w in solve_order if w not in trailing_set] + trailing_newly_visible
-            # Row breaks are inferred from pre-reordered spatial rows; once
-            # newly-visible windows are tailed, keeping their old row-head
-            # break markers can over-fragment solves into single-window layers.
-            force_row_before = {w for w in force_row_before if w not in trailing_set}
-        # Explicit z-intent operations should be treated as fresh layout intent,
-        # not constrained by prior row-structure preservation.
-        preserve_row_structure = len(spatial_rows) > 1 and not (promoted_raised or demoted_lowered)
-
-        def _solve_with_order(order: list[object]) -> tuple[
-            list[tuple[object, int, int]],
-            set[object],
-            Optional[list[list[object]]],
-            int,
-        ]:
-            forced_targets, forced_fallback, forced_layers = self._solve_layered_targets(
-                order,
-                window_rects,
-                work,
-                prefer_vertical=prefer_vertical,
-                force_row_before=force_row_before,
-            )
-            forced_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
-
-            relaxed_targets, relaxed_fallback, relaxed_layers = self._solve_layered_targets(
-                order,
-                window_rects,
-                work,
-                prefer_vertical=prefer_vertical,
-            )
-            relaxed_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
-
-            # Preserve existing row membership by default; only relax when it
-            # clearly reduces fragmentation pressure.
-            targets = forced_targets
-            center_fallback = forced_fallback
-            layer_groups: Optional[list[list[object]]] = [list(layer) for layer in forced_layer_groups]
-            forced_overlap = self._overlap_pair_count(forced_targets, window_rects)
-            relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
-            forced_centered_new = 0
-            relaxed_centered_new = 0
-            forced_centered_raised = 0
-            relaxed_centered_raised = 0
-            forced_centered_all = self._count_centered_targets(
-                forced_targets,
-                windows,
-                window_rects,
-                work,
-            )
-            relaxed_centered_all = self._count_centered_targets(
-                relaxed_targets,
-                windows,
-                window_rects,
-                work,
-            )
-            if priority_windows:
-                forced_centered_new = self._count_centered_targets(
-                    forced_targets,
-                    priority_windows,
-                    window_rects,
-                    work,
-                )
-                relaxed_centered_new = self._count_centered_targets(
-                    relaxed_targets,
-                    priority_windows,
-                    window_rects,
-                    work,
-                )
-            if raised_priority_windows:
-                forced_centered_raised = self._count_centered_targets(
-                    forced_targets,
-                    raised_priority_windows,
-                    window_rects,
-                    work,
-                )
-                relaxed_centered_raised = self._count_centered_targets(
-                    relaxed_targets,
-                    raised_priority_windows,
-                    window_rects,
-                    work,
-                )
-
-            forced_centered_new = int(forced_centered_new)
-            relaxed_centered_new = int(relaxed_centered_new)
-            forced_centered_raised = int(forced_centered_raised)
-            relaxed_centered_raised = int(relaxed_centered_raised)
-            forced_overlap = int(forced_overlap)
-            relaxed_overlap = int(relaxed_overlap)
-            forced_centered_all = int(forced_centered_all)
-            relaxed_centered_all = int(relaxed_centered_all)
-            forced_layers = int(forced_layers)
-            relaxed_layers = int(relaxed_layers)
-
-            if (
-                raised_priority_windows
-                and forced_overlap == 0
-                and relaxed_overlap == 0
-                and forced_centered_raised > relaxed_centered_raised
-            ):
-                # Preserve explicit raise centering when the forced solve
-                # already places raised windows closer to centered intent.
-                pass
-
-            elif (
-                raised_priority_windows
-                and forced_overlap == 0
-                and relaxed_overlap == 0
-                and relaxed_centered_raised > forced_centered_raised
-            ):
-                targets = relaxed_targets
-                center_fallback = relaxed_fallback
-                layer_groups = [list(layer) for layer in relaxed_layer_groups]
-
-            elif not (preserve_row_structure and forced_overlap == 0 and relaxed_overlap == 0):
-                if trailing_newly_visible and forced_centered_new > relaxed_centered_new:
-                    targets = relaxed_targets
-                    center_fallback = relaxed_fallback
-                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
-                elif forced_overlap > 0 and relaxed_overlap < forced_overlap:
-                    targets = relaxed_targets
-                    center_fallback = relaxed_fallback
-                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
-                elif forced_overlap == 0 and relaxed_overlap == 0:
-                    if relaxed_centered_all < forced_centered_all:
-                        targets = relaxed_targets
-                        center_fallback = relaxed_fallback
-                        layer_groups = [list(layer) for layer in relaxed_layer_groups]
-                    # Keep row membership unless relaxation is a substantial win.
-                    elif relaxed_layers + 2 < forced_layers:
-                        targets = relaxed_targets
-                        center_fallback = relaxed_fallback
-                        layer_groups = [list(layer) for layer in relaxed_layer_groups]
-                elif relaxed_layers + 1 < forced_layers:
-                    targets = relaxed_targets
-                    center_fallback = relaxed_fallback
-                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
-
-            centered_new = 0
-            if priority_windows:
-                centered_new = self._count_centered_targets(
-                    targets,
-                    priority_windows,
-                    window_rects,
-                    work,
-                )
-            return (targets, center_fallback, layer_groups, int(centered_new))
-
-        targets, center_fallback, layer_groups, centered_new = _solve_with_order(solve_order)
-        if trailing_newly_visible and solve_order != base_solve_order:
-            base_targets, base_fallback, base_layers, base_centered_new = _solve_with_order(base_solve_order)
-            if int(base_centered_new) < int(centered_new):
-                targets = base_targets
-                center_fallback = base_fallback
-                layer_groups = base_layers
-                centered_new = int(base_centered_new)
-
-        # Visibility-event fallback: if a single/new-subset event still yields
-        # overlap after spatial-order solving, retry with registration order
-        # (same family used by the explicit tile-now/F3 flow) and take it when
-        # it improves overlap or keeps overlap while reducing centered fallback
-        # pressure for newly-visible windows.
-        if trailing_newly_visible and len(trailing_newly_visible) < len(windows):
-            selected_overlap = self._overlap_pair_count(targets, window_rects)
-            if int(selected_overlap) > 0:
-                trailing_set = set(trailing_newly_visible)
-                registration_solve_order = [w for w in windows if w not in trailing_set] + trailing_newly_visible
-                reg_targets, reg_fallback, reg_layers, reg_centered_new = _solve_with_order(registration_solve_order)
-                reg_overlap = self._overlap_pair_count(reg_targets, window_rects)
-                if int(reg_overlap) < int(selected_overlap) or (
-                    int(reg_overlap) == int(selected_overlap)
-                    and int(reg_centered_new) < int(centered_new)
-                ):
-                    targets = reg_targets
-                    center_fallback = reg_fallback
-                    layer_groups = reg_layers
-                    centered_new = int(reg_centered_new)
-
-        original_targets = list(targets)
-        targets, center_fallback = self._fit_pass_repack_layers(
-            targets,
-            window_rects,
-            work,
-            prefer_vertical=prefer_vertical,
-            center_fallback=center_fallback,
+        self._apply_layer_z_order(
+            page_layers,
+            demote=demoted_lowered,
+            promote=promoted_raised | newly_shown,
         )
-        if targets != original_targets:
-            layer_groups = None
-
-        apply_promoted_postprocess = bool(promoted_raised and not trailing_newly_visible)
-
-        if apply_promoted_postprocess and len(promoted_raised) == 1:
-            # Explicit single-window raise should converge to centered placement
-            # independent of how many sibling windows were previously behind it.
-            raised_window = next(iter(promoted_raised))
-            if raised_window in window_rects:
-                raised_rect = window_rects[raised_window]
-                raised_center_x, raised_center_y = self._center_target(work, raised_rect)
-
-                # Only treat peer windows (same z-level as the raised window) as
-                # placement obstacles.  Background windows the raised window
-                # legitimately covers in z-order are excluded so clamping against
-                # a large background window cannot corrupt the peer-overlap check.
-                raised_z = self._window_current_z_index(raised_window)
-                peer_z_threshold = raised_z - 1
-
-                def _is_backdrop_window(rect: Rect) -> bool:
-                    return bool(
-                        int(rect.width) >= int(work.width * 0.75)
-                        and int(rect.height) >= int(work.height * 0.75)
-                    )
-
-                other_target_rects: list[Rect] = []
-                for window, x, y in targets:
-                    if window is raised_window or window not in window_rects:
-                        continue
-                    if self._window_current_z_index(window) < peer_z_threshold:
-                        continue
-                    wr = window_rects[window]
-                    if _is_backdrop_window(wr):
-                        continue
-                    ox, oy = self._clamp_target(window, int(x), int(y), scene_snapshot)
-                    other_target_rects.append(Rect(int(ox), int(oy), int(wr.width), int(wr.height)))
-
-                def _collides_with_others(candidate_x: int, candidate_y: int) -> bool:
-                    candidate_rect = Rect(
-                        int(candidate_x),
-                        int(candidate_y),
-                        int(raised_rect.width),
-                        int(raised_rect.height),
-                    )
-                    return any(candidate_rect.colliderect(other_rect) for other_rect in other_target_rects)
-
-                # Prefer centered placement against peer obstacles so lower-z
-                # background windows cannot reserve gaps inside higher-z solves.
-                centered_x, centered_y = self._clamp_target(
-                    raised_window,
-                    int(raised_center_x),
-                    int(raised_center_y),
-                    scene_snapshot,
-                )
-                selected_x, selected_y = int(centered_x), int(centered_y)
-                if _collides_with_others(int(selected_x), int(selected_y)):
-                    candidate_x_positions = [int(raised_center_x)]
-                    for other_rect in other_target_rects:
-                        candidate_x_positions.append(int(other_rect.left - int(raised_rect.width) - int(self.gap)))
-                        candidate_x_positions.append(int(other_rect.right + int(self.gap)))
-
-                    solver_raw = next(
-                        ((int(x), int(y)) for w, x, y in targets if w is raised_window),
-                        None,
-                    )
-                    if solver_raw is not None:
-                        candidate_x_positions.append(int(solver_raw[0]))
-
-                    best_candidate: tuple[int, int] | None = None
-                    best_distance = 10 ** 9
-                    for candidate_x in candidate_x_positions:
-                        clamped_x, clamped_y = self._clamp_target(
-                            raised_window,
-                            int(candidate_x),
-                            int(raised_center_y),
-                            scene_snapshot,
-                        )
-                        if _collides_with_others(int(clamped_x), int(clamped_y)):
-                            continue
-                        distance = abs(int(clamped_x) - int(raised_center_x))
-                        if distance < best_distance:
-                            best_distance = int(distance)
-                            best_candidate = (int(clamped_x), int(clamped_y))
-
-                    if best_candidate is not None:
-                        selected_x, selected_y = best_candidate
-                    else:
-                        # Dense fallback search by small increments around center
-                        # to find the nearest clamped non-overlapping x-position.
-                        step = max(1, int(self.gap))
-                        max_scan = max(int(work.width) + int(raised_rect.width), step)
-                        found = False
-                        for delta in range(step, max_scan + step, step):
-                            for direction in (1, -1):
-                                candidate_x = int(raised_center_x) + int(direction * delta)
-                                clamped_x, clamped_y = self._clamp_target(
-                                    raised_window,
-                                    candidate_x,
-                                    int(raised_center_y),
-                                    scene_snapshot,
-                                )
-                                if not _collides_with_others(int(clamped_x), int(clamped_y)):
-                                    selected_x, selected_y = int(clamped_x), int(clamped_y)
-                                    found = True
-                                    break
-                            if found:
-                                break
-
-                    if best_candidate is None and not found:
-                        solver_raw = next(
-                            ((int(x), int(y)) for w, x, y in targets if w is raised_window),
-                            None,
-                        )
-                        if solver_raw is not None:
-                            sx, sy = self._clamp_target(
-                                raised_window,
-                                int(solver_raw[0]),
-                                int(solver_raw[1]),
-                                scene_snapshot,
-                            )
-                            selected_x, selected_y = int(sx), int(sy)
-
-                targets = [
-                    (window, int(selected_x), int(selected_y))
-                    if window is raised_window
-                    else (window, int(x), int(y))
-                    for window, x, y in targets
-                ]
-        elif apply_promoted_postprocess and len(promoted_raised) > 1:
-            target_map = {window: (int(x), int(y)) for window, x, y in targets}
-            raised_order = [window for window, _x, _y in targets if window in promoted_raised]
-
-            raised_overlap = 0
-            for idx in range(len(raised_order)):
-                a = raised_order[idx]
-                if a not in target_map or a not in window_rects:
-                    continue
-                ax, ay = target_map[a]
-                ar = window_rects[a]
-                a_rect = Rect(int(ax), int(ay), int(ar.width), int(ar.height))
-                for jdx in range(idx + 1, len(raised_order)):
-                    b = raised_order[jdx]
-                    if b not in target_map or b not in window_rects:
-                        continue
-                    bx, by = target_map[b]
-                    br = window_rects[b]
-                    b_rect = Rect(int(bx), int(by), int(br.width), int(br.height))
-                    if a_rect.colliderect(b_rect):
-                        raised_overlap += 1
-
-            if int(raised_overlap) > 0 and raised_order:
-                # Reflow raised windows with the same row-packing strategy used
-                # by drop solves so wide raised groups can wrap into multiple
-                # centered rows instead of collapsing after clamp.
-                packed_raised, remaining_raised, fallback_raised = self._pack_single_layer(
-                    raised_order,
-                    window_rects,
-                    work,
-                    prefer_vertical=False,
-                    enforce_vertical_pair_cap=False,
-                )
-                if not remaining_raised and not fallback_raised:
-                    centered_raised = self._center_layer_in_work(packed_raised, window_rects, work)
-                    raised_positions = {
-                        window: (int(x), int(y))
-                        for window, x, y in centered_raised
-                    }
-                    targets = [
-                        (
-                            window,
-                            int(raised_positions[window][0]),
-                            int(raised_positions[window][1]),
-                        )
-                        if window in raised_positions
-                        else (window, int(x), int(y))
-                        for window, x, y in targets
-                    ]
-
-        if apply_promoted_postprocess:
-            target_by_window = {window: (int(x), int(y)) for window, x, y in targets}
-            promoted_order = [window for window, _x, _y in targets if window in promoted_raised and window in window_rects]
-
-            # Use the same peer-z filter as the single-raise block: only treat
-            # windows at the same z-level as the promoted window as real obstacles.
-            if promoted_order:
-                promoted_min_z = min(
-                    self._window_current_z_index(w) for w in promoted_order
-                )
-                peer_z_threshold_3 = promoted_min_z - 1
-            else:
-                peer_z_threshold_3 = -1
-
-            occupied_rects: list[Rect] = []
-            for window, x, y in targets:
-                if window in promoted_raised or window not in window_rects:
-                    continue
-                if self._window_current_z_index(window) < peer_z_threshold_3:
-                    continue
-                wr = window_rects[window]
-                if (
-                    int(wr.width) >= int(work.width * 0.75)
-                    and int(wr.height) >= int(work.height * 0.75)
-                ):
-                    continue
-                cx, cy = self._clamp_target(window, int(x), int(y), scene_snapshot)
-                occupied_rects.append(Rect(int(cx), int(cy), int(wr.width), int(wr.height)))
-
-            resolved_positions: dict[object, tuple[int, int]] = {}
-            for window in promoted_order:
-                if window not in target_by_window:
-                    continue
-                wr = window_rects[window]
-                base_x, base_y = target_by_window[window]
-
-                col_step = max(1, int(wr.width) + int(self.gap))
-                row_step = max(1, int(wr.height) + int(self.gap))
-                y_offsets = (0, row_step, -row_step, row_step * 2, -(row_step * 2))
-                search_radius = max(2, len(targets) + 2)
-
-                selected_x, selected_y = self._clamp_target(window, int(base_x), int(base_y), scene_snapshot)
-                selected_rect = Rect(int(selected_x), int(selected_y), int(wr.width), int(wr.height))
-                if any(selected_rect.colliderect(existing) for existing in occupied_rects):
-                    found = False
-                    for radius in range(1, search_radius + 1):
-                        for y_offset in y_offsets:
-                            for direction in (1, -1):
-                                candidate_x = int(base_x) + int(direction * radius * col_step)
-                                candidate_y = int(base_y) + int(y_offset)
-                                cx, cy = self._clamp_target(window, candidate_x, candidate_y, scene_snapshot)
-                                candidate_rect = Rect(int(cx), int(cy), int(wr.width), int(wr.height))
-                                if any(candidate_rect.colliderect(existing) for existing in occupied_rects):
-                                    continue
-                                selected_x, selected_y = int(cx), int(cy)
-                                selected_rect = candidate_rect
-                                found = True
-                                break
-                            if found:
-                                break
-                        if found:
-                            break
-
-                resolved_positions[window] = (int(selected_x), int(selected_y))
-                occupied_rects.append(selected_rect)
-
-            if resolved_positions:
-                targets = [
-                    (
-                        window,
-                        int(resolved_positions[window][0]),
-                        int(resolved_positions[window][1]),
-                    )
-                    if window in resolved_positions
-                    else (window, int(x), int(y))
-                    for window, x, y in targets
-                ]
-
-            # Final safeguard for promoted events: if any overlap survives after
-            # clamp-aware promoted placement (including overlap among previously
-            # raised non-promoted windows), repack the full target set.
-            clamped_targets = []
-            for window, x, y in targets:
-                if window not in window_rects:
-                    continue
-                cx, cy = self._clamp_target(window, int(x), int(y), scene_snapshot)
-                clamped_targets.append((window, int(cx), int(cy)))
-
-            if int(self._overlap_pair_count(clamped_targets, window_rects)) > 0:
-                all_order = [window for window, _x, _y in clamped_targets]
-                packed_all, remaining_all, fallback_all = self._pack_single_layer(
-                    all_order,
-                    window_rects,
-                    work,
-                    prefer_vertical=prefer_vertical,
-                    enforce_vertical_pair_cap=False,
-                )
-                if remaining_all or fallback_all:
-                    packed_all, remaining_all, fallback_all = self._pack_single_layer(
-                        all_order,
-                        window_rects,
-                        work,
-                        prefer_vertical=False,
-                        enforce_vertical_pair_cap=False,
-                    )
-                if not remaining_all and not fallback_all:
-                    targets = self._center_layer_in_work(packed_all, window_rects, work)
-                    layer_groups = None
-
-        self._normalize_window_z_order_from_targets(
-            targets,
-            window_rects,
-            preferred_layer_tail=set(layer_tail_hint),
-            demote_to_back=set(demoted_lowered),
-            promote_to_top=set(promoted_raised),
-            explicit_layers=layer_groups,
-        )
-
         self._apply_targets(
             targets,
-            window_rects,
             scene_snapshot,
-            immediate=immediate,
+            immediate=bool(immediate),
             immediate_windows=immediate_windows,
-            center_fallback=center_fallback,
         )
+
+    def _arrange_single_window(
+        self,
+        window: object,
+        work: Rect,
+        scene_snapshot: Optional[Dict[str, object]],
+        immediate: bool,
+        immediate_windows: Optional[Iterable[object]],
+    ) -> None:
+        target = Rect(0, 0, window.rect.width, window.rect.height)
+        target.center = work.center
+        clamped_x, clamped_y = self._clamp_target(window, int(target.x), int(target.y), scene_snapshot)
+        self._set_window_tiling_target(window, int(clamped_x), int(clamped_y))
+        immediate_window_set = set(immediate_windows or ())
+        if immediate or window in immediate_window_set:
+            setattr(window, "_window_tiling_animating", False)
+            current = Rect(window.rect)
+            window.move_by(int(clamped_x) - current.x, int(clamped_y) - current.y)
+        else:
+            self._animate_window_to(
+                window,
+                int(clamped_x),
+                int(clamped_y),
+                duration=WINDOW_TILING_ANIMATION_DURATION_SECONDS,
+            )
+
+    @staticmethod
+    def _filter_visible(candidates: Optional[Iterable[object]], window_set: set[object]) -> List[object]:
+        result: List[object] = []
+        seen: set[object] = set()
+        if candidates is None:
+            return result
+        for candidate in candidates:
+            if candidate in seen or candidate not in window_set:
+                continue
+            if not bool(getattr(candidate, "visible", False)):
+                continue
+            result.append(candidate)
+            seen.add(candidate)
+        return result
+
+    # ------------------------------------------------------------------
+    # Drop / drag insertion
+    # ------------------------------------------------------------------
+    def _insertion_plan_for_drop(
+        self,
+        moving_window: object,
+        drop_point: tuple[int, int],
+        other_windows: List[object],
+        layout_rects: Dict[object, Rect],
+        z_rank: Optional[Dict[object, int]] = None,
+    ) -> tuple[List[object], set[object]]:
+        """Build a packing plan that inserts ``moving_window`` at the drop slot.
+
+        Returns ``(order, force_row_before)``:
+
+        * ``order`` is the registration-style packing order with the moving
+          window spliced in at the resolved position;
+        * ``force_row_before`` is the set of windows that must start a new row,
+          used to materialise a *new* row above / below / between existing rows
+          when the drop lands in the empty space rather than on an existing row.
+
+        The drop is resolved against the current spatial rows of the other
+        windows. When several rows overlap the drop vertically (e.g. a large
+        backdrop window whose band envelops a smaller foreground row) the
+        *frontmost* row -- the one with the highest z-order, i.e. what the user
+        actually sees on top -- wins, so a window can be dropped between two
+        foreground windows even while a larger window sits behind them. This is
+        independent of the specific windows present and scales with their count.
+        """
+        drop_x = int(drop_point[0])
+        drop_y = int(drop_point[1])
+        z_rank = z_rank or {}
+
+        rows = self._spatial_rows(other_windows, layout_rects)
+        if not rows:
+            return [moving_window], set()
+
+        reading_order = [w for row in rows for w in row]
+
+        # Per-row geometry plus the reading-order index where the row begins.
+        row_infos: list[dict[str, object]] = []
+        start_index = 0
+        for row in rows:
+            tops = [int(layout_rects[w].top) for w in row]
+            bottoms = [int(layout_rects[w].bottom) for w in row]
+            row_infos.append(
+                {
+                    "row": row,
+                    "top": int(min(tops)),
+                    "bottom": int(max(bottoms)),
+                    "z": max((int(z_rank.get(w, 0)) for w in row), default=0),
+                    "start_index": int(start_index),
+                }
+            )
+            start_index += len(row)
+
+        # Rows whose vertical band contains the drop point.
+        containing = [
+            info for info in row_infos
+            if int(info["top"]) <= drop_y <= int(info["bottom"])
+        ]
+        if containing:
+            # Prefer the frontmost row (what the user sees on top), so a large
+            # backdrop window behind a foreground row never steals the drop.
+            target = max(containing, key=lambda info: int(info["z"]))
+            row = list(target["row"])
+            index = int(target["start_index"])
+            for w in row:
+                if drop_x <= int(layout_rects[w].centerx):
+                    break
+                index += 1
+            order = reading_order[:index] + [moving_window] + reading_order[index:]
+            # Joining an existing row: no forced break.
+            return order, set()
+
+        # The drop is in empty vertical space -> create a NEW row above, below,
+        # or between existing rows. Find the row position by comparing the drop
+        # against each row's vertical center line.
+        insert_row_pos = 0
+        for info in row_infos:
+            center = (int(info["top"]) + int(info["bottom"])) / 2.0
+            if drop_y > center:
+                insert_row_pos += 1
+            else:
+                break
+
+        if insert_row_pos <= 0:
+            index = 0
+        elif insert_row_pos >= len(row_infos):
+            index = len(reading_order)
+        else:
+            index = int(row_infos[insert_row_pos]["start_index"])
+
+        order = reading_order[:index] + [moving_window] + reading_order[index:]
+        force: set[object] = {moving_window}
+        # Force the following window (head of the next row) to break too, so the
+        # new row stays isolated instead of absorbing the moving window.
+        if index < len(reading_order):
+            force.add(reading_order[index])
+        return order, force
+
+    def _drop_z_rank(self, scene_snapshot: Optional[Dict[str, object]]) -> Dict[object, int]:
+        """Map each scene window to its z-order rank (higher = drawn in front)."""
+        return {window: index for index, window in enumerate(self._scene_windows(scene_snapshot))}
+
 
     def arrange_windows_for_drop(
         self,
         window: object,
-        drop_point: tuple[int, int] | None,
+        drop_point: tuple[int, int],
         *,
         include_hidden: bool = False,
         immediate: bool = False,
@@ -1765,325 +852,133 @@ class WindowLayoutHandler:
         demoted_windows: Optional[Iterable[object]] = None,
         promoted_windows: Optional[Iterable[object]] = None,
     ) -> None:
-        """Retile after a user drop by spatially reinserting the dropped window.
-
-        Spatial decision order is top-most to behind-most to better match drag-drop
-        intent, then the final solve still emits standard tiling targets.
-        """
         scene_snapshot = self._scene_layout_snapshot()
         windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
         if (not self.enabled and not force) or not windows:
             return
-        if window not in windows:
-            self.arrange_windows(
-                include_hidden=include_hidden,
-                immediate=immediate,
-                force=force,
-            )
+        if window not in set(windows):
+            self.arrange_windows(include_hidden=include_hidden, immediate=immediate, force=force)
             return
-
         work = self._work_area_rect(scene_snapshot)
         if work.width <= 0 or work.height <= 0:
             return
 
-        clamped_drop = None
-        if isinstance(drop_point, tuple) and len(drop_point) == 2:
-            clamped_drop = (
-                max(int(work.left), min(int(drop_point[0]), int(work.right))),
-                max(int(work.top), min(int(drop_point[1]), int(work.bottom))),
-            )
-
-        if clamped_drop is None:
-            self.arrange_windows(
-                include_hidden=include_hidden,
-                immediate=immediate,
-                force=force,
-            )
+        if len(windows) == 1:
+            self._arrange_single_window(windows[0], work, scene_snapshot, immediate, None)
             return
 
         window_rects = {w: self._full_window_rect(w) for w in windows}
-        layout_rects = {w: self._layout_reference_rect(w) for w in windows}
-        prefer_vertical = self._prefer_vertical_packing(windows, layout_rects)
+        other_windows = [w for w in windows if w is not window]
+        layout_rects = {w: self._full_window_rect(w) for w in windows}
 
-        top_to_back = [w for w in self._windows_top_to_back(windows) if w is not window]
-        drop_x, drop_y = clamped_drop
-        insertion_gap = max(4, int(self.gap * 2))
-
-        # Build front-to-back depth layers using layout reference geometry so
-        # in-flight animation positions do not fragment layers during drop.
-        # Then insert into the first eligible layer and stop (no deeper search).
-        depth_layers: list[list[object]] = []
-        for candidate in top_to_back:
-            candidate_rect = layout_rects[candidate]
-            placed = False
-            for layer in depth_layers:
-                if all(not candidate_rect.colliderect(layout_rects[existing]) for existing in layer):
-                    layer.append(candidate)
-                    placed = True
-                    break
-            if not placed:
-                depth_layers.append([candidate])
-
-        selected_layer_index = 0
-        selected_rows: list[list[object]] | None = None
-        nearest_layer_index = 0
-        nearest_layer_distance: Optional[int] = None
-
-        for layer_index, layer_windows in enumerate(depth_layers):
-            layer_rows = self._spatial_rows(layer_windows, layout_rects)
-            if not layer_rows:
-                continue
-
-            layer_top = min(int(layout_rects[w].top) for row in layer_rows for w in row)
-            layer_bottom = max(int(layout_rects[w].bottom) for row in layer_rows for w in row)
-            min_band_y = int(layer_top - insertion_gap)
-            max_band_y = int(layer_bottom + insertion_gap)
-
-            if int(drop_y) >= min_band_y and int(drop_y) <= max_band_y:
-                selected_layer_index = int(layer_index)
-                selected_rows = [list(row) for row in layer_rows]
-                break
-
-            distance = 0
-            if int(drop_y) < min_band_y:
-                distance = int(min_band_y - int(drop_y))
-            elif int(drop_y) > max_band_y:
-                distance = int(int(drop_y) - max_band_y)
-            if nearest_layer_distance is None or int(distance) < int(nearest_layer_distance):
-                nearest_layer_distance = int(distance)
-                nearest_layer_index = int(layer_index)
-
-        if selected_rows is None:
-            if depth_layers:
-                selected_layer_index = int(nearest_layer_index)
-                selected_rows = [list(row) for row in self._spatial_rows(depth_layers[selected_layer_index], layout_rects)]
-            else:
-                selected_layer_index = 0
-                selected_rows = []
-
-        rows = [list(row) for row in selected_rows if row]
-        # Track if a new top row is created for conditional recentering
-        new_top_row_created = False
-        if not rows:
-            rows = [[window]]
-        else:
-            row_spans: list[tuple[int, int, int]] = []
-            for row in rows:
-                top = min(int(layout_rects[w].top) for w in row)
-                bottom = max(int(layout_rects[w].bottom) for w in row)
-                center = int(round(sum(int(layout_rects[w].centery) for w in row) / float(max(1, len(row)))))
-                row_spans.append((top, bottom, center))
-
-            create_new_row = False
-            target_row_index = len(rows) - 1
-            if int(drop_y) < int(row_spans[0][0] - insertion_gap):
-                create_new_row = True
-                target_row_index = 0
-                new_top_row_created = True
-            elif int(drop_y) > int(row_spans[-1][1] + insertion_gap):
-                create_new_row = True
-                target_row_index = len(rows)
-            else:
-                containing_index = None
-                for idx, (top, bottom, _center) in enumerate(row_spans):
-                    if int(drop_y) >= int(top) and int(drop_y) <= int(bottom):
-                        containing_index = idx
-                        break
-
-                if containing_index is not None:
-                    target_row_index = containing_index
-                else:
-                    found_gap = False
-                    for idx in range(len(row_spans) - 1):
-                        upper_bottom = int(row_spans[idx][1])
-                        lower_top = int(row_spans[idx + 1][0])
-                        if int(drop_y) > int(upper_bottom - insertion_gap) and int(drop_y) < int(lower_top + insertion_gap):
-                            create_new_row = True
-                            target_row_index = idx + 1
-                            found_gap = True
-                            break
-                    if not found_gap:
-                        target_row_index = min(
-                            range(len(row_spans)),
-                            key=lambda idx: abs(int(row_spans[idx][2]) - int(drop_y)),
-                        )
-
-            if create_new_row:
-                rows.insert(target_row_index, [window])
-            else:
-                target_row = list(rows[target_row_index])
-                target_row.sort(key=lambda w: (int(layout_rects[w].left), int(layout_rects[w].centerx)))
-                insert_in_row = len(target_row)
-
-                if target_row:
-                    first_rect = layout_rects[target_row[0]]
-                    last_rect = layout_rects[target_row[-1]]
-                    if int(drop_x) <= int(first_rect.left + insertion_gap):
-                        insert_in_row = 0
-                    elif int(drop_x) >= int(last_rect.right - insertion_gap):
-                        insert_in_row = len(target_row)
-                    else:
-                        placed = False
-                        for idx in range(len(target_row) - 1):
-                            left_rect = layout_rects[target_row[idx]]
-                            right_rect = layout_rects[target_row[idx + 1]]
-                            boundary = int((int(left_rect.right) + int(right_rect.left)) // 2)
-                            if abs(int(drop_x) - boundary) <= insertion_gap or int(drop_x) <= boundary:
-                                insert_in_row = idx + 1
-                                placed = True
-                                break
-                        if not placed:
-                            # If pointer is inside an existing item band, split
-                            # before/after that item by its center x.
-                            for idx, candidate in enumerate(target_row):
-                                rect = layout_rects[candidate]
-                                if int(drop_x) >= int(rect.left) and int(drop_x) <= int(rect.right):
-                                    insert_in_row = idx if int(drop_x) <= int(rect.centerx) else idx + 1
-                                    placed = True
-                                    break
-                        if not placed:
-                            insert_in_row = len(target_row)
-
-                target_row.insert(insert_in_row, window)
-                rows[target_row_index] = target_row
-
-        solve_rows: list[list[object]] = []
-        if depth_layers:
-            for layer_index, layer_windows in enumerate(depth_layers):
-                if int(layer_index) == int(selected_layer_index):
-                    solve_rows.extend([list(row) for row in rows if row])
-                else:
-                    solve_rows.extend([list(row) for row in self._spatial_rows(layer_windows, layout_rects) if row])
-        else:
-            solve_rows = [list(row) for row in rows if row]
-
-        preserve_row_structure = len(rows) > 1
-
-        # Preserve row boundaries from the spatial insertion model while solving.
-        solve_order = [w for row in solve_rows for w in row]
-        force_row_before = {row[0] for row in solve_rows[1:] if row}
-
-        targets, center_fallback, forced_layers = self._solve_layered_targets(
-            solve_order,
-            window_rects,
-            work,
-            prefer_vertical=prefer_vertical,
-            force_row_before=force_row_before,
-        )
-        forced_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
-
-        # If row constraints force extra overlap-prone layers, retry without
-        # forced row breaks and prefer the solution with fewer layers.
-        relaxed_targets, relaxed_fallback, relaxed_layers = self._solve_layered_targets(
-            solve_order,
-            window_rects,
-            work,
-            prefer_vertical=prefer_vertical,
-        )
-        relaxed_layer_groups = [list(layer) for layer in (self._last_solve_layers or [])]
-
-        # Drop solves prioritize explicit row/slot insertion intent.
-        forced_overlap = self._overlap_pair_count(targets, window_rects)
-        relaxed_overlap = self._overlap_pair_count(relaxed_targets, window_rects)
-        layer_groups: Optional[list[list[object]]] = [list(layer) for layer in forced_layer_groups]
-
-        forced_drop_target = next(((tx, ty) for w, tx, ty in targets if w is window), None)
-        relaxed_drop_target = next(((tx, ty) for w, tx, ty in relaxed_targets if w is window), None)
-        drop_proximity_tolerance = max(12, int(self.gap * 2))
-
-        if not (preserve_row_structure and int(forced_overlap) == 0 and int(relaxed_overlap) == 0):
-            if int(forced_overlap) > 0 and int(relaxed_overlap) < int(forced_overlap):
-                use_relaxed = True
-                if forced_drop_target is not None and relaxed_drop_target is not None:
-                    forced_drop_dy = abs(int(forced_drop_target[1]) - int(drop_y))
-                    relaxed_drop_dy = abs(int(relaxed_drop_target[1]) - int(drop_y))
-                    if int(relaxed_drop_dy) > int(forced_drop_dy) + int(drop_proximity_tolerance):
-                        use_relaxed = False
-                if use_relaxed:
-                    targets = relaxed_targets
-                    center_fallback = relaxed_fallback
-                    layer_groups = [list(layer) for layer in relaxed_layer_groups]
-            elif int(relaxed_layers) + 1 < int(forced_layers):
-                targets = relaxed_targets
-                center_fallback = relaxed_fallback
-                layer_groups = [list(layer) for layer in relaxed_layer_groups]
-
-        original_targets = list(targets)
-        targets, center_fallback = self._fit_pass_repack_layers(
-            targets,
-            window_rects,
-            work,
-            prefer_vertical=prefer_vertical,
-            center_fallback=center_fallback,
-        )
-        if targets != original_targets:
-            layer_groups = None
-
-        # Only recenter the topmost z-layer if a new top row was NOT created by the drop
-        inferred_layers = [list(layer) for layer in (layer_groups or self._infer_target_layers(targets, window_rects))]
-        if inferred_layers and not new_top_row_created:
-            top_layer = list(inferred_layers[-1])
-            # If demoted_windows is provided, exclude demoted from top layer; otherwise, use all in top layer
-            if demoted_windows is not None:
-                demoted_set = {w for w in demoted_windows if w in windows and bool(getattr(w, "visible", False))}
-                top_non_demoted = [w for w in top_layer if w not in demoted_set and w in window_rects]
-            else:
-                top_non_demoted = [w for w in top_layer if w in window_rects]
-            if len(top_non_demoted) > 1:
-                packed_top, remaining_top, fallback_top = self._pack_single_layer(
-                    top_non_demoted,
-                    window_rects,
-                    work,
-                    prefer_vertical=prefer_vertical,
-                    enforce_vertical_pair_cap=False,
-                )
-                if not remaining_top and not fallback_top:
-                    centered_top = self._center_layer_in_work(packed_top, window_rects, work)
-                    centered_positions = {
-                        window: (int(x), int(y))
-                        for window, x, y in centered_top
-                    }
-                    if centered_positions:
-                        targets = [
-                            (
-                                window,
-                                int(centered_positions[window][0]),
-                                int(centered_positions[window][1]),
-                            )
-                            if window in centered_positions
-                            else (window, int(x), int(y))
-                            for window, x, y in targets
-                        ]
-                        layer_groups = None
-
-        promoted_set: set[object] = set()
-        if promoted_windows is not None:
-            for candidate in promoted_windows:
-                if candidate in windows and bool(getattr(candidate, "visible", False)):
-                    promoted_set.add(candidate)
-
-        # Ensure demoted_set is always defined
-        if demoted_windows is not None:
-            demoted_set = {w for w in demoted_windows if w in windows and bool(getattr(w, "visible", False))}
-        else:
-            demoted_set = set()
-
-        self._normalize_window_z_order_from_targets(
-            targets,
-            window_rects,
-            demote_to_back=demoted_set,
-            promote_to_top=promoted_set,
-            explicit_layers=layer_groups,
+        z_rank = self._drop_z_rank(scene_snapshot)
+        order, force_rows = self._insertion_plan_for_drop(
+            window, drop_point, other_windows, layout_rects, z_rank
         )
 
-        self._apply_targets(
-            targets,
-            window_rects,
-            scene_snapshot,
-            immediate=immediate,
-            center_fallback=center_fallback,
-        )
+        demoted_set = set(self._filter_visible(demoted_windows, set(windows)))
+        promoted_set = set(self._filter_visible(promoted_windows, set(windows)))
 
+        # The drop slot already determines the dropped window's packing position;
+        # caller-supplied promote/demote only adjusts its z-layer.
+        targets, fallback, page_layers = self._solve_layout(order, window_rects, work, force_rows)
+
+        self._apply_layer_z_order(page_layers, demote=demoted_set, promote=promoted_set)
+        self._apply_targets(targets, scene_snapshot, immediate=bool(immediate))
+
+    def arrange_windows_during_drag(
+        self,
+        window: object,
+        pointer_point: tuple[int, int],
+        *,
+        include_hidden: bool = False,
+    ) -> None:
+        """Live drag preview: reflow non-dragged windows to reveal the drop slot.
+
+        The dragged ``window`` is left under the cursor (its target is skipped);
+        every other window animates to the layout it would take if ``window``
+        were dropped at ``pointer_point``.
+        """
+        if not self.enabled:
+            return
+        scene_snapshot = self._scene_layout_snapshot()
+        windows = self._ordered_windows(include_hidden=bool(include_hidden), snapshot=scene_snapshot)
+        if not windows or window not in set(windows):
+            return
+        work = self._work_area_rect(scene_snapshot)
+        if work.width <= 0 or work.height <= 0:
+            return
+        if len(windows) == 1:
+            return
+
+        window_rects = {w: self._full_window_rect(w) for w in windows}
+        other_windows = [w for w in windows if w is not window]
+        layout_rects = {w: self._full_window_rect(w) for w in windows}
+
+        z_rank = self._drop_z_rank(scene_snapshot)
+        order, force_rows = self._insertion_plan_for_drop(
+            window, pointer_point, other_windows, layout_rects, z_rank
+        )
+        targets, fallback, _page_layers = self._solve_layout(order, window_rects, work, force_rows)
+        # Skip the dragged window so it keeps following the cursor.
+        self._apply_targets(targets, scene_snapshot, immediate=False, skip_windows={window})
+
+    # ------------------------------------------------------------------
+    # Public: misc
+    # ------------------------------------------------------------------
     def initialize_window_positions(self) -> None:
-        """Seed scene window internal positions using immediate tiling targets."""
-        self.arrange_windows(include_hidden=True, immediate=True, force=True)
+        if not self.enabled:
+            return
+        self.arrange_windows(immediate=True)
+
+    def is_top_level_window(self, window: object) -> bool:
+        """Return True if no later (higher z-order) window overlaps ``window``."""
+        windows = self._visible_windows()
+        if window not in windows:
+            return False
+        window_rect = self._full_window_rect(window)
+        try:
+            idx = windows.index(window)
+        except ValueError:
+            return False
+        for later_window in windows[idx + 1:]:
+            if window_rect.colliderect(self._full_window_rect(later_window)):
+                return False
+        return True
+
+    def is_top_z_order_for_group(self, window: object) -> bool:
+        return self.is_top_level_window(window)
+
+    def set_enabled(self, enabled: bool, relayout: bool = True) -> None:
+        self.enabled = bool(enabled)
+        if relayout and self.enabled:
+            self.arrange_windows()
+
+    def configure(
+        self,
+        *,
+        gap: Optional[int] = None,
+        padding: Optional[int] = None,
+        avoid_task_panel: Optional[bool] = None,
+        center_on_failure: Optional[bool] = None,
+        relayout: bool = True,
+    ) -> None:
+        if gap is not None:
+            self.gap = max(0, int(gap))
+        if padding is not None:
+            self.padding = max(0, int(padding))
+        if avoid_task_panel is not None:
+            self.avoid_task_panel = bool(avoid_task_panel)
+        if center_on_failure is not None:
+            self.center_on_failure = bool(center_on_failure)
+        if relayout and self.enabled:
+            self.arrange_windows()
+
+    def read_settings(self) -> Dict[str, object]:
+        return {
+            "enabled": self.enabled,
+            "gap": self.gap,
+            "padding": self.padding,
+            "avoid_task_panel": self.avoid_task_panel,
+            "center_on_failure": self.center_on_failure,
+        }

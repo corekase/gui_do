@@ -178,6 +178,24 @@ class PanelControl(UiNode):
             Rect(int(rect.x), int(rect.y), int(rect.width), int(rect.height)),
         )
 
+    def _preview_window_tiling_during_drag(self, window: UiNode, pointer_pos, app: "GuiApplication") -> None:
+        """Live-reflow the non-dragged windows toward the drop slot under the pointer."""
+        if app is None or window is None or not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            return
+        is_window_layout_enabled = getattr(app, "is_window_layout_enabled", None)
+        if not callable(is_window_layout_enabled):
+            is_window_layout_enabled = getattr(app, "is_window_tiling_enabled", None)
+        if callable(is_window_layout_enabled) and not bool(is_window_layout_enabled()):
+            return
+        window_tiling = getattr(app, "window_tiling", None)
+        arrange_during_drag = getattr(window_tiling, "arrange_windows_during_drag", None)
+        if not callable(arrange_during_drag):
+            return
+        try:
+            arrange_during_drag(window, (int(pointer_pos[0]), int(pointer_pos[1])))
+        except Exception:
+            pass
+
     def _mark_constraints_dirty(self) -> None:
         self._constraints_dirty = self.constraints is not None
 
@@ -825,6 +843,7 @@ class PanelControl(UiNode):
             self._drag_blocked_last = shear_suppressed
             if hasattr(self._drag_window, "on_titlebar_drag_update"):
                 self._drag_window.on_titlebar_drag_update(drag_pointer, blocked=shear_suppressed)
+            self._preview_window_tiling_during_drag(self._drag_window, drag_pointer, app)
             event.prevent_default()
             event.stop_propagation()
             return True
